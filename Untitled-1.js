@@ -6,13 +6,15 @@ const LS_CARRITO_KEY = 'carrito';
 const UPLOAD_TOKEN = process.env.UPLOAD_TOKEN;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 
+// En entornos sin proceso de build, "process.env" no estará definido y las
+// variables de entorno no se reemplazarán. Para asegurar la carga de productos
+// directamente desde Google Sheets, se define aquí la URL pública del CSV
+// exportado. Si se cuenta con un paso de build que reemplace la variable,
+// simplemente sustituir este valor mediante la herramienta correspondiente.
+const SHEET_CSV_URL =
+  process.env.SHEET_CSV_URL ||
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
 
-const SHEET_CSV_URL = process.env.SHEET_CSV_URL; // Sin valor por defecto si está en Vercel
-if (!SHEET_CSV_URL) {
-  console.error('SHEET_CSV_URL no está definida en las variables de entorno');
-  mostrarNotificacion('Error de configuración. Contacte al soporte.', 'error');
-  return;
-}
 
 // ===============================
 // ESTADO GLOBAL
@@ -122,7 +124,8 @@ function actualizarContadorCarrito() {
 // ===============================
 async function cargarProductosDesdeSheets() {
   try {
-    const resp = await fetch('/api/sheets', {
+    const resp = await fetch(SHEET_CSV_URL, {
+      // Google Sheets permite CORS en documentos publicados
       headers: { 'Cache-Control': 'no-store' }
     });
     if (!resp.ok) throw new Error(`Error HTTP: ${resp.status}`);
@@ -192,7 +195,7 @@ function crearCardProducto(p) {
 
   return `
     <div class="producto-card" data-id="${p.id}">
-      <img src="${imgUrl}" alt="${p.nombre}" class="producto-img" loading="lazy">
+      <img src="${imgUrl}" alt="${p.nombre}" class="producto-img" loading="lazy" onerror="this.src='/img/placeholder.jpg';">
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
       <p class="producto-stock">
