@@ -117,6 +117,12 @@
         <input type="text" id="input-busqueda" class="input-busqueda" placeholder="Buscar por nombre o descripción..." />
       </div>
       <div id="galeria-productos" class="galeria-productos"></div>
+      <div id="product-loader" class="loader" hidden aria-live="polite">
+        <svg class="spinner" viewBox="0 0 50 50">
+          <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"/>
+        </svg>
+        <p>Cargando productos...</p>
+      </div>
       <div id="paginacion" class="paginacion"></div>
     </div>
   </section>
@@ -195,5 +201,6 @@
   </button>
 
   <script src="/Untitled-1.js" defer></script>
+  <script src="/sheetLoader.js" defer></script>
 </body>
 </html>

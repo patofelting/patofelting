@@ -8,6 +8,12 @@
 
 /* ===== VARIABLES CSS ===== */
 :root {
+  /* Paleta accesible */
+  --teal: #2a9d8f;
+  --dark-blue: #264653;
+  --sand: #e9c46a;
+  --orange: #f4a261;
+  --red: #e76f51;
   --verde-principal: #95d5b2;
   --verde-secundario: #52b788;
   --verde-oscuro: #1b4332;
@@ -1766,3 +1772,7 @@ section h2::after {
   justify-content: center;
   background: rgba(255, 255, 255, 0.8);
 }
+.loader { display: flex; align-items: center; justify-content: center; padding: 1rem; font-size: 1.1rem; }
+.loader svg { width: 32px; height: 32px; margin-right: 0.5rem; animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
