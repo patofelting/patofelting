@@ -13,9 +13,16 @@ const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQ
 const BLOB_API_URL = '/api/blob';
 const BLOB_READ_URL_PREFIX = 'https://te21ra7uSonahf17.public.blob.vercel-storage.com/';
 
+// Validar que SHEET_CSV_URL esté definida
 if (!SHEET_CSV_URL) {
   console.error('SHEET_CSV_URL no está definida');
   mostrarNotificacion('Error de configuración. Contacte al soporte.', 'error');
+}
+
+// Validar que Papa Parse esté disponible
+if (typeof Papa === 'undefined') {
+  console.error('Papa Parse no está cargado. Asegúrate de incluir la librería.');
+  mostrarNotificacion('Error: Librería Papa Parse no encontrada.', 'error');
 }
 
 // ===============================
@@ -38,7 +45,7 @@ let filtrosActuales = {
 // ===============================
 const getElement = (id) => {
   const element = document.getElementById(id);
-  if (!element) console.error(`Elemento no encontrado: ${id}`);
+  if (!element) console.warn(`Elemento no encontrado: ${id}`);
   return element;
 };
 
@@ -130,6 +137,7 @@ function actualizarContadorCarrito() {
 // ===============================
 async function cargarProductosDesdeSheets() {
   try {
+    console.log('Iniciando carga de productos desde:', SHEET_CSV_URL);
     if (elementos.galeriaProductos) {
       elementos.galeriaProductos.innerHTML = '<p>Cargando productos...</p>';
     }
@@ -138,44 +146,50 @@ async function cargarProductosDesdeSheets() {
       headers: { 'Cache-Control': 'no-store' }
     });
     
+    console.log('Respuesta HTTP:', resp.status, resp.statusText);
     if (!resp.ok) {
       throw new Error(`Error HTTP: ${resp.status} - ${resp.statusText}`);
     }
     
     const csvText = await resp.text();
-    console.log('CSV Text:', csvText.substring(0, 200)); // Log first 200 chars for debugging
+    console.log('Contenido del CSV (primeros 500 caracteres):', csvText.substring(0, 500));
     
+    if (typeof Papa === 'undefined') {
+      throw new Error('Papa Parse no está disponible');
+    }
+
     const { data, errors } = Papa.parse(csvText, {
       header: true,
       skipEmptyLines: true,
       transformHeader: h => h
         .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[\u0300-\u036f]/g, ' ')
         .toLowerCase()
-        .replace(/\s+/g, '') // Remove spaces for matching
+        .replace(/\s+/g, '')
     });
+    
+    console.log('Datos parseados:', data);
+    console.log('Errores de parseo:', errors);
     
     if (errors.length) {
       console.error('Errores al parsear CSV:', errors);
       throw new Error('Error al procesar los datos del CSV');
     }
     
-    console.log('Parsed Data:', data); // Log parsed data for debugging
-    
     if (!data || data.length === 0) {
       throw new Error('No se encontraron productos en el CSV');
     }
     
     productos = data
-      .filter(r => r.id && r.nombre && r.precio) // Require only essential fields
+      .filter(r => r.id && r.nombre && r.precio) 
       .map(r => {
         // Procesar imágenes desde Vercel Blob
         const imagenesBlob = [
           r.foto
         ].filter(url => url && typeof url === 'string' && url.trim() !== '')
          .map(url => {
-           if (url.startsWith('http')) return url; // Use full URL if provided
-           return `${BLOB_READ_URL_PREFIX}${url.trim()}`; // Append Vercel Blob prefix
+           if (url.startsWith('http')) return url; 
+           return `${BLOB_READ_URL_PREFIX}${url.trim()}`; 
          });
         
         return {
@@ -197,7 +211,7 @@ async function cargarProductosDesdeSheets() {
         };
       });
     
-    console.log('Productos procesados:', productos); // Log processed products
+    console.log('Productos procesados:', productos);
     
     if (productos.length === 0) {
       throw new Error('No se encontraron productos válidos después del filtrado');
@@ -207,7 +221,7 @@ async function cargarProductosDesdeSheets() {
     actualizarCategorias();
     actualizarUI();
   } catch (e) {
-    console.error('Error al cargar productos:', e);
+    console.error('Error detallado al cargar productos:', e);
     if (elementos.galeriaProductos) {
       elementos.galeriaProductos.innerHTML = '<p>No se pudieron cargar los productos. Intente recargar la página.</p>';
     }
@@ -316,8 +330,7 @@ function filtrarProductos(lista) {
       (categoria === 'todos' || p.categoria === categoria) &&
       (!busqueda || 
        p.nombre.toLowerCase().includes(busquedaLower) || 
-       p.descripcion.toLowerCase().includes(busquedaLower)) &&
-      !p.vendido // Exclude sold products
+       p.descripcion.toLowerCase().includes(busquedaLower))
     );
   });
 }
@@ -405,7 +418,7 @@ function renderizarProductos() {
   }
   
   const list = filtrarProductos(productos);
-  console.log('Productos filtrados:', list); // Log filtered products
+  console.log('Productos filtrados:', list);
   
   const inicio = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
   const slice = list.slice(inicio, inicio + PRODUCTOS_POR_PAGINA);
@@ -597,7 +610,7 @@ function mostrarModalProducto(p) {
       </div>
     </div>
   `;
-  
+
   if (p.imagenes.length > 1) {
     const thumbnails = elementos.modalContenido.querySelectorAll('.modal-thumbnail');
     const mainImg = elementos.modalContenido.querySelector('.modal-img-principal');
@@ -611,14 +624,17 @@ function mostrarModalProducto(p) {
       });
     });
   }
-  
+
   elementos.modalContenido.querySelector('.cerrar-modal').addEventListener('click', cerrarModal);
-  elementos.modalContenido.querySelector('.boton-agregar')?.addEventListener('click', () => {
-    const cantidad = +elementos.modalContenido.querySelector('.modal-cantidad').value || 1;
-    agregarAlCarrito(p.id, cantidad);
-    cerrarModal();
-  });
-  
+  const agregarBtn = elementos.modalContenido.querySelector('.boton-agregar');
+  if (agregarBtn) {
+    agregarBtn.addEventListener('click', () => {
+      const cantidad = +elementos.modalContenido.querySelector('.modal-cantidad').value || 1;
+      agregarAlCarrito(p.id, cantidad);
+      cerrarModal();
+    });
+  }
+
   elementos.productoModal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
   
@@ -627,12 +643,12 @@ function mostrarModalProducto(p) {
       cerrarModal();
     }
   });
-}
 
-function cerrarModal() {
-  if (!elementos.productoModal) return;
-  elementos.productoModal.style.display = 'none';
-  document.body.style.overflow = '';
+  function cerrarModal() {
+    if (!elementos.productoModal) return;
+    elementos.productoModal.style.display = 'none';
+    document.body.style.overflow = '';
+  }
 }
 
 // ===============================
@@ -721,11 +737,11 @@ function inicializarEventos() {
     b.addEventListener('click', () => {
       const t = b.dataset.rangeType;
       if (t === 'precio') {
-        filtrosActuales.precioMin = elementos.precioMinInput.value ? +elementos.precioMinInput.value : null;
-        filtrosActuales.precioMax = elementos.precioMaxInput.value ? +elementos.precioMaxInput.value : null;
-      } else {
-        filtrosActuales.tamañoMin = elementos.tamañoMinInput.value ? +elementos.tamañoMinInput.value : null;
-        filtrosActuales.tamañoMax = elementos.tamañoMaxInput.value ? +elementos.tamañoMaxInput.value : null;
+        filtrosActuales.precioMin = elementos.precioMinInput?.value ? +elementos.precioMinInput.value : null;
+        filtrosActuales.precioMax = elementos.precioMaxInput?.value ? +elementos.precioMaxInput.value : null;
+      } else if (t === 'tamaño') {
+        filtrosActuales.tamañoMin = elementos.tamañoMinInput?.value ? +elementos.tamañoMinInput.value : null;
+        filtrosActuales.tamañoMax = elementos.tamañoMaxInput?.value ? +elementos.tamañoMaxInput.value : null;
       }
       aplicarFiltros();
     });
@@ -812,6 +828,7 @@ function init() {
     return;
   }
   
+  console.log('Inicializando la aplicación...');
   cargarCarrito();
   cargarProductosDesdeSheets();
   inicializarEventos();
