@@ -7,6 +7,8 @@ const UPLOAD_TOKEN = process.env.UPLOAD_TOKEN;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 
 // URL pública de tu Google Sheets en formato CSV
+
+
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
 
 // Configuración de Vercel Blob
