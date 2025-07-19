@@ -6,12 +6,12 @@ const LS_CARRITO_KEY = 'carrito';
 const UPLOAD_TOKEN = process.env.UPLOAD_TOKEN;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 
+// URL pública de tu Google Sheets en formato CSV
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
 
-const SHEET_CSV_URL = process.env.SHEET_CSV_URL; // Sin valor por defecto si está en Vercel
 if (!SHEET_CSV_URL) {
-  console.error('SHEET_CSV_URL no está definida en las variables de entorno');
+  console.error('SHEET_CSV_URL no está definida');
   mostrarNotificacion('Error de configuración. Contacte al soporte.', 'error');
-  return;
 }
 
 // ===============================
@@ -122,20 +122,24 @@ function actualizarContadorCarrito() {
 // ===============================
 async function cargarProductosDesdeSheets() {
   try {
-    const resp = await fetch('/api/sheets', {
+    const resp = await fetch(SHEET_CSV_URL, {
       headers: { 'Cache-Control': 'no-store' }
     });
+    
     if (!resp.ok) throw new Error(`Error HTTP: ${resp.status}`);
+    
     const csvText = await resp.text();
     const { data, errors } = Papa.parse(csvText, {
       header: true,
       skipEmptyLines: true,
       transformHeader: h => h.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
     });
+    
     if (errors.length) {
       console.error('Errores al parsear CSV:', errors);
       throw new Error('Error al procesar los datos');
     }
+    
     productos = data
       .filter(r => r.id && r.nombre && r.precio)
       .map(r => ({
@@ -145,14 +149,16 @@ async function cargarProductosDesdeSheets() {
         precio: parseFloat(r.precio),
         stock: parseInt(r.cantidad, 10) || 0,
         imagenes: [r.foto, r['foto-1'], r['foto-2'], r['foto-3'], r['foto-4']]
-          .filter(url => url && typeof url === 'string' && url.trim() !== ''),
+          .filter(url => url && typeof url === 'string' && url.trim() !== '')
+          .map(url => url.trim()),
         adicionales: r.adicionales?.trim() || 'Material no especificado',
         alto: parseFloat(r.alto) || null,
         ancho: parseFloat(r.ancho) || null,
         profundidad: parseFloat(r.profundidad) || null,
-        categoria: (r.categoria?.trim().toLowerCase() || 'todos'),
+        categoria: (r.categoria?.trim().toLowerCase() || 'otros'),
         tamaño: parseFloat(r.tamaño) || null
       }));
+    
     actualizarUI();
   } catch (e) {
     console.error('Error al cargar productos:', e);
@@ -198,18 +204,6 @@ function crearCardProducto(p) {
       <p class="producto-stock">
         ${agot ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${disp}`}
       </p>
-      <div class="upload-section">
-        <label for="file-upload-${p.id}" class="upload-label">
-          <i class="fas fa-camera"></i> Añadir foto
-        </label>
-        <input
-          type="file"
-          id="file-upload-${p.id}"
-          class="file-upload"
-          data-id="${p.id}"
-          accept="image/*"
-        >
-      </div>
       <div class="card-acciones">
         <input
           type="number"
@@ -283,80 +277,7 @@ function renderizarProductos() {
     }
   });
   
-  setupUploadListeners();
   renderizarPaginacion(list.length);
-}
-
-// ===============================
-// SUBIDA DE IMÁGENES
-// ===============================
-async function subirImagen(productId, file) {
-  if (!file.type.startsWith('image/')) {
-    throw new Error('Solo se permiten archivos de imagen');
-  }
-  
-  if (file.size > MAX_IMAGE_SIZE) {
-    throw new Error(`La imagen es demasiado grande (máximo ${MAX_IMAGE_SIZE / 1024 / 1024}MB)`);
-  }
-  
-  try {
-    const formData = new FormData();
-    formData.append('image', file);
-    formData.append('productId', productId);
-    
-    const resp = await fetch('/api/upload', {
-      method: 'POST',
-      headers: {
-        'x-upload-token': UPLOAD_TOKEN
-      },
-      body: formData
-    });
-    
-    if (!resp.ok) {
-      const errorData = await resp.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Error al subir la imagen');
-    }
-    
-    const data = await resp.json();
-    return data.url;
-  } catch (err) {
-    console.error('Error al subir imagen:', err);
-    throw err;
-  }
-}
-
-function setupUploadListeners() {
-  document.querySelectorAll('.file-upload').forEach(input => {
-    input.addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      
-      const id = parseInt(e.target.dataset.id, 10);
-      const label = e.target.previousElementSibling;
-      const originalHTML = label.innerHTML;
-      
-      label.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo...';
-      e.target.disabled = true;
-      
-      try {
-        const url = await subirImagen(id, file);
-        const prod = productos.find(x => x.id === id);
-        
-        if (prod) {
-          prod.imagenes.unshift(url);
-          actualizarUI();
-          mostrarNotificacion('Imagen subida con éxito', 'exito');
-        }
-      } catch (err) {
-        console.error('Error al subir imagen:', err);
-        mostrarNotificacion(err.message, 'error');
-      } finally {
-        label.innerHTML = originalHTML;
-        e.target.disabled = false;
-        e.target.value = '';
-      }
-    });
-  });
 }
 
 // ===============================
@@ -478,7 +399,14 @@ function mostrarModalProducto(p) {
     <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
     <div class="modal-grid">
       <div class="modal-imagenes">
-        <img src="${p.imagenes[0] || '/img/placeholder.jpg'}" class="modal-img-principal" alt="${p.nombre}" loading="lazy">
+        ${p.imagenes.map((img, i) => `
+          <img 
+            src="${img}" 
+            class="modal-img ${i === 0 ? 'modal-img-principal' : 'modal-img-secundaria'}" 
+            alt="${p.nombre} ${i + 1}"
+            loading="lazy"
+          >
+        `).join('')}
       </div>
       <div class="modal-info">
         <h2>${p.nombre}</h2>
@@ -749,14 +677,4 @@ if (document.readyState !== 'loading') {
   init();
 } else {
   document.addEventListener('DOMContentLoaded', init);
-}
-
-// Exportar para módulos si es necesario
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    init,
-    toggleCarrito,
-    mostrarModalProducto,
-    cerrarModal
-  };
 }
