@@ -564,7 +564,10 @@ function actualizarUI() {
 function aplicarFiltros() {
   paginaActual = 1;
   actualizarUI();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Save current scroll position and restore it after re-rendering
+  const currentScrollPosition = window.scrollY;
+  actualizarUI();
+  window.scrollTo({ top: currentScrollPosition, behavior: 'auto' });
 }
 
 // ===============================
