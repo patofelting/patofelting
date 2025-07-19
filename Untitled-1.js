@@ -9,6 +9,10 @@ const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 // URL pública de tu Google Sheets en formato CSV
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
 
+// Configuración de Vercel Blob
+const BLOB_API_URL = '/api/blob';
+const BLOB_READ_URL_PREFIX = 'https://te21ra7uSonahf17.public.blob.vercel-storage.com/';
+
 if (!SHEET_CSV_URL) {
   console.error('SHEET_CSV_URL no está definida');
   mostrarNotificacion('Error de configuración. Contacte al soporte.', 'error');
@@ -118,7 +122,7 @@ function actualizarContadorCarrito() {
 }
 
 // ===============================
-// CARGA DE PRODUCTOS DESDE SHEETS
+// CARGA DE PRODUCTOS DESDE SHEETS CON VERCELL BLOB
 // ===============================
 async function cargarProductosDesdeSheets() {
   try {
@@ -142,28 +146,117 @@ async function cargarProductosDesdeSheets() {
     
     productos = data
       .filter(r => r.id && r.nombre && r.precio)
-      .map(r => ({
-        id: parseInt(r.id, 10),
-        nombre: r.nombre.trim(),
-        descripcion: r.descripcion?.trim() || '',
-        precio: parseFloat(r.precio),
-        stock: parseInt(r.cantidad, 10) || 0,
-        imagenes: [r.foto, r['foto-1'], r['foto-2'], r['foto-3'], r['foto-4']]
-          .filter(url => url && typeof url === 'string' && url.trim() !== '')
-          .map(url => url.trim()),
-        adicionales: r.adicionales?.trim() || 'Material no especificado',
-        alto: parseFloat(r.alto) || null,
-        ancho: parseFloat(r.ancho) || null,
-        profundidad: parseFloat(r.profundidad) || null,
-        categoria: (r.categoria?.trim().toLowerCase() || 'otros'),
-        tamaño: parseFloat(r.tamaño) || null
-      }));
+      .map(r => {
+        // Procesar imágenes desde Vercel Blob
+        const imagenesBlob = [
+          r.foto, 
+          r['foto-1'], 
+          r['foto-2'], 
+          r['foto-3'], 
+          r['foto-4']
+        ].filter(url => url && typeof url === 'string' && url.trim() !== '')
+         .map(url => {
+           // Si la URL ya es completa, usarla directamente
+           if (url.startsWith('http')) return url;
+           // Si no, asumir que es un path de Vercel Blob
+           return `${BLOB_READ_URL_PREFIX}${url.trim()}`;
+         });
+
+        return {
+          id: parseInt(r.id, 10),
+          nombre: r.nombre.trim(),
+          descripcion: r.descripcion?.trim() || '',
+          precio: parseFloat(r.precio),
+          stock: parseInt(r.cantidad, 10) || 0,
+          imagenes: imagenesBlob,
+          adicionales: r.adicionales?.trim() || 'Material no especificado',
+          alto: parseFloat(r.alto) || null,
+          ancho: parseFloat(r.ancho) || null,
+          profundidad: parseFloat(r.profundidad) || null,
+          categoria: (r.categoria?.trim().toLowerCase() || 'otros'),
+          tamaño: parseFloat(r.tamaño) || null,
+          blobPaths: imagenesBlob.map(url => url.replace(BLOB_READ_URL_PREFIX, ''))
+        };
+      });
     
     actualizarUI();
   } catch (e) {
     console.error('Error al cargar productos:', e);
     mostrarNotificacion('Error al cargar productos. Intente recargar la página.', 'error');
   }
+}
+
+// ===============================
+// SUBIDA DE IMÁGENES A VERCELL BLOB
+// ===============================
+async function subirImagenABlob(productId, file) {
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Solo se permiten archivos de imagen');
+  }
+  
+  if (file.size > MAX_IMAGE_SIZE) {
+    throw new Error(`La imagen es demasiado grande (máximo ${MAX_IMAGE_SIZE / 1024 / 1024}MB)`);
+  }
+  
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('productId', productId);
+    
+    const resp = await fetch(BLOB_API_URL, {
+      method: 'POST',
+      headers: {
+        'x-upload-token': UPLOAD_TOKEN
+      },
+      body: formData
+    });
+    
+    if (!resp.ok) {
+      const errorData = await resp.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Error al subir la imagen');
+    }
+    
+    const data = await resp.json();
+    return `${BLOB_READ_URL_PREFIX}${data.path}`;
+  } catch (err) {
+    console.error('Error al subir imagen:', err);
+    throw err;
+  }
+}
+
+function setupUploadListeners() {
+  document.querySelectorAll('.file-upload').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const id = parseInt(e.target.dataset.id, 10);
+      const label = e.target.previousElementSibling;
+      const originalHTML = label.innerHTML;
+      
+      label.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo...';
+      e.target.disabled = true;
+      
+      try {
+        const url = await subirImagenABlob(id, file);
+        const prod = productos.find(x => x.id === id);
+        
+        if (prod) {
+          prod.imagenes.unshift(url);
+          prod.blobPaths.unshift(url.replace(BLOB_READ_URL_PREFIX, ''));
+          actualizarUI();
+          mostrarNotificacion('Imagen subida con éxito', 'exito');
+        }
+      } catch (err) {
+        console.error('Error al subir imagen:', err);
+        mostrarNotificacion(err.message, 'error');
+      } finally {
+        label.innerHTML = originalHTML;
+        e.target.disabled = false;
+        e.target.value = '';
+      }
+    });
+  });
 }
 
 // ===============================
@@ -204,6 +297,18 @@ function crearCardProducto(p) {
       <p class="producto-stock">
         ${agot ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${disp}`}
       </p>
+      <div class="upload-section">
+        <label for="file-upload-${p.id}" class="upload-label">
+          <i class="fas fa-camera"></i> Añadir foto
+        </label>
+        <input
+          type="file"
+          id="file-upload-${p.id}"
+          class="file-upload"
+          data-id="${p.id}"
+          accept="image/*"
+        >
+      </div>
       <div class="card-acciones">
         <input
           type="number"
@@ -277,6 +382,7 @@ function renderizarProductos() {
     }
   });
   
+  setupUploadListeners();
   renderizarPaginacion(list.length);
 }
 
@@ -399,14 +505,16 @@ function mostrarModalProducto(p) {
     <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
     <div class="modal-grid">
       <div class="modal-imagenes">
-        ${p.imagenes.map((img, i) => `
-          <img 
-            src="${img}" 
-            class="modal-img ${i === 0 ? 'modal-img-principal' : 'modal-img-secundaria'}" 
-            alt="${p.nombre} ${i + 1}"
-            loading="lazy"
-          >
-        `).join('')}
+        <div class="modal-img-principal-container">
+          <img src="${p.imagenes[0] || '/img/placeholder.jpg'}" class="modal-img-principal" alt="${p.nombre}" loading="lazy">
+        </div>
+        ${p.imagenes.length > 1 ? `
+        <div class="modal-thumbnails">
+          ${p.imagenes.slice(1).map((img, i) => `
+            <img src="${img}" class="modal-thumbnail" alt="Miniatura ${i + 1}" data-index="${i + 1}">
+          `).join('')}
+        </div>
+        ` : ''}
       </div>
       <div class="modal-info">
         <h2>${p.nombre}</h2>
@@ -438,6 +546,21 @@ function mostrarModalProducto(p) {
       </div>
     </div>
   `;
+  
+  // Configurar eventos para miniaturas
+  if (p.imagenes.length > 1) {
+    const thumbnails = elementos.modalContenido.querySelectorAll('.modal-thumbnail');
+    const mainImg = elementos.modalContenido.querySelector('.modal-img-principal');
+    
+    thumbnails.forEach(thumb => {
+      thumb.addEventListener('click', () => {
+        const index = thumb.dataset.index;
+        mainImg.src = p.imagenes[index];
+        thumbnails.forEach(t => t.classList.remove('active'));
+        thumb.classList.add('active');
+      });
+    });
+  }
   
   elementos.modalContenido.querySelector('.cerrar-modal').addEventListener('click', cerrarModal);
   elementos.modalContenido.querySelector('.boton-agregar')?.addEventListener('click', () => {
