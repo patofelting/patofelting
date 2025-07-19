@@ -36,7 +36,11 @@ let filtrosActuales = {
 // ===============================
 // REFERENCIAS AL DOM
 // ===============================
-const getElement = (id) => document.getElementById(id) || console.error(`Elemento no encontrado: ${id}`);
+const getElement = (id) => {
+  const element = document.getElementById(id);
+  if (!element) console.error(`Elemento no encontrado: ${id}`);
+  return element;
+};
 
 const elementos = {
   galeriaProductos: getElement('galeria-productos'),
@@ -122,72 +126,109 @@ function actualizarContadorCarrito() {
 }
 
 // ===============================
-// CARGA DE PRODUCTOS DESDE SHEETS CON VERCELL BLOB
+// CARGA DE PRODUCTOS DESDE SHEETS CON VERCEL BLOB
 // ===============================
 async function cargarProductosDesdeSheets() {
   try {
+    if (elementos.galeriaProductos) {
+      elementos.galeriaProductos.innerHTML = '<p>Cargando productos...</p>';
+    }
+    
     const resp = await fetch(SHEET_CSV_URL, {
       headers: { 'Cache-Control': 'no-store' }
     });
     
-    if (!resp.ok) throw new Error(`Error HTTP: ${resp.status}`);
+    if (!resp.ok) {
+      throw new Error(`Error HTTP: ${resp.status} - ${resp.statusText}`);
+    }
     
     const csvText = await resp.text();
+    console.log('CSV Text:', csvText.substring(0, 200)); // Log first 200 chars for debugging
+    
     const { data, errors } = Papa.parse(csvText, {
       header: true,
       skipEmptyLines: true,
-      transformHeader: h => h.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      transformHeader: h => h
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, '') // Remove spaces for matching
     });
     
     if (errors.length) {
       console.error('Errores al parsear CSV:', errors);
-      throw new Error('Error al procesar los datos');
+      throw new Error('Error al procesar los datos del CSV');
+    }
+    
+    console.log('Parsed Data:', data); // Log parsed data for debugging
+    
+    if (!data || data.length === 0) {
+      throw new Error('No se encontraron productos en el CSV');
     }
     
     productos = data
-      .filter(r => r.id && r.nombre && r.precio)
+      .filter(r => r.id && r.nombre && r.precio) // Require only essential fields
       .map(r => {
         // Procesar imágenes desde Vercel Blob
         const imagenesBlob = [
-          r.foto, 
-          r['foto-1'], 
-          r['foto-2'], 
-          r['foto-3'], 
-          r['foto-4']
+          r.foto
         ].filter(url => url && typeof url === 'string' && url.trim() !== '')
          .map(url => {
-           // Si la URL ya es completa, usarla directamente
-           if (url.startsWith('http')) return url;
-           // Si no, asumir que es un path de Vercel Blob
-           return `${BLOB_READ_URL_PREFIX}${url.trim()}`;
+           if (url.startsWith('http')) return url; // Use full URL if provided
+           return `${BLOB_READ_URL_PREFIX}${url.trim()}`; // Append Vercel Blob prefix
          });
-
+        
         return {
           id: parseInt(r.id, 10),
-          nombre: r.nombre.trim(),
-          descripcion: r.descripcion?.trim() || '',
-          precio: parseFloat(r.precio),
+          nombre: r.nombre ? r.nombre.trim() : 'Sin Nombre',
+          descripcion: r.descripcion ? r.descripcion.trim() : '',
+          precio: parseFloat(r.precio) || 0,
           stock: parseInt(r.cantidad, 10) || 0,
-          imagenes: imagenesBlob,
-          adicionales: r.adicionales?.trim() || 'Material no especificado',
+          imagenes: imagenesBlob.length ? imagenesBlob : ['/img/placeholder.jpg'],
+          adicionales: r.adicionales ? r.adicionales.trim() : 'Material no especificado',
           alto: parseFloat(r.alto) || null,
           ancho: parseFloat(r.ancho) || null,
           profundidad: parseFloat(r.profundidad) || null,
-          categoria: (r.categoria?.trim().toLowerCase() || 'otros'),
+          categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
           tamaño: parseFloat(r.tamaño) || null,
-          blobPaths: imagenesBlob.map(url => url.replace(BLOB_READ_URL_PREFIX, ''))
+          blobPaths: imagenesBlob.map(url => url.replace(BLOB_READ_URL_PREFIX, '')),
+          vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
+          estado: r.estado ? r.estado.trim() : ''
         };
       });
     
+    console.log('Productos procesados:', productos); // Log processed products
+    
+    if (productos.length === 0) {
+      throw new Error('No se encontraron productos válidos después del filtrado');
+    }
+    
+    // Actualizar opciones de categoría en el filtro
+    actualizarCategorias();
     actualizarUI();
   } catch (e) {
     console.error('Error al cargar productos:', e);
-    mostrarNotificacion('Error al cargar productos. Intente recargar la página.', 'error');
+    if (elementos.galeriaProductos) {
+      elementos.galeriaProductos.innerHTML = '<p>No se pudieron cargar los productos. Intente recargar la página.</p>';
+    }
+    mostrarNotificacion(`Error al cargar productos: ${e.message}. Intente recargar la página.`, 'error');
   }
 }
 
 // ===============================
-// SUBIDA DE IMÁGENES A VERCELL BLOB
+// ACTUALIZAR CATEGORÍAS
+// ===============================
+function actualizarCategorias() {
+  if (!elementos.selectCategoria) return;
+  
+  const categorias = ['todos', ...new Set(productos.map(p => p.categoria))];
+  elementos.selectCategoria.innerHTML = categorias
+    .map(cat => `<option value="${cat}">${cat.charAt(0).toUpperCase() + cat.slice(1)}</option>`)
+    .join('');
+}
+
+// ===============================
+// SUBIDA DE IMÁGENES A VERCEL BLOB
 // ===============================
 async function subirImagenABlob(productId, file) {
   if (!file.type.startsWith('image/')) {
@@ -275,7 +316,8 @@ function filtrarProductos(lista) {
       (categoria === 'todos' || p.categoria === categoria) &&
       (!busqueda || 
        p.nombre.toLowerCase().includes(busquedaLower) || 
-       p.descripcion.toLowerCase().includes(busquedaLower))
+       p.descripcion.toLowerCase().includes(busquedaLower)) &&
+      !p.vendido // Exclude sold products
     );
   });
 }
@@ -357,13 +399,22 @@ function renderizarPaginacion(total) {
 }
 
 function renderizarProductos() {
-  if (!elementos.galeriaProductos) return;
+  if (!elementos.galeriaProductos) {
+    console.error('galeria-productos no encontrado en el DOM');
+    return;
+  }
   
   const list = filtrarProductos(productos);
+  console.log('Productos filtrados:', list); // Log filtered products
+  
   const inicio = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
   const slice = list.slice(inicio, inicio + PRODUCTOS_POR_PAGINA);
   
-  elementos.galeriaProductos.innerHTML = slice.map(crearCardProducto).join('');
+  if (slice.length === 0) {
+    elementos.galeriaProductos.innerHTML = '<p>No se encontraron productos con los filtros aplicados.</p>';
+  } else {
+    elementos.galeriaProductos.innerHTML = slice.map(crearCardProducto).join('');
+  }
   
   elementos.galeriaProductos.addEventListener('click', (e) => {
     const target = e.target.closest('.boton-agregar');
@@ -525,7 +576,7 @@ function mostrarModalProducto(p) {
         <p class="modal-descripcion">${p.descripcion}</p>
         ${p.adicionales ? `<p class="modal-adicionales"><strong>Materiales:</strong> ${p.adicionales}</p>` : ''}
         ${p.alto && p.ancho ? `<p class="modal-medidas"><strong>Medidas:</strong> Alto: ${p.alto}cm, Ancho: ${p.ancho}cm${p.profundidad ? `, Profundidad: ${p.profundidad}cm` : ''}</p>` : ''}
-        
+        ${p.estado ? `<p class="modal-estado"><strong>Estado:</strong> ${p.estado}</p>` : ''}
         <div class="modal-acciones">
           <input
             type="number"
@@ -547,7 +598,6 @@ function mostrarModalProducto(p) {
     </div>
   `;
   
-  // Configurar eventos para miniaturas
   if (p.imagenes.length > 1) {
     const thumbnails = elementos.modalContenido.querySelectorAll('.modal-thumbnail');
     const mainImg = elementos.modalContenido.querySelector('.modal-img-principal');
@@ -624,12 +674,10 @@ function toggleCarrito() {
 // INICIALIZACIÓN DE EVENTOS
 // ===============================
 function inicializarEventos() {
-  // Carrito
   elementos.carritoBtnMain?.addEventListener('click', toggleCarrito);
   elementos.carritoOverlay?.addEventListener('click', toggleCarrito);
   elementos.btnCerrarCarrito?.addEventListener('click', toggleCarrito);
   
-  // Vaciar carrito
   elementos.btnVaciarCarrito?.addEventListener('click', () => {
     carrito = [];
     guardarCarrito();
@@ -638,7 +686,6 @@ function inicializarEventos() {
     mostrarNotificacion('Carrito vaciado', 'info');
   });
   
-  // Finalizar compra
   elementos.btnFinalizarCompra?.addEventListener('click', () => {
     if (carrito.length === 0) {
       mostrarNotificacion('El carrito está vacío', 'error');
@@ -647,7 +694,6 @@ function inicializarEventos() {
     elementos.avisoPreCompraModal.style.display = 'flex';
   });
   
-  // Confirmar compra
   elementos.btnEntendidoAviso?.addEventListener('click', () => {
     mostrarNotificacion('Compra finalizada con éxito', 'exito');
     carrito = [];
@@ -657,12 +703,10 @@ function inicializarEventos() {
     elementos.avisoPreCompraModal.style.display = 'none';
   });
   
-  // Cancelar compra
   elementos.btnCancelarAviso?.addEventListener('click', () => {
     elementos.avisoPreCompraModal.style.display = 'none';
   });
   
-  // Filtros
   elementos.inputBusqueda?.addEventListener('input', (e) => {
     filtrosActuales.busqueda = e.target.value.toLowerCase();
     aplicarFiltros();
@@ -707,31 +751,26 @@ function inicializarEventos() {
     aplicarFiltros();
   });
   
-  // Menú hamburguesa
   elementos.hamburguesaBtn?.addEventListener('click', () => {
     elementos.menu?.classList.toggle('open');
   });
   
-  // Botón flotante
   elementos.btnFlotante?.addEventListener('click', () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
   
-  // Cerrar modal con ESC
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       cerrarModal();
     }
   });
   
-  // FAQ toggles
   elementos.faqToggles?.forEach(toggle => {
     toggle.addEventListener('click', () => {
       toggle.parentElement?.classList.toggle('active');
     });
   });
   
-  // Formulario de contacto
   elementos.formContacto?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -777,13 +816,12 @@ function init() {
   cargarProductosDesdeSheets();
   inicializarEventos();
   
-  // Lazy loading de imágenes
   if ('IntersectionObserver' in window) {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           const img = entry.target;
-          img.src = img.dataset.src;
+          img.src = img.dataset.src || img.src;
           observer.unobserve(img);
         }
       });
@@ -795,7 +833,6 @@ function init() {
   }
 }
 
-// Iniciar cuando el DOM esté listo
 if (document.readyState !== 'loading') {
   init();
 } else {
