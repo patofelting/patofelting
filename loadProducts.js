@@ -1,5 +1,5 @@
 (function () {
-  const SHEET_CSV_URL = window.SHEET_CSV_URL;
+  const CSV_URL = window.SHEET_CSV_URL;
   const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE;
 
   function mostrarError(mensaje) {
@@ -35,10 +35,12 @@
 
   async function loadProductsFromSheets() {
     const contenedor = document.getElementById('galeria-productos');
-    if (contenedor) contenedor.innerHTML = '<p>Cargando productos...</p>';
+    const loader = document.getElementById('product-loader');
+    if (loader) loader.hidden = false;
+    if (contenedor) contenedor.innerHTML = '';
 
     try {
-      const resp = await fetch(SHEET_CSV_URL, { cache: 'no-cache' });
+      const resp = await fetch(CSV_URL, { cache: 'no-cache' });
       if (!resp.ok) throw new Error('No se pudo obtener el CSV');
       const csv = await resp.text();
 
@@ -67,6 +69,8 @@
     } catch (err) {
       console.error(err);
       mostrarError('No se pudieron cargar los productos.');
+    } finally {
+      if (loader) loader.hidden = true;
     }
   }
 
