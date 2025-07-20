@@ -214,19 +214,35 @@
     </div>
   </section>
 
-  <section id="preguntas" class="faqs">
-    <div class="container">
-      <h2>Preguntas Frecuentes</h2>
-      <div class="faq-item">
-        <div class="faq-toggle">¿Cuánto tiempo tarda en llegar mi pedido?</div>
-        <div class="faq-content">El tiempo de entrega depende de la complejidad y el volumen de pedidos, generalmente entre 7 y 15 días hábiles.</div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-toggle">¿Puedo personalizar mi figura?</div>
-        <div class="faq-content">¡Sí! Ofrecemos personalización total, contáctame para discutir tu idea.</div>
+  <section class="faqs">
+  <h2>Preguntas Frecuentes</h2>
+  <div class="faq-filter">
+    <select id="faq-category" class="faq-select">
+      <option value="todos">Todas</option>
+      <option value="envios">Envíos</option>
+      <option value="personalizacion">Personalización</option>
+      <option value="devoluciones">Devoluciones</option>
+    </select>
+    <input type="text" id="faq-search" placeholder="Buscar pregunta..." class="faq-search">
+  </div>
+  <div class="faq-items">
+    <div class="faq-item" data-category="envios">
+      <button class="faq-toggle" aria-expanded="false">¿Cuánto tiempo tarda en llegar mi pedido?</button>
+      <div class="faq-content" hidden>
+        El tiempo de entrega depende de la complejidad y el volumen de pedidos, generalmente entre 7 y 15 días hábiles.
+        <a href="#contacto" class="faq-more">Más Detalles</a>
       </div>
     </div>
-  </section>
+    <div class="faq-item" data-category="personalizacion">
+      <button class="faq-toggle" aria-expanded="false">¿Puedo personalizar mi figura?</button>
+      <div class="faq-content" hidden>
+        ¡Sí! Ofrecemos personalización total, contáctame para discutir tu idea.
+        <a href="#contacto" class="faq-more">Pregúntame</a>
+      </div>
+    </div>
+    <!-- Agrega más preguntas aquí -->
+  </div>
+</section>
 
   <footer class="footer">
     <div class="footer-content">
