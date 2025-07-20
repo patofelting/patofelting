@@ -4,6 +4,7 @@
 const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
+const PLACEHOLDER_IMAGE = 'img/placeholder.png';
 
 // ===============================
 // ESTADO GLOBAL
@@ -190,8 +191,8 @@ function crearCardProducto(p) {
   const enCarrito = carrito.find(i => i.id === p.id);
   const disp = p.stock - (enCarrito?.cantidad || 0);
   const agot = disp <= 0;
-  // Si no hay imágenes no renderizamos ninguna img ni espacio
-  const imgHtml = p.imagenes[0] ? `<img src="${p.imagenes[0]}" alt="${p.nombre}" class="producto-img" loading="lazy">` : '';
+  const primeraImagen = p.imagenes[0] || PLACEHOLDER_IMAGE;
+  const imgHtml = `<img src="${primeraImagen}" alt="${p.nombre}" class="producto-img" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'">`;
 
   return `
     <div class="producto-card" data-id="${p.id}">
@@ -283,14 +284,17 @@ function mostrarModalProducto(p) {
 
   let carruselHtml = '';
   if (p.imagenes.length > 0) {
-    carruselHtml += `<img src="${p.imagenes[0]}" class="modal-img" id="modal-img-principal" alt="${p.nombre}" loading="lazy">`;
+    const primera = p.imagenes[0] || PLACEHOLDER_IMAGE;
+    carruselHtml += `<img src="${primera}" class="modal-img" id="modal-img-principal" alt="${p.nombre}" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'">`;
     if (p.imagenes.length > 1) {
       carruselHtml += `<div class="modal-thumbnails">
         ${p.imagenes.map((img, i) => `
-          <img src="${img}" class="modal-thumbnail${i === 0 ? ' active' : ''}" alt="Miniatura ${i + 1}" data-index="${i}">
+          <img src="${img || PLACEHOLDER_IMAGE}" class="modal-thumbnail${i === 0 ? ' active' : ''}" alt="Miniatura ${i + 1}" data-index="${i}" onerror="this.src='${PLACEHOLDER_IMAGE}'">
         `).join('')}
       </div>`;
     }
+  } else {
+    carruselHtml += `<img src="${PLACEHOLDER_IMAGE}" class="modal-img" id="modal-img-principal" alt="${p.nombre}" loading="lazy">`;
   }
 
   elementos.modalContenido.innerHTML = `
