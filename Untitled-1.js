@@ -404,98 +404,192 @@ function renderizarProductos() {
 // MODAL DE PRODUCTO
 // ===============================
 
-function mostrarModalProducto(p) {
+function mostrarModalProducto(producto) {
+  // 1. Validación más robusta de elementos del DOM
   if (!elementos.productoModal || !elementos.modalContenido) {
-    console.error('Elementos del modal no encontrados');
+    console.error('Elementos del modal no encontrados', {
+      productoModal: !!elementos.productoModal,
+      modalContenido: !!elementos.modalContenido
+    });
     return;
   }
-  
-  const enCarrito = carrito.find(i => i.id === p.id);
-  const disp = p.stock - (enCarrito?.cantidad || 0);
 
-  let carruselHtml = '';
-  if (p.imagenes.length > 0) {
-    const primera = p.imagenes[0] || PLACEHOLDER_IMAGE;
-    carruselHtml += `<img src="${primera}" class="modal-img" id="modal-img-principal" alt="${p.nombre}" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'">`;
-    
-    if (p.imagenes.length > 1) {
-      carruselHtml += `<div class="modal-thumbnails">
-        ${p.imagenes.map((img, i) => `
-          <img src="${img || PLACEHOLDER_IMAGE}" class="modal-thumbnail${i === 0 ? ' active' : ''}" alt="Miniatura ${i + 1}" data-index="${i}" onerror="this.src='${PLACEHOLDER_IMAGE}'">
-        `).join('')}
-      </div>`;
+  // 2. Manejo más seguro del carrito y disponibilidad
+  const enCarrito = carrito.find(item => item.id === producto.id) || { cantidad: 0 };
+  const disponible = Math.max(0, producto.stock - enCarrito.cantidad);
+  const estaAgotado = disponible <= 0;
+
+  // 3. Generación del carrusel con manejo de errores mejorado
+  const generarCarrusel = () => {
+    const imagenesValidas = producto.imagenes.filter(img => img) || [];
+    const tieneImagenes = imagenesValidas.length > 0;
+    const primeraImagen = tieneImagenes ? imagenesValidas[0] : PLACEHOLDER_IMAGE;
+
+    let html = `
+      <img src="${primeraImagen}" 
+           class="modal-img" 
+           id="modal-img-principal" 
+           alt="${producto.nombre}" 
+           loading="lazy"
+           onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}'">`;
+
+    if (imagenesValidas.length > 1) {
+      html += `
+        <div class="modal-thumbnails">
+          ${imagenesValidas.map((img, index) => `
+            <img src="${img}" 
+                 class="modal-thumbnail ${index === 0 ? 'active' : ''}" 
+                 alt="Miniatura ${index + 1} de ${producto.nombre}"
+                 data-index="${index}"
+                 onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}'">
+          `).join('')}
+        </div>`;
     }
-  } else {
-    carruselHtml += `<img src="${PLACEHOLDER_IMAGE}" class="modal-img" id="modal-img-principal" alt="${p.nombre}" loading="lazy">`;
-  }
 
+    return html;
+  };
+
+  // 4. Plantilla más organizada y accesible
   elementos.modalContenido.innerHTML = `
-    <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
+    <button class="cerrar-modal" aria-label="Cerrar modal de producto">×</button>
     <div class="modal-flex">
       <div class="modal-carrusel">
-        ${carruselHtml}
+        ${generarCarrusel()}
       </div>
       <div class="modal-info">
-        <h2 class="modal-nombre">${p.nombre}</h2>
-        <div class="modal-precio">$U ${p.precio.toLocaleString('es-UY')}</div>
-        <div class="modal-stock ${disp > 0 ? 'disponible' : 'agotado'}">${disp > 0 ? `Disponible: ${disp}` : 'AGOTADO'}</div>
-        <div class="modal-descripcion">${p.descripcion || ''}</div>
-        ${p.adicionales ? `<div class="modal-detalles"><span>Material:</span> ${p.adicionales}</div>` : ''}
-        ${p.alto && p.ancho ? `<div class="modal-detalles"><span>Medidas:</span> ${p.alto}x${p.ancho}${p.profundidad ? 'x' + p.profundidad : ''} cm</div>` : ''}
-        ${p.estado ? `<div class="modal-detalles"><span>Estado:</span> ${p.estado}</div>` : ''}
+        <h1 class="modal-nombre">${producto.nombre}</h1>
+        <div class="modal-precio" aria-label="Precio">$U ${producto.precio.toLocaleString('es-UY')}</div>
+        <div class="modal-stock ${estaAgotado ? 'agotado' : 'disponible'}" 
+             aria-live="polite">
+          ${estaAgotado ? 'AGOTADO' : `Disponible: ${disponible}`}
+        </div>
+        
+        ${producto.descripcion ? `
+          <div class="modal-descripcion">
+            <h2 class="sr-only">Descripción</h2>
+            <p>${producto.descripcion}</p>
+          </div>
+        ` : ''}
+        
+        <div class="modal-detalles-container">
+          ${producto.adicionales ? `
+            <div class="modal-detalle">
+              <span class="detalle-etiqueta">Material:</span>
+              <span class="detalle-valor">${producto.adicionales}</span>
+            </div>
+          ` : ''}
+          
+          ${producto.alto && producto.ancho ? `
+            <div class="modal-detalle">
+              <span class="detalle-etiqueta">Medidas:</span>
+              <span class="detalle-valor">
+                ${producto.alto} × ${producto.ancho}
+                ${producto.profundidad ? ' × ' + producto.profundidad : ''} cm
+              </span>
+            </div>
+          ` : ''}
+          
+          ${producto.estado ? `
+            <div class="modal-detalle">
+              <span class="detalle-etiqueta">Estado:</span>
+              <span class="detalle-valor">${producto.estado}</span>
+            </div>
+          ` : ''}
+        </div>
+        
         <div class="modal-acciones">
-          <input type="number" value="1" min="1" max="${disp}" class="cantidad-modal-input" ${disp <= 0 ? 'disabled' : ''}>
-          <button class="boton-agregar-modal${disp <= 0 ? ' agotado' : ''}" ${disp <= 0 ? 'disabled' : ''} data-id="${p.id}">
-            ${disp <= 0 ? 'Agotado' : 'Agregar al carrito'}
+          <label for="cantidad-modal-${producto.id}" class="sr-only">Cantidad</label>
+          <input type="number" 
+                 id="cantidad-modal-${producto.id}"
+                 value="1" 
+                 min="1" 
+                 max="${disponible}" 
+                 class="cantidad-modal-input" 
+                 ${estaAgotado ? 'disabled aria-disabled="true"' : ''}>
+          
+          <button class="boton-agregar-modal ${estaAgotado ? 'agotado' : ''}" 
+                  data-id="${producto.id}"
+                  ${estaAgotado ? 'disabled aria-disabled="true"' : ''}
+                  aria-label="${estaAgotado ? 'Producto agotado' : 'Agregar al carrito'}">
+            ${estaAgotado ? 'Agotado' : 'Agregar al carrito'}
           </button>
         </div>
       </div>
     </div>
   `;
 
-  // Carrusel de imágenes
-  if (p.imagenes.length > 1) {
-    const mainImg = elementos.modalContenido.querySelector('#modal-img-principal');
-    const thumbnails = elementos.modalContenido.querySelectorAll('.modal-thumbnail');
-    
-    thumbnails.forEach((thumb, i) => {
-      thumb.addEventListener('click', () => {
-        thumbnails.forEach(t => t.classList.remove('active'));
-        thumb.classList.add('active');
-        mainImg.src = p.imagenes[i];
+  // 5. Event listeners mejorados
+  const configurarEventos = () => {
+    // Carrusel de imágenes
+    if (producto.imagenes?.length > 1) {
+      const mainImg = elementos.modalContenido.querySelector('#modal-img-principal');
+      const thumbnails = elementos.modalContenido.querySelectorAll('.modal-thumbnail');
+      
+      thumbnails.forEach(thumb => {
+        thumb.addEventListener('click', () => {
+          const index = thumb.dataset.index;
+          thumbnails.forEach(t => t.classList.remove('active'));
+          thumb.classList.add('active');
+          mainImg.src = producto.imagenes[index];
+        });
       });
-    });
-  }
-
-  // Mostrar modal
-  elementos.productoModal.style.display = 'flex';
-  document.body.classList.add('no-scroll');
-
-  // Event listeners
-  const cerrarBtn = elementos.modalContenido.querySelector('.cerrar-modal');
-  if (cerrarBtn) {
-    cerrarBtn.addEventListener('click', cerrarModal);
-  }
-
-  const agregarBtn = elementos.modalContenido.querySelector('.boton-agregar-modal');
-  if (agregarBtn) {
-    agregarBtn.addEventListener('click', () => {
-      const cantidad = +elementos.modalContenido.querySelector('.cantidad-modal-input').value || 1;
-      agregarAlCarrito(p.id, cantidad);
-      cerrarModal();
-    });
-  }
-
-  elementos.productoModal.addEventListener('click', (e) => {
-    if (e.target === elementos.productoModal) {
-      cerrarModal();
     }
-  });
 
-  function cerrarModal() {
-    elementos.productoModal.style.display = 'none';
-    document.body.classList.remove('no-scroll');
-  }
+    // Cerrar modal
+    const cerrarBtn = elementos.modalContenido.querySelector('.cerrar-modal');
+    cerrarBtn?.addEventListener('click', cerrarModal);
+
+    // Agregar al carrito
+    const agregarBtn = elementos.modalContenido.querySelector('.boton-agregar-modal');
+    agregarBtn?.addEventListener('click', () => {
+      const cantidadInput = elementos.modalContenido.querySelector('.cantidad-modal-input');
+      const cantidad = Math.min(
+        parseInt(cantidadInput.value) || 1,
+        disponible
+      );
+      
+      agregarAlCarrito(producto.id, cantidad);
+      mostrarNotificacion(`${producto.nombre} agregado al carrito`, 'exito');
+      cerrarModal();
+    });
+
+    // Cerrar al hacer clic fuera
+    elementos.productoModal.addEventListener('click', (e) => {
+      if (e.target === elementos.productoModal) {
+        cerrarModal();
+      }
+    });
+  };
+
+  // 6. Mostrar el modal con animación
+  const mostrarModal = () => {
+    elementos.productoModal.style.display = 'flex';
+    document.body.classList.add('no-scroll');
+    
+    // Pequeño delay para la animación
+    setTimeout(() => {
+      elementos.productoModal.style.opacity = '1';
+      elementos.productoModal.style.visibility = 'visible';
+      
+      // Enfocar el botón de cerrar para accesibilidad
+      elementos.modalContenido.querySelector('.cerrar-modal')?.focus();
+    }, 10);
+  };
+
+  // 7. Función para cerrar el modal
+  const cerrarModal = () => {
+    elementos.productoModal.style.opacity = '0';
+    elementos.productoModal.style.visibility = 'hidden';
+    
+    setTimeout(() => {
+      elementos.productoModal.style.display = 'none';
+      document.body.classList.remove('no-scroll');
+    }, 300);
+  };
+
+  // Inicializar
+  configurarEventos();
+  mostrarModal();
 }
 
 // ===============================
