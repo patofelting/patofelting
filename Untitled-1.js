@@ -585,36 +585,6 @@ function inicializarEventos() {
     });
   });
   
-  elementos.formContacto?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const formData = new FormData(elementos.formContacto);
-    const data = Object.fromEntries(formData.entries());
-    
-    try {
-      const response = await fetch('/api/contacto', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Error al enviar el mensaje');
-      }
-      
-      elementos.formContacto.reset();
-      elementos.successMessage.style.display = 'block';
-      
-      setTimeout(() => {
-        elementos.successMessage.style.display = 'none';
-      }, 5000);
-    } catch (error) {
-      console.error('Error:', error);
-      mostrarNotificacion('Error al enviar el mensaje. Por favor, intente nuevamente.', 'error');
-    }
-  });
 }
 
 // ===============================
@@ -653,33 +623,48 @@ if (document.readyState !== 'loading') {
 } else {
   document.addEventListener('DOMContentLoaded', init);
 }
-// EmailJS init seguro
-  if (window.emailjs) {
-    emailjs.init("o4IxJz0Zz-LQ8jYKG"); 
-    const formContacto = document.getElementById('form-contacto');
-    if (formContacto) {
-      formContacto.addEventListener('submit', function(event) {
-        event.preventDefault();
-        const btnEnviar = document.getElementById('btn-enviar');
-        const successMessage = document.getElementById('success-message');
-        btnEnviar.disabled = true;
-        btnEnviar.textContent = 'Enviando...';
-        emailjs.sendForm('service_89by24g', 'template_8mn7hdp', this) 
-          .then(function() {
-            btnEnviar.disabled = false;
-            btnEnviar.textContent = 'Enviar mensaje';
-            formContacto.reset();
-            if (successMessage) {
-              successMessage.classList.remove('hidden');
-              setTimeout(() => successMessage.classList.add('hidden'), 5000);
-            }
-            mostrarNotificacion("¡Mensaje enviado con éxito!", "exito");
-          }, function() {
-            btnEnviar.disabled = false;
-            btnEnviar.textContent = 'Enviar mensaje';
-            mostrarNotificacion("Error al enviar mensaje. Intenta de nuevo.", "error");
-          });
+
+// EmailJS init seguro y manejo único del formulario de contacto
+if (window.emailjs) {
+  emailjs.init("o4IxJz0Zz-LQ8jYKG");
+}
+
+const formContacto = document.getElementById('form-contacto');
+if (formContacto) {
+  formContacto.addEventListener('submit', async function(event) {
+    event.preventDefault();
+    const btnEnviar = document.getElementById('btn-enviar');
+    const successMessage = document.getElementById('success-message');
+    btnEnviar.disabled = true;
+    btnEnviar.textContent = 'Enviando...';
+
+    const formData = new FormData(formContacto);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+      const resp = await fetch('/api/contacto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
       });
+      if (!resp.ok) throw new Error('Backend error');
+
+      if (window.emailjs) {
+        await emailjs.sendForm('service_89by24g', 'template_8mn7hdp', formContacto);
+      }
+
+      formContacto.reset();
+      if (successMessage) {
+        successMessage.classList.remove('hidden');
+        setTimeout(() => successMessage.classList.add('hidden'), 5000);
+      }
+      mostrarNotificacion('¡Mensaje enviado con éxito!', 'exito');
+    } catch (err) {
+      console.error(err);
+      mostrarNotificacion('Error al enviar el mensaje. Por favor, intente nuevamente.', 'error');
+    } finally {
+      btnEnviar.disabled = false;
+      btnEnviar.textContent = 'Enviar mensaje';
     }
-	
-  }
+  });
+}

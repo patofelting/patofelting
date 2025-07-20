@@ -32,39 +32,39 @@ function mostrarProductos(productos) {
   contenedor.innerHTML = productos.map(crearProductoHTML).join('');
 }
 
-function loadProductsFromSheets() {
+async function loadProductsFromSheets() {
   const contenedor = document.getElementById('galeria-productos');
   if (contenedor) contenedor.innerHTML = '<p>Cargando productos...</p>';
 
-  fetch(SHEET_CSV_URL)
-    .then(r => {
-      if (!r.ok) throw new Error('No se pudo obtener el CSV');
-      return r.text();
-    })
-    .then(csv => {
-      if (typeof Papa === 'undefined') throw new Error('PapaParse no disponible');
-      const { data, errors } = Papa.parse(csv, {
-        header: true,
-        skipEmptyLines: true
-      });
-      if (errors.length) {
-        console.error('Errores al parsear CSV', errors);
-        throw new Error('Error al procesar los datos');
-      }
-      const productos = data.map(row => ({
-        id: parseInt(row.id, 10) || 0,
-        nombre: row.nombre ? row.nombre.trim() : 'Sin nombre',
-        descripcion: row.descripcion ? row.descripcion.trim() : '',
-        precio: parseFloat(row.precio) || 0,
-        stock: parseInt(row.cantidad, 10) || 0,
-        imagenes: row.foto ? row.foto.split(',').map(u => u.trim()).filter(Boolean) : []
-      }));
-      mostrarProductos(productos);
-    })
-    .catch(err => {
-      console.error(err);
-      mostrarError('No se pudieron cargar los productos.');
+  try {
+    const r = await fetch(SHEET_CSV_URL, { cache: 'no-cache' });
+    if (!r.ok) throw new Error('No se pudo obtener el CSV');
+    const csv = await r.text();
+    if (typeof Papa === 'undefined') throw new Error('PapaParse no disponible');
+
+    const { data, errors } = Papa.parse(csv, {
+      header: true,
+      skipEmptyLines: true
     });
+    if (errors.length) {
+      console.error('Errores al parsear CSV', errors);
+      throw new Error('Error al procesar los datos');
+    }
+
+    const productos = data.map(row => ({
+      id: parseInt(row.id, 10) || 0,
+      nombre: row.nombre ? row.nombre.trim() : 'Sin nombre',
+      descripcion: row.descripcion ? row.descripcion.trim() : '',
+      precio: parseFloat(row.precio) || 0,
+      stock: parseInt(row.cantidad, 10) || 0,
+      imagenes: row.foto ? row.foto.split(',').map(u => u.trim()).filter(Boolean) : []
+    }));
+
+    mostrarProductos(productos);
+  } catch (err) {
+    console.error(err);
+    mostrarError('No se pudieron cargar los productos.');
+  }
 }
 
 document.addEventListener('DOMContentLoaded', loadProductsFromSheets);
