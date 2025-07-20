@@ -1,207 +1,145 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Patofelting - Creaciones en Fieltro</title>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="Untitled-1.css" />
-  
-  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patofelting</title>
+    <!-- Enlaza aquí tu archivo CSS (styles.css) -->
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <nav class="nav">
-    <div class="nav-container">
-      <div class="logo-container">
-        <img src="" alt="Logo Patofelting" class="logo-img" />
-        <h2 class="logo-text">Patofelting</h2>
-      </div>
-      <button class="hamburguesa" aria-label="Menú de navegación" aria-expanded="false">☰</button>
-      <button class="carrito-btn" id="carrito-btn-main" aria-label="Abrir carrito de compras">
-        <i class="fas fa-shopping-cart"></i> Carrito (<span id="contador-carrito">0</span>)
-      </button>
-      <ul id="menu" class="menu">
-        <li><a href="#inicio">Inicio</a></li>
-        <li><a href="#sobre">Sobre mí</a></li>
-        <li><a href="#productos">Productos</a></li>
-        <li><a href="#contacto">Contacto</a></li>
-        <li><a href="#preguntas">Preguntas</li>
-      </ul>
-    </div>
-  </nav>
+    
+    <nav class="nav">
+        <div class="nav-container">
+            <div class="logo-container">
+                <img src="logo.png" alt="Patofelting" class="logo-img">
+                Patofelting
+            </div>
+            <button class="hamburguesa">☰</button>
+            <ul class="menu">
+                <li><a href="#inicio">Inicio</a></li>
+                <li><a href="#sobre-mi">Sobre mí</a></li>
+                <li><a href="#productos">Productos</a></li>
+                <li><a href="#contacto">Contacto</a></li>
+                <li><a href="#preguntas">Preguntas</a></li>
+            </ul>
+            <a href="#carrito" class="carrito-link">Carrito (0)</a>
+        </div>
+    </nav>
 
-  <div id="carrito-panel" class="carrito-panel">
-    <div class="carrito-header">
-      <h2>Tu Carrito</h2>
-      <button class="cerrar-carrito" aria-label="Cerrar carrito">×</button>
-    </div>
-    <ul id="lista-carrito" class="lista-carrito"></ul>
-    <div class="carrito-footer">
-      <p id="total">Total: $U 0</p>
-      <div class="carrito-acciones">
+    <aside id="carrito-panel">
+        <div class="carrito-header">
+            <h2>Tu Carrito</h2>
+            <button class="cerrar-carrito">×</button>
+        </div>
+        <ul class="lista-carrito"></ul>
+        <p id="total">Total: $U 0</p>
         <button class="boton-vaciar-carrito">Vaciar Carrito</button>
         <button class="boton-finalizar-compra">Finalizar Compra</button>
-      </div>
-    </div>
-  </div>
-  <div class="carrito-overlay"></div>
+    </aside>
+    <div class="carrito-overlay"></div>
 
-  <section id="inicio" class="hero">
-    <video autoplay muted loop playsinline class="video-fondo" aria-hidden="true">
-      <source src="" type="" />
-      <source src="" type="" />
-      <p>Video de fondo que muestra el proceso artesanal de Patofelting.</p>
-    </video>
-    <div class="hero-content">
-      <h1>Patofelting</h1>
-      <h2>Creaciones con alma en fieltro.</h2>
-      <p>Figuras únicas, hechas a mano con amor y dedicación.</p>
-      <a href="#productos" class="cta-button">Ver Productos</a>
-    </div>
-  </section>
-
-  <section id="sobre" class="about-me seccion">
-    <div class="container">
-      <div class="about-content">
-        <div class="about-text">
-          <h2>Convierte Ideas en Arte: Descubrí el Universo de Patofelting</h2>
-          <p>¡Hola! Soy Patricia 👩‍🎨, la pasión y el corazón creativo detrás de <strong>Patofelting</strong>.</p>
-          <p>Desde 2018, he perfeccionado el arte del <strong>needle felting</strong> (fieltro con aguja), una técnica mágica que no solo transforma fibras de lana en figuras, sino que da vida a tus ideas más queridas.</p>
-          <ul>
-            <li>🧶 <strong>Maestría Artesanal:</strong> Cada creación es <strong>100% hecha a mano</strong> con las más finas fibras naturales, garantizando una calidad y calidez inigualables.</li>
-            <li>🍃 <strong>Inspiración sin Límites:</strong> ¿Sueñas con un personaje de la naturaleza, un animal querido, un recuerdo cotidiano... o ese <strong>personaje favorito?</strong>? Desde la fantasía a la realidad, diseño piezas <strong>totalmente personalizadas</strong> que capturan tu esencia y se adaptan perfectamente a tu imaginación.</li>
-            <li>✨ <strong>Más que una Figura: Una Pieza de Colección Única.</strong> Cada obra de Patofelting es <strong>irrepetible</strong>, poseyendo su propia alma, detalles exclusivos y una historia que te invita a coleccionar momentos y emociones.</li>
-          </ul>
-          <blockquote>🌿 <em>"Mi magia consiste en hilar la lana con emoción, tejiendo paciencia y amor en cada puntada, para que cada pieza se convierta en un sentimiento palpable."</em></blockquote>
-          <p class="cta">
-            ¿Listo/a para dar vida a esa idea tan especial?<br>
-            <strong>¡Conversemos! Juntos, crearemos la pieza de tus sueños.</strong> 🐑✨
-          </p>
-          <p class="cta-demanda">
-            ¿Buscás un regalo que realmente deje huella?<br>
-            🎁 Una figura de fieltro de Patofelting no es solo un objeto bello: 
-            <strong>es un recuerdo que perdura, una emoción, una historia que se cuenta sin palabras.</strong><br>
-            Desde el primer "pinchazo" de inspiración hasta el último detalle, cada creación está diseñada para decir: 
-            <em>"Esto es especialmente para vos".</em>
-          </p>
+    <section class="hero">
+        <video autoplay muted loop class="video-fondo">
+            <source src="video-proceso.mp4" type="video/mp4">
+            Video de fondo que muestra el proceso artesanal de Patofelting.
+        </video>
+        <div class="hero-content">
+            <h1>Patofelting</h1>
+            <p>Creaciones con alma en fieltro.</p>
+            <p>Figuras únicas, hechas a mano con amor y dedicación.</p>
+            <a href="#productos" class="cta-button">Ver Productos</a>
         </div>
-        <div class="about-image">
-          <img src="" alt="Logo de Patofelting" class="logo-patofelting" />
+    </section>
+
+    <section class="intro-section">
+        <h1>Convierte Ideas en Arte: Descubrí el Universo de Patofelting</h1>
+        <p>¡Hola! Soy Patricia 👩‍🎨, la pasión y el corazón creativo detrás de Patofelting.</p>
+        <p>Desde 2018, he perfeccionado el arte del needle felting, una técnica mágica que no solo transforma fibras de lana en figuras, sino que da vida a tus ideas más queridas.</p>
+
+        <h3>Maestría Artesanal</h3>
+        <p><span class="icon">🧶</span> Cada creación es 100% hecha a mano con las más finas fibras naturales, garantizando una calidad y calidez inigualables.</p>
+
+        <h3>Inspiración sin Límites</h3>
+        <p><span class="icon">🍃</span> ¿Sueñas con un personaje de la naturaleza, un animal querido, un recuerdo cotidiano... o ese personaje favorito? Diseñamos piezas totalmente personalizadas que capturan tu esencia.</p>
+
+        <h3>Más que una Figura</h3>
+        <p><span class="icon">✨</span> Una Pieza de Colección Única. Cada obra de Patofelting es irrepetible, con detalles exclusivos y una historia que te invita a coleccionar momentos.</p>
+
+        <p class="highlight">"Mi magia consiste en hilar la lana con emoción, tejiendo paciencia y amor en cada puntada."</p>
+        <a href="#contacto" class="cta-button">¡Conversemos!</a>
+
+        <h3>Un Regalo con Alma</h3>
+        <p><span class="icon">🎁</span> Una figura de fieltro de Patofelting no es solo un objeto bello: es un recuerdo que perdura, una emoción, una historia que se cuenta sin palabras.</p>
+        <p>Desde el primer "pinchazo" de inspiración hasta el último detalle, cada creación está diseñada para decir: "Esto es especialmente para vos".</p>
+    </section>
+
+    <section id="productos">
+        <h2>Nuestros Productos</h2>
+        <div class="filtros">
+            <div>
+                <label>Categorías:</label>
+                <select class="filtro-categoria">
+                    <option>Todos</option>
+                    <option>Animales</option>
+                    <option>Fantasía</option>
+                </select>
+            </div>
+            <div>
+                <label>Precio:</label>
+                <input type="number" placeholder="Min:" min="0">
+                <input type="number" placeholder="Max:" min="0">
+                <button class="aplicar-rango-btn">Aplicar</button>
+            </div>
+            <button id="boton-resetear-filtros">Resetear Filtros</button>
         </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="productos" class="productos">
-    <div class="container">
-      <h2>Nuestros Productos</h2>
-      <div class="filtros-container">
-        <div class="filtro-grupo">
-          <h3>Categorías:</h3>
-          <select id="filtro-categoria">
-            <option value="todos">Todos</option>
-            <option value="animales">Animales</option>
-            <option value="fantasia">Fantasía</option>
-          </select>
+        <div class="galeria-productos">
+            <div class="producto-card">Cargando productos...</div>
         </div>
-        <div class="filtro-grupo filtro-rango">
-          <h3>Precio:</h3>
-          <label for="precio-min">Min:</label>
-          <input type="number" id="precio-min" class="input-rango-filtro" placeholder="Ej: 100" />
-          <label for="precio-max">Max:</label>
-          <input type="number" id="precio-max" class="input-rango-filtro" placeholder="Ej: 500" />
-          <button class="aplicar-rango-btn" data-range-type="precio">Aplicar</button>
+        <div class="paginacion"></div>
+    </section>
+
+    <section id="confirmacion">
+        <h2>🧙‍♀️ Antes de confirmar tu pedido</h2>
+        <p>Te pedimos que leas cuidadosamente las especificaciones de compra: esto incluye las características del producto, los tiempos de envío, y nuestra política de devoluciones.</p>
+        <p>💫 Cada pieza es creada artesanalmente con paciencia, emoción y muchos pinchazos de amor dependiendo de la complejidad y el volumen de pedidos.</p>
+        <p>🌟 Nuestra intención es que vivas una experiencia mágica y transparente, y que tu figura llegue tal como la soñaste. Te agradecemos por valorar el trabajo hecho a mano.</p>
+        <button>Sí, he leído y deseo continuar 🐑</button>
+        <button>Cancelar compra</button>
+    </section>
+
+    <section id="contacto">
+        <h2>Contáctame</h2>
+        <p>¿Tienes alguna pregunta, una idea para una figura personalizada o simplemente quieres saludar? ¡No dudes en contactarme!</p>
+        <form>
+            <input type="text" placeholder="Nombre:" required>
+            <input type="email" placeholder="Email:" required>
+            <textarea placeholder="Mensaje:" required></textarea>
+            <button type="submit">Enviar Mensaje</button>
+            <p>¡Mensaje enviado con éxito!</p>
+        </form>
+    </section>
+
+    <section id="preguntas">
+        <h2>Preguntas Frecuentes</h2>
+        <div class="faq-section">
+            <div>
+                <h3 class="faq-toggle">¿Cuánto tiempo tarda en llegar mi pedido?</h3>
+                <p class="faq-content">El tiempo de entrega depende de la complejidad y el volumen de pedidos, generalmente entre 7 y 15 días hábiles.</p>
+            </div>
+            <div>
+                <h3 class="faq-toggle">¿Puedo personalizar mi figura?</h3>
+                <p class="faq-content">¡Sí! Ofrecemos personalización total, contáctame para discutir tu idea.</p>
+            </div>
         </div>
-        <button id="boton-resetear-filtros" class="boton-resetear-filtros">Resetear Filtros</button>
-        <input type="text" id="input-busqueda" class="input-busqueda" placeholder="Buscar por nombre o descripción..." />
-      </div>
-      <div id="galeria-productos" class="galeria-productos"></div>
-      <div id="product-loader" class="loader" hidden aria-live="polite">
-        <svg class="spinner" viewBox="0 0 50 50">
-          <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"/>
-        </svg>
-        <p>Cargando productos...</p>
-      </div>
-      <div id="paginacion" class="paginacion"></div>
-    </div>
-  </section>
+    </section>
 
-  <div class="modal-overlay" id="producto-modal">
-    <div class="modal-contenido-producto tilt-container">
-      <div id="modal-contenido"></div>
-    </div>
-  </div>
+    <footer class="footer">
+        <p>Seguime en <a href="https://x.com/patofelting">@patofelting</a></p>
+        <p>📧 <a href="mailto:patofelting@gmail.com">patofelting@gmail.com</a></p>
+        <p>© 2025 Patofelting — Hecho con amor en Uruguay 🧶</p>
+    </footer>
 
-  <div id="aviso-pre-compra-modal" class="modal-aviso" hidden>
-    <div class="modal-aviso-contenido">
-      <h3>🧙‍♀️ Antes de confirmar tu pedido</h3>
-      <p><strong>Te pedimos que leas cuidadosamente las <em>especificaciones de compra</em></strong>: esto incluye las <strong>características del producto</strong>, <strong>los tiempos de envío</strong>, y nuestra <strong>política de devoluciones</strong>.</p>
-      <p>💫 Cada pieza es creada artesanalmente con paciencia, emoción y muchos pinchazos de amor dependiendo de la complejidad y el volumen de pedidos.</p>
-      <p>🌟 Nuestra intención es que vivas una experiencia mágica y transparente, y que tu figura llegue tal como la soñaste. Te agradecemos por valorar el trabajo hecho a mano.</p>
-      <div class="modal-aviso-botones">
-        <button id="btn-entendido-aviso" class="boton-aviso-entendido">Sí, he leído y deseo continuar 🐑</button>
-        <button id="btn-cancelar-aviso" class="boton-aviso-cancelar">Cancelar compra</button>
-      </div>
-    </div>
-  </div>
-
-  <section id="contacto" class="contact">
-    <div class="container">
-      <h2>Contáctame</h2>
-      <p>¿Tienes alguna pregunta, una idea para una figura personalizada o simplemente quieres saludar? ¡No dudes en contactarme!</p>
-      <form id="form-contacto" class="contact-form">
-        <div class="form-group">
-          <label for="nombre">Nombre:</label>
-          <input type="text" id="nombre" name="from_name" required />
-        </div>
-        <div class="form-group">
-          <label for="email">Email:</label>
-          <input type="email" id="email" name="from_email" required />
-        </div>
-        <div class="form-group">
-          <label for="mensaje">Mensaje:</label>
-          <textarea id="mensaje" name="message" rows="5" required></textarea>
-        </div>
-        <button type="submit" id="btn-enviar" class="submit-button">Enviar Mensaje</button>
-        <p id="success-message" class="success-message hidden">¡Mensaje enviado con éxito!</p>
-      </form>
-    </div>
-  </section>
-
-  <section id="preguntas" class="faqs">
-    <div class="container">
-      <h2>Preguntas Frecuentes</h2>
-      <div class="faq-item">
-        <div class="faq-toggle">¿Cuánto tiempo tarda en llegar mi pedido?</div>
-        <div class="faq-content">El tiempo de entrega depende de la complejidad y el volumen de pedidos, generalmente entre 7 y 15 días hábiles.</div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-toggle">¿Puedo personalizar mi figura?</div>
-        <div class="faq-content">¡Sí! Ofrecemos personalización total, contáctame para discutir tu idea.</div>
-      </div>
-    </div>
-  </section>
-
-  <footer class="footer">
-    <div class="footer-content">
-      <p>
-        Seguime en
-        <a href="https://www.instagram.com/pato_felting" target="_blank" aria-label="Instagram de Patofelting">
-          <i class="fab fa-instagram"></i> @patofelting
-        </a>
-      </p>
-      <p>📧 <a href="mailto:patofelting@gmail.com">patofelting@gmail.com</a></p>
-      <p>© 2025 <strong>Patofelting</strong> — Hecho con amor en Uruguay 🧶</p>
-    </div>
-  </footer>
-
-  <button class="boton-flotante" aria-label="Volver arriba">
-    <i class="fas fa-arrow-up"></i>
-  </button>
-
-  <script src="Untitled-1.js" defer></script>
-  
+    <button class="boton-flotante">↑</button>
 </body>
 </html>
