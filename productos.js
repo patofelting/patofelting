@@ -1,8 +1,8 @@
 // Carga de productos desde Google Sheets usando PapaParse
 // Control de stock y manejo de errores
 
-const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
-const PLACEHOLDER_IMAGE = 'img/222222&text=Sin+Imagen.png';
+const SHEET_CSV_URL = window.SHEET_CSV_URL;
+const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE;
 
 let productos = [];
 
