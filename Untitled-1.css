@@ -1903,3 +1903,126 @@ section h2::after {
 }
 .cerrar-modal:hover { background: #f1f8f4; transform: scale(1.1) rotate(90deg);}
 .cerrar-modal:focus-visible { outline: 2px solid var(--verde-secundario); outline-offset: 2px;}
+/* Update product gallery grid */
+.galeria-productos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 2rem;
+  padding: 2rem;
+}
+
+/* Product card styling */
+.producto-card {
+  background: white;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--sombra-card);
+  transition: transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.producto-card:hover {
+  transform: translateY(-5px);
+}
+
+.producto-img-container {
+  height: 200px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gris-card);
+}
+
+.producto-img {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  transition: transform 0.3s ease;
+}
+
+.producto-card:hover .producto-img {
+  transform: scale(1.05);
+}
+
+.producto-info {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex-grow: 1;
+}
+
+.producto-nombre {
+  font-size: 1.2rem;
+  color: var(--verde-oscuro);
+  margin: 0;
+}
+
+.producto-precio {
+  font-weight: bold;
+  color: var(--verde-secundario);
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.producto-stock {
+  font-size: 0.9rem;
+  color: var(--verde-texto-secundario);
+  margin-bottom: 1rem;
+}
+
+.texto-agotado {
+  color: #e63946;
+  font-weight: bold;
+}
+
+.card-acciones {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.cantidad-input {
+  width: 50px;
+  padding: 0.5rem;
+  border: 1px solid var(--gris-borde);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.boton-agregar, .boton-detalles {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  flex-grow: 1;
+}
+
+.boton-agregar {
+  background: var(--verde-secundario);
+  color: white;
+}
+
+.boton-agregar:hover:not(:disabled) {
+  background: var(--verde-oscuro);
+}
+
+.boton-agregar.agotado, 
+.boton-agregar:disabled {
+  background: var(--gris-borde);
+  color: var(--verde-texto-secundario);
+  cursor: not-allowed;
+}
+
+.boton-detalles {
+  background: var(--verde-claro);
+  color: var(--verde-oscuro);
+}
+
+.boton-detalles:hover {
+  background: #c0ebd0;
+}
