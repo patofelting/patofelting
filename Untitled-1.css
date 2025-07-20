@@ -629,6 +629,24 @@ section h2::after {
   transition: transform var(--transicion-fast);
 }
 
+.modal-img-principal-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--gris-card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.modal-img-principal {
+  width: 100%;
+  height: auto;
+  max-height: 350px;
+  object-fit: contain;
+}
+
 .modal-img:hover {
   transform: scale(1.04);
 }
@@ -846,13 +864,13 @@ section h2::after {
   width: 100%;
   max-width: 380px;
   height: 100vh;
-  background-color: var(--crema-suave);
-  box-shadow: -3px 0 20px rgba(0, 0, 0, 0.15);
+  background: linear-gradient(var(--crema-suave), var(--verde-extra-claro));
+  box-shadow: -3px 0 25px rgba(0, 0, 0, 0.2);
   padding: 2rem 1.5rem;
   overflow-y: auto;
   transition: right 0.3s ease-out;
   z-index: 1000;
-  border-left: 1px solid var(--verde-claro);
+  border-left: 2px solid var(--verde-secundario);
   display: flex;
   flex-direction: column;
 }
