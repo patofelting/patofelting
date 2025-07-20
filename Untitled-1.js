@@ -187,37 +187,30 @@ async function cargarProductosDesdeSheets() {
     }
     
     productos = data
-  .filter(r => r.id && r.nombre && r.precio) 
-  .map(r => {
-    console.log('Fila parseada:', r); // <--- LOG PARA DEBUG
-    return {
-      id: parseInt(r.id, 10),
-      nombre: r.nombre ? r.nombre.trim() : 'Sin Nombre',
-      descripcion: r.descripcion ? r.descripcion.trim() : '',
-      precio: parseFloat(r.precio) || 0,
-      stock: parseInt(r.cantidad, 10) || 0,
-      imagenes: (r.foto && r.foto.trim() !== "" ? r.foto.split(',').map(x => x.trim()) : ['/img/placeholder.jpg']),
-      
+      .filter(r => r.id && r.nombre && r.precio) 
+      .map(r => ({
+        id: parseInt(r.id, 10),
+        nombre: r.nombre ? r.nombre.trim() : 'Sin Nombre',
+        descripcion: r.descripcion ? r.descripcion.trim() : '',
+        precio: parseFloat(r.precio) || 0,
+        stock: parseInt(r.cantidad, 10) || 0,
+        imagenes: (r.foto && r.foto.trim() !== "") ? r.foto.split(',').map(x => x.trim()) : ['/img/placeholder.jpg'],
+        adicionales: r.adicionales ? r.adicionales.trim() : 'Material no especificado',
+        alto: parseFloat(r.alto) || null,
+        ancho: parseFloat(r.ancho) || null,
+        profundidad: parseFloat(r.profundidad) || null,
+        categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
+        tamaño: parseFloat(r.tamaño) || null,
+        vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
+        estado: r.estado ? r.estado.trim() : ''
+      }));
 
-      adicionales: r.adicionales ? r.adicionales.trim() : 'Material no especificado',
-      alto: parseFloat(r.alto) || null,
-      ancho: parseFloat(r.ancho) || null,
-      profundidad: parseFloat(r.profundidad) || null,
-      categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
-      tamaño: parseFloat(r.tamaño) || null,
-      vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
-      estado: r.estado ? r.estado.trim() : ''
-    };
-  });
-
-    
     console.log('Productos procesados:', productos);
     
     if (productos.length === 0) {
       throw new Error('No se encontraron productos válidos después del filtrado');
     }
     
-    // Actualizar opciones de categoría en el filtro
     actualizarCategorias();
     actualizarUI();
   } catch (e) {
@@ -306,9 +299,10 @@ function renderizarPaginacion(total) {
     b.textContent = i;
     b.className = i === paginaActual ? 'pagina-activa' : '';
     b.addEventListener('click', () => {
+      const currentScrollPosition = window.scrollY; // Guardar posición antes del cambio
       paginaActual = i;
       renderizarProductos();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: currentScrollPosition, behavior: 'auto' }); // Restaurar posición
     });
     cont.appendChild(b);
   }
@@ -326,8 +320,11 @@ function renderizarProductos() {
   const inicio = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
   const slice = list.slice(inicio, inicio + PRODUCTOS_POR_PAGINA);
   
+  const currentScrollPosition = window.scrollY; // Guardar posición antes de renderizar
+  
   if (slice.length === 0) {
     elementos.galeriaProductos.innerHTML = '<p>No se encontraron productos con los filtros aplicados.</p>';
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // Desplazar solo si no hay resultados
   } else {
     elementos.galeriaProductos.innerHTML = slice.map(crearCardProducto).join('');
   }
@@ -350,6 +347,7 @@ function renderizarProductos() {
   });
   
   renderizarPaginacion(list.length);
+  window.scrollTo({ top: currentScrollPosition, behavior: 'auto' }); // Restaurar posición
 }
 
 // ===============================
@@ -566,12 +564,10 @@ function actualizarUI() {
 // MANEJO DE FILTROS
 // ===============================
 function aplicarFiltros() {
-  paginaActual = 1;
+  paginaActual = 1; // Reiniciar a la primera página al aplicar filtros
+  const currentScrollPosition = window.scrollY; // Guardar posición actual
   actualizarUI();
-  // Save current scroll position and restore it after re-rendering
-  const currentScrollPosition = window.scrollY;
-  actualizarUI();
-  window.scrollTo({ top: currentScrollPosition, behavior: 'auto' });
+  window.scrollTo({ top: currentScrollPosition, behavior: 'auto' }); // Restaurar posición
 }
 
 // ===============================
