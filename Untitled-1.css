@@ -2026,3 +2026,213 @@ section h2::after {
 .boton-detalles:hover {
   background: #c0ebd0;
 }
+
+/* ===== PRODUCTOS - VERSIÓN MEJORADA ===== */
+.galeria-productos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.8rem;
+  padding: 1.5rem;
+}
+
+.producto-card {
+  background: white;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--gris-borde);
+  transition: all var(--transicion-fast);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.producto-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* Etiqueta de stock */
+.producto-stock-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  z-index: 2;
+}
+
+.stock-disponible {
+  background-color: var(--verde-principal);
+  color: white;
+}
+
+.stock-bajo {
+  background-color: #ffd166;
+  color: #5e4a00;
+}
+
+.stock-agotado {
+  background-color: #ef476f;
+  color: white;
+}
+
+.producto-img-container {
+  height: 200px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gris-card);
+  border-bottom: 1px solid var(--gris-borde);
+}
+
+.producto-img {
+  max-height: 90%;
+  max-width: 90%;
+  object-fit: contain;
+  transition: transform var(--transicion-fast);
+}
+
+.producto-card:hover .producto-img {
+  transform: scale(1.08);
+}
+
+.producto-info {
+  padding: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  flex-grow: 1;
+}
+
+.producto-nombre {
+  font-size: 1.1rem;
+  color: var(--verde-oscuro);
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.producto-precio {
+  font-weight: 700;
+  color: var(--verde-secundario);
+  font-size: 1.2rem;
+  margin: 0.2rem 0;
+}
+
+.producto-descripcion {
+  font-size: 0.85rem;
+  color: var(--verde-salvia);
+  margin-bottom: 0.5rem;
+  display: -webkit-box;
+
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-acciones {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: auto;
+  flex-wrap: wrap;
+}
+
+.cantidad-container {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.cantidad-input {
+  width: 50px;
+  padding: 0.5rem;
+  border: 1px solid var(--gris-borde);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  font-weight: 500;
+  transition: border var(--transicion-fast);
+}
+
+.cantidad-input:focus {
+  border-color: var(--verde-secundario);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(82, 183, 136, 0.15);
+}
+
+.boton-agregar, .boton-detalles {
+  padding: 0.6rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 500;
+  transition: all var(--transicion-fast);
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.boton-agregar {
+  background: var(--verde-secundario);
+  color: white;
+}
+
+.boton-agregar:hover:not(:disabled) {
+  background: var(--verde-oscuro);
+  transform: translateY(-2px);
+}
+
+.boton-agregar.agotado, 
+.boton-agregar:disabled {
+  background: #e9ecef;
+  color: #adb5bd;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.boton-detalles {
+  background: var(--verde-claro);
+  color: var(--verde-oscuro);
+  border: 1px solid var(--gris-borde);
+}
+
+.boton-detalles:hover {
+  background: #c0ebd0;
+  transform: translateY(-2px);
+}
+
+/* Estado de agotado */
+.producto-agotado .producto-img {
+  opacity: 0.7;
+  filter: grayscale(20%);
+}
+
+.producto-agotado .producto-nombre,
+.producto-agotado .producto-precio {
+  opacity: 0.7;
+}
+
+/* Efecto de "agotado" */
+.producto-agotado-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.7);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #d90429;
+  font-size: 1.2rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
