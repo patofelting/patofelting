@@ -3,7 +3,6 @@
 // ===============================
 const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
-const PLACEHOLDER_IMAGE = 'img/222222&text=Sin+Imagen.png';
 
 // URL pública de tu Google Sheets en formato CSV
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
@@ -195,7 +194,7 @@ async function cargarProductosDesdeSheets() {
         descripcion: r.descripcion ? r.descripcion.trim() : '',
         precio: parseFloat(r.precio) || 0,
         stock: parseInt(r.cantidad, 10) || 0,
-        imagenes: (r.foto && r.foto.trim() !== "") ? r.foto.split(',').map(x => x.trim()) : [PLACEHOLDER_IMAGE],
+        imagenes: (r.foto && r.foto.trim() !== "") ? r.foto.split(',').map(x => x.trim()) : ['/img/placeholder.jpg'],
         adicionales: r.adicionales ? r.adicionales.trim() : 'Material no especificado',
         alto: parseFloat(r.alto) || null,
         ancho: parseFloat(r.ancho) || null,
@@ -251,7 +250,7 @@ function crearCardProducto(p) {
   const enCarrito = carrito.find(i => i.id === p.id);
   const disp = p.stock - (enCarrito?.cantidad || 0);
   const agot = disp <= 0;
-  const imgUrl = p.imagenes[0] || PLACEHOLDER_IMAGE;
+  const imgUrl = p.imagenes[0] || '/img/placeholder.jpg';
 
   return `
     <div class="producto-card" data-id="${p.id}">
@@ -387,7 +386,7 @@ function agregarAlCarrito(id, cantidad = 1) {
       nombre: prod.nombre,
       precio: prod.precio,
       cantidad,
-      imagen: prod.imagenes[0] || PLACEHOLDER_IMAGE
+      imagen: prod.imagenes[0] || '/img/placeholder.jpg'
     });
   }
   
@@ -475,7 +474,11 @@ function mostrarModalProducto(p) {
     <div class="modal-grid">
       <div class="modal-imagenes">
         <div class="modal-img-principal-container">
+
           <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" class="modal-img-principal" alt="${p.nombre}" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'">
+
+          <img src="${p.imagenes[0] || '/img/placeholder.jpg'}" class="modal-img-principal" alt="${p.nombre}" loading="lazy">
+
         </div>
         ${p.imagenes.length > 1 ? `
         <div class="modal-thumbnails">
