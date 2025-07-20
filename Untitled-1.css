@@ -1,496 +1,197 @@
-/* ===== VARIABLES CSS (Existing, ensure these are at the top of your file) ===== */
+/* ===== VARIABLES CSS (Ensure these are at the top of your file) ===== */
 :root {
-  --verde-principal: #95d5b2;
-  --verde-secundario: #52b788;
-  --verde-oscuro: #1b4332;
-  --verde-claro: #d8f3dc;
-  --verde-extra-claro: #e8f4ea;
-  --verde-texto-secundario: #2d6a4f;
-  --verde-salvia: #5a7a60;
-  --crema-suave: #fffaf6;
-  --gris-claro-borde: rgba(152, 193, 152, 0.3);
-  --gris-suave: #e8f3ed;
-  --gris-card: #f8fbf9;
-  --gris-borde: #e0eee6;
-  --overlay: rgba(34, 51, 41, 0.55); /* Slightly darker overlay for more impact */
-  --sombra-card: 0 18px 36px rgba(60, 90, 60, 0.13);
-  --radius-xl: 20px;
-  --radius-md: 16px;
-  --radius-sm: 12px;
-  --transicion-slow: 0.38s cubic-bezier(0.28, 0.85, 0.41, 0.98);
-  --transicion-fast: 0.22s cubic-bezier(0.28, 0.85, 0.41, 0.98);
-  --padding-modal: 32px;
-  --padding-modal-mobile: 18px;
-
-  /* Nuevas variables para un toque moderno */
-  --sombra-modal-impresionante: 0 25px 50px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.05);
-  --sombra-boton-interactivo: 0 8px 15px rgba(0, 0, 0, 0.1);
-  --gradiente-suave: linear-gradient(145deg, var(--verde-claro) 0%, var(--verde-extra-claro) 100%);
-  --animacion-entrada-modal: var(--transicion-slow) cubic-bezier(0.34, 1.56, 0.64, 1); /* Bounce effect */
+  /* ... (keep your existing variables) ... */
+  --padding-modal: 32px; /* Standard desktop padding */
+  --padding-modal-mobile: 20px; /* Reduced mobile padding */
+  --modal-gap-desktop: 30px; /* Gap between modal sections on desktop */
+  --modal-gap-mobile: 20px; /* Gap between modal sections on mobile */
 }
 
-/* ===== GENERAL IMPROVEMENTS ===== */
-body {
-  font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Modern font */
-  color: var(--verde-texto-secundario);
-  line-height: 1.7; /* Slightly increased for better readability */
-}
-
-/* Add Poppins font if not already linked in HTML */
-/* You would add this in your index.html <head> section:
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-*/
-
-section h2 {
-  font-weight: 700; /* Make headings bolder */
-  letter-spacing: -0.03em; /* Tighten letter spacing for a modern look */
-}
-
-section h2::after {
-  background-color: var(--verde-secundario); /* Stronger color for underline */
-  transform: scaleX(0); /* Start hidden */
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Springy transition */
-  transform-origin: center;
-}
-
-section h2:hover::after {
-  transform: scaleX(1); /* Expand on hover */
-}
-
-.cta-button {
-  border-radius: 50px; /* More rounded buttons */
-  letter-spacing: 0.05em;
-  box-shadow: var(--sombra-boton-interactivo);
-}
-
-.cta-button:hover {
-  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.18); /* More pronounced shadow on hover */
-}
-
-/* ===== MODAL DE PRODUCTO (IMPRESSIVE STYLE) ===== */
+/* ===== MODAL DE PRODUCTO (Refinements for spacing) ===== */
 #producto-modal {
-  background: var(--overlay);
-  backdrop-filter: blur(8px); /* Blur effect for the background */
-  transition: opacity 0.3s ease, backdrop-filter 0.3s ease;
-  overflow-y: auto; /* Allow scrolling for modal itself if content is too long */
-  padding: 20px; /* Add some padding around the modal on smaller screens */
-  display: flex; /* Ensure it's always flex for centering when visible */
+  /* Keep existing styles, ensure it's a flex container for centering */
+  display: flex;
   align-items: center;
   justify-content: center;
+  padding: 10px; /* Reduced padding around the modal itself to prevent breakage on very small screens */
+  overflow-y: auto; /* Allow the entire modal to scroll if needed */
 }
-
-#producto-modal[style*="display: flex"] {
-  opacity: 1; /* Override initial opacity for smooth transition */
-}
-
 
 .modal-contenido-producto {
+  /* Keep existing visual styles */
   background: white;
-  background-image: var(--gradiente-suave); /* Subtle gradient background */
+  background-image: var(--gradiente-suave);
   border-radius: var(--radius-xl);
-  box-shadow: var(--sombra-modal-impresionante); /* Impressive shadow */
-  border: none; /* Remove subtle border, let shadow do the work */
-  padding: var(--padding-modal);
-  transform: scale(0.9); /* Start slightly smaller for animation */
-  opacity: 0; /* Start invisible for animation */
-  animation: modalEnter 0.5s var(--animacion-entrada-modal) forwards; /* Custom entry animation */
+  box-shadow: var(--sombra-modal-impresionante);
+  padding: var(--padding-modal); /* Use variable for padding */
   position: relative;
-  max-height: 90vh; /* Adjust max height */
-  overflow-y: auto; /* Enable internal scrolling */
-  width: 95%; /* Make it slightly wider on smaller screens */
-  max-width: 550px; /* Allow it to be a bit larger */
+  max-height: 95vh; /* Allow it to take up more vertical space if content is long */
+  width: 95%;
+  max-width: 700px; /* Slightly increased max-width for more content space */
+  display: flex; /* Make it a flex container */
+  flex-direction: column; /* Stack items vertically by default */
+  gap: var(--modal-gap-desktop); /* Gap between child elements */
+  overflow-y: auto; /* Allow content inside to scroll */
+
+  /* Animation */
+  transform: scale(0.9);
+  opacity: 0;
+  animation: modalEnter 0.5s var(--animacion-entrada-modal) forwards;
 }
 
-@keyframes modalEnter {
-  0% { opacity: 0; transform: translateY(50px) scale(0.8); }
-  70% { opacity: 1; transform: translateY(-10px) scale(1.02); } /* Slight bounce up */
-  100% { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-/* For modal exit (requires JS to add a class before display:none) */
-/*
-.modal-contenido-producto.exit {
-  animation: modalExit 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
-}
-
-@keyframes modalExit {
-  0% { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(50px) scale(0.9); }
-}
-*/
-
-.cerrar-modal {
-  background: var(--gris-suave);
-  color: var(--verde-oscuro);
-  font-size: 2rem; /* Larger close icon */
-  width: 45px; /* Larger button area */
-  height: 45px;
-  top: 18px;
-  right: 18px;
-  border-radius: 50%;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease-in-out;
-}
-
-.cerrar-modal:hover {
-  background: var(--verde-secundario);
-  color: white;
-  transform: rotate(90deg) scale(1.1);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-}
-
-.cerrar-modal::before {
-  content: '\00D7'; /* Unicode ' multiplication sign for a cleaner 'x' */
-  font-weight: 300; /* Lighter weight for the 'x' */
+/* Adjust the internal layout of the modal-contenido-producto for better spacing */
+.modal-info-principal {
+  display: flex;
+  flex-wrap: wrap; /* Allow items to wrap on smaller screens */
+  gap: var(--modal-gap-desktop); /* Gap between image and text section */
+  align-items: flex-start; /* Align items to the top */
 }
 
 .modal-carrusel {
-  width: 320px; /* Larger image carousel */
+  min-width: 280px; /* Ensure minimum width for the image */
+  max-width: 350px; /* Max width for consistency */
+  flex-shrink: 0; /* Prevent it from shrinking too much */
+  flex-grow: 1; /* Allow it to grow */
+  width: 100%; /* Default to full width for small screens */
+
+  /* Keep existing styles */
   height: 320px;
   border-radius: var(--radius-md);
-  box-shadow: 0 10px 25px rgba(100, 160, 120, 0.15); /* More prominent shadow */
+  box-shadow: 0 10px 25px rgba(100, 160, 120, 0.15);
   border: none;
   background: var(--gris-card);
+  display: flex; /* Ensure images inside are centered if needed */
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-detalles-producto {
+  flex-grow: 1; /* Allow text details to take up remaining space */
+  min-width: 250px; /* Minimum width to prevent squishing */
 }
 
 .modal-img {
-  padding: 20px; /* More padding inside image container */
-  border-radius: var(--radius-md);
+  max-width: 100%; /* Ensure image fits within its container */
+  height: auto; /* Maintain aspect ratio */
+  display: block; /* Remove extra space below image */
+  border-radius: var(--radius-md); /* Apply radius to the image itself if needed */
+  object-fit: contain; /* Ensure image fits without cropping */
 }
 
 .modal-nombre {
-  font-size: 1.8rem; /* Larger product name */
-  margin-bottom: 8px;
-  font-weight: 700;
-  color: var(--verde-oscuro);
+  margin-bottom: 5px; /* Reduced margin */
 }
 
 .modal-precio {
-  font-size: 1.4rem; /* Larger price */
-  color: var(--verde-secundario);
-  font-weight: 800; /* Extra bold */
+  margin-bottom: 10px; /* Reduced margin */
 }
 
 .modal-stock {
-  font-size: 0.95rem;
-  padding: 6px 18px; /* Slightly more padding */
-  border-radius: 25px; /* Fully rounded */
-  letter-spacing: 0.05em;
-  background: var(--verde-principal); /* Use principal green for stock */
-}
-
-.modal-stock.agotado {
-  background: #e76f51; /* A more distinct red for 'agotado' */
+  margin-bottom: 15px; /* Reduced margin */
 }
 
 .modal-descripcion {
-  font-size: 1.1rem; /* Slightly larger description text */
-  color: var(--verde-salvia);
-  line-height: 1.6;
-  max-width: 85%; /* Make it a bit narrower for better readability */
-  margin-left: auto;
-  margin-right: auto;
+  font-size: 1em; /* Slightly smaller for better fit */
+  max-width: 100%; /* Ensure it uses full width available */
+  margin: 0 0 15px 0; /* Reset margins and add bottom margin */
 }
 
 .modal-detalles {
-  padding: 15px 10px; /* Increased padding */
-  border-radius: var(--radius-md);
-  background: var(--gris-suave); /* Use gris-suave for subtle contrast */
-  margin-top: 15px;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05); /* Inner shadow for depth */
+  margin-top: 0; /* Remove top margin, handled by gap in parent */
+  padding: 12px 15px; /* Adjusted padding */
+  display: flex;
+  flex-direction: column; /* Stack items inside details */
+  gap: 10px; /* Gap for rows in details */
+}
+
+/* Ensure quantity and add to cart button are well-spaced */
+.modal-acciones {
+  display: flex;
+  flex-wrap: wrap; /* Allow to wrap on smaller screens */
+  gap: 15px; /* Space between input and button */
+  align-items: center;
+  margin-top: 15px; /* Add some space above actions */
+}
+
+.cantidad-modal-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .cantidad-modal-input {
-  width: 70px; /* Slightly wider input */
-  padding: 10px 0;
-  border-radius: 12px;
-  border: 1px solid var(--verde-claro);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08); /* Inner shadow */
-}
-
-.cantidad-modal-input:focus {
-  border-color: var(--verde-principal); /* Highlight with principal green */
-  box-shadow: 0 0 0 3px rgba(149, 213, 178, 0.3), inset 0 1px 3px rgba(0, 0, 0, 0.08);
+  width: 65px; /* Slightly narrower input */
+  padding: 8px 0; /* Reduced padding */
+  font-size: 1.05rem;
 }
 
 .boton-agregar-modal {
-  padding: 15px 0; /* More prominent button */
-  border-radius: 15px; /* More rounded */
-  font-size: 1.1rem;
-  font-weight: 700;
-  box-shadow: var(--sombra-boton-interactivo);
-  transition: all 0.3s ease-in-out;
-}
-
-.boton-agregar-modal:hover,
-.boton-agregar-modal:focus-visible {
-  background: var(--verde-oscuro); /* Darker green on hover */
-  transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
-}
-
-.boton-agregar-modal:disabled,
-.boton-agregar-modal.agotado {
-  background: #ccc;
-  color: #888;
-  cursor: not-allowed;
-  box-shadow: none;
-  transform: none;
-}
-
-/* ===== CARRITO PANEL (Side Modal) IMPROVEMENTS ===== */
-.carrito-panel {
-  box-shadow: -8px 0 30px rgba(0, 0, 0, 0.25); /* Stronger shadow */
-  border-left: none; /* Remove border */
-  padding: 2.5rem 2rem; /* More internal padding */
-  background: var(--crema-suave);
-  background-image: var(--gradiente-suave); /* Consistent gradient */
-}
-
-.carrito-header h2 {
-  font-size: 2rem;
-  color: var(--verde-oscuro);
-}
-
-.cerrar-carrito {
-  font-size: 3rem; /* Larger close button */
-  color: var(--verde-salvia);
-  transition: transform 0.3s ease, color 0.3s ease;
-}
-
-.cerrar-carrito:hover {
-  color: var(--verde-oscuro);
-  transform: rotate(90deg) scale(1.1);
-}
-
-.carrito-item {
-  padding-bottom: 20px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--gris-claro-borde);
-}
-
-.item-nombre {
-  font-size: 1.15em;
-  font-weight: 600;
-  color: var(--verde-oscuro);
-}
-
-.item-precio {
-  font-size: 1.05em;
-  color: var(--verde-texto-secundario);
-}
-
-.cantidad-btn {
-  background-color: var(--verde-principal); /* Use principal green */
-  border-radius: 8px; /* Slightly less rounded */
-  width: 32px;
-  height: 32px;
-  font-size: 1.5em;
-}
-
-.cantidad-btn:hover {
-  background-color: var(--verde-secundario);
-}
-
-.eliminar-item {
-  font-size: 2.2em; /* Larger delete icon */
-  color: #e76f51; /* Consistent red for delete */
-}
-
-.eliminar-item:hover {
-  color: #cf4a2a;
-  transform: scale(1.3);
-}
-
-.carrito-footer {
-  border-top: 2px solid var(--verde-claro); /* Thicker border */
-  padding-top: 2rem;
-}
-
-#total {
-  font-size: 1.6rem;
-  color: var(--verde-oscuro);
-  font-weight: 700;
-}
-
-.boton-vaciar-carrito,
-.boton-finalizar-compra {
-  border-radius: 10px;
-  padding: 15px 20px;
-  font-size: 1.15em;
-  font-weight: 600;
-}
-
-.boton-vaciar-carrito {
-  background-color: var(--gris-suave);
-  color: var(--verde-oscuro);
-}
-
-.boton-vaciar-carrito:hover {
-  background-color: var(--gris-borde);
-}
-
-.boton-finalizar-compra {
-  background-color: var(--verde-secundario);
-  color: white;
-  box-shadow: var(--sombra-boton-interactivo);
-}
-
-.boton-finalizar-compra:hover {
-  background-color: var(--verde-oscuro);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
-}
-
-/* ===== AVISO MODAL (If you have one, assuming similar structure to producto-modal) ===== */
-/* Add or modify styles for a general "modal-aviso" class if it exists in your HTML */
-.modal-aviso-contenido {
-    background: white;
-    background-image: var(--gradiente-suave);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--sombra-modal-impresionante);
-    padding: var(--padding-modal);
-    position: relative;
-    max-width: 480px;
-    width: 95%;
-    text-align: center;
-    animation: modalEnter 0.5s var(--animacion-entrada-modal) forwards;
-}
-
-.modal-aviso-botones {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 20px;
-}
-
-.boton-aviso-entendido,
-.boton-aviso-cancelar {
-    padding: 12px 25px;
-    border-radius: 50px;
-    font-weight: 600;
-    font-size: 1.05em;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: var(--sombra-boton-interactivo);
-}
-
-.boton-aviso-entendido {
-    background-color: var(--verde-secundario);
-    color: white;
-    border: none;
-}
-
-.boton-aviso-entendido:hover {
-    background-color: var(--verde-oscuro);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
-}
-
-.boton-aviso-cancelar {
-    background-color: var(--gris-suave);
-    color: var(--verde-oscuro);
-    border: 1px solid var(--verde-claro);
-}
-
-.boton-aviso-cancelar:hover {
-    background-color: var(--gris-borde);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+  flex-grow: 1; /* Allow button to take available space */
+  min-width: 180px; /* Ensure button isn't too small */
+  padding: 12px 20px; /* Adjusted padding */
+  font-size: 1.05rem;
 }
 
 
-/* ===== MEDIA QUERIES (Review and adjust existing ones) ===== */
+/* ===== MEDIA QUERIES (Adjust for smaller screens) ===== */
 @media (max-width: 768px) {
-  .nav-container {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .menu {
-    flex-direction: column;
-    width: 100%;
-    display: none; /* Controlled by JS for hamburger menu */
-    padding-top: 1rem;
-    text-align: center;
-  }
-  .menu.open {
-    display: flex;
-  }
-  .hamburguesa {
-    display: block;
-    position: absolute;
-    right: 1rem;
-    top: 1.5rem;
-  }
-  #carrito-btn-main {
-    position: absolute;
-    left: 1rem;
-    top: 1.5rem;
-  }
-  .logo-container {
-    margin-bottom: 1rem;
-    width: 100%;
-    justify-content: center;
-  }
-
-  .about-content {
-    flex-direction: column;
-  }
-  .about-image {
-    order: -1; /* Image first on mobile */
-    margin-bottom: 1.5rem;
-  }
-
   .modal-contenido-producto {
-    padding: var(--padding-modal-mobile);
-    max-width: 95%; /* Adjust for very small screens */
-    border-radius: var(--radius-md);
-  }
-  .modal-carrusel {
-    width: 200px; /* Adjust size for mobile modals */
-    height: 200px;
-  }
-  .modal-nombre {
-    font-size: 1.3rem;
-  }
-  .modal-precio {
-    font-size: 1.1rem;
-  }
-  .boton-agregar-modal {
-    font-size: 1em;
-    padding: 12px 0;
-  }
-  .cantidad-modal-input {
-    width: 60px;
-    padding: 8px 0;
+    padding: var(--padding-modal-mobile); /* Use mobile padding */
+    gap: var(--modal-gap-mobile); /* Use mobile gap */
   }
 
-  .carrito-panel {
-    max-width: 90%;
-    padding: 1.5rem 1rem;
+  .modal-info-principal {
+    flex-direction: column; /* Stack image and details vertically */
+    align-items: center; /* Center them */
+    gap: var(--modal-gap-mobile);
+  }
+
+  .modal-carrusel {
+    width: 250px; /* Adjust size for mobile modals */
+    height: 250px;
+    margin-bottom: 0; /* Remove extra margin if flex-direction is column */
+  }
+
+  .modal-detalles-producto {
+    text-align: center; /* Center text content for better mobile presentation */
+    width: 100%; /* Take full width on mobile */
+  }
+
+  .modal-descripcion {
+    text-align: left; /* Keep description left-aligned for readability */
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 90%; /* Constrain width for readability on mobile */
+  }
+
+  .modal-acciones {
+    flex-direction: column; /* Stack quantity and button vertically */
+    align-items: stretch; /* Stretch to fill width */
+  }
+
+  .cantidad-modal-container {
+    justify-content: center; /* Center quantity controls */
+  }
+
+  .boton-agregar-modal {
+    width: 100%; /* Full width button on mobile */
   }
 }
 
 @media (max-width: 480px) {
-  .hero h1 {
-    font-size: 2.2rem;
+  .modal-contenido-producto {
+    padding: 15px; /* Even smaller padding on very small screens */
+    gap: 15px;
   }
-  .hero h2 {
-    font-size: 1.6rem;
+  .modal-carrusel {
+    width: 200px;
+    height: 200px;
   }
-  .cta-button {
-    padding: 0.7rem 1.6rem;
-    font-size: 0.95em;
-  }
-  section h2 {
-    font-size: 2rem;
-  }
-  .producto-card {
-    padding: 1rem;
-  }
-  .producto-nombre {
-    font-size: 1.05rem;
-  }
-  .producto-precio {
-    font-size: 0.95rem;
+  .cerrar-modal {
+    width: 35px;
+    height: 35px;
+    font-size: 1.5rem;
+    top: 10px;
+    right: 10px;
   }
 }
