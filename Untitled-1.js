@@ -59,6 +59,20 @@ const elementos = {
 };
 
 // ===============================
+// PREVENIR SCROLL INESPERADO EN BOTONES
+// ===============================
+// Algunos navegadores interpretan un <button> sin atributo "type"
+// como type="submit", lo que puede disparar el envío del formulario
+// más cercano y provocar que la página haga scroll hacia arriba.
+// Esta función establece el tipo "button" por defecto en esos casos
+// para evitar ese comportamiento sin modificar el HTML.
+function evitarScrollPorDefecto() {
+  document.querySelectorAll('button:not([type])').forEach(btn => {
+    btn.setAttribute('type', 'button');
+  });
+}
+
+// ===============================
 // NOTIFICACIONES
 // ===============================
 function mostrarNotificacion(mensaje, tipo = 'exito') {
@@ -630,6 +644,7 @@ function init() {
   cargarCarrito();
   cargarProductosDesdeSheets();
   inicializarEventos();
+  evitarScrollPorDefecto();
   
   if ('IntersectionObserver' in window) {
     const observer = new IntersectionObserver((entries) => {
