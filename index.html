@@ -138,7 +138,28 @@
 
  <div id="producto-modal" class="modal-overlay">
   <div class="modal-contenido-producto">
-    <div id="modal-contenido"></div>
+    <button class="cerrar-modal" aria-label="Cerrar modal">&times;</button>
+    <div class="modal-flex">
+      <div class="modal-carrusel">
+        <img src="" alt="Imagen del producto" class="modal-img">
+      </div>
+      <div class="modal-info">
+        <h2 class="modal-nombre">Nombre del Producto</h2>
+        <p class="modal-precio">$0</p>
+        <span class="modal-stock disponible">Disponible</span>
+        <p class="modal-descripcion">Descripción del producto</p>
+        <div class="modal-detalles">
+          <!-- Detalles del producto -->
+        </div>
+        <div class="modal-acciones">
+          <input type="number" class="cantidad-modal-input" value="1" min="1">
+          <button class="boton-agregar-modal">Agregar al carrito</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-thumbnails">
+      <!-- Miniaturas de imágenes -->
+    </div>
   </div>
 </div>
 
