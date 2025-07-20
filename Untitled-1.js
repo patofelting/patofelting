@@ -216,7 +216,8 @@ async function cargarProductosDesdeSheets() {
       descripcion: r.descripcion ? r.descripcion.trim() : '',
       precio: parseFloat(r.precio) || 0,
       stock: parseInt(r.cantidad, 10) || 0,
-      imagenes: (r.foto && r.foto.trim() !== "" ? r.foto.split(',').map(x => x.trim()) : ['/img/placeholder.jpg']),
+     imagenes: (r.foto && r.foto.trim() !== "" ? r.foto.split(',').map(x => x.trim()) : ['/img/222222&text=Sin+Imagen.png']),
+
       
 
       adicionales: r.adicionales ? r.adicionales.trim() : 'Material no especificado',
