@@ -254,33 +254,37 @@ function crearCardProducto(p) {
 
   return `
     <div class="producto-card" data-id="${p.id}">
-      <img src="${imgUrl}" alt="${p.nombre}" class="producto-img" loading="lazy">
-      <h3 class="producto-nombre">${p.nombre}</h3>
-      <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
-      <p class="producto-stock">
-        ${agot ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${disp}`}
-      </p>
-      <div class="card-acciones">
-        <input
-          type="number"
-          value="1"
-          min="1"
-          max="${disp}"
-          class="cantidad-input"
-          id="cantidad-${p.id}"
-          ${agot ? 'disabled' : ''}
-        >
-        <button
-          class="boton-agregar ${agot ? 'agotado' : ''}"
-          data-id="${p.id}"
-          ${agot ? 'disabled' : ''}
-        >
-          ${agot
-            ? '<i class="fas fa-times-circle"></i> Agotado'
-            : '<i class="fas fa-cart-plus"></i> Agregar'}
-        </button>
+      <div class="producto-img-container">
+        <img src="${imgUrl}" alt="${p.nombre}" class="producto-img" loading="lazy">
       </div>
-      <button class="boton-detalles" data-id="${p.id}">Ver Detalles</button>
+      <div class="producto-info">
+        <h3 class="producto-nombre">${p.nombre}</h3>
+        <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
+        <p class="producto-stock">
+          ${agot ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${disp}`}
+        </p>
+        <div class="card-acciones">
+          <input
+            type="number"
+            value="1"
+            min="1"
+            max="${disp}"
+            class="cantidad-input"
+            id="cantidad-${p.id}"
+            ${agot ? 'disabled' : ''}
+          >
+          <button
+            class="boton-agregar ${agot ? 'agotado' : ''}"
+            data-id="${p.id}"
+            ${agot ? 'disabled' : ''}
+          >
+            ${agot ? 'Agotado' : 'Agregar'}
+          </button>
+          <button class="boton-detalles" data-id="${p.id}">
+            Ver Detalles
+          </button>
+        </div>
+      </div>
     </div>
   `;
 }
