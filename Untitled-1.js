@@ -3,7 +3,7 @@
 // ===============================
 const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
-const SHEET_CSV_URL = window.SHEET_CSV_URL;
+const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE;
 
 // ===============================
@@ -134,7 +134,7 @@ async function cargarProductosDesdeSheets() {
     if (elementos.galeriaProductos) {
       elementos.galeriaProductos.innerHTML = '<p>Cargando productos...</p>';
     }
-    const resp = await fetch(SHEET_CSV_URL, { headers: { 'Cache-Control': 'no-store' } });
+    const resp = await fetch(CSV_URL, { headers: { 'Cache-Control': 'no-store' } });
     if (!resp.ok) throw new Error('Error al cargar productos.');
     const csvText = await resp.text();
     if (typeof Papa === 'undefined') throw new Error('Papa Parse no disponible');
