@@ -327,6 +327,71 @@ img {
   transition: background-color 0.3s ease;
 }
 
+
+/* New/Adjusted container for image and product details */
+.modal-info-principal {
+  display: flex;
+  flex-wrap: wrap; /* Allows items to wrap onto the next line if space is limited */
+  justify-content: center; /* Center items when they wrap */
+  align-items: flex-start; /* Align items to the top */
+  gap: var(--modal-gap-desktop); /* Gap between the image carousel and the product details */
+}
+
+.modal-carrusel {
+  width: 100%; /* Default to full width on small screens */
+  max-width: 320px; /* Max width for the carousel container */
+  height: 320px; /* Fixed height for consistency */
+  flex-shrink: 0; /* Prevents it from shrinking too much */
+  flex-grow: 1; /* Allows it to grow to fill space */
+
+  position: relative;
+
+  /* Keep existing visual styles */
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 25px rgba(100, 160, 120, 0.15); /* More prominent shadow */
+  border: none;
+  background: var(--gris-card);
+  
+  /* Flex properties for centering the image within the carousel */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden; /* Hide any overflow if image is slightly larger than container */
+}
+
+.modal-img {
+  max-width: 100%; /* VERY IMPORTANT: Ensures image doesn't overflow its container */
+  max-height: 100%; /* Ensures image doesn't overflow vertically */
+  display: block; /* Removes extra space below inline images */
+  object-fit: contain; /* Scales the image to fit its content box while maintaining its aspect ratio */
+  border-radius: var(--radius-sm); /* Apply a slight border-radius to the image itself */
+}
+
+.modal-prev,
+.modal-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  border: none;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.modal-prev {
+  left: 8px;
+}
+
+.modal-next {
+  right: 8px;
+}
+
 .carrusel-punto {
   display: inline-block;
   width: 12px;
@@ -340,6 +405,7 @@ img {
 .carrusel-punto.active {
   background-color: white;
 }
+
 
 .modal-detalles-producto {
   flex: 1;
@@ -538,6 +604,49 @@ img {
   .modal-carrusel {
     height: 280px;
   }
+
+
+@media (max-width: 480px) {
+  .hero h1 {
+    font-size: 2.2rem;
+  }
+  .hero h2 {
+    font-size: 1.6rem;
+  }
+  .hero p {
+    font-size: 1em;
+  }
+  .cta-button {
+    padding: 0.7rem 1.6rem;
+    font-size: 0.95em;
+  }
+  .section-title {
+    font-size: 1.8rem;
+  }
+  .producto-nombre {
+    font-size: 1.1rem;
+  }
+  .producto-precio {
+    font-size: 1em;
+  }
+  .boton-agregar,
+  .boton-detalles {
+    font-size: 0.9em;
+  }
+  .modal-contenido-producto {
+    padding: 12px; /* Even smaller padding on very small screens */
+    gap: 12px;
+  }
+  .modal-carrusel {
+    width: 220px;
+    height: 220px;
+  }
+  .modal-prev,
+  .modal-next {
+    width: 28px;
+    height: 28px;
+  }
+
 
   .cerrar-modal {
     width: 32px;
