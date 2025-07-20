@@ -329,7 +329,10 @@ function mostrarModalProducto(p) {
     });
   }
   // Botón cerrar
-  elementos.modalContenido.querySelector('.cerrar-modal').addEventListener('click', cerrarModal);
+  const cerrarBtn = elementos.modalContenido.querySelector('.cerrar-modal');
+  if (cerrarBtn) {
+    cerrarBtn.addEventListener('click', cerrarModal);
+  }
   // Botón agregar al carrito
   const agregarBtn = elementos.modalContenido.querySelector('.boton-agregar-modal');
   if (agregarBtn) {
@@ -339,9 +342,10 @@ function mostrarModalProducto(p) {
       cerrarModal();
     });
   }
-  // Cierra modal al tocar fuera
+  // Mostrar modal
   elementos.productoModal.style.display = 'flex';
   document.body.classList.add('no-scroll');
+  // Cierra modal al tocar fuera
   elementos.productoModal.addEventListener('click', (e) => {
     if (e.target === elementos.productoModal) cerrarModal();
   });
@@ -439,9 +443,6 @@ function renderizarCarrito() {
     }
   };
 }
-
-
-
 
 // ===============================
 // ACTUALIZACIÓN DE UI
@@ -570,7 +571,7 @@ function inicializarEventos() {
   
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      cerrarModal();
+      if (elementos.productoModal && elementos.productoModal.style.display === 'flex') cerrarModal();
     }
   });
   
@@ -678,4 +679,3 @@ if (document.readyState !== 'loading') {
     }
 	
   }
-  
