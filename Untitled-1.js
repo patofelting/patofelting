@@ -60,3 +60,34 @@
   background-color: yellow;
   font-weight: bold;
 }
+// EmailJS init seguro
+  if (window.emailjs) {
+    emailjs.init("o4IxJz0Zz-LQ8jYKG"); 
+    const formContacto = document.getElementById('form-contacto');
+    if (formContacto) {
+      formContacto.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const btnEnviar = document.getElementById('btn-enviar');
+        const successMessage = document.getElementById('success-message');
+        btnEnviar.disabled = true;
+        btnEnviar.textContent = 'Enviando...';
+        emailjs.sendForm('service_89by24g', 'template_8mn7hdp', this) 
+          .then(function() {
+            btnEnviar.disabled = false;
+            btnEnviar.textContent = 'Enviar mensaje';
+            formContacto.reset();
+            if (successMessage) {
+              successMessage.classList.remove('hidden');
+              setTimeout(() => successMessage.classList.add('hidden'), 5000);
+            }
+            mostrarNotificacion("¡Mensaje enviado con éxito!", "exito");
+          }, function() {
+            btnEnviar.disabled = false;
+            btnEnviar.textContent = 'Enviar mensaje';
+            mostrarNotificacion("Error al enviar mensaje. Intenta de nuevo.", "error");
+          });
+      });
+    }
+	
+  }
+  
