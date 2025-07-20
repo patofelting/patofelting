@@ -7,18 +7,6 @@ const LS_CARRITO_KEY = 'carrito';
 // URL pública de tu Google Sheets en formato CSV
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
 
-// Validar que SHEET_CSV_URL esté definida
-if (!SHEET_CSV_URL) {
-  console.error('SHEET_CSV_URL no está definida');
-  mostrarNotificacion('Error de configuración. Contacte al soporte.', 'error');
-}
-
-// Validar que Papa Parse esté disponible
-if (typeof Papa === 'undefined') {
-  console.error('Papa Parse no está cargado. Asegúrate de incluir la librería.');
-  mostrarNotificacion('Error: Librería Papa Parse no encontrada.', 'error');
-}
-
 // ===============================
 // ESTADO GLOBAL
 // ===============================
@@ -33,7 +21,6 @@ let filtrosActuales = {
   categoria: 'todos',
   busqueda: ''
 };
-
 let lazyObserver = null;
 
 // ===============================
@@ -207,31 +194,33 @@ async function cargarProductosDesdeSheets() {
     }
     
     productos = data
-  .filter(r => r.id && r.nombre && r.precio) 
-  .map(r => {
-    console.log('Fila parseada:', r); // <--- LOG PARA DEBUG
-    return {
-      id: parseInt(r.id, 10),
-      nombre: r.nombre ? r.nombre.trim() : 'Sin Nombre',
-      descripcion: r.descripcion ? r.descripcion.trim() : '',
-      precio: parseFloat(r.precio) || 0,
-      stock: parseInt(r.cantidad, 10) || 0,
-     imagenes: (r.foto && r.foto.trim() !== "" ? r.foto.split(',').map(x => x.trim()) : ['/img/222222&text=Sin+Imagen.png']),
+      .filter(r => r.id && r.nombre && r.precio)
+      .map(r => {
+        // --- Asegura que si foto está vacía, use tu placeholder global (GitHub) ---
+        let imagenes;
+        if (r.foto && r.foto.trim() !== "") {
+          imagenes = r.foto.split(',').map(x => x.trim());
+        } else {
+          imagenes = ['https://raw.githubusercontent.com/patofelting/patofelting/main/img/placeholder.jpg'];
+        }
+        return {
+          id: parseInt(r.id, 10),
+          nombre: r.nombre ? r.nombre.trim() : 'Sin Nombre',
+          descripcion: r.descripcion ? r.descripcion.trim() : '',
+          precio: parseFloat(r.precio) || 0,
+          stock: parseInt(r.cantidad, 10) || 0,
+          imagenes,
+          adicionales: r.adicionales ? r.adicionales.trim() : 'Material no especificado',
+          alto: parseFloat(r.alto) || null,
+          ancho: parseFloat(r.ancho) || null,
+          profundidad: parseFloat(r.profundidad) || null,
+          categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
+          tamaño: parseFloat(r.tamaño) || null,
+          vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
+          estado: r.estado ? r.estado.trim() : ''
+        };
+      });
 
-      
-
-      adicionales: r.adicionales ? r.adicionales.trim() : 'Material no especificado',
-      alto: parseFloat(r.alto) || null,
-      ancho: parseFloat(r.ancho) || null,
-      profundidad: parseFloat(r.profundidad) || null,
-      categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
-      tamaño: parseFloat(r.tamaño) || null,
-      vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
-      estado: r.estado ? r.estado.trim() : ''
-    };
-  });
-
-    
     console.log('Productos procesados:', productos);
     
     if (productos.length === 0) {
@@ -257,16 +246,15 @@ function filtrarProductos(lista) {
   return lista.filter(p => {
     const { precioMin, precioMax, tamañoMin, tamañoMax, categoria, busqueda } = filtrosActuales;
     const busquedaLower = busqueda.toLowerCase();
-    
     return (
       (precioMin === null || p.precio >= precioMin) &&
       (precioMax === null || p.precio <= precioMax) &&
       (tamañoMin === null || (p.tamaño !== null && p.tamaño >= tamañoMin)) &&
       (tamañoMax === null || (p.tamaño !== null && p.tamaño <= tamañoMax)) &&
       (categoria === 'todos' || p.categoria === categoria) &&
-      (!busqueda || 
-       p.nombre.toLowerCase().includes(busquedaLower) || 
-       p.descripcion.toLowerCase().includes(busquedaLower))
+      (!busqueda ||
+        p.nombre.toLowerCase().includes(busquedaLower) ||
+        p.descripcion.toLowerCase().includes(busquedaLower))
     );
   });
 }
@@ -278,11 +266,11 @@ function crearCardProducto(p) {
   const enCarrito = carrito.find(i => i.id === p.id);
   const disp = p.stock - (enCarrito?.cantidad || 0);
   const agot = disp <= 0;
-  const imgUrl = p.imagenes[0] || '/img/placeholder.jpg';
+  const imgUrl = p.imagenes[0];
 
   return `
     <div class="producto-card" data-id="${p.id}">
-      <img data-src="${imgUrl}" src="/img/placeholder.jpg" alt="${p.nombre}" class="producto-img" loading="lazy" onerror="this.onerror=null;this.src='/img/placeholder.jpg';">
+      <img data-src="${imgUrl}" src="${imgUrl}" alt="${p.nombre}" class="producto-img" loading="lazy" onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/patofelting/patofelting/main/img/placeholder.jpg';">
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
       <p class="producto-stock">
@@ -354,23 +342,25 @@ function renderizarProductos() {
     iniciarLazyLoad();
   }
   
-  elementos.galeriaProductos.addEventListener('click', (e) => {
-    const target = e.target.closest('.boton-agregar');
-    if (target) {
-      const id = +target.dataset.id;
-      const cant = +document.getElementById(`cantidad-${id}`).value || 1;
-      agregarAlCarrito(id, cant);
-      return;
-    }
-    
-    const detalleBtn = e.target.closest('.boton-detalles');
-    if (detalleBtn) {
-      const id = +detalleBtn.dataset.id;
-      const prod = productos.find(p => p.id === id);
-      if (prod) mostrarModalProducto(prod);
-    }
-  });
-  
+  // SOLO AGREGA UN SOLO EVENT LISTENER (evita acumulación)
+  if (!elementos.galeriaProductos._hasListener) {
+    elementos.galeriaProductos.addEventListener('click', (e) => {
+      const target = e.target.closest('.boton-agregar');
+      if (target) {
+        const id = +target.dataset.id;
+        const cant = +document.getElementById(`cantidad-${id}`).value || 1;
+        agregarAlCarrito(id, cant);
+        return;
+      }
+      const detalleBtn = e.target.closest('.boton-detalles');
+      if (detalleBtn) {
+        const id = +detalleBtn.dataset.id;
+        const prod = productos.find(p => p.id === id);
+        if (prod) mostrarModalProducto(prod);
+      }
+    });
+    elementos.galeriaProductos._hasListener = true;
+  }
   renderizarPaginacion(list.length);
 }
 
@@ -406,7 +396,7 @@ function agregarAlCarrito(id, cantidad = 1) {
       nombre: prod.nombre,
       precio: prod.precio,
       cantidad,
-      imagen: prod.imagenes[0] || '/img/placeholder.jpg'
+      imagen: prod.imagenes[0]
     });
   }
   
@@ -426,7 +416,7 @@ function renderizarCarrito() {
   
   elementos.listaCarrito.innerHTML = carrito.map(i => `
     <li class="carrito-item">
-      <img src="${i.imagen}" class="carrito-item-img" alt="${i.nombre}" loading="lazy">
+      <img src="${i.imagen}" class="carrito-item-img" alt="${i.nombre}" loading="lazy" onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/patofelting/patofelting/main/img/placeholder.jpg';">
       <div class="carrito-item-info">
         <span class="carrito-item-nombre">${i.nombre}</span>
         <span class="carrito-item-subtotal">$U ${(i.precio * i.cantidad).toLocaleString('es-UY')}</span>
@@ -488,18 +478,18 @@ function mostrarModalProducto(p) {
   
   const enCarrito = carrito.find(i => i.id === p.id);
   const disp = p.stock - (enCarrito?.cantidad || 0);
-  
+
   elementos.modalContenido.innerHTML = `
     <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
     <div class="modal-grid">
       <div class="modal-imagenes">
         <div class="modal-img-principal-container">
-          <img data-src="${p.imagenes[0] || '/img/placeholder.jpg'}" src="/img/placeholder.jpg" class="modal-img-principal" alt="${p.nombre}" loading="lazy" onerror="this.onerror=null;this.src='/img/placeholder.jpg';">
+          <img data-src="${p.imagenes[0]}" src="${p.imagenes[0]}" class="modal-img-principal" alt="${p.nombre}" loading="lazy" onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/patofelting/patofelting/main/img/placeholder.jpg';">
         </div>
         ${p.imagenes.length > 1 ? `
         <div class="modal-thumbnails">
           ${p.imagenes.slice(1).map((img, i) => `
-            <img data-src="${img}" src="/img/placeholder.jpg" class="modal-thumbnail" alt="Miniatura ${i + 1}" data-index="${i + 1}" onerror="this.onerror=null;this.src='/img/placeholder.jpg';">
+            <img data-src="${img}" src="${img}" class="modal-thumbnail" alt="Miniatura ${i + 1}" data-index="${i + 1}" onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/patofelting/patofelting/main/img/placeholder.jpg';">
           `).join('')}
         </div>
         ` : ''}
@@ -755,7 +745,6 @@ function init() {
     console.warn('Este script debe ejecutarse en el navegador');
     return;
   }
-  
   console.log('Inicializando la aplicación...');
   cargarCarrito();
   cargarProductosDesdeSheets();
