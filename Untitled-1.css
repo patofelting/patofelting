@@ -176,7 +176,7 @@ body.no-scroll {
   display: none;
   background: none;
   border: none;
-  font-size: 1.5rem;A
+  font-size: 1.5rem;
   cursor: pointer;
   color: var(--verde-texto-secundario);
   transition: color 0.3s;
