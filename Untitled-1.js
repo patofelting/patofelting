@@ -100,7 +100,7 @@ async function cargarProductosDesdeSheets() {
         nombre: r.nombre.trim(),
         descripcion: r.descripcion || '',
         precio: parseFloat(r.precio) || 0,
-        stock: parseInt(r.cantidad, 10) || 0, // <-- Stock de la hoja
+        stock: parseInt(r.cantidad, 10) || 0,
         imagenes: (r.foto && r.foto.trim() !== "") ? r.foto.split(',').map(x => x.trim()) : [],
         adicionales: r.adicionales ? r.adicionales.trim() : '',
         alto: parseFloat(r.alto) || null,
@@ -170,6 +170,37 @@ function crearCardProducto(p) {
   `;
 }
 
+function renderizarProductos() {
+  if (!elementos.galeriaProductos) return;
+  const list = filtrarProductos(productos);
+  const inicio = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
+  const slice = list.slice(inicio, inicio + PRODUCTOS_POR_PAGINA);
+  if (slice.length === 0) {
+    elementos.galeriaProductos.innerHTML = '<p>No se encontraron productos con los filtros aplicados.</p>';
+  } else {
+    elementos.galeriaProductos.innerHTML = slice.map(crearCardProducto).join('');
+  }
+  elementos.galeriaProductos.onclick = (e) => {
+    const target = e.target.closest('.boton-agregar');
+    if (target) {
+      const id = +target.dataset.id;
+      const cant = +document.getElementById(`cantidad-${id}`).value || 1;
+      agregarAlCarrito(id, cant);
+      return;
+    }
+    const detalleBtn = e.target.closest('.boton-detalles');
+    if (detalleBtn) {
+      const id = +detalleBtn.dataset.id;
+      const prod = productos.find(p => p.id === id);
+      if (prod) mostrarModalProducto(prod);
+    }
+  };
+  renderizarPaginacion(list.length);
+}
+
+// ===============================
+// PAGINACIÓN
+// ===============================
 function renderizarPaginacion(total) {
   const pages = Math.ceil(total / PRODUCTOS_POR_PAGINA);
   const cont = elementos.paginacion;
@@ -181,31 +212,23 @@ function renderizarPaginacion(total) {
     b.textContent = i;
     b.className = i === paginaActual ? 'pagina-activa' : '';
     b.addEventListener('click', (e) => {
-      e.preventDefault(); // 👈 ¡Evita el salto!
+      e.preventDefault();
       paginaActual = i;
       renderizarProductos();
       const galeria = document.getElementById('galeria-productos');
-      if (galeria) {
-        galeria.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+      if (galeria) galeria.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     cont.appendChild(b);
   }
 }
 
-
-
- 
-
-
 // ===============================
-// MODAL DE PRODUCTO (con stock real)
+// MODAL DE PRODUCTO
 // ===============================
 function mostrarModalProducto(p) {
   if (!elementos.productoModal || !elementos.modalContenido) return;
   const enCarrito = carrito.find(i => i.id === p.id);
   const disp = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
-
   let carruselHtml = '';
   if (p.imagenes.length > 0) {
     carruselHtml += `<img src="${p.imagenes[0]}" class="modal-img" id="modal-img-principal" alt="${p.nombre}" loading="lazy">`;
@@ -217,7 +240,6 @@ function mostrarModalProducto(p) {
       </div>`;
     }
   }
-
   elementos.modalContenido.innerHTML = `
     <button class="cerrar-modal" aria-label="Cerrar modal"></button>
     <div class="modal-flex">
