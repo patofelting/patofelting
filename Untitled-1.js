@@ -3,7 +3,7 @@
 // ===============================
 const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
-const PLACEHOLDER_IMAGE = 'img/222222&text=Sin+Imagen.png';
+const PLACEHOLDER_IMAGE = 'img/placeholder.png';
 
 // URL pública de tu Google Sheets en formato CSV
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
@@ -256,7 +256,7 @@ function crearCardProducto(p) {
   return `
     <div class="producto-card" data-id="${p.id}">
       <div class="producto-img-container">
-        <img src="${imgUrl}" alt="${p.nombre}" class="producto-img" loading="lazy">
+        <img src="${imgUrl}" alt="${p.nombre}" class="producto-img" loading="lazy" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';">
       </div>
       <div class="producto-info">
         <h3 class="producto-nombre">${p.nombre}</h3>
