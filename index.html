@@ -56,20 +56,35 @@
   </div>
   <div class="carrito-overlay"></div>
 
-  <section id="inicio" class="hero">
-    <video autoplay muted loop playsinline class="video-fondo" aria-hidden="true">
-      <source src="" type="" />
-      <source src="" type="" />
-      <p>Video de fondo que muestra el proceso artesanal de Patofelting.</p>
-    </video>
-    <div class="hero-content">
-      <h1>Patofelting</h1>
-      <h2>Creaciones con alma en fieltro.</h2>
-      <p>Figuras únicas, hechas a mano con amor y dedicación.</p>
-      <a href="#productos" class="cta-button">Ver Productos</a>
+<section id="inicio" class="hero">
+  <!-- Video optimizado con poster de carga -->
+  <video autoplay muted loop playsinline class="video-fondo" aria-hidden="true" 
+         poster="img/placeholder-video.jpg" preload="metadata">
+    <source src="https://i.imgur.com/nWNPya9.mp4" type="video/mp4">
+    <source src="videos/patofelting-video.webm" type="video/webm"> <!-- Versión alternativa -->
+    <!-- Fallback para navegadores que no soportan video -->
+    <img src="img/hero-fallback.jpg" alt="Proceso artesanal de Patofelting" class="video-fallback">
+  </video>
+  
+  <!-- Contenido sobrepuesto con mejor semántica -->
+  <div class="hero-content">
+    <div class="content-wrapper">
+      <h1 class="hero-title">Patofelting</h1>
+      <h2 class="hero-subtitle">Creaciones con alma en fieltro</h2>
+      <p class="hero-description">Figuras únicas, hechas a mano con amor y dedicación</p>
+      <div class="cta-container">
+        <a href="#productos" class="cta-button">Ver Productos</a>
+        <a href="#contacto" class="cta-button secondary">Contactar</a>
+      </div>
     </div>
-  </section>
-
+  </div>
+  
+  <!-- Flecha indicadora de scroll -->
+  <div class="scroll-indicator">
+    <span class="scroll-text">Desplázate</span>
+    <div class="arrow-down"></div>
+  </div>
+</section>
   <section id="sobre" class="about-me seccion">
     <div class="container">
       <div class="about-content">
