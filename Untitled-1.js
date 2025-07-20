@@ -211,7 +211,10 @@ function renderizarPaginacion(total) {
     b.addEventListener('click', () => {
       paginaActual = i;
       renderizarProductos();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const galeria = document.getElementById('galeria-productos');
+if (galeria) {
+  galeria.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
     });
     cont.appendChild(b);
   }
