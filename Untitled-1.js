@@ -715,3 +715,55 @@ if (document.readyState !== 'loading') {
 } else {
   document.addEventListener('DOMContentLoaded', init);
 }
+document.addEventListener('DOMContentLoaded', function() {
+  // Control del modal de producto
+  const productoModal = document.getElementById('producto-modal');
+  const cerrarModalBtn = productoModal.querySelector('.cerrar-modal');
+  
+  // Función para abrir el modal (debes llamarla desde tus botones "Ver detalles")
+  function abrirModalProducto(producto) {
+    // Aquí llenarías el modal con los datos del producto
+    productoModal.style.display = 'flex';
+    document.body.classList.add('no-scroll');
+    
+    // Animación de aparición
+    setTimeout(() => {
+      productoModal.style.opacity = '1';
+    }, 10);
+  }
+  
+  // Función para cerrar el modal
+  function cerrarModalProducto() {
+    productoModal.style.opacity = '0';
+    setTimeout(() => {
+      productoModal.style.display = 'none';
+      document.body.classList.remove('no-scroll');
+    }, 300);
+  }
+  
+  // Event listeners
+  cerrarModalBtn.addEventListener('click', cerrarModalProducto);
+  
+  // Cerrar al hacer clic fuera del contenido
+  productoModal.addEventListener('click', function(e) {
+    if (e.target === productoModal) {
+      cerrarModalProducto();
+    }
+  });
+  
+  // Cerrar con la tecla ESC
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && productoModal.style.display === 'flex') {
+      cerrarModalProducto();
+    }
+  });
+  
+  // Ejemplo de cómo conectar los botones "Ver detalles" (debes adaptarlo a tu código)
+  document.querySelectorAll('.boton-detalles').forEach(boton => {
+    boton.addEventListener('click', function() {
+      const productoId = this.dataset.productoId;
+      // Aquí obtendrías los datos del producto y llamarías a abrirModalProducto()
+      abrirModalProducto(productoId);
+    });
+  });
+});
