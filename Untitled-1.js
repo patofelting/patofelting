@@ -7,6 +7,18 @@ const LS_CARRITO_KEY = 'carrito';
 // URL pública de tu Google Sheets en formato CSV
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
 
+// Validar que SHEET_CSV_URL esté definida
+if (!SHEET_CSV_URL) {
+  console.error('SHEET_CSV_URL no está definida');
+  mostrarNotificacion('Error de configuración. Contacte al soporte.', 'error');
+}
+
+// Validar que Papa Parse esté disponible
+if (typeof Papa === 'undefined') {
+  console.error('Papa Parse no está cargado. Asegúrate de incluir la librería.');
+  mostrarNotificacion('Error: Librería Papa Parse no encontrada.', 'error');
+}
+
 // ===============================
 // ESTADO GLOBAL
 // ===============================
@@ -21,7 +33,6 @@ let filtrosActuales = {
   categoria: 'todos',
   busqueda: ''
 };
-let lazyObserver = null;
 
 // ===============================
 // REFERENCIAS AL DOM
@@ -127,24 +138,6 @@ function actualizarCategorias() {
     .join('');
 }
 
-function iniciarLazyLoad() {
-  if (!('IntersectionObserver' in window)) return;
-  if (!lazyObserver) {
-    lazyObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const img = entry.target;
-          img.src = img.dataset.src || img.src;
-          lazyObserver.unobserve(img);
-        }
-      });
-    }, { rootMargin: '100px' });
-  }
-  document.querySelectorAll('img[data-src]').forEach(img => {
-    lazyObserver.observe(img);
-  });
-}
-
 // ===============================
 // CARGA DE PRODUCTOS DESDE SHEETS
 // ===============================
@@ -194,33 +187,30 @@ async function cargarProductosDesdeSheets() {
     }
     
     productos = data
-      .filter(r => r.id && r.nombre && r.precio)
-      .map(r => {
-        // --- Asegura que si foto está vacía, use tu placeholder global (GitHub) ---
-        let imagenes;
-        if (r.foto && r.foto.trim() !== "") {
-          imagenes = r.foto.split(',').map(x => x.trim());
-        } else {
-          imagenes = ['https://raw.githubusercontent.com/patofelting/patofelting/main/img/placeholder.jpg'];
-        }
-        return {
-          id: parseInt(r.id, 10),
-          nombre: r.nombre ? r.nombre.trim() : 'Sin Nombre',
-          descripcion: r.descripcion ? r.descripcion.trim() : '',
-          precio: parseFloat(r.precio) || 0,
-          stock: parseInt(r.cantidad, 10) || 0,
-          imagenes,
-          adicionales: r.adicionales ? r.adicionales.trim() : 'Material no especificado',
-          alto: parseFloat(r.alto) || null,
-          ancho: parseFloat(r.ancho) || null,
-          profundidad: parseFloat(r.profundidad) || null,
-          categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
-          tamaño: parseFloat(r.tamaño) || null,
-          vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
-          estado: r.estado ? r.estado.trim() : ''
-        };
-      });
+  .filter(r => r.id && r.nombre && r.precio) 
+  .map(r => {
+    console.log('Fila parseada:', r); // <--- LOG PARA DEBUG
+    return {
+      id: parseInt(r.id, 10),
+      nombre: r.nombre ? r.nombre.trim() : 'Sin Nombre',
+      descripcion: r.descripcion ? r.descripcion.trim() : '',
+      precio: parseFloat(r.precio) || 0,
+      stock: parseInt(r.cantidad, 10) || 0,
+      imagenes: (r.foto && r.foto.trim() !== "" ? r.foto.split(',').map(x => x.trim()) : ['/img/placeholder.jpg']),
+      
 
+      adicionales: r.adicionales ? r.adicionales.trim() : 'Material no especificado',
+      alto: parseFloat(r.alto) || null,
+      ancho: parseFloat(r.ancho) || null,
+      profundidad: parseFloat(r.profundidad) || null,
+      categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
+      tamaño: parseFloat(r.tamaño) || null,
+      vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
+      estado: r.estado ? r.estado.trim() : ''
+    };
+  });
+
+    
     console.log('Productos procesados:', productos);
     
     if (productos.length === 0) {
@@ -246,15 +236,16 @@ function filtrarProductos(lista) {
   return lista.filter(p => {
     const { precioMin, precioMax, tamañoMin, tamañoMax, categoria, busqueda } = filtrosActuales;
     const busquedaLower = busqueda.toLowerCase();
+    
     return (
       (precioMin === null || p.precio >= precioMin) &&
       (precioMax === null || p.precio <= precioMax) &&
       (tamañoMin === null || (p.tamaño !== null && p.tamaño >= tamañoMin)) &&
       (tamañoMax === null || (p.tamaño !== null && p.tamaño <= tamañoMax)) &&
       (categoria === 'todos' || p.categoria === categoria) &&
-      (!busqueda ||
-        p.nombre.toLowerCase().includes(busquedaLower) ||
-        p.descripcion.toLowerCase().includes(busquedaLower))
+      (!busqueda || 
+       p.nombre.toLowerCase().includes(busquedaLower) || 
+       p.descripcion.toLowerCase().includes(busquedaLower))
     );
   });
 }
@@ -266,11 +257,11 @@ function crearCardProducto(p) {
   const enCarrito = carrito.find(i => i.id === p.id);
   const disp = p.stock - (enCarrito?.cantidad || 0);
   const agot = disp <= 0;
-  const imgUrl = p.imagenes[0];
+  const imgUrl = p.imagenes[0] || '/img/placeholder.jpg';
 
   return `
     <div class="producto-card" data-id="${p.id}">
-      <img data-src="${imgUrl}" src="${imgUrl}" alt="${p.nombre}" class="producto-img" loading="lazy" onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/patofelting/patofelting/main/img/placeholder.jpg';">
+      <img src="${imgUrl}" alt="${p.nombre}" class="producto-img" loading="lazy">
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
       <p class="producto-stock">
@@ -339,28 +330,25 @@ function renderizarProductos() {
     elementos.galeriaProductos.innerHTML = '<p>No se encontraron productos con los filtros aplicados.</p>';
   } else {
     elementos.galeriaProductos.innerHTML = slice.map(crearCardProducto).join('');
-    iniciarLazyLoad();
   }
   
-  // SOLO AGREGA UN SOLO EVENT LISTENER (evita acumulación)
-  if (!elementos.galeriaProductos._hasListener) {
-    elementos.galeriaProductos.addEventListener('click', (e) => {
-      const target = e.target.closest('.boton-agregar');
-      if (target) {
-        const id = +target.dataset.id;
-        const cant = +document.getElementById(`cantidad-${id}`).value || 1;
-        agregarAlCarrito(id, cant);
-        return;
-      }
-      const detalleBtn = e.target.closest('.boton-detalles');
-      if (detalleBtn) {
-        const id = +detalleBtn.dataset.id;
-        const prod = productos.find(p => p.id === id);
-        if (prod) mostrarModalProducto(prod);
-      }
-    });
-    elementos.galeriaProductos._hasListener = true;
-  }
+  elementos.galeriaProductos.addEventListener('click', (e) => {
+    const target = e.target.closest('.boton-agregar');
+    if (target) {
+      const id = +target.dataset.id;
+      const cant = +document.getElementById(`cantidad-${id}`).value || 1;
+      agregarAlCarrito(id, cant);
+      return;
+    }
+    
+    const detalleBtn = e.target.closest('.boton-detalles');
+    if (detalleBtn) {
+      const id = +detalleBtn.dataset.id;
+      const prod = productos.find(p => p.id === id);
+      if (prod) mostrarModalProducto(prod);
+    }
+  });
+  
   renderizarPaginacion(list.length);
 }
 
@@ -396,7 +384,7 @@ function agregarAlCarrito(id, cantidad = 1) {
       nombre: prod.nombre,
       precio: prod.precio,
       cantidad,
-      imagen: prod.imagenes[0]
+      imagen: prod.imagenes[0] || '/img/placeholder.jpg'
     });
   }
   
@@ -416,7 +404,7 @@ function renderizarCarrito() {
   
   elementos.listaCarrito.innerHTML = carrito.map(i => `
     <li class="carrito-item">
-      <img src="${i.imagen}" class="carrito-item-img" alt="${i.nombre}" loading="lazy" onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/patofelting/patofelting/main/img/placeholder.jpg';">
+      <img src="${i.imagen}" class="carrito-item-img" alt="${i.nombre}" loading="lazy">
       <div class="carrito-item-info">
         <span class="carrito-item-nombre">${i.nombre}</span>
         <span class="carrito-item-subtotal">$U ${(i.precio * i.cantidad).toLocaleString('es-UY')}</span>
@@ -478,17 +466,24 @@ function mostrarModalProducto(p) {
   
   const enCarrito = carrito.find(i => i.id === p.id);
   const disp = p.stock - (enCarrito?.cantidad || 0);
-
+  
   elementos.modalContenido.innerHTML = `
     <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
-    <div class="modal-info-principal">
-      <div class="modal-carrusel">
-        <button class="modal-prev" aria-label="Imagen anterior">&#10094;</button>
-        <img src="${p.imagenes[0]}" class="modal-img" alt="${p.nombre}" loading="lazy" onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/patofelting/patofelting/main/img/placeholder.jpg';">
-        <button class="modal-next" aria-label="Imagen siguiente">&#10095;</button>
+    <div class="modal-grid">
+      <div class="modal-imagenes">
+        <div class="modal-img-principal-container">
+          <img src="${p.imagenes[0] || '/img/placeholder.jpg'}" class="modal-img-principal" alt="${p.nombre}" loading="lazy">
+        </div>
+        ${p.imagenes.length > 1 ? `
+        <div class="modal-thumbnails">
+          ${p.imagenes.slice(1).map((img, i) => `
+            <img src="${img}" class="modal-thumbnail" alt="Miniatura ${i + 1}" data-index="${i + 1}">
+          `).join('')}
+        </div>
+        ` : ''}
       </div>
-      <div class="modal-detalles-producto">
-        <h2 class="modal-nombre">${p.nombre}</h2>
+      <div class="modal-info">
+        <h2>${p.nombre}</h2>
         <p class="modal-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
         <p class="modal-stock ${disp > 0 ? 'disponible' : 'agotado'}">
           ${disp > 0 ? `Disponible: ${disp} unidades` : 'AGOTADO'}
@@ -507,7 +502,7 @@ function mostrarModalProducto(p) {
             ${disp <= 0 ? 'disabled' : ''}
           >
           <button
-            class="boton-agregar-modal ${disp <= 0 ? 'agotado' : ''}"
+            class="boton-agregar ${disp <= 0 ? 'agotado' : ''}"
             data-id="${p.id}"
             ${disp <= 0 ? 'disabled' : ''}
           >
@@ -517,53 +512,45 @@ function mostrarModalProducto(p) {
       </div>
     </div>
   `;
-  iniciarLazyLoad();
 
-  let indiceActual = 0;
-  const img = elementos.modalContenido.querySelector('.modal-img');
-  const prev = elementos.modalContenido.querySelector('.modal-prev');
-  const next = elementos.modalContenido.querySelector('.modal-next');
-
-  function actualizarImagen() {
-    img.src = p.imagenes[indiceActual];
-  }
-
-  if (prev && next) {
-    prev.addEventListener('click', () => {
-      indiceActual = (indiceActual - 1 + p.imagenes.length) % p.imagenes.length;
-      actualizarImagen();
-    });
-
-    next.addEventListener('click', () => {
-      indiceActual = (indiceActual + 1) % p.imagenes.length;
-      actualizarImagen();
+  if (p.imagenes.length > 1) {
+    const thumbnails = elementos.modalContenido.querySelectorAll('.modal-thumbnail');
+    const mainImg = elementos.modalContenido.querySelector('.modal-img-principal');
+    
+    thumbnails.forEach(thumb => {
+      thumb.addEventListener('click', () => {
+        const index = thumb.dataset.index;
+        mainImg.src = p.imagenes[index];
+        thumbnails.forEach(t => t.classList.remove('active'));
+        thumb.classList.add('active');
+      });
     });
   }
 
-  elementos.modalContenido.querySelector('.cerrar-modal').addEventListener('click', cerrarModalProducto);
-  const agregarBtn = elementos.modalContenido.querySelector('.boton-agregar-modal');
+  elementos.modalContenido.querySelector('.cerrar-modal').addEventListener('click', cerrarModal);
+  const agregarBtn = elementos.modalContenido.querySelector('.boton-agregar');
   if (agregarBtn) {
     agregarBtn.addEventListener('click', () => {
       const cantidad = +elementos.modalContenido.querySelector('.modal-cantidad').value || 1;
       agregarAlCarrito(p.id, cantidad);
-      cerrarModalProducto();
+      cerrarModal();
     });
   }
 
-  elementos.productoModal.classList.add('open');
+  elementos.productoModal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
   
   elementos.productoModal.addEventListener('click', (e) => {
     if (e.target === elementos.productoModal) {
-      cerrarModalProducto();
+      cerrarModal();
     }
   });
-}
 
-function cerrarModalProducto() {
-  if (!elementos.productoModal) return;
-  elementos.productoModal.classList.remove('open');
-  document.body.style.overflow = '';
+  function cerrarModal() {
+    if (!elementos.productoModal) return;
+    elementos.productoModal.style.display = 'none';
+    document.body.style.overflow = '';
+  }
 }
 
 // ===============================
@@ -695,7 +682,7 @@ function inicializarEventos() {
   
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      cerrarModalProducto();
+      cerrarModal();
     }
   });
   
@@ -745,11 +732,27 @@ function init() {
     console.warn('Este script debe ejecutarse en el navegador');
     return;
   }
+  
   console.log('Inicializando la aplicación...');
   cargarCarrito();
   cargarProductosDesdeSheets();
   inicializarEventos();
-  iniciarLazyLoad();
+  
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const img = entry.target;
+          img.src = img.dataset.src || img.src;
+          observer.unobserve(img);
+        }
+      });
+    }, { rootMargin: '100px' });
+    
+    document.querySelectorAll('img[data-src]').forEach(img => {
+      observer.observe(img);
+    });
+  }
 }
 
 if (document.readyState !== 'loading') {
