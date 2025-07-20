@@ -781,3 +781,38 @@ if (document.readyState !== 'loading') {
 } else {
   document.addEventListener('DOMContentLoaded', init);
 }
+elementos.faqToggles?.forEach(toggle => {
+  toggle.addEventListener('click', () => {
+    const expanded = toggle.getAttribute('aria-expanded') === 'true';
+    toggle.setAttribute('aria-expanded', !expanded);
+    const content = toggle.nextElementSibling;
+    content.hidden = expanded;
+  });
+});
+
+// Filtro de categorías
+elementos.faqCategory?.addEventListener('change', (e) => {
+  const category = e.target.value;
+  const items = document.querySelectorAll('.faq-item');
+  items.forEach(item => {
+    if (category === 'todos' || item.dataset.category === category) {
+      item.style.display = 'block';
+    } else {
+      item.style.display = 'none';
+    }
+  });
+});
+
+// Búsqueda
+elementos.faqSearch?.addEventListener('input', (e) => {
+  const query = e.target.value.toLowerCase();
+  const items = document.querySelectorAll('.faq-item');
+  items.forEach(item => {
+    const text = item.querySelector('.faq-toggle').textContent.toLowerCase();
+    if (query === '' || text.includes(query)) {
+      item.style.display = 'block';
+    } else {
+      item.style.display = 'none';
+    }
+  });
+});
