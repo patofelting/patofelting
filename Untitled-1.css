@@ -1912,3 +1912,111 @@ section h2::after {
     width: 100%;
   }
 }
+.faqs {
+  background-color: var(--crema-suave, #fffaf6);
+  padding: 3rem 1rem;
+}
+
+.faq-filter {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 2rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.faq-select, .faq-search {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--gris-borde, #e0eee6);
+  font-size: 1rem;
+  background: var(--verde-extra-claro, #e8f4ea);
+  transition: border-color 0.3s ease;
+}
+
+.faq-select:focus, .faq-search:focus {
+  border-color: var(--verde-secundario, #52b788);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(82, 183, 136, 0.15);
+}
+
+.faq-items {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.faq-item {
+  margin-bottom: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--verde-claro, #d8f3dc);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease;
+}
+
+.faq-item:hover {
+  transform: translateY(-3px);
+}
+
+.faq-toggle {
+  background: var(--verde-claro, #d8f3dc);
+  color: var(--verde-oscuro, #1b4332);
+  border: none;
+  padding: 1.2rem 1.5rem;
+  font-weight: 600;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.1rem;
+  position: relative;
+}
+
+.faq-toggle:hover {
+  background: var(--verde-principal, #95d5b2);
+}
+
+.faq-toggle:focus-visible {
+  outline: 2px solid var(--verde-secundario, #52b788);
+  outline-offset: 2px;
+}
+
+.faq-toggle::after {
+  content: '▼';
+  font-size: 0.8rem;
+  transition: transform 0.3s ease;
+}
+
+.faq-toggle[aria-expanded="true"]::after {
+  transform: rotate(180deg);
+}
+
+.faq-content {
+  padding: 1.5rem;
+  background: white;
+  color: var(--verde-salvia, #5a7a60);
+  font-size: 1rem;
+  line-height: 1.6;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; height: 0; }
+  to { opacity: 1; height: auto; }
+}
+
+.faq-more {
+  display: inline-block;
+  margin-top: 10px;
+  color: var(--verde-secundario, #52b788);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.faq-more:hover {
+  text-decoration: underline;
+}
