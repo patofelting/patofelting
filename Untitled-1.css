@@ -1639,4 +1639,85 @@ section h2::after {
   align-items: center;
   justify-content: center;
   background: rgba(255, 255, 255, 0.8);
+}/* Contenedor principal del carrusel */
+.modal-carrusel {
+  position: relative;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+/* Imagen principal */
+.modal-img {
+  max-width: 100%;
+  max-height: 400px;
+  border-radius: 8px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+  display: block;
+  margin: 0 auto;
+  transition: opacity 0.3s ease;
+}
+
+/* Contenedor de miniaturas - ahora debajo */
+.modal-thumbnails {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 15px;
+  padding: 10px 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #4CAF50 transparent;
+}
+
+/* Estilo de cada miniatura */
+.modal-thumbnail {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 5px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+  flex-shrink: 0; /* Evita que se reduzcan */
+}
+
+/* Efecto hover en miniaturas */
+.modal-thumbnail:hover {
+  transform: scale(1.05);
+  border-color: #4CAF50;
+}
+
+/* Miniatura activa/seleccionada */
+.modal-thumbnail.active {
+  border-color: #4CAF50;
+  transform: scale(1.05);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  position: relative;
+}
+
+/* Indicador visual de miniatura activa */
+.modal-thumbnail.active::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 15px;
+  height: 3px;
+  background-color: #4CAF50;
+  border-radius: 3px;
+}
+
+/* Scrollbar personalizada para el contenedor de miniaturas */
+.modal-thumbnails::-webkit-scrollbar {
+  height: 6px;
+}
+
+.modal-thumbnails::-webkit-scrollbar-thumb {
+  background-color: #4CAF50;
+  border-radius: 3px;
+}
+
+.modal-thumbnails::-webkit-scrollbar-track {
+  background: transparent;
 }
