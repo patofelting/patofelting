@@ -1788,3 +1788,86 @@ section h2::after {
   justify-content: center;
   background: rgba(255, 255, 255, 0.8);
 }
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-contenido-producto {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  width: 800px;
+}
+
+.cerrar-modal {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.modal-flex {
+  display: flex;
+  gap: 2rem;
+}
+
+.modal-carrusel {
+  flex: 1;
+}
+
+.modal-info {
+  flex: 1;
+}
+
+.modal-img {
+  max-width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+}
+
+.modal-thumbnails {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.modal-thumbnail {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  cursor: pointer;
+  border: 2px solid #ddd;
+}
+
+.modal-thumbnail.active {
+  border-color: #52b788;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .modal-flex {
+    flex-direction: column;
+  }
+  
+  .modal-contenido-producto {
+    width: 95%;
+  }
+}
