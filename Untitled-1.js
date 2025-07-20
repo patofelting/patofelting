@@ -481,21 +481,14 @@ function mostrarModalProducto(p) {
 
   elementos.modalContenido.innerHTML = `
     <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
-    <div class="modal-grid">
-      <div class="modal-imagenes">
-        <div class="modal-img-principal-container">
-          <img data-src="${p.imagenes[0]}" src="${p.imagenes[0]}" class="modal-img-principal" alt="${p.nombre}" loading="lazy" onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/patofelting/patofelting/main/img/placeholder.jpg';">
-        </div>
-        ${p.imagenes.length > 1 ? `
-        <div class="modal-thumbnails">
-          ${p.imagenes.slice(1).map((img, i) => `
-            <img data-src="${img}" src="${img}" class="modal-thumbnail" alt="Miniatura ${i + 1}" data-index="${i + 1}" onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/patofelting/patofelting/main/img/placeholder.jpg';">
-          `).join('')}
-        </div>
-        ` : ''}
+    <div class="modal-info-principal">
+      <div class="modal-carrusel">
+        <button class="modal-prev" aria-label="Imagen anterior">&#10094;</button>
+        <img src="${p.imagenes[0]}" class="modal-img" alt="${p.nombre}" loading="lazy" onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/patofelting/patofelting/main/img/placeholder.jpg';">
+        <button class="modal-next" aria-label="Imagen siguiente">&#10095;</button>
       </div>
-      <div class="modal-info">
-        <h2>${p.nombre}</h2>
+      <div class="modal-detalles-producto">
+        <h2 class="modal-nombre">${p.nombre}</h2>
         <p class="modal-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
         <p class="modal-stock ${disp > 0 ? 'disponible' : 'agotado'}">
           ${disp > 0 ? `Disponible: ${disp} unidades` : 'AGOTADO'}
@@ -514,7 +507,7 @@ function mostrarModalProducto(p) {
             ${disp <= 0 ? 'disabled' : ''}
           >
           <button
-            class="boton-agregar ${disp <= 0 ? 'agotado' : ''}"
+            class="boton-agregar-modal ${disp <= 0 ? 'agotado' : ''}"
             data-id="${p.id}"
             ${disp <= 0 ? 'disabled' : ''}
           >
@@ -526,44 +519,51 @@ function mostrarModalProducto(p) {
   `;
   iniciarLazyLoad();
 
-  if (p.imagenes.length > 1) {
-    const thumbnails = elementos.modalContenido.querySelectorAll('.modal-thumbnail');
-    const mainImg = elementos.modalContenido.querySelector('.modal-img-principal');
-    
-    thumbnails.forEach(thumb => {
-      thumb.addEventListener('click', () => {
-        const index = thumb.dataset.index;
-        mainImg.src = p.imagenes[index];
-        thumbnails.forEach(t => t.classList.remove('active'));
-        thumb.classList.add('active');
-      });
+  let indiceActual = 0;
+  const img = elementos.modalContenido.querySelector('.modal-img');
+  const prev = elementos.modalContenido.querySelector('.modal-prev');
+  const next = elementos.modalContenido.querySelector('.modal-next');
+
+  function actualizarImagen() {
+    img.src = p.imagenes[indiceActual];
+  }
+
+  if (prev && next) {
+    prev.addEventListener('click', () => {
+      indiceActual = (indiceActual - 1 + p.imagenes.length) % p.imagenes.length;
+      actualizarImagen();
+    });
+
+    next.addEventListener('click', () => {
+      indiceActual = (indiceActual + 1) % p.imagenes.length;
+      actualizarImagen();
     });
   }
 
-  elementos.modalContenido.querySelector('.cerrar-modal').addEventListener('click', cerrarModal);
-  const agregarBtn = elementos.modalContenido.querySelector('.boton-agregar');
+  elementos.modalContenido.querySelector('.cerrar-modal').addEventListener('click', cerrarModalProducto);
+  const agregarBtn = elementos.modalContenido.querySelector('.boton-agregar-modal');
   if (agregarBtn) {
     agregarBtn.addEventListener('click', () => {
       const cantidad = +elementos.modalContenido.querySelector('.modal-cantidad').value || 1;
       agregarAlCarrito(p.id, cantidad);
-      cerrarModal();
+      cerrarModalProducto();
     });
   }
 
-  elementos.productoModal.style.display = 'flex';
+  elementos.productoModal.classList.add('open');
   document.body.style.overflow = 'hidden';
   
   elementos.productoModal.addEventListener('click', (e) => {
     if (e.target === elementos.productoModal) {
-      cerrarModal();
+      cerrarModalProducto();
     }
   });
+}
 
-  function cerrarModal() {
-    if (!elementos.productoModal) return;
-    elementos.productoModal.style.display = 'none';
-    document.body.style.overflow = '';
-  }
+function cerrarModalProducto() {
+  if (!elementos.productoModal) return;
+  elementos.productoModal.classList.remove('open');
+  document.body.style.overflow = '';
 }
 
 // ===============================
@@ -695,7 +695,7 @@ function inicializarEventos() {
   
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      cerrarModal();
+      cerrarModalProducto();
     }
   });
   

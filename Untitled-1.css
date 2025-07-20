@@ -635,6 +635,8 @@ p {
   flex-shrink: 0; /* Prevents it from shrinking too much */
   flex-grow: 1; /* Allows it to grow to fill space */
 
+  position: relative;
+
   /* Keep existing visual styles */
   border-radius: var(--radius-md);
   box-shadow: 0 10px 25px rgba(100, 160, 120, 0.15); /* More prominent shadow */
@@ -654,6 +656,31 @@ p {
   display: block; /* Removes extra space below inline images */
   object-fit: contain; /* Scales the image to fit its content box while maintaining its aspect ratio */
   border-radius: var(--radius-sm); /* Apply a slight border-radius to the image itself */
+}
+
+.modal-prev,
+.modal-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  border: none;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.modal-prev {
+  left: 8px;
+}
+
+.modal-next {
+  right: 8px;
 }
 
 .modal-detalles-producto {
@@ -1495,6 +1522,11 @@ p {
   .modal-carrusel {
     width: 220px;
     height: 220px;
+  }
+  .modal-prev,
+  .modal-next {
+    width: 28px;
+    height: 28px;
   }
   .cerrar-modal {
     width: 32px;
