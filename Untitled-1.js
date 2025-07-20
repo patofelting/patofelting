@@ -292,7 +292,11 @@ function renderizarProductos() {
 // MODAL MEJORADO (sin placeholder, sin thumbnails si no hay imagen)
 // ===============================
 function mostrarModalProducto(p) {
-  if (!elementos.productoModal || !elementos.modalContenido) return;
+  if (!elementos.productoModal || !elementos.modalContenido) {
+    console.error('Elementos del modal no encontrados');
+    return;
+  }
+  
   const enCarrito = carrito.find(i => i.id === p.id);
   const disp = p.stock - (enCarrito?.cantidad || 0);
 
@@ -312,7 +316,7 @@ function mostrarModalProducto(p) {
   }
 
   elementos.modalContenido.innerHTML = `
-    <button class="cerrar-modal" aria-label="Cerrar modal"></button>
+    <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
     <div class="modal-flex">
       <div class="modal-carrusel">
         ${carruselHtml}
@@ -334,6 +338,7 @@ function mostrarModalProducto(p) {
       </div>
     </div>
   `;
+
   // Carrusel
   if (p.imagenes.length > 1) {
     const mainImg = elementos.modalContenido.querySelector('#modal-img-principal');
@@ -346,12 +351,17 @@ function mostrarModalProducto(p) {
       });
     });
   }
-  // Botón cerrar
+
+  // Mostrar modal
+  elementos.productoModal.style.display = 'flex';
+  document.body.classList.add('no-scroll');
+
+  // Event listeners
   const cerrarBtn = elementos.modalContenido.querySelector('.cerrar-modal');
   if (cerrarBtn) {
     cerrarBtn.addEventListener('click', cerrarModal);
   }
-  // Botón agregar al carrito
+
   const agregarBtn = elementos.modalContenido.querySelector('.boton-agregar-modal');
   if (agregarBtn) {
     agregarBtn.addEventListener('click', () => {
@@ -360,19 +370,18 @@ function mostrarModalProducto(p) {
       cerrarModal();
     });
   }
-  // Mostrar modal
-  elementos.productoModal.style.display = 'flex';
-  document.body.classList.add('no-scroll');
-  // Cierra modal al tocar fuera
+
   elementos.productoModal.addEventListener('click', (e) => {
-    if (e.target === elementos.productoModal) cerrarModal();
+    if (e.target === elementos.productoModal) {
+      cerrarModal();
+    }
   });
+
   function cerrarModal() {
     elementos.productoModal.style.display = 'none';
     document.body.classList.remove('no-scroll');
   }
 }
-
 // ===============================
 // CARRITO (sin placeholder)
 // ===============================
