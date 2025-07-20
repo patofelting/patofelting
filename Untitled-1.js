@@ -361,7 +361,6 @@ function renderizarPaginacion(total) {
     b.addEventListener('click', () => {
       paginaActual = i;
       renderizarProductos();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
     cont.appendChild(b);
   }
@@ -405,21 +404,15 @@ function renderizarProductos() {
 // ===============================
 
 function mostrarModalProducto(producto) {
-  // 1. Validación más robusta de elementos del DOM
   if (!elementos.productoModal || !elementos.modalContenido) {
-    console.error('Elementos del modal no encontrados', {
-      productoModal: !!elementos.productoModal,
-      modalContenido: !!elementos.modalContenido
-    });
+    console.error('Elementos del modal no encontrados');
     return;
   }
 
-  // 2. Manejo más seguro del carrito y disponibilidad
   const enCarrito = carrito.find(item => item.id === producto.id) || { cantidad: 0 };
   const disponible = Math.max(0, producto.stock - enCarrito.cantidad);
   const estaAgotado = disponible <= 0;
 
-  // 3. Generación del carrusel con manejo de errores mejorado
   const generarCarrusel = () => {
     const imagenesValidas = producto.imagenes.filter(img => img) || [];
     const tieneImagenes = imagenesValidas.length > 0;
@@ -449,7 +442,6 @@ function mostrarModalProducto(producto) {
     return html;
   };
 
-  // 4. Plantilla más organizada y accesible
   elementos.modalContenido.innerHTML = `
     <button class="cerrar-modal" aria-label="Cerrar modal de producto">×</button>
     <div class="modal-flex">
@@ -488,13 +480,6 @@ function mostrarModalProducto(producto) {
               </span>
             </div>
           ` : ''}
-          
-          ${producto.estado ? `
-            <div class="modal-detalle">
-              <span class="detalle-etiqueta">Estado:</span>
-              <span class="detalle-valor">${producto.estado}</span>
-            </div>
-          ` : ''}
         </div>
         
         <div class="modal-acciones">
@@ -518,9 +503,7 @@ function mostrarModalProducto(producto) {
     </div>
   `;
 
-  // 5. Event listeners mejorados
   const configurarEventos = () => {
-    // Carrusel de imágenes
     if (producto.imagenes?.length > 1) {
       const mainImg = elementos.modalContenido.querySelector('#modal-img-principal');
       const thumbnails = elementos.modalContenido.querySelectorAll('.modal-thumbnail');
@@ -535,11 +518,9 @@ function mostrarModalProducto(producto) {
       });
     }
 
-    // Cerrar modal
     const cerrarBtn = elementos.modalContenido.querySelector('.cerrar-modal');
     cerrarBtn?.addEventListener('click', cerrarModal);
 
-    // Agregar al carrito
     const agregarBtn = elementos.modalContenido.querySelector('.boton-agregar-modal');
     agregarBtn?.addEventListener('click', () => {
       const cantidadInput = elementos.modalContenido.querySelector('.cantidad-modal-input');
@@ -553,7 +534,6 @@ function mostrarModalProducto(producto) {
       cerrarModal();
     });
 
-    // Cerrar al hacer clic fuera
     elementos.productoModal.addEventListener('click', (e) => {
       if (e.target === elementos.productoModal) {
         cerrarModal();
@@ -561,22 +541,17 @@ function mostrarModalProducto(producto) {
     });
   };
 
-  // 6. Mostrar el modal con animación
   const mostrarModal = () => {
     elementos.productoModal.style.display = 'flex';
     document.body.classList.add('no-scroll');
     
-    // Pequeño delay para la animación
     setTimeout(() => {
       elementos.productoModal.style.opacity = '1';
       elementos.productoModal.style.visibility = 'visible';
-      
-      // Enfocar el botón de cerrar para accesibilidad
       elementos.modalContenido.querySelector('.cerrar-modal')?.focus();
     }, 10);
   };
 
-  // 7. Función para cerrar el modal
   const cerrarModal = () => {
     elementos.productoModal.style.opacity = '0';
     elementos.productoModal.style.visibility = 'hidden';
@@ -587,7 +562,6 @@ function mostrarModalProducto(producto) {
     }, 300);
   };
 
-  // Inicializar
   configurarEventos();
   mostrarModal();
 }
@@ -598,9 +572,7 @@ function mostrarModalProducto(producto) {
 
 function aplicarFiltros() {
   paginaActual = 1;
-  const currentScrollPosition = window.scrollY;
   actualizarUI();
-  window.scrollTo({ top: currentScrollPosition, behavior: 'auto' });
 }
 
 // ===============================
@@ -809,55 +781,3 @@ if (document.readyState !== 'loading') {
 } else {
   document.addEventListener('DOMContentLoaded', init);
 }
-document.addEventListener('DOMContentLoaded', function() {
-  // Control del modal de producto
-  const productoModal = document.getElementById('producto-modal');
-  const cerrarModalBtn = productoModal.querySelector('.cerrar-modal');
-  
-  // Función para abrir el modal (debes llamarla desde tus botones "Ver detalles")
-  function abrirModalProducto(producto) {
-    // Aquí llenarías el modal con los datos del producto
-    productoModal.style.display = 'flex';
-    document.body.classList.add('no-scroll');
-    
-    // Animación de aparición
-    setTimeout(() => {
-      productoModal.style.opacity = '1';
-    }, 10);
-  }
-  
-  // Función para cerrar el modal
-  function cerrarModalProducto() {
-    productoModal.style.opacity = '0';
-    setTimeout(() => {
-      productoModal.style.display = 'none';
-      document.body.classList.remove('no-scroll');
-    }, 300);
-  }
-  
-  // Event listeners
-  cerrarModalBtn.addEventListener('click', cerrarModalProducto);
-  
-  // Cerrar al hacer clic fuera del contenido
-  productoModal.addEventListener('click', function(e) {
-    if (e.target === productoModal) {
-      cerrarModalProducto();
-    }
-  });
-  
-  // Cerrar con la tecla ESC
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && productoModal.style.display === 'flex') {
-      cerrarModalProducto();
-    }
-  });
-  
-  // Ejemplo de cómo conectar los botones "Ver detalles" (debes adaptarlo a tu código)
-  document.querySelectorAll('.boton-detalles').forEach(boton => {
-    boton.addEventListener('click', function() {
-      const productoId = this.dataset.productoId;
-      // Aquí obtendrías los datos del producto y llamarías a abrirModalProducto()
-      abrirModalProducto(productoId);
-    });
-  });
-});
