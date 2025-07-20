@@ -41,35 +41,34 @@ function init() {
   try {
     verificarRecursos();
     
-    // Verificar si EmailJS está disponible
-    if (typeof emailjs === 'undefined') {
-      console.warn('EmailJS no está cargado');
-      document.getElementById('form-contacto')?.classList.add('hidden');
+    // EmailJS init seguro
+  if (window.emailjs) {
+    emailjs.init("o4IxJz0Zz-LQ8jYKG"); 
+    const formContacto = document.getElementById('form-contacto');
+    if (formContacto) {
+      formContacto.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const btnEnviar = document.getElementById('btn-enviar');
+        const successMessage = document.getElementById('success-message');
+        btnEnviar.disabled = true;
+        btnEnviar.textContent = 'Enviando...';
+        emailjs.sendForm('service_89by24g', 'template_8mn7hdp', this) 
+          .then(function() {
+            btnEnviar.disabled = false;
+            btnEnviar.textContent = 'Enviar mensaje';
+            formContacto.reset();
+            if (successMessage) {
+              successMessage.classList.remove('hidden');
+              setTimeout(() => successMessage.classList.add('hidden'), 5000);
+            }
+            mostrarNotificacion("¡Mensaje enviado con éxito!", "exito");
+          }, function() {
+            btnEnviar.disabled = false;
+            btnEnviar.textContent = 'Enviar mensaje';
+            mostrarNotificacion("Error al enviar mensaje. Intenta de nuevo.", "error");
+          });
+      });
     }
-
-    // Resto de tu inicialización...
-    cargarCarrito();
-    cargarProductosDesdeSheets();
-    inicializarEventos();
-    inicializarFAQ();
-    
-    if (typeof emailjs !== 'undefined') {
-      inicializarFormularioContacto();
-    }
-
-  } catch (error) {
-    console.error('Error en la inicialización:', error);
-    mostrarNotificacion('Error al iniciar la aplicación', 'error');
+	
   }
-}
-
-// Manejo mejorado de eventos de error
-window.addEventListener('error', event => {
-  console.error('Error global:', event.error);
-  mostrarNotificacion('Ocurrió un error inesperado', 'error');
-});
-
-window.addEventListener('unhandledrejection', event => {
-  console.error('Error no manejado:', event.reason);
-  mostrarNotificacion('Error en operación asíncrona', 'error');
-});
+  
