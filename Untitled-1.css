@@ -1,139 +1,151 @@
 /* ===== VARIABLES CSS (Ensure these are at the top of your file) ===== */
 :root {
   /* ... (keep your existing variables) ... */
-  --padding-modal: 32px; /* Standard desktop padding */
-  --padding-modal-mobile: 20px; /* Reduced mobile padding */
-  --modal-gap-desktop: 30px; /* Gap between modal sections on desktop */
-  --modal-gap-mobile: 20px; /* Gap between modal sections on mobile */
+  --padding-modal: 28px; /* Slightly reduced desktop padding */
+  --padding-modal-mobile: 18px; /* Slightly reduced mobile padding */
+  --modal-gap-desktop: 25px; /* Slightly reduced gap between modal sections on desktop */
+  --modal-gap-mobile: 15px; /* Slightly reduced gap between modal sections on mobile */
 }
 
-/* ===== MODAL DE PRODUCTO (Refinements for spacing) ===== */
+/* ===== MODAL DE PRODUCTO (Refinements for image adaptation and layout) ===== */
 #producto-modal {
-  /* Keep existing styles, ensure it's a flex container for centering */
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px; /* Reduced padding around the modal itself to prevent breakage on very small screens */
-  overflow-y: auto; /* Allow the entire modal to scroll if needed */
+  padding: 8px; /* Reduced padding around the entire modal for very tight screens */
+  overflow-y: auto; /* Allows scrolling for the entire modal overlay if content is very tall */
 }
 
 .modal-contenido-producto {
-  /* Keep existing visual styles */
   background: white;
   background-image: var(--gradiente-suave);
   border-radius: var(--radius-xl);
   box-shadow: var(--sombra-modal-impresionante);
-  padding: var(--padding-modal); /* Use variable for padding */
+  padding: var(--padding-modal); /* Uses dynamic padding */
   position: relative;
-  max-height: 95vh; /* Allow it to take up more vertical space if content is long */
-  width: 95%;
-  max-width: 700px; /* Slightly increased max-width for more content space */
-  display: flex; /* Make it a flex container */
-  flex-direction: column; /* Stack items vertically by default */
-  gap: var(--modal-gap-desktop); /* Gap between child elements */
-  overflow-y: auto; /* Allow content inside to scroll */
-
+  max-height: 95vh; /* Allows it to take up more vertical space if content is long */
+  width: 95%; /* Responsive width */
+  max-width: 750px; /* Increased max-width for better content display */
+  display: flex;
+  flex-direction: column; /* Stacks main sections vertically */
+  gap: var(--modal-gap-desktop); /* Space between main sections (e.g., image/text block and action block) */
+  overflow-y: auto; /* Allows content inside the modal to scroll */
+  
   /* Animation */
   transform: scale(0.9);
   opacity: 0;
   animation: modalEnter 0.5s var(--animacion-entrada-modal) forwards;
 }
 
-/* Adjust the internal layout of the modal-contenido-producto for better spacing */
+.cerrar-modal {
+  /* Keep existing styles */
+  top: 15px; /* Adjusted position slightly */
+  right: 15px; /* Adjusted position slightly */
+  width: 40px; /* Slightly smaller close button */
+  height: 40px;
+  font-size: 1.8rem;
+}
+
+/* New/Adjusted container for image and product details */
 .modal-info-principal {
   display: flex;
-  flex-wrap: wrap; /* Allow items to wrap on smaller screens */
-  gap: var(--modal-gap-desktop); /* Gap between image and text section */
+  flex-wrap: wrap; /* Allows items to wrap onto the next line if space is limited */
+  justify-content: center; /* Center items when they wrap */
   align-items: flex-start; /* Align items to the top */
+  gap: var(--modal-gap-desktop); /* Gap between the image carousel and the product details */
 }
 
 .modal-carrusel {
-  min-width: 280px; /* Ensure minimum width for the image */
-  max-width: 350px; /* Max width for consistency */
-  flex-shrink: 0; /* Prevent it from shrinking too much */
-  flex-grow: 1; /* Allow it to grow */
-  width: 100%; /* Default to full width for small screens */
+  width: 100%; /* Default to full width on small screens */
+  max-width: 320px; /* Max width for the carousel container */
+  height: 320px; /* Fixed height for consistency */
+  flex-shrink: 0; /* Prevents it from shrinking too much */
+  flex-grow: 1; /* Allows it to grow to fill space */
 
-  /* Keep existing styles */
-  height: 320px;
+  /* Keep existing visual styles */
   border-radius: var(--radius-md);
   box-shadow: 0 10px 25px rgba(100, 160, 120, 0.15);
   border: none;
   background: var(--gris-card);
-  display: flex; /* Ensure images inside are centered if needed */
+  
+  /* Flex properties for centering the image within the carousel */
+  display: flex;
   justify-content: center;
   align-items: center;
-}
-
-.modal-detalles-producto {
-  flex-grow: 1; /* Allow text details to take up remaining space */
-  min-width: 250px; /* Minimum width to prevent squishing */
+  overflow: hidden; /* Hide any overflow if image is slightly larger than container */
 }
 
 .modal-img {
-  max-width: 100%; /* Ensure image fits within its container */
-  height: auto; /* Maintain aspect ratio */
-  display: block; /* Remove extra space below image */
-  border-radius: var(--radius-md); /* Apply radius to the image itself if needed */
-  object-fit: contain; /* Ensure image fits without cropping */
+  max-width: 100%; /* VERY IMPORTANT: Ensures image doesn't overflow its container */
+  max-height: 100%; /* Ensures image doesn't overflow vertically */
+  display: block; /* Removes extra space below inline images */
+  object-fit: contain; /* Scales the image to fit its content box while maintaining its aspect ratio */
+  border-radius: var(--radius-sm); /* Apply a slight border-radius to the image itself */
 }
 
+.modal-detalles-producto {
+  flex-grow: 1; /* Allows this section to take up remaining horizontal space */
+  min-width: 280px; /* Minimum width to prevent squishing text on larger screens */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Align text to the left by default */
+}
+
+/* Text elements within modal-detalles-producto */
 .modal-nombre {
-  margin-bottom: 5px; /* Reduced margin */
+  font-size: 1.7rem; /* Slightly adjusted font size */
+  margin-bottom: 5px;
+  line-height: 1.2;
 }
-
 .modal-precio {
-  margin-bottom: 10px; /* Reduced margin */
+  font-size: 1.3rem; /* Slightly adjusted font size */
+  margin-bottom: 10px;
 }
-
 .modal-stock {
-  margin-bottom: 15px; /* Reduced margin */
+  margin-bottom: 15px;
 }
-
 .modal-descripcion {
-  font-size: 1em; /* Slightly smaller for better fit */
-  max-width: 100%; /* Ensure it uses full width available */
-  margin: 0 0 15px 0; /* Reset margins and add bottom margin */
+  font-size: 1em; /* Ensured appropriate font size */
+  line-height: 1.5;
+  margin-bottom: 15px;
+  text-align: left; /* Explicitly left-align description */
 }
 
 .modal-detalles {
-  margin-top: 0; /* Remove top margin, handled by gap in parent */
-  padding: 12px 15px; /* Adjusted padding */
-  display: flex;
-  flex-direction: column; /* Stack items inside details */
-  gap: 10px; /* Gap for rows in details */
+  padding: 10px 12px; /* Adjusted padding */
+  gap: 8px; /* Smaller gap for details list items */
 }
 
-/* Ensure quantity and add to cart button are well-spaced */
 .modal-acciones {
   display: flex;
-  flex-wrap: wrap; /* Allow to wrap on smaller screens */
-  gap: 15px; /* Space between input and button */
+  flex-wrap: wrap; /* Allows quantity and button to wrap */
+  gap: 12px; /* Reduced gap between quantity and button */
   align-items: center;
-  margin-top: 15px; /* Add some space above actions */
+  justify-content: flex-start; /* Align actions to the left */
+  margin-top: 10px; /* Reduced top margin */
 }
 
 .cantidad-modal-container {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px; /* Reduced gap around quantity input */
 }
 
 .cantidad-modal-input {
-  width: 65px; /* Slightly narrower input */
-  padding: 8px 0; /* Reduced padding */
-  font-size: 1.05rem;
+  width: 60px; /* Slightly narrower input */
+  padding: 7px 0; /* Reduced padding */
+  font-size: 1rem;
 }
 
 .boton-agregar-modal {
-  flex-grow: 1; /* Allow button to take available space */
-  min-width: 180px; /* Ensure button isn't too small */
-  padding: 12px 20px; /* Adjusted padding */
-  font-size: 1.05rem;
+  flex-grow: 1; /* Allows button to take available space */
+  min-width: 160px; /* Ensure button isn't too small */
+  padding: 10px 18px; /* Adjusted padding */
+  font-size: 1em;
 }
 
 
-/* ===== MEDIA QUERIES (Adjust for smaller screens) ===== */
+/* ===== MEDIA QUERIES (Adjusted for better responsiveness) ===== */
 @media (max-width: 768px) {
   .modal-contenido-producto {
     padding: var(--padding-modal-mobile); /* Use mobile padding */
@@ -147,9 +159,8 @@
   }
 
   .modal-carrusel {
-    width: 250px; /* Adjust size for mobile modals */
-    height: 250px;
-    margin-bottom: 0; /* Remove extra margin if flex-direction is column */
+    width: 280px; /* Fixed width for mobile carousel */
+    height: 280px; /* Fixed height for mobile carousel */
   }
 
   .modal-detalles-producto {
@@ -157,20 +168,29 @@
     width: 100%; /* Take full width on mobile */
   }
 
+  .modal-nombre,
+  .modal-precio,
+  .modal-stock,
   .modal-descripcion {
-    text-align: left; /* Keep description left-aligned for readability */
+    text-align: center; /* Center all text elements within the details */
     margin-left: auto;
     margin-right: auto;
+  }
+  
+  .modal-descripcion {
     max-width: 90%; /* Constrain width for readability on mobile */
+    text-align: left; /* Override to keep description text left-aligned */
   }
 
   .modal-acciones {
     flex-direction: column; /* Stack quantity and button vertically */
     align-items: stretch; /* Stretch to fill width */
+    justify-content: center; /* Center content horizontally */
   }
 
   .cantidad-modal-container {
     justify-content: center; /* Center quantity controls */
+    width: 100%; /* Full width for quantity container */
   }
 
   .boton-agregar-modal {
@@ -180,18 +200,28 @@
 
 @media (max-width: 480px) {
   .modal-contenido-producto {
-    padding: 15px; /* Even smaller padding on very small screens */
-    gap: 15px;
+    padding: 12px; /* Even smaller padding on very small screens */
+    gap: 12px;
   }
   .modal-carrusel {
-    width: 200px;
-    height: 200px;
+    width: 220px;
+    height: 220px;
   }
   .cerrar-modal {
-    width: 35px;
-    height: 35px;
-    font-size: 1.5rem;
-    top: 10px;
-    right: 10px;
+    width: 32px;
+    height: 32px;
+    font-size: 1.3rem;
+    top: 8px;
+    right: 8px;
+  }
+  .modal-nombre {
+    font-size: 1.4rem;
+  }
+  .modal-precio {
+    font-size: 1.1rem;
+  }
+  .boton-agregar-modal {
+    padding: 8px 15px;
+    font-size: 0.9em;
   }
 }
