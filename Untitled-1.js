@@ -170,41 +170,6 @@ function crearCardProducto(p) {
   `;
 }
 
-function renderizarProductos() {
-  if (!elementos.galeriaProductos) return;
-  const list = filtrarProductos(productos);
-  const inicio = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
-  const slice = list.slice(inicio, inicio + PRODUCTOS_POR_PAGINA);
-  if (slice.length === 0) {
-    elementos.galeriaProductos.innerHTML = '<p>No se encontraron productos con los filtros aplicados.</p>';
-  } else {
-    elementos.galeriaProductos.innerHTML = slice.map(crearCardProducto).join('');
-  }
-  elementos.galeriaProductos.onclick = (e) => {
-    const target = e.target.closest('.boton-agregar');
-    if (target) {
-      const id = +target.dataset.id;
-      const cant = +document.getElementById(`cantidad-${id}`).value || 1;
-      agregarAlCarrito(id, cant);
-      return;
-    }
-    const detalleBtn = e.target.closest('.boton-detalles');
-    if (detalleBtn) {
-      const id = +detalleBtn.dataset.id;
-      const prod = productos.find(p => p.id === id);
-      if (prod) mostrarModalProducto(prod);
-    }
-  };
-  renderizarPaginacion(list.length);
-}
-
-function renderizarPaginacion(total) {
-  const pages = Math.ceil(total / PRODUCTOS_POR_PAGINA);
-  const cont = elementos.paginacion;
-  if (!cont) return;
-  cont.innerHTML = '';
-  if (pages <= 1) return;
- 
 function renderizarPaginacion(total) {
   const pages = Math.ceil(total / PRODUCTOS_POR_PAGINA);
   const cont = elementos.paginacion;
@@ -215,18 +180,23 @@ function renderizarPaginacion(total) {
     const b = document.createElement('button');
     b.textContent = i;
     b.className = i === paginaActual ? 'pagina-activa' : '';
-    b.addEventListener('click', () => {
+    b.addEventListener('click', (e) => {
+      e.preventDefault(); // 👈 ¡Evita el salto!
       paginaActual = i;
       renderizarProductos();
       const galeria = document.getElementById('galeria-productos');
-if (galeria) {
-  galeria.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
+      if (galeria) {
+        galeria.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     });
     cont.appendChild(b);
   }
 }
-}
+
+
+
+ 
+
 
 // ===============================
 // MODAL DE PRODUCTO (con stock real)
