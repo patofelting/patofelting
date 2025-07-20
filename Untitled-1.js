@@ -255,7 +255,7 @@ function crearCardProducto(p) {
   return `
     <div class="producto-card" data-id="${p.id}">
       <div class="producto-img-container">
-        <img src="${imgUrl}" alt="${p.nombre}" class="producto-img" loading="lazy">
+        <img src="${imgUrl}" alt="${p.nombre}" class="producto-img" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'">
       </div>
       <div class="producto-info">
         <h3 class="producto-nombre">${p.nombre}</h3>
@@ -406,7 +406,7 @@ function renderizarCarrito() {
   
   elementos.listaCarrito.innerHTML = carrito.map(i => `
     <li class="carrito-item">
-      <img src="${i.imagen}" class="carrito-item-img" alt="${i.nombre}" loading="lazy">
+      <img src="${i.imagen}" class="carrito-item-img" alt="${i.nombre}" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'">
       <div class="carrito-item-info">
         <span class="carrito-item-nombre">${i.nombre}</span>
         <span class="carrito-item-subtotal">$U ${(i.precio * i.cantidad).toLocaleString('es-UY')}</span>
@@ -474,12 +474,16 @@ function mostrarModalProducto(p) {
     <div class="modal-grid">
       <div class="modal-imagenes">
         <div class="modal-img-principal-container">
+
+          <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" class="modal-img-principal" alt="${p.nombre}" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'">
+
           <img src="${p.imagenes[0] || '/img/placeholder.jpg'}" class="modal-img-principal" alt="${p.nombre}" loading="lazy">
+
         </div>
         ${p.imagenes.length > 1 ? `
         <div class="modal-thumbnails">
           ${p.imagenes.slice(1).map((img, i) => `
-            <img src="${img}" class="modal-thumbnail" alt="Miniatura ${i + 1}" data-index="${i + 1}">
+            <img src="${img}" class="modal-thumbnail" alt="Miniatura ${i + 1}" data-index="${i + 1}" onerror="this.src='${PLACEHOLDER_IMAGE}'">
           `).join('')}
         </div>
         ` : ''}
