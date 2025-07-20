@@ -188,22 +188,27 @@ async function cargarProductosDesdeSheets() {
     
     productos = data
   .filter(r => r.id && r.nombre && r.precio) 
-  .map(r => ({
-    id: parseInt(r.id, 10),
-    nombre: r.nombre ? r.nombre.trim() : 'Sin Nombre',
-    descripcion: r.descripcion ? r.descripcion.trim() : '',
-    precio: parseFloat(r.precio) || 0,
-    stock: parseInt(r.cantidad, 10) || 0,
-    imagenes: (r.foto ? r.foto.split(',').map(x => x.trim()) : ['/img/placeholder.jpg']),
-    adicionales: r.adicionales ? r.adicionales.trim() : 'Material no especificado',
-    alto: parseFloat(r.alto) || null,
-    ancho: parseFloat(r.ancho) || null,
-    profundidad: parseFloat(r.profundidad) || null,
-    categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
-    tamaño: parseFloat(r.tamaño) || null,
-    vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
-    estado: r.estado ? r.estado.trim() : ''
-  }));
+  .map(r => {
+    console.log('Fila parseada:', r); // <--- LOG PARA DEBUG
+    return {
+      id: parseInt(r.id, 10),
+      nombre: r.nombre ? r.nombre.trim() : 'Sin Nombre',
+      descripcion: r.descripcion ? r.descripcion.trim() : '',
+      precio: parseFloat(r.precio) || 0,
+      stock: parseInt(r.cantidad, 10) || 0,
+      imagenes: (r.foto && r.foto.trim() !== "" ? r.foto.split(',').map(x => x.trim()) : ['https://via.placeholder.com/250x250?text=Sin+Imagen']),
+
+      adicionales: r.adicionales ? r.adicionales.trim() : 'Material no especificado',
+      alto: parseFloat(r.alto) || null,
+      ancho: parseFloat(r.ancho) || null,
+      profundidad: parseFloat(r.profundidad) || null,
+      categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
+      tamaño: parseFloat(r.tamaño) || null,
+      vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
+      estado: r.estado ? r.estado.trim() : ''
+    };
+  });
+
     
     console.log('Productos procesados:', productos);
     
