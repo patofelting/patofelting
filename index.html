@@ -95,7 +95,7 @@
 
   <section id="productos" class="productos">
     <div class="container">
-      <h2>Nuestros Productos</h2>
+      <h2 class="productos-titulo">Nuestras Creaciones</h2>
       <div class="filtros-container">
         <div class="filtro-grupo">
           <h3>Categorías:</h3>
@@ -128,8 +128,10 @@
   </section>
 
   <div class="modal-overlay" id="producto-modal">
-    <div class="modal-contenido-producto tilt-container">
-      <div id="modal-contenido"></div>
+    <div class="modal-contenido-producto tilt-container" aria-hidden="true" role="dialog" aria-labelledby="modal-title">
+      <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
+      <div id="modal-contenido" class="modal-info-principal" tabindex="-1">
+      </div>
     </div>
   </div>
 
