@@ -9,8 +9,11 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
 
+  <!-- Se recomienda agregar el enlace al recurso de Google Fonts en el head -->
+  <!-- <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"> -->
 </head>
 <body>
+  <!-- Barra de navegación -->
   <nav class="nav">
     <div class="nav-container">
       <div class="logo-container">
@@ -26,11 +29,12 @@
         <li><a href="#sobre">Sobre mí</a></li>
         <li><a href="#productos">Productos</a></li>
         <li><a href="#contacto">Contacto</a></li>
-        <li><a href="#preguntas">Preguntas</li>
+        <li><a href="#preguntas">Preguntas</a></li>
       </ul>
     </div>
   </nav>
 
+  <!-- Carrito de compras -->
   <div id="carrito-panel" class="carrito-panel">
     <div class="carrito-header">
       <h2>Tu Carrito</h2>
@@ -47,6 +51,7 @@
   </div>
   <div class="carrito-overlay"></div>
 
+  <!-- Sección de inicio -->
   <section id="inicio" class="hero">
     <video autoplay muted loop playsinline class="video-fondo" aria-hidden="true">
       <source src="" type="" />
@@ -61,6 +66,7 @@
     </div>
   </section>
 
+  <!-- Sección 'Sobre mí' -->
   <section id="sobre" class="about-me seccion">
     <div class="container">
       <div class="about-content">
@@ -93,9 +99,10 @@
     </div>
   </section>
 
+  <!-- Sección de productos -->
   <section id="productos" class="productos">
     <div class="container">
-      <h2 class="productos-titulo">Nuestras Creaciones</h2>
+      <h2>Nuestras Creaciones</h2>
       <div class="filtros-container">
         <div class="filtro-grupo">
           <h3>Categorías:</h3>
@@ -127,14 +134,17 @@
     </div>
   </section>
 
+  <!-- Modal de producto -->
   <div class="modal-overlay" id="producto-modal">
-    <div class="modal-contenido-producto tilt-container" aria-hidden="true" role="dialog" aria-labelledby="modal-title">
+    <div class="modal-contenido-producto" aria-hidden="true" role="dialog" aria-labelledby="modal-title">
       <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
       <div id="modal-contenido" class="modal-info-principal" tabindex="-1">
+        <!-- Contenido dinámico del producto -->
       </div>
     </div>
   </div>
 
+  <!-- Modal de aviso -->
   <div id="aviso-pre-compra-modal" class="modal-aviso" hidden>
     <div class="modal-aviso-contenido">
       <h3>🧙‍♀️ Antes de confirmar tu pedido</h3>
@@ -148,6 +158,7 @@
     </div>
   </div>
 
+  <!-- Sección de contacto -->
   <section id="contacto" class="contact">
     <div class="container">
       <h2>Contáctame</h2>
@@ -171,6 +182,7 @@
     </div>
   </section>
 
+  <!-- Sección de preguntas frecuentes -->
   <section id="preguntas" class="faqs">
     <div class="container">
       <h2>Preguntas Frecuentes</h2>
@@ -185,6 +197,7 @@
     </div>
   </section>
 
+  <!-- Pie de página -->
   <footer class="footer">
     <div class="footer-content">
       <p>
@@ -198,6 +211,7 @@
     </div>
   </footer>
 
+  <!-- Botón flotante 'volver arriba' -->
   <button class="boton-flotante" aria-label="Volver arriba">
     <i class="fas fa-arrow-up"></i>
   </button>
