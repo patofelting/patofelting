@@ -37,15 +37,25 @@ async function loadProductsFromSheets() {
   if (contenedor) contenedor.innerHTML = '<p>Cargando productos...</p>';
 
   try {
+
     const r = await fetch(SHEET_CSV_URL, { cache: 'no-cache' });
     if (!r.ok) throw new Error('No se pudo obtener el CSV');
     const csv = await r.text();
+
+    const r = await fetch(SHEET_CSV_URL);
+    if (!r.ok) throw new Error('No se pudo obtener el CSV');
+    const csv = await r.text();
+
+
     if (typeof Papa === 'undefined') throw new Error('PapaParse no disponible');
 
     const { data, errors } = Papa.parse(csv, {
       header: true,
       skipEmptyLines: true
     });
+
+
+
     if (errors.length) {
       console.error('Errores al parsear CSV', errors);
       throw new Error('Error al procesar los datos');
