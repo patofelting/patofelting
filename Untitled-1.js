@@ -204,6 +204,13 @@ function renderizarPaginacion(total) {
   if (!cont) return;
   cont.innerHTML = '';
   if (pages <= 1) return;
+ 
+function renderizarPaginacion(total) {
+  const pages = Math.ceil(total / PRODUCTOS_POR_PAGINA);
+  const cont = elementos.paginacion;
+  if (!cont) return;
+  cont.innerHTML = '';
+  if (pages <= 1) return;
   for (let i = 1; i <= pages; i++) {
     const b = document.createElement('button');
     b.textContent = i;
@@ -218,6 +225,7 @@ if (galeria) {
     });
     cont.appendChild(b);
   }
+}
 }
 
 // ===============================
