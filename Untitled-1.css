@@ -5,7 +5,7 @@
   --gris: #555;
   --fondo: #f5f7fa;
   --blanco: #fff;
-  --fuente: 'Segoe UI', 'Roboto', Arial, sans-serif;
+  --fuente: 'Nunito', 'Segoe UI', 'Roboto', Arial, sans-serif;
   --sombra: 0 2px 16px rgba(40, 50, 60, 0.07);
 }
 
@@ -491,4 +491,96 @@ img {
 }
 .boton-flotante:hover {
   background: var(--verde); box-shadow: 0 3px 16px rgba(80,180,90,.26);
+}
+
+/* =========== NAVEGACIÓN =========== */
+.nav {
+  background: var(--blanco);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+.nav-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.8rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.logo-img {
+  width: 40px;
+  height: 40px;
+}
+.menu {
+  list-style: none;
+  display: flex;
+  gap: 1rem;
+  margin: 0;
+}
+.menu li a {
+  color: var(--gris);
+  font-weight: 600;
+}
+.hamburguesa { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+
+@media (max-width: 768px) {
+  .menu {
+    position: absolute;
+    top: 56px;
+    right: 0;
+    background: var(--blanco);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 1rem;
+    flex-direction: column;
+    display: none;
+  }
+  .menu.open { display: flex; }
+  .hamburguesa { display: block; }
+}
+
+/* =========== HERO =========== */
+.hero {
+  position: relative;
+  min-height: 70vh;
+  text-align: center;
+  color: #fff;
+  overflow: hidden;
+}
+.video-fondo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+}
+.hero-content {
+  position: relative;
+  padding: 4rem 1rem;
+}
+.cta-button {
+  display: inline-block;
+  margin-top: 1rem;
+  background: var(--verde-claro);
+  color: #fff;
+  padding: 0.7rem 1.2rem;
+  border-radius: 6px;
+  font-weight: bold;
+  transition: background .2s;
+}
+.cta-button:hover { background: var(--verde); }
+
+.footer {
+  background: var(--blanco);
+  padding: 1.2rem 0;
+  margin-top: 3rem;
+  box-shadow: 0 -1px 6px rgba(0,0,0,0.05);
 }

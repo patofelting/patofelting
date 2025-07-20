@@ -34,6 +34,8 @@ let filtrosActuales = {
   busqueda: ''
 };
 
+let lazyObserver = null;
+
 // ===============================
 // REFERENCIAS AL DOM
 // ===============================
@@ -136,6 +138,24 @@ function actualizarCategorias() {
   elementos.selectCategoria.innerHTML = categorias
     .map(cat => `<option value="${cat}">${cat.charAt(0).toUpperCase() + cat.slice(1)}</option>`)
     .join('');
+}
+
+function iniciarLazyLoad() {
+  if (!('IntersectionObserver' in window)) return;
+  if (!lazyObserver) {
+    lazyObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const img = entry.target;
+          img.src = img.dataset.src || img.src;
+          lazyObserver.unobserve(img);
+        }
+      });
+    }, { rootMargin: '100px' });
+  }
+  document.querySelectorAll('img[data-src]').forEach(img => {
+    lazyObserver.observe(img);
+  });
 }
 
 // ===============================
@@ -261,7 +281,7 @@ function crearCardProducto(p) {
 
   return `
     <div class="producto-card" data-id="${p.id}">
-      <img src="${imgUrl}" alt="${p.nombre}" class="producto-img" loading="lazy">
+      <img data-src="${imgUrl}" src="/img/placeholder.jpg" alt="${p.nombre}" class="producto-img" loading="lazy" onerror="this.onerror=null;this.src='/img/placeholder.jpg';">
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
       <p class="producto-stock">
@@ -330,6 +350,7 @@ function renderizarProductos() {
     elementos.galeriaProductos.innerHTML = '<p>No se encontraron productos con los filtros aplicados.</p>';
   } else {
     elementos.galeriaProductos.innerHTML = slice.map(crearCardProducto).join('');
+    iniciarLazyLoad();
   }
   
   elementos.galeriaProductos.addEventListener('click', (e) => {
@@ -472,12 +493,12 @@ function mostrarModalProducto(p) {
     <div class="modal-grid">
       <div class="modal-imagenes">
         <div class="modal-img-principal-container">
-          <img src="${p.imagenes[0] || '/img/placeholder.jpg'}" class="modal-img-principal" alt="${p.nombre}" loading="lazy">
+          <img data-src="${p.imagenes[0] || '/img/placeholder.jpg'}" src="/img/placeholder.jpg" class="modal-img-principal" alt="${p.nombre}" loading="lazy" onerror="this.onerror=null;this.src='/img/placeholder.jpg';">
         </div>
         ${p.imagenes.length > 1 ? `
         <div class="modal-thumbnails">
           ${p.imagenes.slice(1).map((img, i) => `
-            <img src="${img}" class="modal-thumbnail" alt="Miniatura ${i + 1}" data-index="${i + 1}">
+            <img data-src="${img}" src="/img/placeholder.jpg" class="modal-thumbnail" alt="Miniatura ${i + 1}" data-index="${i + 1}" onerror="this.onerror=null;this.src='/img/placeholder.jpg';">
           `).join('')}
         </div>
         ` : ''}
@@ -512,6 +533,7 @@ function mostrarModalProducto(p) {
       </div>
     </div>
   `;
+  iniciarLazyLoad();
 
   if (p.imagenes.length > 1) {
     const thumbnails = elementos.modalContenido.querySelectorAll('.modal-thumbnail');
@@ -737,22 +759,7 @@ function init() {
   cargarCarrito();
   cargarProductosDesdeSheets();
   inicializarEventos();
-  
-  if ('IntersectionObserver' in window) {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const img = entry.target;
-          img.src = img.dataset.src || img.src;
-          observer.unobserve(img);
-        }
-      });
-    }, { rootMargin: '100px' });
-    
-    document.querySelectorAll('img[data-src]').forEach(img => {
-      observer.observe(img);
-    });
-  }
+  iniciarLazyLoad();
 }
 
 if (document.readyState !== 'loading') {
