@@ -3,7 +3,7 @@
 // ===============================
 const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
-const CSV_URL = window.SHEET_CSV_URL || '';
+const CSV_URL = window.SHEET_CARRITO_URL || '';
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/200';
 
 // ===============================
@@ -485,7 +485,7 @@ function mostrarModalProducto(producto) {
     requestAnimationFrame(() => {
       elementos.productoModal.style.opacity = '1';
       elementos.productoModal.style.visibility = 'visible';
-      elementos.modalContenido.querySelector('.cerrar-modal').focus();
+      cerrarBtn.focus();
     });
   };
 
@@ -620,11 +620,16 @@ function inicializarEventos() {
   });
 
   // FAQs
-  elementos.faqToggles?.forEach(toggle => {
-    toggle.addEventListener('click', () => {
-      toggle.parentElement?.classList.toggle('active');
+  if (elementos.faqToggles?.length) {
+    elementos.faqToggles.forEach(toggle => {
+      toggle.addEventListener('click', () => {
+        const faqItem = toggle.closest('.faq-item');
+        if (faqItem) faqItem.classList.toggle('active');
+      });
     });
-  });
+  } else {
+    console.warn('No se encontraron elementos .faq-toggle en el DOM');
+  }
 
   // Formulario de contacto
   if (window.emailjs) {
@@ -644,14 +649,19 @@ function inicializarEventos() {
         const formData = new FormData(elementos.formContacto);
         const data = Object.fromEntries(formData.entries());
 
-        const resp = await fetch('/api/contacto', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
+        // Intento de envío al backend (opcional)
+        let backendResponse = true; // Simulamos éxito por ahora
+        if (window.location.hostname !== 'localhost') { // Evitar en desarrollo local
+          const resp = await fetch('/api/contacto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          backendResponse = resp.ok;
+          if (!resp.ok) throw new Error('Error en el backend');
+        }
 
-        if (!resp.ok) throw new Error('Error en el backend');
-
+        // Envío con EmailJS
         await emailjs.sendForm('service_89by24g', 'template_8mn7hdp', elementos.formContacto);
 
         elementos.formContacto.reset();
@@ -661,7 +671,7 @@ function inicializarEventos() {
         }
         mostrarNotificacion('¡Mensaje enviado con éxito!', 'exito');
       } catch (err) {
-        console.error(err);
+        console.error('Error en el envío:', err);
         mostrarNotificacion('Error al enviar el mensaje. Por favor, intente nuevamente.', 'error');
       } finally {
         btnEnviar.disabled = false;
@@ -680,7 +690,7 @@ function init() {
     return;
   }
 
-  console.log('Inicializando la aplicación...');
+  console.log('Inicializando la aplicación... a las', new Date().toLocaleString());
   cargarCarrito();
   cargarProductosDesdeSheets();
   inicializarEventos();
