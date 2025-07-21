@@ -1,8 +1,8 @@
 /* Base Styles & Variables */
 :root {
-  --primary-color: #8e6c88;
-  --secondary-color: #d1b3c4;
-  --accent-color: #b392ac;
+  --primary-color: #4CAF50; /* Verde principal */
+  --secondary-color: #8BC34A; /* Verde claro */
+  --accent-color: #388E3C; /* Verde oscuro */
   --text-color: #333;
   --light-text: #f8f8f8;
   --background-color: #fff;
@@ -472,17 +472,56 @@ blockquote {
 }
 
 .boton-ver-detalles {
-  padding: 8px 15px;
+  padding: 10px 15px;
   background-color: var(--primary-color);
   color: white;
   border-radius: var(--border-radius);
   text-align: center;
   transition: var(--transition);
   width: 100%;
+  margin-top: 10px;
+  font-weight: 600;
+  border: none;
 }
 
 .boton-ver-detalles:hover {
   background-color: var(--accent-color);
+  transform: translateY(-2px);
+}
+
+.card-acciones {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.cantidad-input {
+  width: 60px;
+  padding: 8px;
+  border: 1px solid var(--medium-gray);
+  border-radius: var(--border-radius);
+  text-align: center;
+}
+
+.boton-agregar {
+  flex: 1;
+  padding: 10px;
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: var(--border-radius);
+  border: none;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.boton-agregar:hover {
+  background-color: var(--accent-color);
+  transform: translateY(-2px);
+}
+
+.boton-agregar.agotado {
+  background-color: var(--medium-gray);
+  cursor: not-allowed;
 }
 
 /* Product Modal */
@@ -602,6 +641,8 @@ blockquote {
   color: white;
   border-radius: var(--border-radius);
   transition: var(--transition);
+  font-weight: 600;
+  border: none;
 }
 
 .boton-agregar-modal:hover {
@@ -921,7 +962,7 @@ blockquote {
 .form-group textarea:focus {
   border-color: var(--primary-color);
   outline: none;
-  box-shadow: 0 0 0 2px rgba(142, 108, 136, 0.2);
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
 }
 
 .submit-button {
