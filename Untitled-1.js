@@ -623,3 +623,27 @@ if (document.readyState !== 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 }
 window.resetearFiltros = resetearFiltros;
+
+// Cierre del modal por botón cancelar
+document.getElementById('btn-cancelar-aviso')?.addEventListener('click', () => {
+  document.getElementById('aviso-pre-compra-modal').style.display = 'none';
+});
+
+// Cierre del modal por la X (si tienes el botón de cerrar con clase .cerrar-modal o similar)
+document.querySelector('#aviso-pre-compra-modal .cerrar-modal')?.addEventListener('click', () => {
+  document.getElementById('aviso-pre-compra-modal').style.display = 'none';
+});
+
+// Cierre por fondo (click fuera del modal)
+document.getElementById('aviso-pre-compra-modal')?.addEventListener('click', e => {
+  if (e.target === e.currentTarget) {
+    e.currentTarget.style.display = 'none';
+  }
+});
+
+// Cierre con tecla ESC
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.getElementById('aviso-pre-compra-modal').style.display = 'none';
+  }
+});
