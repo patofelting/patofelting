@@ -3,7 +3,7 @@
 // ===============================
 const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
-const CSV_URL = window.SHEET_CARRITO_URL || '';
+const CSV_URL = window.SHEET_CSV_URL || '';
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/200';
 
 // ===============================
@@ -239,47 +239,60 @@ async function cargarProductosDesdeSheets() {
   elementos.galeriaProductos.innerHTML = '<p>Cargando productos...</p>';
 
   try {
+    if (!CSV_URL) throw new Error('URL del CSV no definida');
     const resp = await fetch(CSV_URL, { headers: { 'Cache-Control': 'no-store' } });
-    if (!resp.ok) throw new Error('Error al cargar productos desde el servidor');
-
+    if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
     const csvText = await resp.text();
+
+    // Depuración: Imprime el contenido del CSV para inspección
+    console.log('Contenido del CSV:', csvText);
+
     if (typeof Papa === 'undefined') throw new Error('Papa Parse no está disponible');
 
-    const { data, errors } = Papa.parse(csvText, {
+    // Configuración ajustada de Papa Parse
+    const { data, errors, meta } = Papa.parse(csvText, {
       header: true,
       skipEmptyLines: true,
-      transformHeader: h => h.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, '_')
+      delimiter: ',', // Cambia esto si el delimitador es diferente (por ejemplo, ';' o '\t')
+      transformHeader: h => h.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, '_'),
+      dynamicTyping: true // Intenta convertir automáticamente cadenas a números
     });
 
-    if (errors.length) throw new Error('Errores al procesar el CSV: ' + errors.map(e => e.message).join('; '));
+    if (errors.length) {
+      console.error('Errores de Papa Parse:', errors);
+      throw new Error('Errores al procesar el CSV: ' + errors.map(e => e.message).join('; '));
+    }
     if (!data || data.length === 0) throw new Error('No se encontraron productos en el CSV');
 
+    // Filtra y mapea los datos
     productos = data
-      .filter(r => r.id && r.nombre && r.precio)
+      .filter(r => r.id !== undefined && r.nombre && r.precio !== undefined)
       .map(r => ({
-        id: parseInt(r.id, 10),
-        nombre: r.nombre.trim() || 'Sin Nombre',
-        descripcion: r.descripcion?.trim() || '',
+        id: parseInt(r.id, 10) || 0,
+        nombre: r.nombre ? r.nombre.trim() : 'Sin Nombre',
+        descripcion: r.descripcion ? r.descripcion.trim() : '',
         precio: parseFloat(r.precio) || 0,
         stock: parseInt(r.cantidad, 10) || 0,
-        imagenes: (r.foto && r.foto.trim()) ? r.foto.split(',').map(x => x.trim()).filter(x => x) : [],
-        adicionales: r.adicionales?.trim() || '',
+        imagenes: (r.foto && r.foto.trim()) ? r.foto.split(',').map(x => x.trim()).filter(x => !!x) : [],
+        adicionales: r.adicionales ? r.adicionales.trim() : '',
         alto: parseFloat(r.alto) || null,
         ancho: parseFloat(r.ancho) || null,
         profundidad: parseFloat(r.profundidad) || null,
-        categoria: r.categoria?.trim().toLowerCase() || 'otros',
+        categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
         tamaño: parseFloat(r.tamaño) || null,
-        vendido: r.vendido?.trim().toLowerCase() === 'true',
-        estado: r.estado?.trim() || ''
+        vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
+        estado: r.estado ? r.estado.trim() : ''
       }));
 
     actualizarCategorias();
     actualizarUI();
   } catch (e) {
-    elementos.galeriaProductos.innerHTML = '<p>No se pudieron cargar los productos. Intente recargar la página.</p>';
+    console.error('Error en cargarProductosDesdeSheets:', e);
+    elementos.galeriaProductos.innerHTML = '<p>Error al procesar los productos. Verifica el archivo CSV o intenta más tarde.</p>';
     mostrarNotificacion('Error al cargar productos: ' + e.message, 'error');
   }
 }
+
 
 function actualizarCategorias() {
   if (!elementos.selectCategoria) return;
@@ -485,7 +498,7 @@ function mostrarModalProducto(producto) {
     requestAnimationFrame(() => {
       elementos.productoModal.style.opacity = '1';
       elementos.productoModal.style.visibility = 'visible';
-      cerrarBtn.focus();
+      elementos.modalContenido.querySelector('.cerrar-modal').focus();
     });
   };
 
@@ -620,16 +633,11 @@ function inicializarEventos() {
   });
 
   // FAQs
-  if (elementos.faqToggles?.length) {
-    elementos.faqToggles.forEach(toggle => {
-      toggle.addEventListener('click', () => {
-        const faqItem = toggle.closest('.faq-item');
-        if (faqItem) faqItem.classList.toggle('active');
-      });
+  elementos.faqToggles?.forEach(toggle => {
+    toggle.addEventListener('click', () => {
+      toggle.parentElement?.classList.toggle('active');
     });
-  } else {
-    console.warn('No se encontraron elementos .faq-toggle en el DOM');
-  }
+  });
 
   // Formulario de contacto
   if (window.emailjs) {
@@ -649,19 +657,14 @@ function inicializarEventos() {
         const formData = new FormData(elementos.formContacto);
         const data = Object.fromEntries(formData.entries());
 
-        // Intento de envío al backend (opcional)
-        let backendResponse = true; // Simulamos éxito por ahora
-        if (window.location.hostname !== 'localhost') { // Evitar en desarrollo local
-          const resp = await fetch('/api/contacto', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-          });
-          backendResponse = resp.ok;
-          if (!resp.ok) throw new Error('Error en el backend');
-        }
+        const resp = await fetch('/api/contacto', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
 
-        // Envío con EmailJS
+        if (!resp.ok) throw new Error('Error en el backend');
+
         await emailjs.sendForm('service_89by24g', 'template_8mn7hdp', elementos.formContacto);
 
         elementos.formContacto.reset();
@@ -671,7 +674,7 @@ function inicializarEventos() {
         }
         mostrarNotificacion('¡Mensaje enviado con éxito!', 'exito');
       } catch (err) {
-        console.error('Error en el envío:', err);
+        console.error(err);
         mostrarNotificacion('Error al enviar el mensaje. Por favor, intente nuevamente.', 'error');
       } finally {
         btnEnviar.disabled = false;
@@ -690,7 +693,7 @@ function init() {
     return;
   }
 
-  console.log('Inicializando la aplicación... a las', new Date().toLocaleString());
+  console.log('Inicializando la aplicación...');
   cargarCarrito();
   cargarProductosDesdeSheets();
   inicializarEventos();
