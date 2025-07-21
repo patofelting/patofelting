@@ -1768,3 +1768,66 @@ section h2::after {
 }
 
 
+/* Estilos para FAQs */
+.faq-item {
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+
+.faq-item.active {
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.faq-toggle {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  background: #f5f5f5;
+  border: none;
+  text-align: left;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.3s ease;
+}
+
+.faq-toggle:hover {
+  background: #e8f3ed;
+}
+
+.faq-toggle[aria-expanded="true"] {
+  background: #d8f3dc;
+}
+
+.faq-toggle::after {
+  content: '+';
+  font-size: 1.2rem;
+  transition: transform 0.3s ease;
+}
+
+.faq-toggle[aria-expanded="true"]::after {
+  content: '-';
+}
+
+.faq-content {
+  padding: 0 1.5rem;
+  max-height: 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.faq-item.active .faq-content {
+  padding: 1.5rem;
+  max-height: 1000px; /* Ajusta según necesidad */
+}
+
+.faq-more {
+  color: #2d6a4f;
+  font-weight: 600;
+  text-decoration: underline;
+}
