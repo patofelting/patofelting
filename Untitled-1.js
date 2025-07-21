@@ -20,6 +20,7 @@ let filtrosActuales = {
   categoria: 'todos',
   busqueda: ''
 };
+let lazyObserver = null;
 
 // ===============================
 // REFERENCIAS AL DOM
@@ -55,8 +56,7 @@ const elementos = {
   btnFlotante: document.querySelector('.boton-flotante'),
   avisoPreCompraModal: getElement('aviso-pre-compra-modal'),
   btnEntendidoAviso: getElement('btn-entendido-aviso'),
-  btnCancelarAviso: getElement('btn-cancelar-aviso'),
-  productLoader: getElement('product-loader')
+  btnCancelarAviso: getElement('btn-cancelar-aviso')
 };
 
 // ===============================
@@ -121,16 +121,8 @@ function agregarAlCarrito(id, cantidad = 1) {
   const prod = productos.find(p => p.id === id);
   if (!prod) return mostrarNotificacion('Producto no encontrado', 'error');
   
- cantidad = parseInt(cantidad, 10);
-if (isNaN(cantidad)) {  // <-- Aquí faltaba el paréntesis de cierre
-  mostrarNotificacion('Por favor ingrese una cantidad válida', 'error');
-  return;
-}
-  
-  if (cantidad < 1) {
-    mostrarNotificacion('La cantidad debe ser al menos 1', 'error');
-    return;
-  }
+  cantidad = parseInt(cantidad, 10);
+  if (isNaN(cantidad) || cantidad < 1) return mostrarNotificacion('Cantidad inválida', 'error');
   
   const enCarrito = carrito.find(item => item.id === id);
   const disponibles = prod.stock - (enCarrito?.cantidad || 0);
@@ -148,7 +140,7 @@ if (isNaN(cantidad)) {  // <-- Aquí faltaba el paréntesis de cierre
       nombre: prod.nombre,
       precio: prod.precio,
       cantidad,
-      imagen: prod.imagenes[0] || PLACEHOLDER_IMAGE
+      imagen: prod.imagenes[0] || ''
     });
   }
   
@@ -168,26 +160,24 @@ function renderizarCarrito() {
   
   elementos.listaCarrito.innerHTML = carrito.map(i => `
     <li class="carrito-item">
-      <img src="${i.imagen}" class="carrito-item-img" alt="${i.nombre}" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'">
+      ${i.imagen ? `<img src="${i.imagen}" class="carrito-item-img" alt="${i.nombre}" loading="lazy">` : ''}
       <div class="carrito-item-info">
         <span class="carrito-item-nombre">${i.nombre}</span>
-        <span class="carrito-item-precio">$U ${i.precio.toLocaleString('es-UY')}</span>
+        <span class="carrito-item-subtotal">$U ${(i.precio * i.cantidad).toLocaleString('es-UY')}</span>
         <div class="carrito-item-controls">
           <button data-id="${i.id}" data-action="decrementar" aria-label="Reducir cantidad">-</button>
           <span class="carrito-item-cantidad">${i.cantidad}</span>
           <button data-id="${i.id}" data-action="incrementar" aria-label="Aumentar cantidad">+</button>
           <button data-id="${i.id}" class="eliminar-item" aria-label="Eliminar del carrito">
-            Eliminar
+            <i class="fas fa-trash"></i>
           </button>
         </div>
-        <span class="carrito-item-subtotal">Subtotal: $U ${(i.precio * i.cantidad).toLocaleString('es-UY')}</span>
       </div>
     </li>`).join('');
   
   const total = carrito.reduce((sum, i) => sum + i.precio * i.cantidad, 0);
   elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
   
-  // Manejar eventos de los controles del carrito
   elementos.listaCarrito.onclick = (e) => {
     const target = e.target.closest('[data-id]');
     if (!target) return;
@@ -227,7 +217,7 @@ function renderizarCarrito() {
 function toggleCarrito() {
   if (!elementos.carritoPanel || !elementos.carritoOverlay) return;
   
-  const isOpen = elementos.carritoPanel.classList.toggle('active');
+  const isOpen = elementos.carritoPanel.classList.toggle('open');
   elementos.carritoOverlay.classList.toggle('active', isOpen);
   document.body.classList.toggle('no-scroll', isOpen);
   
@@ -244,12 +234,8 @@ function toggleCarrito() {
 
 async function cargarProductosDesdeSheets() {
   try {
-    if (elementos.productLoader) {
-      elementos.productLoader.hidden = false;
-    }
-    
     if (elementos.galeriaProductos) {
-      elementos.galeriaProductos.innerHTML = '';
+      elementos.galeriaProductos.innerHTML = '<p>Cargando productos...</p>';
     }
     
     const resp = await fetch(CSV_URL, { headers: { 'Cache-Control': 'no-store' } });
@@ -269,12 +255,7 @@ async function cargarProductosDesdeSheets() {
     });
     
     if (errors.length) throw new Error('Error al procesar los datos del CSV');
-    if (!data || data.length === 0) {
-      if (elementos.galeriaProductos) {
-        elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles en este momento.</p>';
-      }
-      return;
-    }
+    if (!data || data.length === 0) throw new Error('No se encontraron productos en el CSV');
     
     productos = data
       .filter(r => r.id && r.nombre && r.precio)
@@ -284,7 +265,7 @@ async function cargarProductosDesdeSheets() {
         descripcion: r.descripcion ? r.descripcion.trim() : '',
         precio: parseFloat(r.precio) || 0,
         stock: parseInt(r.cantidad, 10) || 0,
-        imagenes: (r.foto && r.foto.trim() !== "") ? r.foto.split(',').map(x => x.trim()).filter(x => !!x) : [PLACEHOLDER_IMAGE],
+        imagenes: (r.foto && r.foto.trim() !== "") ? r.foto.split(',').map(x => x.trim()).filter(x => !!x) : [],
         adicionales: r.adicionales ? r.adicionales.trim() : '',
         alto: parseFloat(r.alto) || null,
         ancho: parseFloat(r.ancho) || null,
@@ -298,23 +279,16 @@ async function cargarProductosDesdeSheets() {
     actualizarCategorias();
     actualizarUI();
   } catch (e) {
-    console.error('Error al cargar productos:', e);
     if (elementos.galeriaProductos) {
-      elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos. Intente recargar la página.</p>';
+      elementos.galeriaProductos.innerHTML = '<p>No se pudieron cargar los productos. Intente recargar la página.</p>';
     }
     mostrarNotificacion('Error al cargar productos: ' + e.message, 'error');
-  } finally {
-    if (elementos.productLoader) {
-      elementos.productLoader.hidden = true;
-    }
   }
 }
 
 function actualizarCategorias() {
   if (!elementos.selectCategoria) return;
-  const categoriasUnicas = [...new Set(productos.map(p => p.categoria))];
-  const categorias = ['todos', ...categoriasUnicas];
-  
+  const categorias = ['todos', ...new Set(productos.map(p => p.categoria))];
   elementos.selectCategoria.innerHTML = categorias
     .map(cat => `<option value="${cat}">${cat.charAt(0).toUpperCase() + cat.slice(1)}</option>`)
     .join('');
@@ -343,40 +317,37 @@ function crearCardProducto(p) {
   const disp = p.stock - (enCarrito?.cantidad || 0);
   const agot = disp <= 0;
   const primeraImagen = p.imagenes[0] || PLACEHOLDER_IMAGE;
+  const imgHtml = `<img src="${primeraImagen}" alt="${p.nombre}" class="producto-img" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'">`;
 
   return `
     <div class="producto-card" data-id="${p.id}">
-      <img src="${primeraImagen}" 
-           alt="${p.nombre}" 
-           class="producto-imagen" 
-           loading="lazy"
-           onerror="this.src='${PLACEHOLDER_IMAGE}'">
-      <div class="producto-info">
-        <h3 class="producto-nombre">${p.nombre}</h3>
-        <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
-        <p class="producto-stock ${agot ? 'agotado' : 'disponible'}">
-          ${agot ? 'Agotado' : `Stock: ${disp}`}
-        </p>
-        <div class="card-acciones">
-          <input
-            type="number"
-            value="1"
-            min="1"
-            max="${disp}"
-            class="cantidad-input"
-            id="cantidad-${p.id}"
-            ${agot ? 'disabled' : ''}
-          >
-          <button
-            class="boton-agregar ${agot ? 'agotado' : ''}"
-            data-id="${p.id}"
-            ${agot ? 'disabled' : ''}
-          >
-            ${agot ? 'Agotado' : 'Agregar'}
-          </button>
-        </div>
-        <button class="boton-detalles" data-id="${p.id}">Ver Detalles</button>
+      ${imgHtml}
+      <h3 class="producto-nombre">${p.nombre}</h3>
+      <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
+      <p class="producto-stock">
+        ${agot ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${disp}`}
+      </p>
+      <div class="card-acciones">
+        <input
+          type="number"
+          value="1"
+          min="1"
+          max="${disp}"
+          class="cantidad-input"
+          id="cantidad-${p.id}"
+          ${agot ? 'disabled' : ''}
+        >
+        <button
+          class="boton-agregar ${agot ? 'agotado' : ''}"
+          data-id="${p.id}"
+          ${agot ? 'disabled' : ''}
+        >
+          ${agot
+            ? '<i class="fas fa-times-circle"></i> Agotado'
+            : '<i class="fas fa-cart-plus"></i> Agregar'}
+        </button>
       </div>
+      <button class="boton-detalles" data-id="${p.id}">Ver Detalles</button>
     </div>
   `;
 }
@@ -409,12 +380,11 @@ function renderizarProductos() {
   const slice = list.slice(inicio, inicio + PRODUCTOS_POR_PAGINA);
   
   if (slice.length === 0) {
-    elementos.galeriaProductos.innerHTML = '<p class="sin-resultados">No se encontraron productos con los filtros aplicados.</p>';
+    elementos.galeriaProductos.innerHTML = '<p>No se encontraron productos con los filtros aplicados.</p>';
   } else {
     elementos.galeriaProductos.innerHTML = slice.map(crearCardProducto).join('');
   }
   
-  // Manejar eventos de los botones
   elementos.galeriaProductos.onclick = (e) => {
     const target = e.target.closest('.boton-agregar');
     if (target) {
@@ -450,7 +420,7 @@ function mostrarModalProducto(producto) {
   const estaAgotado = disponible <= 0;
 
   const generarCarrusel = () => {
-    const imagenesValidas = producto.imagenes.filter(img => img) || [PLACEHOLDER_IMAGE];
+    const imagenesValidas = producto.imagenes.filter(img => img) || [];
     const tieneImagenes = imagenesValidas.length > 0;
     const primeraImagen = tieneImagenes ? imagenesValidas[0] : PLACEHOLDER_IMAGE;
 
@@ -632,15 +602,23 @@ function inicializarFAQs() {
       const content = faqItem.querySelector('.faq-content');
       const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
       
+      // Cerrar todos los demás FAQs primero
+      document.querySelectorAll('.faq-item').forEach(item => {
+        if (item !== faqItem) {
+          item.classList.remove('active');
+          item.querySelector('.faq-toggle').setAttribute('aria-expanded', 'false');
+          item.querySelector('.faq-content').style.maxHeight = '0';
+        }
+      });
+      
       // Alternar el FAQ actual
+      faqItem.classList.toggle('active');
       toggle.setAttribute('aria-expanded', !isExpanded);
       
       if (!isExpanded) {
         content.style.maxHeight = content.scrollHeight + 'px';
-        faqItem.classList.add('active');
       } else {
         content.style.maxHeight = '0';
-        faqItem.classList.remove('active');
       }
     });
   });
@@ -762,17 +740,11 @@ function inicializarEventos() {
   elementos.btnCerrarCarrito?.addEventListener('click', toggleCarrito);
   
   elementos.btnVaciarCarrito?.addEventListener('click', () => {
-    if (carrito.length === 0) {
-      mostrarNotificacion('El carrito ya está vacío', 'info');
-      return;
-    }
-    
-    if (confirm('¿Estás seguro de que deseas vaciar el carrito?')) {
-      carrito = [];
-      guardarCarrito();
-      actualizarUI();
-      mostrarNotificacion('Carrito vaciado', 'info');
-    }
+    carrito = [];
+    guardarCarrito();
+    actualizarUI();
+    toggleCarrito();
+    mostrarNotificacion('Carrito vaciado', 'info');
   });
   
   elementos.btnFinalizarCompra?.addEventListener('click', () => {
@@ -843,42 +815,19 @@ function inicializarEventos() {
   
   // Menú hamburguesa
   elementos.hamburguesaBtn?.addEventListener('click', () => {
-    elementos.menu?.classList.toggle('active');
-    elementos.hamburguesaBtn.setAttribute('aria-expanded', 
-      elementos.menu.classList.contains('active'));
-  });
-  
-  // Cerrar menú al hacer clic en un enlace
-  document.querySelectorAll('.menu a').forEach(link => {
-    link.addEventListener('click', () => {
-      if (elementos.menu.classList.contains('active')) {
-        elementos.menu.classList.remove('active');
-        elementos.hamburguesaBtn.setAttribute('aria-expanded', 'false');
-      }
-    });
+    elementos.menu?.classList.toggle('open');
   });
   
   // Botón flotante
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 300) {
-      elementos.btnFlotante?.classList.add('visible');
-    } else {
-      elementos.btnFlotante?.classList.remove('visible');
-    }
-  });
-  
   elementos.btnFlotante?.addEventListener('click', () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
   
-  // Tecla Escape para cerrar modal y carrito
+  // Tecla Escape para cerrar modal
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      if (elementos.productoModal.style.display === 'flex') {
+      if (elementos.productoModal && elementos.productoModal.style.display === 'flex') {
         cerrarModal();
-      }
-      if (elementos.carritoPanel.classList.contains('active')) {
-        toggleCarrito();
       }
     }
   });
@@ -901,10 +850,27 @@ function init() {
   }
   
   console.log('Inicializando la aplicación...');
-  evitarScrollPorDefecto();
   cargarCarrito();
   cargarProductosDesdeSheets();
   inicializarEventos();
+  evitarScrollPorDefecto();
+  
+  // Lazy loading para imágenes
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const img = entry.target;
+          img.src = img.dataset.src || img.src;
+          observer.unobserve(img);
+        }
+      });
+    }, { rootMargin: '100px' });
+    
+    document.querySelectorAll('img[data-src]').forEach(img => {
+      observer.observe(img);
+    });
+  }
 }
 
 // Iniciar la aplicación
