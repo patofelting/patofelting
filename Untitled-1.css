@@ -83,62 +83,63 @@ button {
 }
 
 /* Estilo de la imagen del logo */
-.logo-img {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    object-fit: cover;
+.logo-container {
+    display: flex;
+    align-items: center;
 }
 
-/* Estilo del texto del logo */
-.logo-text {
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: #009688;
-    margin-left: 10px;
+.logo-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 120px;
+    height: 120px;
+}
+
+.logo-img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.logo-badge {
+    position: absolute;
+    bottom: -30px;
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 1.4rem;
+    letter-spacing: 2px;
 }
 
 .logo-tagline {
-    font-size: 0.8rem;
-    color: #009688;
-    margin: 2px 0 0 0;
-}
-.hamburguesa {
-  font-size: 1.5rem;
-  display: none;
-  background: none;
-  color: var(--text-color);
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    font-weight: 300;
+    margin-left: 10px;
+    letter-spacing: 1px;
 }
 
-.carrito-btn {
-  background-color: var(--primary-color);
-  color: white;
-  padding: 8px 15px;
-  border-radius: var(--border-radius);
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  transition: var(--transition);
+.logo-img:hover {
+    transform: scale(1.05);
 }
 
-.carrito-btn:hover {
-  background-color: var(--accent-color);
-}
-
-.menu {
-  display: flex;
-  list-style: none;
-  gap: 20px;
-}
-
-.menu li a {
-  padding: 5px 10px;
-  transition: var(--transition);
-  font-weight: 500;
-}
-
-.menu li a:hover {
-  color: var(--primary-color);
+@media (max-width: 768px) {
+    .logo-wrapper {
+        width: 90px;
+        height: 90px;
+    }
+    .logo-img {
+        width: 70px;
+        height: 70px;
+    }
+    .logo-badge {
+        bottom: -25px;
+        font-size: 1.2rem;
+    }
 }
 
 /* Hero Section */
