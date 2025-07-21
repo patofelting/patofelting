@@ -82,12 +82,7 @@ button {
     align-items: center;
 }
 
-.logo-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
+/* Estilo de la imagen del logo */
 .logo-img {
     width: 50px;
     height: 50px;
@@ -95,34 +90,19 @@ button {
     object-fit: cover;
 }
 
-.logo-text-wrapper {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.logo-badge {
+/* Estilo del texto del logo */
+.logo-text {
     font-size: 1.2rem;
-    font-weight: 700;
-    letter-spacing: 1px;
-    color: var(--primary-color);
-    margin: 0;
+    font-weight: bold;
+    color: #009688;
+    margin-left: 10px;
 }
 
 .logo-tagline {
     font-size: 0.8rem;
-    font-weight: 400;
-    color: var(--primary-color);
+    color: #009688;
     margin: 2px 0 0 0;
-    letter-spacing: 1px;
 }
-
-@media (max-width: 768px) {
-    .logo-wrapper {
-        gap: 5px;
-    }
-}
-
 .hamburguesa {
   font-size: 1.5rem;
   display: none;
