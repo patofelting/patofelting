@@ -258,42 +258,22 @@ function toggleCarrito() {
 
 async function cargarProductosDesdeSheets() {
   try {
-    if (elementos.productLoader) {
-      elementos.productLoader.hidden = false;
-    }
-    
-    if (elementos.galeriaProductos) {
-      elementos.galeriaProductos.innerHTML = '';
-    }
-    
-    const resp = await fetch(CSV_URL);
-    if (!resp.ok) throw new Error('Error al cargar productos: ' + resp.status);
-    
+    if (elementos.productLoader) elementos.productLoader.hidden = false;
+    if (elementos.galeriaProductos) elementos.galeriaProductos.innerHTML = '';
+
+    const resp = await fetch(CSV_URL, { headers: { 'Cache-Control': 'no-store' } });
+    if (!resp.ok) throw new Error('Error al cargar productos.');
     const csvText = await resp.text();
-    if (typeof Papa === 'undefined') throw new Error('Papa Parse no está cargado');
-    
-    const { data, errors } = Papa.parse(csvText, {
-      header: true,
-      skipEmptyLines: true,
-      transformHeader: h => h
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .replace(/\s+/g, '_')
-    });
-    
-    if (errors.length > 0) {
-      console.error('Errores al parsear CSV:', errors);
-      throw new Error('Error al procesar los datos del CSV');
-    }
-    
+
+    if (typeof Papa === 'undefined') throw new Error('Papa Parse no disponible');
+    const { data } = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+
     if (!data || data.length === 0) {
-      if (elementos.galeriaProductos) {
+      if (elementos.galeriaProductos)
         elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles en este momento.</p>';
-      }
+      if (elementos.productLoader) elementos.productLoader.hidden = true;
       return;
     }
-    
     productos = data
       .filter(row => row.id && row.nombre && row.precio)
       .map(row => ({
@@ -319,20 +299,14 @@ async function cargarProductosDesdeSheets() {
     actualizarUI();
   } catch (error) {
     console.error('Error al cargar productos:', error);
-    if (elementos.galeriaProductos) {
-      elementos.galeriaProductos.innerHTML = `
-        <p class="error-carga">
-          No se pudieron cargar los productos. Por favor recarga la página.
-          <button onclick="location.reload()">Recargar</button>
-        </p>`;
-    }
-    mostrarNotificacion('Error al cargar productos: ' + error.message, 'error');
+   if (elementos.galeriaProductos)
+      elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos. Intenta recargar la página.</p>';
+    mostrarNotificacion('Error al cargar productos: ' + e.message, 'error');
   } finally {
-    if (elementos.productLoader) {
-      elementos.productLoader.hidden = true;
-    }
+    if (elementos.productLoader) elementos.productLoader.hidden = true;
   }
 }
+
 
 function actualizarCategorias() {
   if (!elementos.selectCategoria) return;
@@ -382,38 +356,22 @@ function crearCardProducto(producto) {
   const imagenPrincipal = producto.imagenes[0] || PLACEHOLDER_IMAGE;
 
   return `
-    <div class="producto-card" data-id="${producto.id}">
-      <img src="${imagenPrincipal}" 
-           alt="${producto.nombre}" 
-           class="producto-imagen" 
-           loading="lazy"
-           onerror="this.src='${PLACEHOLDER_IMAGE}'">
-      <div class="producto-info">
-        <h3 class="producto-nombre">${producto.nombre}</h3>
-        <p class="producto-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
-        <p class="producto-stock ${agotado ? 'agotado' : 'disponible'}">
-          ${agotado ? 'Agotado' : `Disponible: ${disponibles}`}
-        </p>
-        <div class="card-acciones">
-          <input type="number" 
-                 value="1" 
-                 min="1" 
-                 max="${disponibles}" 
-                 class="cantidad-input" 
-                 id="cantidad-${producto.id}"
-                 ${agotado ? 'disabled' : ''}>
-          <button class="boton-agregar ${agotado ? 'agotado' : ''}" 
-                  data-id="${producto.id}"
-                  ${agotado ? 'disabled' : ''}>
-            ${agotado ? 'Agotado' : 'Agregar'}
-          </button>
-        </div>
-        <button class="boton-detalles" data-id="${producto.id}">
-          Ver Detalles
-        </button>
-      </div>
+  <div class="producto-card" data-id="${p.id}">
+    ${imgHtml}
+    <h3 class="producto-nombre">${p.nombre}</h3>
+    <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
+    <p class="producto-stock">
+      ${agot ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${disp}`}
+    </p>
+    <div class="card-acciones">
+      <input type="number" value="1" min="1" max="${disp}" class="cantidad-input" id="cantidad-${p.id}" ${agot || disp===1 ? 'disabled' : ''} style="background:#f7fff7;">
+      <button class="boton-agregar${agot ? ' agotado' : ''}" data-id="${p.id}" ${agot ? 'disabled' : ''}>
+        ${agot ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
+      </button>
     </div>
-  `;
+    <button class="boton-detalles" data-id="${p.id}">👀 Ver Detalle</button>
+  </div>
+`;
 }
 
 function renderizarPaginacion(totalProductos) {
