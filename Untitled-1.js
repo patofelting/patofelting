@@ -193,12 +193,10 @@ function toggleCarrito() {
 
 async function cargarProductosDesdeSheets() {
   try {
-    // Ocultamos completamente el loader
     if (elementos.productLoader) {
       elementos.productLoader.style.display = 'none';
       elementos.productLoader.hidden = true;
     }
-    
     if (elementos.galeriaProductos) elementos.galeriaProductos.innerHTML = '';
     const resp = await fetch(CSV_URL, { headers: { 'Cache-Control': 'no-store' } });
     if (!resp.ok) throw new Error('Error al cargar productos');
@@ -279,7 +277,7 @@ function crearCardProducto(p) {
           ${agot ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
         </button>
       </div>
-      <button class="boton-detalles" data-id="${p.id}">👀 Ver Detalle</button>
+      <button class="boton-detalles" data-id="${p.id}">🛈 Ver Detalle</button>
     </div>
   `;
 }
@@ -328,15 +326,15 @@ function mostrarModalProducto(producto) {
   const disponibles = Math.max(0, producto.stock - enCarrito.cantidad);
   const agotado = disponibles <= 0;
 
- contenido.innerHTML = `
+  contenido.innerHTML = `
     <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
     <div class="modal-flex">
       <div class="modal-carrusel">
         <img src="${producto.imagenes[0] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
         ${producto.imagenes.length > 1 ? `
           <div class="modal-controls">
-            <button class="modal-prev" aria-label="Imagen anterior">❮</button>
-            <button class="modal-next" aria-label="Siguiente imagen">❯</button>
+            <button class="modal-prev" aria-label="Imagen anterior">‹</button>
+            <button class="modal-next" aria-label="Siguiente imagen">›</button>
           </div>
         ` : ''}
       </div>
@@ -365,12 +363,11 @@ function mostrarModalProducto(producto) {
     </div>
   `;
 
-  // Agregar funcionalidad del carrusel
+  // Carrusel
   if (producto.imagenes.length > 1) {
     let currentIndex = 0;
     const mainImage = contenido.querySelector('.modal-img');
     const thumbnails = contenido.querySelectorAll('.thumbnail');
-    
     function updateImage(index) {
       currentIndex = index;
       mainImage.src = producto.imagenes[index];
@@ -378,17 +375,14 @@ function mostrarModalProducto(producto) {
         thumb.classList.toggle('active', i === index);
       });
     }
-    
     contenido.querySelector('.modal-prev')?.addEventListener('click', () => {
       const newIndex = (currentIndex - 1 + producto.imagenes.length) % producto.imagenes.length;
       updateImage(newIndex);
     });
-    
     contenido.querySelector('.modal-next')?.addEventListener('click', () => {
       const newIndex = (currentIndex + 1) % producto.imagenes.length;
       updateImage(newIndex);
     });
-    
     thumbnails.forEach((thumb, i) => {
       thumb.addEventListener('click', () => updateImage(i));
     });
@@ -472,6 +466,45 @@ function resetearFiltros() {
 }
 
 // ===============================
+// MENÚ HAMBURGUESA Y FAQ
+// ===============================
+
+function inicializarMenuHamburguesa() {
+  const hamburguesa = document.querySelector('.hamburguesa');
+  const menu = document.getElementById('menu');
+  if (!hamburguesa || !menu) return;
+  hamburguesa.addEventListener('click', function () {
+    const expanded = menu.classList.toggle('menu-abierto');
+    hamburguesa.setAttribute('aria-expanded', expanded);
+    document.body.classList.toggle('no-scroll', expanded);
+  });
+  // Cierra el menú al hacer click en un enlace (en móvil)
+  menu.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      menu.classList.remove('menu-abierto');
+      hamburguesa.setAttribute('aria-expanded', false);
+      document.body.classList.remove('no-scroll');
+    });
+  });
+}
+
+function inicializarFAQ() {
+  const faqToggles = document.querySelectorAll('.faq-toggle');
+  faqToggles.forEach(toggle => {
+    toggle.addEventListener('click', () => {
+      const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', !isExpanded);
+      const content = toggle.nextElementSibling;
+      if (isExpanded) {
+        content.hidden = true;
+      } else {
+        content.hidden = false;
+      }
+    });
+  });
+}
+
+// ===============================
 // INICIALIZACIÓN
 // ===============================
 
@@ -527,6 +560,10 @@ function inicializarEventos() {
 
   // Modal de producto
   conectarEventoModal();
+
+  // Menú hamburguesa y FAQ
+  inicializarMenuHamburguesa();
+  inicializarFAQ();
 }
 
 function init() {
@@ -537,7 +574,6 @@ function init() {
     elementos.productLoader.style.display = 'none';
     elementos.productLoader.hidden = true;
   }
-  
   cargarCarrito();
   cargarProductosDesdeSheets();
   inicializarEventos();
@@ -550,21 +586,3 @@ if (document.readyState !== 'loading') {
 }
 
 window.resetearFiltros = resetearFiltros;
-
-function inicializarFAQ() {
-  const faqToggles = document.querySelectorAll('.faq-toggle');
-  
-  faqToggles.forEach(toggle => {
-    toggle.addEventListener('click', () => {
-      const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-      toggle.setAttribute('aria-expanded', !isExpanded);
-      
-      const content = toggle.nextElementSibling;
-      if (isExpanded) {
-        content.hidden = true;
-      } else {
-        content.hidden = false;
-      }
-    });
-  });
-}
