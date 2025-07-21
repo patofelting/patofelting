@@ -193,7 +193,12 @@ function toggleCarrito() {
 
 async function cargarProductosDesdeSheets() {
   try {
-    if (elementos.productLoader) elementos.productLoader.hidden = false;
+    // Ocultamos completamente el loader
+    if (elementos.productLoader) {
+      elementos.productLoader.style.display = 'none';
+      elementos.productLoader.hidden = true;
+    }
+    
     if (elementos.galeriaProductos) elementos.galeriaProductos.innerHTML = '';
     const resp = await fetch(CSV_URL, { headers: { 'Cache-Control': 'no-store' } });
     if (!resp.ok) throw new Error('Error al cargar productos');
@@ -203,7 +208,6 @@ async function cargarProductosDesdeSheets() {
     if (!data || data.length === 0) {
       if (elementos.galeriaProductos)
         elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles en este momento.</p>';
-      if (elementos.productLoader) elementos.productLoader.hidden = true;
       return;
     }
     productos = data
@@ -229,8 +233,6 @@ async function cargarProductosDesdeSheets() {
     if (elementos.galeriaProductos)
       elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos.</p>';
     mostrarNotificacion('Error al cargar productos: ' + (e.message || e), 'error');
-  } finally {
-    if (elementos.productLoader) elementos.productLoader.hidden = true;
   }
 }
 
@@ -319,14 +321,13 @@ function renderizarProductos() {
 
 function mostrarModalProducto(producto) {
   const modal = elementos.productoModal;
-  const contenido = document.getElementById('modal-contenido');
+  const contenido = elementos.modalContenido;
   if (!modal || !contenido) return;
 
   const enCarrito = carrito.find(item => item.id === producto.id) || { cantidad: 0 };
   const disponibles = Math.max(0, producto.stock - enCarrito.cantidad);
   const agotado = disponibles <= 0;
 
-  // HTML del modal
   contenido.innerHTML = `
     <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
     <div class="modal-flex">
@@ -352,7 +353,6 @@ function mostrarModalProducto(producto) {
     </div>
   `;
 
-  // Eventos del modal
   contenido.querySelector('.cerrar-modal').onclick = () => cerrarModal();
   const agregarBtn = contenido.querySelector('.boton-agregar-modal');
   agregarBtn.onclick = () => {
@@ -366,7 +366,6 @@ function mostrarModalProducto(producto) {
     document.body.classList.add('no-scroll');
   }, 10);
 
-  // Cierra modal al tocar fuera
   modal.onclick = e => {
     if (e.target === modal) cerrarModal();
   };
@@ -389,7 +388,6 @@ function conectarEventoModal() {
       const producto = productos.find(p => p.id === id);
       if (producto) mostrarModalProducto(producto);
     }
-    // Evento para "Agregar" directo desde la card
     const btnAgregar = e.target.closest('.boton-agregar');
     if (btnAgregar) {
       const id = +btnAgregar.dataset.id;
@@ -452,7 +450,7 @@ function inicializarEventos() {
     }
   });
 
-  // Finalizar compra (muestra aviso modal solo al final)
+  // Finalizar compra
   elementos.btnFinalizarCompra?.addEventListener('click', () => {
     if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
     elementos.avisoPreCompraModal.style.display = 'flex';
@@ -492,9 +490,13 @@ function inicializarEventos() {
 }
 
 function init() {
-  // Ocultar modales al iniciar
+  // Ocultar modales y loader al inicio
   if (elementos.avisoPreCompraModal) elementos.avisoPreCompraModal.style.display = 'none';
   if (elementos.productoModal) elementos.productoModal.style.display = 'none';
+  if (elementos.productLoader) {
+    elementos.productLoader.style.display = 'none';
+    elementos.productLoader.hidden = true;
+  }
   
   cargarCarrito();
   cargarProductosDesdeSheets();
@@ -507,5 +509,4 @@ if (document.readyState !== 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 }
 
-// Para llamar desde HTML si querés (el botón "Mostrar todos")
 window.resetearFiltros = resetearFiltros;
