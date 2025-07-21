@@ -85,6 +85,156 @@ function isValidEmail(email) {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return re.test(email);
 }
+// ===============================
+// MANEJO DE PREGUNTAS FRECUENTES (FAQs)
+// ===============================
+
+function inicializarFAQs() {
+  // Seleccionar todos los toggles de FAQ
+  const faqToggles = document.querySelectorAll('.faq-toggle');
+  
+  // Agregar evento click a cada toggle
+  faqToggles.forEach(toggle => {
+    toggle.addEventListener('click', function() {
+      // Obtener el elemento padre (faq-item)
+      const faqItem = this.closest('.faq-item');
+      // Obtener el contenido asociado
+      const content = faqItem.querySelector('.faq-content');
+      
+      // Verificar si ya está abierto
+      const isOpen = this.getAttribute('aria-expanded') === 'true';
+      
+      // Cerrar todos los FAQs primero
+      document.querySelectorAll('.faq-item').forEach(item => {
+        if (item !== faqItem) {
+          item.querySelector('.faq-toggle').setAttribute('aria-expanded', 'false');
+          item.querySelector('.faq-content').hidden = true;
+          item.classList.remove('active');
+        }
+      });
+      
+      // Alternar el estado del FAQ actual
+      if (isOpen) {
+        this.setAttribute('aria-expanded', 'false');
+        content.hidden = true;
+        faqItem.classList.remove('active');
+      } else {
+        this.setAttribute('aria-expanded', 'true');
+        content.hidden = false;
+        faqItem.classList.add('active');
+      }
+    });
+  });
+}
+
+// ===============================
+// FORMULARIO DE CONTACTO MEJORADO
+// ===============================
+
+function inicializarFormularioContacto() {
+  const form = document.getElementById('form-contacto');
+  if (!form) return;
+
+  const btnEnviar = document.getElementById('btn-enviar');
+  const successMessage = document.getElementById('success-message');
+
+  // Validación en tiempo real
+  form.addEventListener('input', function() {
+    const nombre = form.from_name.value.trim();
+    const email = form.from_email.value.trim();
+    const mensaje = form.message.value.trim();
+    
+    // Validar email con expresión regular
+    const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    
+    // Habilitar/deshabilitar botón
+    btnEnviar.disabled = !(nombre && emailValido && mensaje);
+  });
+
+  // Manejar envío del formulario
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // Validación final
+    const nombre = form.from_name.value.trim();
+    const email = form.from_email.value.trim();
+    const mensaje = form.message.value.trim();
+    
+    if (!nombre || !email || !mensaje) {
+      mostrarNotificacion('Por favor complete todos los campos', 'error');
+      return;
+    }
+    
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      mostrarNotificacion('Por favor ingrese un email válido', 'error');
+      return;
+    }
+    
+    // Configurar estado de envío
+    btnEnviar.disabled = true;
+    btnEnviar.textContent = 'Enviando...';
+    
+    try {
+      // Inicializar EmailJS solo si está disponible
+      if (window.emailjs && !window.emailjsInitialized) {
+        await emailjs.init("o4IxJz0Zz-LQ8jYKG");
+        window.emailjsInitialized = true;
+      }
+      
+      // Enviar formulario con EmailJS si está disponible
+      if (window.emailjs) {
+        await emailjs.sendForm('service_89by24g', 'template_8mn7hdp', form);
+      } else {
+        // Fallback: enviar con fetch
+        const response = await fetch('/api/contacto', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from_name: nombre,
+            from_email: email,
+            message: mensaje
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Error en el servidor');
+        }
+      }
+      
+      // Éxito
+      form.reset();
+      mostrarNotificacion('¡Mensaje enviado con éxito!', 'exito');
+      
+      if (successMessage) {
+        successMessage.textContent = '¡Mensaje enviado con éxito!';
+        successMessage.className = 'success-message success';
+        successMessage.hidden = false;
+        
+        setTimeout(() => {
+          successMessage.hidden = true;
+        }, 5000);
+      }
+    } catch (error) {
+      console.error('Error al enviar el mensaje:', error);
+      mostrarNotificacion('Error al enviar el mensaje. Intente nuevamente.', 'error');
+      
+      if (successMessage) {
+        successMessage.textContent = 'Error al enviar el mensaje';
+        successMessage.className = 'success-message error';
+        successMessage.hidden = false;
+        
+        setTimeout(() => {
+          successMessage.hidden = true;
+        }, 5000);
+      }
+    } finally {
+      btnEnviar.disabled = false;
+      btnEnviar.textContent = 'Enviar Mensaje';
+    }
+  });
+}
+
+
 
 // ===============================
 // MANEJO DEL CARRITO
