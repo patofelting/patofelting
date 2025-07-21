@@ -93,13 +93,13 @@ button {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 120px;
-    height: 120px;
+    width: 100px;
+    height: 100px;
 }
 
 .logo-img {
-    width: 100px;
-    height: 100px;
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
     object-fit: cover;
     transition: transform 0.3s ease;
@@ -108,16 +108,16 @@ button {
 
 .logo-badge {
     position: absolute;
-    bottom: -30px;
+    bottom: -25px;
     color: var(--primary-color);
     font-weight: 700;
-    font-size: 1.4rem;
+    font-size: 1.2rem;
     letter-spacing: 2px;
 }
 
 .logo-tagline {
     color: var(--primary-color);
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 300;
     margin-left: 10px;
     letter-spacing: 1px;
@@ -129,16 +129,16 @@ button {
 
 @media (max-width: 768px) {
     .logo-wrapper {
-        width: 90px;
-        height: 90px;
-    }
-    .logo-img {
         width: 70px;
         height: 70px;
     }
+    .logo-img {
+        width: 60px;
+        height: 60px;
+    }
     .logo-badge {
-        bottom: -25px;
-        font-size: 1.2rem;
+        bottom: -20px;
+        font-size: 1rem;
     }
 }
 
