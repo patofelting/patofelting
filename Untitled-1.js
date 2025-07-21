@@ -52,6 +52,7 @@ const elementos = {
   faqToggles: document.querySelectorAll('.faq-toggle'),
   formContacto: getElement('form-contacto'),
   successMessage: getElement('success-message'),
+  btnEnviar: getElement('btn-enviar'),
   btnFlotante: document.querySelector('.boton-flotante'),
   avisoPreCompraModal: getElement('aviso-pre-compra-modal'),
   btnEntendidoAviso: getElement('btn-entendido-aviso'),
@@ -78,6 +79,11 @@ function mostrarNotificacion(mensaje, tipo = 'exito') {
     notificacion.classList.remove('show');
     setTimeout(() => notificacion.remove(), 300);
   }, 3000);
+}
+
+function isValidEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
 }
 
 // ===============================
@@ -586,6 +592,144 @@ function actualizarUI() {
 }
 
 // ===============================
+// PREGUNTAS FRECUENTES
+// ===============================
+
+function inicializarFAQs() {
+  elementos.faqToggles?.forEach(toggle => {
+    toggle.addEventListener('click', () => {
+      const faqItem = toggle.closest('.faq-item');
+      const content = faqItem.querySelector('.faq-content');
+      const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+      
+      // Cerrar todos los demás FAQs primero
+      document.querySelectorAll('.faq-item').forEach(item => {
+        if (item !== faqItem) {
+          item.classList.remove('active');
+          item.querySelector('.faq-toggle').setAttribute('aria-expanded', 'false');
+          item.querySelector('.faq-content').style.maxHeight = '0';
+        }
+      });
+      
+      // Alternar el FAQ actual
+      faqItem.classList.toggle('active');
+      toggle.setAttribute('aria-expanded', !isExpanded);
+      
+      if (!isExpanded) {
+        content.style.maxHeight = content.scrollHeight + 'px';
+      } else {
+        content.style.maxHeight = '0';
+      }
+    });
+  });
+}
+
+// ===============================
+// FORMULARIO DE CONTACTO
+// ===============================
+
+async function enviarFormularioContacto(event) {
+  event.preventDefault();
+  
+  const form = event.target;
+  const btnEnviar = elementos.btnEnviar;
+  const successMessage = elementos.successMessage;
+  
+  // Validación
+  const nombre = form.from_name.value.trim();
+  const email = form.from_email.value.trim();
+  const mensaje = form.message.value.trim();
+  
+  if (!nombre || !email || !mensaje) {
+    mostrarNotificacion("Por favor complete todos los campos", "error");
+    return;
+  }
+  
+  if (!isValidEmail(email)) {
+    mostrarNotificacion("Por favor ingrese un email válido", "error");
+    return;
+  }
+  
+  btnEnviar.disabled = true;
+  btnEnviar.textContent = 'Enviando...';
+  
+  try {
+    // Inicializar EmailJS solo una vez si está disponible
+    if (window.emailjs && !window.emailjsInitialized) {
+      await emailjs.init("o4IxJz0Zz-LQ8jYKG");
+      window.emailjsInitialized = true;
+    }
+    
+    let resultado;
+    
+    // Intentar enviar con EmailJS primero
+    if (window.emailjs) {
+      resultado = await emailjs.sendForm('service_89by24g', 'template_8mn7hdp', form);
+    } else {
+      // Fallback a fetch si EmailJS no está disponible
+      const response = await fetch('/api/contacto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from_name: nombre,
+          from_email: email,
+          message: mensaje
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Error en el servidor');
+      }
+      resultado = await response.json();
+    }
+    
+    // Éxito
+    form.reset();
+    mostrarNotificacion("¡Mensaje enviado con éxito!", "exito");
+    
+    if (successMessage) {
+      successMessage.textContent = '¡Mensaje enviado con éxito!';
+      successMessage.className = 'success-message success';
+      successMessage.style.display = 'block';
+      setTimeout(() => {
+        successMessage.style.display = 'none';
+      }, 5000);
+    }
+  } catch (error) {
+    console.error("Error al enviar el mensaje:", error);
+    mostrarNotificacion("Error al enviar mensaje. Intenta de nuevo.", "error");
+    
+    if (successMessage) {
+      successMessage.textContent = 'Error al enviar el mensaje. Por favor intente nuevamente.';
+      successMessage.className = 'success-message error';
+      successMessage.style.display = 'block';
+      setTimeout(() => {
+        successMessage.style.display = 'none';
+      }, 5000);
+    }
+  } finally {
+    btnEnviar.disabled = false;
+    btnEnviar.textContent = 'Enviar mensaje';
+  }
+}
+
+function inicializarFormularioContacto() {
+  if (!elementos.formContacto) return;
+  
+  // Validación en tiempo real
+  elementos.formContacto.addEventListener('input', function() {
+    const nombre = this.from_name.value.trim();
+    const email = this.from_email.value.trim();
+    const mensaje = this.message.value.trim();
+    
+    elementos.btnEnviar.disabled = !(nombre && email && mensaje && isValidEmail(email));
+  });
+  
+  // Envío del formulario
+  elementos.formContacto.addEventListener('submit', enviarFormularioContacto);
+}
+
+// ===============================
 // INICIALIZACIÓN DE EVENTOS
 // ===============================
 
@@ -688,57 +832,11 @@ function inicializarEventos() {
     }
   });
   
-  // FAQs
-  elementos.faqToggles?.forEach(toggle => {
-    toggle.addEventListener('click', () => {
-      toggle.parentElement?.classList.toggle('active');
-    });
-  });
+  // Inicializar FAQs
+  inicializarFAQs();
   
-  // Formulario de contacto
-  if (window.emailjs) {
-    emailjs.init("o4IxJz0Zz-LQ8jYKG");
-  }
-
-  const formContacto = document.getElementById('form-contacto');
-  if (formContacto) {
-    formContacto.addEventListener('submit', async function(event) {
-      event.preventDefault();
-      const btnEnviar = document.getElementById('btn-enviar');
-      const successMessage = document.getElementById('success-message');
-      btnEnviar.disabled = true;
-      btnEnviar.textContent = 'Enviando...';
-
-      const formData = new FormData(formContacto);
-      const data = Object.fromEntries(formData.entries());
-
-      try {
-        const resp = await fetch('/api/contacto', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        if (!resp.ok) throw new Error('Backend error');
-
-        if (window.emailjs) {
-          await emailjs.sendForm('service_89by24g', 'template_8mn7hdp', formContacto);
-        }
-
-        formContacto.reset();
-        if (successMessage) {
-          successMessage.classList.remove('hidden');
-          setTimeout(() => successMessage.classList.add('hidden'), 5000);
-        }
-        mostrarNotificacion('¡Mensaje enviado con éxito!', 'exito');
-      } catch (err) {
-        console.error(err);
-        mostrarNotificacion('Error al enviar el mensaje. Por favor, intente nuevamente.', 'error');
-      } finally {
-        btnEnviar.disabled = false;
-        btnEnviar.textContent = 'Enviar mensaje';
-      }
-    });
-  }
+  // Inicializar formulario de contacto
+  inicializarFormularioContacto();
 }
 
 // ===============================
@@ -781,34 +879,3 @@ if (document.readyState !== 'loading') {
 } else {
   document.addEventListener('DOMContentLoaded', init);
 }
-
-// EmailJS init seguro
-  if (window.emailjs) {
-    emailjs.init("o4IxJz0Zz-LQ8jYKG"); 
-    const formContacto = document.getElementById('form-contacto');
-    if (formContacto) {
-      formContacto.addEventListener('submit', function(event) {
-        event.preventDefault();
-        const btnEnviar = document.getElementById('btn-enviar');
-        const successMessage = document.getElementById('success-message');
-        btnEnviar.disabled = true;
-        btnEnviar.textContent = 'Enviando...';
-        emailjs.sendForm('service_89by24g', 'template_8mn7hdp', this) 
-          .then(function() {
-            btnEnviar.disabled = false;
-            btnEnviar.textContent = 'Enviar mensaje';
-            formContacto.reset();
-            if (successMessage) {
-              successMessage.classList.remove('hidden');
-              setTimeout(() => successMessage.classList.add('hidden'), 5000);
-            }
-            mostrarNotificacion("¡Mensaje enviado con éxito!", "exito");
-          }, function() {
-            btnEnviar.disabled = false;
-            btnEnviar.textContent = 'Enviar mensaje';
-            mostrarNotificacion("Error al enviar mensaje. Intenta de nuevo.", "error");
-          });
-      });
-    }
-	
-  }
