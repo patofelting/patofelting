@@ -328,11 +328,17 @@ function mostrarModalProducto(producto) {
   const disponibles = Math.max(0, producto.stock - enCarrito.cantidad);
   const agotado = disponibles <= 0;
 
-  contenido.innerHTML = `
+ contenido.innerHTML = `
     <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
     <div class="modal-flex">
       <div class="modal-carrusel">
         <img src="${producto.imagenes[0] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
+        ${producto.imagenes.length > 1 ? `
+          <div class="modal-controls">
+            <button class="modal-prev" aria-label="Imagen anterior">❮</button>
+            <button class="modal-next" aria-label="Siguiente imagen">❯</button>
+          </div>
+        ` : ''}
       </div>
       <div class="modal-info">
         <h1 class="modal-nombre">${producto.nombre}</h1>
@@ -342,6 +348,12 @@ function mostrarModalProducto(producto) {
         </p>
         <div class="modal-descripcion">
           ${producto.descripcion || ''}
+        </div>
+        <div class="modal-thumbnails">
+          ${producto.imagenes.map((img, i) => `
+            <img src="${img}" class="thumbnail ${i === 0 ? 'active' : ''}" 
+                 data-index="${i}" alt="Miniatura ${i + 1}">
+          `).join('')}
         </div>
         <div class="modal-acciones">
           <input type="number" value="1" min="1" max="${disponibles}" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
@@ -353,6 +365,34 @@ function mostrarModalProducto(producto) {
     </div>
   `;
 
+  // Agregar funcionalidad del carrusel
+  if (producto.imagenes.length > 1) {
+    let currentIndex = 0;
+    const mainImage = contenido.querySelector('.modal-img');
+    const thumbnails = contenido.querySelectorAll('.thumbnail');
+    
+    function updateImage(index) {
+      currentIndex = index;
+      mainImage.src = producto.imagenes[index];
+      thumbnails.forEach((thumb, i) => {
+        thumb.classList.toggle('active', i === index);
+      });
+    }
+    
+    contenido.querySelector('.modal-prev')?.addEventListener('click', () => {
+      const newIndex = (currentIndex - 1 + producto.imagenes.length) % producto.imagenes.length;
+      updateImage(newIndex);
+    });
+    
+    contenido.querySelector('.modal-next')?.addEventListener('click', () => {
+      const newIndex = (currentIndex + 1) % producto.imagenes.length;
+      updateImage(newIndex);
+    });
+    
+    thumbnails.forEach((thumb, i) => {
+      thumb.addEventListener('click', () => updateImage(i));
+    });
+  }
   contenido.querySelector('.cerrar-modal').onclick = () => cerrarModal();
   const agregarBtn = contenido.querySelector('.boton-agregar-modal');
   agregarBtn.onclick = () => {
@@ -510,3 +550,21 @@ if (document.readyState !== 'loading') {
 }
 
 window.resetearFiltros = resetearFiltros;
+
+function inicializarFAQ() {
+  const faqToggles = document.querySelectorAll('.faq-toggle');
+  
+  faqToggles.forEach(toggle => {
+    toggle.addEventListener('click', () => {
+      const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', !isExpanded);
+      
+      const content = toggle.nextElementSibling;
+      if (isExpanded) {
+        content.hidden = true;
+      } else {
+        content.hidden = false;
+      }
+    });
+  });
+}
