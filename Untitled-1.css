@@ -1251,3 +1251,41 @@ blockquote {
     right: 20px;
   }
 }
+
+:root {
+  --primary-green: #7ed957;
+  --primary-green-dark: #67b948;
+  --primary-green-soft: #a2f4a2;
+}
+
+.boton-agregar, .boton-agregar-modal, .boton-ver-detalles, .boton-detalles {
+  background: var(--primary-green);
+  color: #fff !important;
+  border-radius: var(--border-radius,8px);
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+.boton-agregar:hover, .boton-agregar-modal:hover, .boton-ver-detalles:hover, .boton-detalles:hover {
+  background: var(--primary-green-dark);
+}
+
+.boton-detalles, .boton-ver-detalles {
+  margin-top: 10px;
+  font-size: 1rem;
+  letter-spacing: 0.5px;
+  border: none;
+  width: 100%;
+}
+
+.producto-card .boton-detalles {
+  display: block;
+  margin: 10px auto 0 auto;
+  box-shadow: 0 2px 6px #0001;
+}
+
+.producto-card .boton-detalles:active {
+  background: var(--primary-green-soft);
+  color: #2b3a2b;
+}
+
