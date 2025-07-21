@@ -21,7 +21,6 @@ let filtrosActuales = {
   busqueda: ''
 };
 let lazyObserver = null;
-
 // ===============================
 // REFERENCIAS AL DOM
 // ===============================
