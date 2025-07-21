@@ -59,38 +59,72 @@ function manejarErroresImagenes() {
 // ===============================
 // PREGUNTAS FRECUENTES (FAQs)
 // ===============================
+/* Estilos básicos para FAQs */
+.faq-item {
+  margin-bottom: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
 
-function inicializarFAQs() {
-  const faqItems = document.querySelectorAll('.faq-item');
-  
-  faqItems.forEach(item => {
-    const toggle = item.querySelector('.faq-toggle');
-    const content = item.querySelector('.faq-content');
-    
-    toggle.addEventListener('click', () => {
-      const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-      
-      // Cerrar todos los demás FAQs
-      document.querySelectorAll('.faq-item').forEach(otherItem => {
-        if (otherItem !== item) {
-          otherItem.querySelector('.faq-toggle').setAttribute('aria-expanded', 'false');
-          otherItem.querySelector('.faq-content').hidden = true;
-          otherItem.classList.remove('active');
-        }
-      });
-      
-      // Alternar el FAQ actual
-      if (isExpanded) {
-        toggle.setAttribute('aria-expanded', 'false');
-        content.hidden = true;
-        item.classList.remove('active');
-      } else {
-        toggle.setAttribute('aria-expanded', 'true');
-        content.hidden = false;
-        item.classList.add('active');
-      }
-    });
-  });
+.faq-item.active {
+  border-color: #95d5b2;
+  box-shadow: 0 2px 8px rgba(149, 213, 178, 0.3);
+}
+
+.faq-toggle {
+  width: 100%;
+  padding: 15px 20px;
+  background: #f8f9fa;
+  border: none;
+  text-align: left;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.3s ease;
+}
+
+.faq-toggle:hover {
+  background: #e9ecef;
+}
+
+.faq-toggle[aria-expanded="true"] {
+  background: #d8f3dc;
+  color: #1b4332;
+}
+
+.faq-toggle::after {
+  content: '+';
+  font-size: 20px;
+  transition: transform 0.3s ease;
+}
+
+.faq-toggle[aria-expanded="true"]::after {
+  content: '-';
+}
+
+.faq-content {
+  padding: 0 20px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  background: white;
+}
+
+.faq-item.active .faq-content {
+  padding: 15px 20px;
+  max-height: 1000px; /* Ajusta según el contenido máximo */
+}
+
+/* Estilo para enlaces dentro del contenido */
+.faq-content a {
+  color: #2d6a4f;
+  text-decoration: underline;
 }
 
 // ===============================
