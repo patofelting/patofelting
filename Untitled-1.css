@@ -80,19 +80,18 @@ button {
 .logo-container {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 10px;
 }
 
 .logo-img {
-  width: 70px;
-  height: 70px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   object-fit: cover;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
 .logo-text {
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: var(--primary-color);
 }
@@ -107,13 +106,12 @@ button {
 .carrito-btn {
   background-color: var(--primary-color);
   color: white;
-  padding: 10px 15px;
+  padding: 8px 15px;
   border-radius: var(--border-radius);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
   transition: var(--transition);
-  font-weight: 500;
 }
 
 .carrito-btn:hover {
@@ -123,7 +121,7 @@ button {
 .menu {
   display: flex;
   list-style: none;
-  gap: 30px;
+  gap: 20px;
 }
 
 .menu li a {
@@ -350,9 +348,6 @@ blockquote {
   gap: 15px;
   margin-bottom: 30px;
   align-items: center;
-  padding: 15px;
-  background-color: var(--light-gray);
-  border-radius: var(--border-radius);
 }
 
 .filtro-grupo {
@@ -414,7 +409,7 @@ blockquote {
 
 .galeria-productos {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 25px;
   margin-top: 30px;
 }
@@ -436,7 +431,7 @@ blockquote {
 
 .producto-img {
   width: 100%;
-  height: 200px;
+  height: 250px;
   object-fit: cover;
 }
 
@@ -657,67 +652,393 @@ blockquote {
   cursor: not-allowed;
 }
 
-/* FAQ Section */
-.faq-section {
-  padding: 60px 0;
-  background-color: var(--light-gray);
-}
-
-.faq-section h2 {
-  text-align: center;
-  font-size: 2rem;
-  margin-bottom: 40px;
-  color: var(--text-color);
-}
-
-.faq-categories {
+/* Shopping Cart */
+.carrito-panel {
+  position: fixed;
+  top: 0;
+  right: -400px;
+  width: 100%;
+  max-width: 400px;
+  height: 100vh;
+  background-color: white;
+  box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+  z-index: 1500;
+  transition: var(--transition);
   display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 30px;
+  flex-direction: column;
 }
 
-.faq-category-btn {
-  padding: 8px 16px;
-  border-radius: 20px;
-  background-color: var(--medium-gray);
+.carrito-panel.active {
+  right: 0;
+}
+
+.carrito-header {
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--medium-gray);
+}
+
+.carrito-header h2 {
+  font-size: 1.5rem;
+  color: var(--primary-color);
+}
+
+.cerrar-carrito {
+  font-size: 1.5rem;
+  background: none;
+  color: var(--dark-gray);
+  transition: var(--transition);
+}
+
+.cerrar-carrito:hover {
   color: var(--text-color);
-  border: none;
+}
+
+.lista-carrito {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.carrito-vacio {
+  text-align: center;
+  color: var(--dark-gray);
+  padding: 20px;
+}
+
+.carrito-item {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--medium-gray);
+}
+
+.carrito-item-img {
+  width: 70px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: var(--border-radius);
+}
+
+.carrito-item-info {
+  flex: 1;
+}
+
+.carrito-item-nombre {
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.carrito-item-subtotal {
+  color: var(--primary-color);
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.carrito-item-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.carrito-item-controls button {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background-color: var(--medium-gray);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.carrito-item-controls button:hover {
+  background-color: var(--dark-gray);
+  color: white;
+}
+
+.carrito-item-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.carrito-item-cantidad {
+  min-width: 20px;
+  text-align: center;
+}
+
+.eliminar-item {
+  color: var(--error-color);
+  font-size: 0.9rem;
   cursor: pointer;
   transition: var(--transition);
-  font-weight: 500;
+  background: none;
+  margin-left: auto;
 }
 
-.faq-category-btn.active,
-.faq-category-btn:hover {
+.eliminar-item:hover {
+  color: #c62828;
+}
+
+.carrito-footer {
+  padding: 20px;
+  border-top: 1px solid var(--medium-gray);
+}
+
+.total {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 15px;
+  text-align: right;
+}
+
+.carrito-acciones {
+  display: flex;
+  gap: 10px;
+}
+
+.boton-vaciar-carrito, .boton-finalizar-compra {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--border-radius);
+  transition: var(--transition);
+}
+
+.boton-vaciar-carrito {
+  background-color: var(--medium-gray);
+  color: var(--text-color);
+}
+
+.boton-vaciar-carrito:hover {
+  background-color: var(--dark-gray);
+  color: white;
+}
+
+.boton-finalizar-compra {
   background-color: var(--primary-color);
   color: white;
 }
 
-.faq-container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 0 20px;
+.boton-finalizar-compra:hover {
+  background-color: var(--accent-color);
 }
 
+.carrito-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1400;
+  opacity: 0;
+  visibility: hidden;
+  transition: var(--transition);
+}
+
+.carrito-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Pre-purchase Modal */
+#aviso-pre-compra-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+#aviso-pre-compra-modal.visible {
+  display: flex;
+}
+
+.modal-aviso-contenido {
+  background-color: white;
+  border-radius: var(--border-radius);
+  width: 90%;
+  max-width: 500px;
+  padding: 30px;
+  position: relative;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.modal-aviso-contenido h3 {
+  font-size: 1.5rem;
+  margin-bottom: 15px;
+  color: var(--primary-color);
+}
+
+.modal-aviso-contenido p {
+  margin-bottom: 15px;
+}
+
+.modal-aviso-botones {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.boton-aviso-entendido, .boton-aviso-cancelar {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--border-radius);
+  transition: var(--transition);
+}
+
+.boton-aviso-entendido {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.boton-aviso-entendido:hover {
+  background-color: var(--accent-color);
+}
+
+.boton-aviso-cancelar {
+  background-color: var(--medium-gray);
+  color: var(--text-color);
+}
+
+.boton-aviso-cancelar:hover {
+  background-color: var(--dark-gray);
+  color: white;
+}
+
+/* Notificaciones */
+.notificacion {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 15px 20px;
+  border-radius: var(--border-radius);
+  color: white;
+  box-shadow: var(--box-shadow);
+  transform: translateY(100px);
+  opacity: 0;
+  transition: var(--transition);
+  z-index: 2100;
+}
+
+.notificacion.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.notificacion.exito {
+  background-color: var(--success-color);
+}
+
+.notificacion.error {
+  background-color: var(--error-color);
+}
+
+.notificacion.info {
+  background-color: #2196F3;
+}
+
+/* Contact Section */
+.contact {
+  padding: 80px 0;
+  background-color: var(--light-gray);
+}
+
+.contact h2 {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  color: var(--primary-color);
+}
+
+.contact p {
+  text-align: center;
+  max-width: 700px;
+  margin: 0 auto 30px;
+}
+
+.contact-form {
+  max-width: 600px;
+  margin: 0 auto;
+  background-color: white;
+  padding: 30px;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 10px 15px;
+  border: 1px solid var(--medium-gray);
+  border-radius: var(--border-radius);
+  font-family: inherit;
+  transition: var(--transition);
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  border-color: var(--primary-color);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.submit-button {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.submit-button:hover {
+  background-color: var(--accent-color);
+}
+
+.success-message {
+  text-align: center;
+  color: var(--success-color);
+  margin-top: 15px;
+  font-weight: 600;
+}
+
+/* FAQ Section */
 .faq-item {
   margin-bottom: 15px;
+  border: 1px solid var(--medium-gray);
   border-radius: var(--border-radius);
   overflow: hidden;
-  box-shadow: var(--box-shadow);
-  transition: all 0.3s ease;
-  background-color: white;
+  transition: var(--transition);
 }
 
 .faq-item:hover {
-  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+  border-color: var(--primary-color);
 }
 
 .faq-toggle {
   width: 100%;
-  padding: 20px;
+  padding: 15px 20px;
   text-align: left;
   font-weight: 600;
   background-color: white;
@@ -725,40 +1046,27 @@ blockquote {
   justify-content: space-between;
   align-items: center;
   transition: var(--transition);
-  cursor: pointer;
-  border: none;
-  font-size: 1.1rem;
-  color: var(--text-color);
-}
-
-.faq-toggle:hover {
-  background-color: rgba(76, 175, 80, 0.05);
 }
 
 .faq-toggle::after {
   content: '+';
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   transition: var(--transition);
-  color: var(--primary-color);
-  font-weight: bold;
-}
-
-.faq-toggle[aria-expanded="true"] {
-  background-color: rgba(76, 175, 80, 0.1);
 }
 
 .faq-toggle[aria-expanded="true"]::after {
   content: '-';
 }
 
+.faq-toggle:hover {
+  background-color: var(--light-gray);
+}
+
 .faq-content {
   padding: 0 20px;
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.4s ease, padding 0.3s ease;
-  background-color: white;
-  line-height: 1.7;
-  color: var(--dark-gray);
+  transition: max-height 0.3s ease;
 }
 
 .faq-toggle[aria-expanded="true"] + .faq-content {
@@ -770,12 +1078,6 @@ blockquote {
   color: var(--primary-color);
   font-weight: 600;
   text-decoration: underline;
-  transition: var(--transition);
-}
-
-.faq-more:hover {
-  color: var(--accent-color);
-  text-decoration: none;
 }
 
 /* Footer */
@@ -806,6 +1108,78 @@ blockquote {
 
 .footer i {
   margin-right: 5px;
+}
+
+/* Loader */
+#product-loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 30px;
+  display: none;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  animation: rotate 2s linear infinite;
+}
+
+.path {
+  stroke: var(--primary-color);
+  stroke-linecap: round;
+  animation: dash 1.5s ease-in-out infinite;
+}
+
+@keyframes rotate {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dash {
+  0% {
+    stroke-dasharray: 1, 150;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -35;
+  }
+  100% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -124;
+  }
+}
+
+/* Pagination */
+#paginacion {
+  display: flex;
+  justify-content: center;
+  margin-top: 40px;
+  gap: 5px;
+}
+
+#paginacion button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--medium-gray);
+  color: var(--text-color);
+  transition: var(--transition);
+}
+
+#paginacion button:hover {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+#paginacion button.active {
+  background-color: var(--primary-color);
+  color: white;
 }
 
 /* Responsive Styles */
@@ -935,3 +1309,164 @@ blockquote {
     flex-direction: column;
   }
 }
+
+/* Menú carrito en móviles */
+@media (max-width: 768px) {
+  .carrito-panel {
+    width: 90%;
+    max-width: 350px;
+    right: -100%;
+    transition: right 0.3s ease;
+  }
+  
+  .carrito-panel.active {
+    right: 0;
+  }
+  
+  .carrito-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 998;
+  }
+  
+  .carrito-overlay.active {
+    display: block;
+  }
+  
+  .cerrar-carrito {
+    display: block;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
+}
+
+/* Ocultar scroll cuando el modal está abierto */
+body.no-scroll {
+  overflow: hidden;
+}
+/* Estilos para el carrusel */
+.modal-carrusel {
+  position: relative;
+}
+
+.modal-controls {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  transform: translateY(-50%);
+  padding: 0 10px;
+}
+
+.modal-prev, .modal-next {
+  background: rgba(255,255,255,0.7);
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.modal-prev:hover, .modal-next:hover {
+  background: var(--primary-color);
+  color: white;
+}
+
+.modal-thumbnails {
+  display: flex;
+  gap: 10px;
+  margin: 15px 0;
+  overflow-x: auto;
+  padding-bottom: 10px;
+}
+
+.thumbnail {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: var(--transition);
+  border: 2px solid transparent;
+}
+
+.thumbnail.active, .thumbnail:hover {
+  opacity: 1;
+  border-color: var(--primary-color);
+}
+
+/* FAQ mejorado */
+.faq-item {
+  margin-bottom: 10px;
+  border: 1px solid var(--medium-gray);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.faq-item:hover {
+  border-color: var(--primary-color);
+}
+
+.faq-toggle {
+  width: 100%;
+  padding: 15px 20px;
+  text-align: left;
+  font-weight: 600;
+  background-color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: var(--transition);
+  cursor: pointer;
+  border: none;
+}
+
+.faq-toggle::after {
+  content: '+';
+  font-size: 1.5rem;
+  transition: var(--transition);
+}
+
+.faq-toggle[aria-expanded="true"]::after {
+  content: '-';
+}
+
+.faq-toggle:hover {
+  background-color: var(--light-gray);
+}
+
+.faq-content {
+  padding: 0 20px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  background-color: white;
+}
+
+.faq-toggle[aria-expanded="true"] + .faq-content {
+  padding: 15px 20px;
+  max-height: 500px;
+}
+
+.faq-more {
+  color: var(--primary-color);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
