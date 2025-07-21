@@ -1,8 +1,14 @@
+// ===============================
+// CONFIGURACIÓN INICIAL
+// ===============================
 const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE;
 
+// ===============================
+// ESTADO GLOBAL
+// ===============================
 let productos = [];
 let carrito = [];
 let paginaActual = 1;
@@ -16,6 +22,9 @@ let filtrosActuales = {
 };
 let lazyObserver = null;
 
+// ===============================
+// REFERENCIAS AL DOM
+// ===============================
 const getElement = (id) => document.getElementById(id);
 const elementos = {
   galeriaProductos: getElement('galeria-productos'),
@@ -50,6 +59,10 @@ const elementos = {
   btnCancelarAviso: getElement('btn-cancelar-aviso')
 };
 
+// ===============================
+// FUNCIONES AUXILIARES
+// ===============================
+
 function evitarScrollPorDefecto() {
   document.querySelectorAll('button:not([type])').forEach(btn => {
     btn.setAttribute('type', 'button');
@@ -72,6 +85,10 @@ function isValidEmail(email) {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return re.test(email);
 }
+
+// ===============================
+// MANEJO DEL CARRITO
+// ===============================
 
 function guardarCarrito() {
   try {
@@ -200,8 +217,7 @@ function renderizarCarrito() {
 function toggleCarrito() {
   if (!elementos.carritoPanel || !elementos.carritoOverlay) return;
   
-  const isOpen = !elementos.carritoPanel.classList.contains('open');
-  elementos.carritoPanel.classList.toggle('open', isOpen);
+  const isOpen = elementos.carritoPanel.classList.toggle('open');
   elementos.carritoOverlay.classList.toggle('active', isOpen);
   document.body.classList.toggle('no-scroll', isOpen);
   
@@ -211,6 +227,10 @@ function toggleCarrito() {
     }, 100);
   }
 }
+
+// ===============================
+// MANEJO DE PRODUCTOS
+// ===============================
 
 async function cargarProductosDesdeSheets() {
   try {
@@ -385,6 +405,10 @@ function renderizarProductos() {
   renderizarPaginacion(list.length);
 }
 
+// ===============================
+// MODAL DE PRODUCTO
+// ===============================
+
 function mostrarModalProducto(producto) {
   if (!elementos.productoModal || !elementos.modalContenido) {
     console.error('Elementos del modal no encontrados');
@@ -492,9 +516,10 @@ function mostrarModalProducto(producto) {
       
       thumbnails.forEach(thumb => {
         thumb.addEventListener('click', () => {
+          const index = thumb.dataset.index;
           thumbnails.forEach(t => t.classList.remove('active'));
           thumb.classList.add('active');
-          mainImg.src = producto.imagenes[thumb.dataset.index];
+          mainImg.src = producto.imagenes[index];
         });
       });
     }
@@ -522,29 +547,43 @@ function mostrarModalProducto(producto) {
     });
   };
 
+  const mostrarModal = () => {
+    elementos.productoModal.style.display = 'flex';
+    document.body.classList.add('no-scroll');
+    
+    setTimeout(() => {
+      elementos.productoModal.style.opacity = '1';
+      elementos.productoModal.style.visibility = 'visible';
+      elementos.modalContenido.querySelector('.cerrar-modal')?.focus();
+    }, 10);
+  };
+
   const cerrarModal = () => {
     elementos.productoModal.style.opacity = '0';
     elementos.productoModal.style.visibility = 'hidden';
+    
     setTimeout(() => {
       elementos.productoModal.style.display = 'none';
       document.body.classList.remove('no-scroll');
     }, 300);
   };
 
-  elementos.productoModal.style.display = 'flex';
-  document.body.classList.add('no-scroll');
   configurarEventos();
-  setTimeout(() => {
-    elementos.productoModal.style.opacity = '1';
-    elementos.productoModal.style.visibility = 'visible';
-    elementos.modalContenido.querySelector('.cerrar-modal')?.focus();
-  }, 10);
+  mostrarModal();
 }
+
+// ===============================
+// MANEJO DE FILTROS
+// ===============================
 
 function aplicarFiltros() {
   paginaActual = 1;
-  renderizarProductos();
+  actualizarUI();
 }
+
+// ===============================
+// ACTUALIZACIÓN DE UI
+// ===============================
 
 function actualizarUI() {
   renderizarProductos();
@@ -552,25 +591,29 @@ function actualizarUI() {
   actualizarContadorCarrito();
 }
 
+// ===============================
+// PREGUNTAS FRECUENTES
+// ===============================
+
 function inicializarFAQs() {
   elementos.faqToggles?.forEach(toggle => {
-    const faqItem = toggle.closest('.faq-item');
-    const content = faqItem.querySelector('.faq-content');
     toggle.addEventListener('click', () => {
+      const faqItem = toggle.closest('.faq-item');
+      const content = faqItem.querySelector('.faq-content');
       const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
       
+      // Cerrar todos los demás FAQs primero
       document.querySelectorAll('.faq-item').forEach(item => {
         if (item !== faqItem) {
           item.classList.remove('active');
           item.querySelector('.faq-toggle').setAttribute('aria-expanded', 'false');
-          item.querySelector('.faq-content').setAttribute('hidden', 'true');
           item.querySelector('.faq-content').style.maxHeight = '0';
         }
       });
       
-      faqItem.classList.toggle('active', !isExpanded);
+      // Alternar el FAQ actual
+      faqItem.classList.toggle('active');
       toggle.setAttribute('aria-expanded', !isExpanded);
-      content.toggleAttribute('hidden', isExpanded);
       
       if (!isExpanded) {
         content.style.maxHeight = content.scrollHeight + 'px';
@@ -581,6 +624,10 @@ function inicializarFAQs() {
   });
 }
 
+// ===============================
+// FORMULARIO DE CONTACTO
+// ===============================
+
 async function enviarFormularioContacto(event) {
   event.preventDefault();
   
@@ -588,17 +635,18 @@ async function enviarFormularioContacto(event) {
   const btnEnviar = elementos.btnEnviar;
   const successMessage = elementos.successMessage;
   
+  // Validación
   const nombre = form.from_name.value.trim();
   const email = form.from_email.value.trim();
   const mensaje = form.message.value.trim();
   
   if (!nombre || !email || !mensaje) {
-    mostrarNotificacion("Por favor completa todos los campos requeridos", "error");
+    mostrarNotificacion("Por favor complete todos los campos", "error");
     return;
   }
   
   if (!isValidEmail(email)) {
-    mostrarNotificacion("Por favor ingresa un correo electrónico válido", "error");
+    mostrarNotificacion("Por favor ingrese un email válido", "error");
     return;
   }
   
@@ -606,48 +654,69 @@ async function enviarFormularioContacto(event) {
   btnEnviar.textContent = 'Enviando...';
   
   try {
+    // Inicializar EmailJS solo una vez si está disponible
+    if (window.emailjs && !window.emailjsInitialized) {
+      await emailjs.init("o4IxJz0Zz-LQ8jYKG");
+      window.emailjsInitialized = true;
+    }
+    
+    let resultado;
+    
+    // Intentar enviar con EmailJS primero
     if (window.emailjs) {
-      if (!window.emailjsInitialized) {
-        await emailjs.init("o4IxJz0Zz-LQ8jYKG");
-        window.emailjsInitialized = true;
-      }
-      
-      await emailjs.sendForm('service_89by24g', 'template_8mn7hdp', form);
-      form.reset();
-      mostrarNotificacion("¡Mensaje enviado con éxito!", "exito");
-      
-      if (successMessage) {
-        successMessage.textContent = '¡Mensaje enviado con éxito!';
-        successMessage.className = 'success-message success';
-        successMessage.classList.remove('hidden');
-        setTimeout(() => {
-          successMessage.classList.add('hidden');
-        }, 5000);
-      }
+      resultado = await emailjs.sendForm('service_89by24g', 'template_8mn7hdp', form);
     } else {
-      throw new Error('EmailJS no está disponible');
+      // Fallback a fetch si EmailJS no está disponible
+      const response = await fetch('/api/contacto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from_name: nombre,
+          from_email: email,
+          message: mensaje
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Error en el servidor');
+      }
+      resultado = await response.json();
+    }
+    
+    // Éxito
+    form.reset();
+    mostrarNotificacion("¡Mensaje enviado con éxito!", "exito");
+    
+    if (successMessage) {
+      successMessage.textContent = '¡Mensaje enviado con éxito!';
+      successMessage.className = 'success-message success';
+      successMessage.style.display = 'block';
+      setTimeout(() => {
+        successMessage.style.display = 'none';
+      }, 5000);
     }
   } catch (error) {
     console.error("Error al enviar el mensaje:", error);
-    mostrarNotificacion("Error al enviar el mensaje. Por favor intenta de nuevo.", "error");
+    mostrarNotificacion("Error al enviar mensaje. Intenta de nuevo.", "error");
     
     if (successMessage) {
-      successMessage.textContent = 'Error al enviar el mensaje. Por favor intenta nuevamente.';
+      successMessage.textContent = 'Error al enviar el mensaje. Por favor intente nuevamente.';
       successMessage.className = 'success-message error';
-      successMessage.classList.remove('hidden');
+      successMessage.style.display = 'block';
       setTimeout(() => {
-        successMessage.classList.add('hidden');
+        successMessage.style.display = 'none';
       }, 5000);
     }
   } finally {
     btnEnviar.disabled = false;
-    btnEnviar.textContent = 'Enviar Mensaje';
+    btnEnviar.textContent = 'Enviar mensaje';
   }
 }
 
 function inicializarFormularioContacto() {
   if (!elementos.formContacto) return;
   
+  // Validación en tiempo real
   elementos.formContacto.addEventListener('input', function() {
     const nombre = this.from_name.value.trim();
     const email = this.from_email.value.trim();
@@ -656,10 +725,16 @@ function inicializarFormularioContacto() {
     elementos.btnEnviar.disabled = !(nombre && email && mensaje && isValidEmail(email));
   });
   
+  // Envío del formulario
   elementos.formContacto.addEventListener('submit', enviarFormularioContacto);
 }
 
+// ===============================
+// INICIALIZACIÓN DE EVENTOS
+// ===============================
+
 function inicializarEventos() {
+  // Carrito
   elementos.carritoBtnMain?.addEventListener('click', toggleCarrito);
   elementos.carritoOverlay?.addEventListener('click', toggleCarrito);
   elementos.btnCerrarCarrito?.addEventListener('click', toggleCarrito);
@@ -693,6 +768,7 @@ function inicializarEventos() {
     elementos.avisoPreCompraModal.style.display = 'none';
   });
   
+  // Filtros
   elementos.inputBusqueda?.addEventListener('input', (e) => {
     filtrosActuales.busqueda = e.target.value.toLowerCase();
     aplicarFiltros();
@@ -737,15 +813,17 @@ function inicializarEventos() {
     aplicarFiltros();
   });
   
+  // Menú hamburguesa
   elementos.hamburguesaBtn?.addEventListener('click', () => {
-    const isOpen = elementos.menu.classList.toggle('open');
-    elementos.hamburguesaBtn.setAttribute('aria-expanded', isOpen);
+    elementos.menu?.classList.toggle('open');
   });
   
+  // Botón flotante
   elementos.btnFlotante?.addEventListener('click', () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
   
+  // Tecla Escape para cerrar modal
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       if (elementos.productoModal && elementos.productoModal.style.display === 'flex') {
@@ -754,9 +832,16 @@ function inicializarEventos() {
     }
   });
   
+  // Inicializar FAQs
   inicializarFAQs();
+  
+  // Inicializar formulario de contacto
   inicializarFormularioContacto();
 }
+
+// ===============================
+// INICIALIZACIÓN PRINCIPAL
+// ===============================
 
 function init() {
   if (typeof document === 'undefined') {
@@ -770,6 +855,7 @@ function init() {
   inicializarEventos();
   evitarScrollPorDefecto();
   
+  // Lazy loading para imágenes
   if ('IntersectionObserver' in window) {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -787,19 +873,9 @@ function init() {
   }
 }
 
+// Iniciar la aplicación
 if (document.readyState !== 'loading') {
   init();
 } else {
   document.addEventListener('DOMContentLoaded', init);
-}
-
-function cerrarModal() {
-  if (elementos.productoModal) {
-    elementos.productoModal.style.opacity = '0';
-    elementos.productoModal.style.visibility = 'hidden';
-    setTimeout(() => {
-      elementos.productoModal.style.display = 'none';
-      document.body.classList.remove('no-scroll');
-    }, 300);
-  }
 }
