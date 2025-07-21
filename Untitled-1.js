@@ -200,7 +200,8 @@ function renderizarCarrito() {
 function toggleCarrito() {
   if (!elementos.carritoPanel || !elementos.carritoOverlay) return;
   
-  const isOpen = elementos.carritoPanel.classList.toggle('open');
+  const isOpen = !elementos.carritoPanel.classList.contains('open');
+  elementos.carritoPanel.classList.toggle('open', isOpen);
   elementos.carritoOverlay.classList.toggle('active', isOpen);
   document.body.classList.toggle('no-scroll', isOpen);
   
@@ -491,10 +492,9 @@ function mostrarModalProducto(producto) {
       
       thumbnails.forEach(thumb => {
         thumb.addEventListener('click', () => {
-          const index = thumb.dataset.index;
           thumbnails.forEach(t => t.classList.remove('active'));
           thumb.classList.add('active');
-          mainImg.src = producto.imagenes[index];
+          mainImg.src = producto.imagenes[thumb.dataset.index];
         });
       });
     }
@@ -525,17 +525,15 @@ function mostrarModalProducto(producto) {
   const cerrarModal = () => {
     elementos.productoModal.style.opacity = '0';
     elementos.productoModal.style.visibility = 'hidden';
-    
     setTimeout(() => {
       elementos.productoModal.style.display = 'none';
       document.body.classList.remove('no-scroll');
     }, 300);
   };
 
-  configurarEventos();
   elementos.productoModal.style.display = 'flex';
   document.body.classList.add('no-scroll');
-  
+  configurarEventos();
   setTimeout(() => {
     elementos.productoModal.style.opacity = '1';
     elementos.productoModal.style.visibility = 'visible';
@@ -545,7 +543,7 @@ function mostrarModalProducto(producto) {
 
 function aplicarFiltros() {
   paginaActual = 1;
-  actualizarUI();
+  renderizarProductos();
 }
 
 function actualizarUI() {
@@ -751,14 +749,6 @@ function inicializarEventos() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       if (elementos.productoModal && elementos.productoModal.style.display === 'flex') {
-        const cerrarModal = () => {
-          elementos.productoModal.style.opacity = '0';
-          elementos.productoModal.style.visibility = 'hidden';
-          setTimeout(() => {
-            elementos.productoModal.style.display = 'none';
-            document.body.classList.remove('no-scroll');
-          }, 300);
-        };
         cerrarModal();
       }
     }
@@ -801,4 +791,15 @@ if (document.readyState !== 'loading') {
   init();
 } else {
   document.addEventListener('DOMContentLoaded', init);
+}
+
+function cerrarModal() {
+  if (elementos.productoModal) {
+    elementos.productoModal.style.opacity = '0';
+    elementos.productoModal.style.visibility = 'hidden';
+    setTimeout(() => {
+      elementos.productoModal.style.display = 'none';
+      document.body.classList.remove('no-scroll');
+    }, 300);
+  }
 }
