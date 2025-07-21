@@ -492,6 +492,10 @@ function inicializarEventos() {
 }
 
 function init() {
+  // Ocultar modales al iniciar
+  if (elementos.avisoPreCompraModal) elementos.avisoPreCompraModal.style.display = 'none';
+  if (elementos.productoModal) elementos.productoModal.style.display = 'none';
+  
   cargarCarrito();
   cargarProductosDesdeSheets();
   inicializarEventos();
