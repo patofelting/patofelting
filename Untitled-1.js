@@ -647,3 +647,24 @@ document.addEventListener('keydown', e => {
     document.getElementById('aviso-pre-compra-modal').style.display = 'none';
   }
 });
+// Mostrar el aviso SOLO al finalizar la compra
+elementos.btnFinalizarCompra?.addEventListener('click', () => {
+  if (carrito.length === 0) {
+    mostrarNotificacion('El carrito está vacío', 'error');
+    return;
+  }
+  document.getElementById('aviso-pre-compra-modal').style.display = 'flex';
+});
+
+// Botón "Cancelar compra" y click fuera
+document.getElementById('btn-cancelar-aviso')?.addEventListener('click', cerrarAvisoCompra);
+document.getElementById('aviso-pre-compra-modal')?.addEventListener('click', e => {
+  if (e.target === e.currentTarget) cerrarAvisoCompra();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') cerrarAvisoCompra();
+});
+
+function cerrarAvisoCompra() {
+  document.getElementById('aviso-pre-compra-modal').style.display = 'none';
+}
