@@ -635,54 +635,58 @@ blockquote {
   min-height: 430px;
 }
 
+/* ESTO ES EXCLUSIVO PARA LA IMAGEN PRINCIPAL DENTRO DEL MODAL */
 .modal-img {
-  width: auto; /* Cambiado de max-width a width:auto para mejor escalado */
-  height: auto; /* Cambiado de max-height fijo a auto */
-  max-width: 90%; /* Más flexible que 400px fijo */
-  max-height: 70vh; /* Mejor que 60px (era muy pequeño) */
-  min-width: 200px; /* Más razonable que 98px */
-  aspect-ratio: 1/1; /* Mantenemos relación cuadrada */
-  object-fit: contain; /* Bueno para productos */
-  object-position: center;
-  border-radius: 22px; /* Mantenemos bordes redondeados */
-  background: #f8fafb; /* Color de fondo ligeramente ajustado */
-  box-shadow: 
-    0 6px 24px rgba(60, 90, 110, 0.12), /* Sombra más profesional */
-    0 2px 6px rgba(0, 0, 0, 0.05);
+  max-width: 90vw; /* Ocupará el 90% del ancho de la pantalla */
+  max-height: 70vh; /* Ocupará el 70% del alto visible */
+  min-width: 300px; /* Nunca más pequeño que esto */
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 16px;
+  background: #f8f9fa;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
   margin: 0 auto;
   display: block;
-  padding: 20px; /* Espacio interno añadido */
-  border: 1px solid rgba(0, 0, 0, 0.05); /* Borde sutil añadido */
-  transition: 
-    transform 0.3s ease, 
-    box-shadow 0.3s ease;
+  padding: 15px;
+  border: 1px solid #eee;
+  cursor: zoom-in;
+  transition: transform 0.3s ease;
 }
 
-/* Efecto hover para interacción */
+/* Efecto hover para feedback visual */
 .modal-img:hover {
   transform: scale(1.02);
-  box-shadow: 
-    0 8px 32px rgba(60, 90, 110, 0.15),
-    0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-/* Ajustes para dispositivos móviles */
-@media (max-width: 768px) {
+/* Zoom al hacer click (opcional) */
+.modal-img.zoomed {
+  transform: scale(1.5);
+  cursor: zoom-out;
+}
+
+/* Ajustes para pantallas grandes */
+@media (min-width: 1200px) {
   .modal-img {
-    max-width: 85vw;
-    max-height: 60vh;
-    padding: 15px;
-    border-radius: 18px;
+    max-width: 700px; /* Límite máximo absoluto */
+    max-height: 600px;
   }
 }
 
-/* Ajustes para pantallas muy pequeñas */
-@media (max-width: 480px) {
+/* Ajuste fino para tablets */
+@media (max-width: 992px) {
   .modal-img {
-    max-width: 92vw;
+    max-width: 85vw;
+    max-height: 60vh;
+  }
+}
+
+/* Optimización para móviles */
+@media (max-width: 576px) {
+  .modal-img {
+    max-width: 95vw;
     max-height: 50vh;
-    padding: 12px;
-    border-radius: 16px;
+    padding: 10px;
   }
 }
 .modal-info {
