@@ -4,7 +4,7 @@
 const CONFIG = {
   PRODUCTOS_POR_PAGINA: 6,
   LS_CARRITO_KEY: 'carrito_patofelting',
-  
+  CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv',
   PLACEHOLDER_IMAGE: 'img/placeholder.png',
   CACHE_BUSTER: '?v=' + new Date().getTime()
 };
