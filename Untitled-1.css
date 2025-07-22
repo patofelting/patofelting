@@ -15,6 +15,13 @@
   --border-radius: 8px;
   --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   --transition: all 0.3s ease;
+  --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --font-size-base: 16px;
+  --font-size-small: 14px;
+  --font-size-large: 18px;
+  --font-weight-normal: 400;
+  --font-weight-bold: 700;
+  --line-height: 1.6;
 }
 
 * {
@@ -25,12 +32,12 @@
 
 html {
   scroll-behavior: smooth;
-  font-size: 16px;
+  font-size: var(--font-size-base);
 }
 
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  line-height: 1.6;
+  font-family: var(--font-family);
+  line-height: var(--line-height);
   color: var(--text-color);
   background-color: var(--background-color);
   overflow-x: hidden;
@@ -92,7 +99,7 @@ button {
 
 .logo-text {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   color: var(--primary-color);
 }
 
@@ -127,7 +134,7 @@ button {
 .menu li a {
   padding: 5px 10px;
   transition: var(--transition);
-  font-weight: 500;
+  font-weight: var(--font-weight-normal);
 }
 
 .menu li a:hover {
@@ -204,7 +211,7 @@ button {
 .cta-button {
   padding: 12px 25px;
   border-radius: var(--border-radius);
-  font-weight: 600;
+  font-weight: var(--font-weight-bold);
   transition: var(--transition);
 }
 
@@ -318,7 +325,7 @@ blockquote {
 }
 
 .cta {
-  font-weight: 600;
+  font-weight: var(--font-weight-bold);
   margin: 20px 0;
 }
 
@@ -358,7 +365,7 @@ blockquote {
 
 .filtro-grupo h3 {
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-bold);
 }
 
 .filtro-rango {
@@ -442,7 +449,7 @@ blockquote {
 }
 
 .producto-precio {
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   color: var(--primary-color);
   margin-bottom: 10px;
   padding: 0 15px;
@@ -595,14 +602,14 @@ blockquote {
 
 .modal-precio {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   margin-bottom: 15px;
 }
 
 .modal-stock {
   font-size: 1rem;
   margin-bottom: 20px;
-  font-weight: 600;
+  font-weight: var(--font-weight-bold);
 }
 
 .modal-stock.disponible {
@@ -615,7 +622,7 @@ blockquote {
 
 .modal-descripcion {
   margin-bottom: 20px;
-  line-height: 1.6;
+  line-height: var(--line-height);
 }
 
 .modal-acciones {
@@ -702,8 +709,7 @@ blockquote {
   padding: 20px;
 }
 
-.carrito-vacio {
-  text-align: center;
+.carrito-vacio {  text-align: center;
   color: var(--dark-gray);
   padding: 20px;
 }
@@ -728,13 +734,13 @@ blockquote {
 }
 
 .carrito-item-nombre {
-  font-weight: 600;
+  font-weight: var(--font-weight-bold);
   margin-bottom: 5px;
 }
 
 .carrito-item-subtotal {
   color: var(--primary-color);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   margin-bottom: 5px;
 }
 
@@ -791,7 +797,7 @@ blockquote {
 
 .total {
   font-size: 1.2rem;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   margin-bottom: 15px;
   text-align: right;
 }
@@ -982,7 +988,7 @@ blockquote {
 .form-group label {
   display: block;
   margin-bottom: 8px;
-  font-weight: 600;
+  font-weight: var(--font-weight-bold);
 }
 
 .form-group input,
@@ -1008,7 +1014,7 @@ blockquote {
   background-color: var(--primary-color);
   color: white;
   border-radius: var(--border-radius);
-  font-weight: 600;
+  font-weight: var(--font-weight-bold);
   transition: var(--transition);
 }
 
@@ -1020,12 +1026,24 @@ blockquote {
   text-align: center;
   color: var(--success-color);
   margin-top: 15px;
-  font-weight: 600;
+  font-weight: var(--font-weight-bold);
 }
 
 /* FAQ Section */
+.faq-section {
+  padding: 80px 0;
+  background-color: var(--light-gray);
+}
+
+.faq-section h2 {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 40px;
+  color: var(--primary-color);
+}
+
 .faq-item {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
   border: 1px solid var(--medium-gray);
   border-radius: var(--border-radius);
   overflow: hidden;
@@ -1040,17 +1058,19 @@ blockquote {
   width: 100%;
   padding: 15px 20px;
   text-align: left;
-  font-weight: 600;
+  font-weight: var(--font-weight-bold);
   background-color: white;
   display: flex;
   justify-content: space-between;
   align-items: center;
   transition: var(--transition);
+  cursor: pointer;
+  border: none;
 }
 
 .faq-toggle::after {
   content: '+';
-  font-size: 1.2rem;
+  font-size: 1.5rem;
   transition: var(--transition);
 }
 
@@ -1067,6 +1087,7 @@ blockquote {
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.3s ease;
+  background-color: white;
 }
 
 .faq-toggle[aria-expanded="true"] + .faq-content {
@@ -1076,7 +1097,7 @@ blockquote {
 
 .faq-more {
   color: var(--primary-color);
-  font-weight: 600;
+  font-weight: var(--font-weight-bold);
   text-decoration: underline;
 }
 
@@ -1187,12 +1208,12 @@ blockquote {
   .about-content {
     flex-direction: column;
   }
-  
+
   .about-image {
     order: -1;
     margin-bottom: 30px;
   }
-  
+
   .modal-flex {
     flex-direction: column;
   }
@@ -1202,7 +1223,7 @@ blockquote {
   .hamburguesa {
     display: block;
   }
-  
+
   .menu {
     position: fixed;
     top: 80px;
@@ -1217,63 +1238,63 @@ blockquote {
     transition: transform 0.3s ease;
     z-index: 999;
   }
-  
+
   .menu.active {
     transform: translateY(0);
   }
-  
+
   .hero-title {
     font-size: 3rem;
   }
-  
+
   .hero-subtitle {
     font-size: 1.5rem;
   }
-  
+
   .cta-container {
     flex-direction: column;
     gap: 10px;
   }
-  
+
   .filtros-container {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .filtro-grupo {
     width: 100%;
   }
-  
+
   .input-busqueda {
     width: 100%;
   }
-  
+
   .carrito-panel {
     max-width: 100%;
   }
-  
+
   /* Modal responsive */
   #modal-contenido {
     padding: 20px;
     width: 95%;
   }
-  
+
   .modal-nombre {
     font-size: 1.5rem;
   }
-  
+
   .modal-precio {
     font-size: 1.2rem;
   }
-  
+
   .modal-acciones {
     flex-direction: column;
   }
-  
+
   .cantidad-modal-input {
     width: 100%;
   }
-  
+
   .boton-agregar-modal {
     width: 100%;
   }
@@ -1283,28 +1304,28 @@ blockquote {
   .hero-title {
     font-size: 2.5rem;
   }
-  
+
   .hero-subtitle {
     font-size: 1.2rem;
   }
-  
+
   .nav-container {
     padding: 10px 15px;
   }
-  
+
   .logo-text {
     font-size: 1.2rem;
   }
-  
+
   .carrito-btn {
     padding: 6px 10px;
     font-size: 0.9rem;
   }
-  
+
   .modal-aviso-contenido {
     padding: 20px;
   }
-  
+
   .modal-aviso-botones {
     flex-direction: column;
   }
@@ -1318,11 +1339,11 @@ blockquote {
     right: -100%;
     transition: right 0.3s ease;
   }
-  
+
   .carrito-panel.active {
     right: 0;
   }
-  
+
   .carrito-overlay {
     display: none;
     position: fixed;
@@ -1333,11 +1354,11 @@ blockquote {
     background: rgba(0,0,0,0.5);
     z-index: 998;
   }
-  
+
   .carrito-overlay.active {
     display: block;
   }
-  
+
   .cerrar-carrito {
     display: block;
     position: absolute;
@@ -1354,6 +1375,7 @@ blockquote {
 body.no-scroll {
   overflow: hidden;
 }
+
 /* Estilos para el carrusel */
 .modal-carrusel {
   position: relative;
@@ -1427,7 +1449,253 @@ body.no-scroll {
   width: 100%;
   padding: 15px 20px;
   text-align: left;
-  font-weight: 600;
+  font-weight: var(--font-weight-bold);
+  background-color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: var(--transition);
+  cursor: pointer;
+  border: none;
+}
+
+.faq-toggle::after {
+  content: '+';
+  font-size: 1.5rem;
+  transition: var(--transition);
+}
+
+.faq-toggle[aria-expanded="true"]::after {
+  content: '-';
+}
+
+.faq-toggle:hover {
+  background-color: var(--light-gray);
+}
+
+.faq-content {
+  padding: 0 20px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  background-color: white;
+}
+
+.faq-toggle[aria-expanded="true"] + .faq-content {
+  padding: 15px 20px;
+  max-height:  500px;
+}
+
+.faq-more {
+  color: var(--primary-color);
+  font-weight: var(--font-weight-bold);
+  text-decoration: underline;
+}
+
+/* Pagination Enhancements */
+#paginacion button.active {
+  background-color: var(--primary-color);
+  color: white;
+  font-weight: var(--font-weight-bold);
+}
+
+#paginacion button:hover {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+#paginacion button {
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* Carrito Enhancements */
+.carrito-panel {
+  box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+  transition: right 0.3s ease;
+}
+
+.carrito-header {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--medium-gray);
+}
+
+.carrito-header h2 {
+  font-size: 1.5rem;
+  color: white;
+}
+
+.carrito-item {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--medium-gray);
+}
+
+.carrito-item-img {
+  width: 70px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: var(--border-radius);
+}
+
+.carrito-item-info {
+  flex: 1;
+}
+
+.carrito-item-nombre {
+  font-weight: var(--font-weight-bold);
+  margin-bottom: 5px;
+}
+
+.carrito-item-subtotal {
+  color: var(--primary-color);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: 5px;
+}
+
+.carrito-item-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.carrito-item-controls button {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background-color: var(--medium-gray);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.carrito-item-controls button:hover {
+  background-color: var(--dark-gray);
+  color: white;
+}
+
+.carrito-item-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.carrito-item-cantidad {
+  min-width: 20px;
+  text-align: center;
+}
+
+.eliminar-item {
+  color: var(--error-color);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: var(--transition);
+  background: none;
+  margin-left: auto;
+}
+
+.eliminar-item:hover {
+  color: #c62828;
+}
+
+.carrito-footer {
+  padding: 20px;
+  border-top: 1px solid var(--medium-gray);
+}
+
+.total {
+  font-size: 1.2rem;
+  font-weight: var(--font-weight-bold);
+  margin-bottom: 15px;
+  text-align: right;
+}
+
+.carrito-acciones {
+  display: flex;
+  gap: 10px;
+}
+
+.boton-vaciar-carrito, .boton-finalizar-compra {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--border-radius);
+  transition: var(--transition);
+}
+
+.boton-vaciar-carrito {
+  background-color: var(--medium-gray);
+  color: var(--text-color);
+}
+
+.boton-vaciar-carrito:hover {
+  background-color: var(--dark-gray);
+  color: white;
+}
+
+.boton-finalizar-compra {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.boton-finalizar-compra:hover {
+  background-color: var(--accent-color);
+}
+
+.carrito-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1400;
+  opacity: 0;
+  visibility: hidden;
+  transition: var(--transition);
+}
+
+.carrito-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* FAQ Section Enhancements */
+.faq-section {
+  padding: 80px 0;
+  background-color: var(--light-gray);
+}
+
+.faq-section h2 {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 40px;
+  color: var(--primary-color);
+}
+
+.faq-item {
+  margin-bottom: 20px;
+  border: 1px solid var(--medium-gray);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.faq-item:hover {
+  border-color: var(--primary-color);
+}
+
+.faq-toggle {
+  width: 100%;
+  padding: 15px 20px;
+  text-align: left;
+  font-weight: var(--font-weight-bold);
   background-color: white;
   display: flex;
   justify-content: space-between;
@@ -1466,7 +1734,259 @@ body.no-scroll {
 
 .faq-more {
   color: var(--primary-color);
-  font-weight: 600;
+  font-weight: var(--font-weight-bold);
   text-decoration: underline;
 }
 
+/* Product Page Indicator */
+.producto-card {
+  position: relative;
+}
+
+.producto-card::before {
+  content: attr(data-page);
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: var(--primary-color);
+  color: white;
+  padding: 5px 10px;
+  border-radius: var(--border-radius);
+  font-size: 0.8rem;
+  font-weight: var(--font-weight-bold);
+  opacity: 0.8;
+  transition: opacity 0.3s;
+}
+
+.producto-card:hover::before {
+  opacity: 1;
+}
+
+/* Responsive Enhancements */
+@media (max-width: 992px) {
+  .about-content {
+    flex-direction: column;
+  }
+
+  .about-image {
+    order: -1;
+    margin-bottom: 30px;
+  }
+
+  .modal-flex {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 768px) {
+  .hamburguesa {
+    display: block;
+  }
+
+  .menu {
+    position: fixed;
+    top: 80px;
+    left: 0;
+    width: 100%;
+    background-color: white;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0;
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+    transform: translateY(-150%);
+    transition: transform 0.3s ease;
+    z-index: 999;
+  }
+
+  .menu.active {
+    transform: translateY(0);
+  }
+
+  .hero-title {
+    font-size: 3rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1.5rem;
+  }
+
+  .cta-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .filtros-container {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filtro-grupo {
+    width: 100%;
+  }
+
+  .input-busqueda {
+    width: 100%;
+  }
+
+  .carrito-panel {
+    max-width: 100%;
+  }
+
+  /* Modal responsive */
+  #modal-contenido {
+    padding: 20px;
+    width: 95%;
+  }
+
+  .modal-nombre {
+    font-size: 1.5rem;
+  }
+
+  .modal-precio {
+    font-size: 1.2rem;
+  }
+
+  .modal-acciones {
+    flex-direction: column;
+  }
+
+  .cantidad-modal-input {
+    width: 100%;
+  }
+
+  .boton-agregar-modal {
+    width: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .hero-title {
+    font-size: 2.5rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1.2rem;
+  }
+
+  .nav-container {
+    padding: 10px 15px;
+  }
+
+  .logo-text {
+    font-size: 1.2rem;
+  }
+
+  .carrito-btn {
+    padding: 6px 10px;
+    font-size: 0.9rem;
+  }
+
+  .modal-aviso-contenido {
+    padding: 20px;
+  }
+
+  .modal-aviso-botones {
+    flex-direction: column;
+  }
+}
+
+/* Menú carrito en móviles */
+@media (max-width: 768px) {
+  .carrito-panel {
+    width: 90%;
+    max-width: 350px;
+    right: -100%;
+    transition: right 0.3s ease;
+  }
+
+  .carrito-panel.active {
+    right: 0;
+  }
+
+  .carrito-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 998;
+  }
+
+  .carrito-overlay.active {
+    display: block;
+  }
+
+  .cerrar-carrito {
+    display: block;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
+}
+
+/* Ocultar scroll cuando el modal está abierto */
+body.no-scroll {
+  overflow: hidden;
+}
+
+/* Estilos para el carrusel */
+.modal-carrusel {
+  position: relative;
+}
+
+.modal-controls {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  transform: translateY(-50%);
+  padding: 0 10px;
+}
+
+.modal-prev, .modal-next {
+  background: rgba(255,255,255,0.7);
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.modal-prev:hover, .modal-next:hover {
+  background: var(--primary-color);
+  color: white;
+}
+
+.modal-thumbnails {
+  display: flex;
+  gap: 10px;
+  margin: 15px 0;
+  overflow-x: auto;
+  padding-bottom: 10px;
+}
+
+.thumbnail {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: var(--transition);
+  border: 2px solid transparent;
+}
+
+.thumbnail.active, .thumbnail:hover {
+  opacity: 1;
+  border-color: var(--primary-color);
+}
