@@ -1330,39 +1330,56 @@ blockquote {
 
 /* Notificaciones */
 .notificacion {
-  position: fixed !important;
-  top: 38px !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  display: inline-block !important;
-  min-width: 120px !important;
-  max-width: 320px !important;
-  width: auto !important;
-  padding: 10px 20px !important;
-  border-radius: 8px !important;
-  font-size: 1rem !important;
-  font-weight: 500 !important;
-  box-shadow: 0 2px 14px rgba(44,62,80,0.10) !important;
-  z-index: 9999 !important;
-  background: #23272f !important;
-  color: #fff !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  transition: opacity 0.21s, top 0.21s !important;
-  text-align: center !important;
-  line-height: 1.5 !important;
-  height: auto !important;
-  box-sizing: border-box !important;
-  margin: 0 !important;
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-block;
+  min-width: 110px;
+  max-width: 85vw;
+  width: auto;
+  padding: 7px 17px;
+  border-radius: 18px;
+  font-size: 0.97rem;
+  font-weight: 500;
+  box-shadow: 0 4px 18px 0 rgba(44,62,80,0.07);
+  z-index: 9999;
+  background: #23272f;
+  color: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s, top 0.22s;
+  text-align: center;
+  line-height: 1.44;
+  height: auto;
+  box-sizing: border-box;
+  margin: 0;
+  letter-spacing: 0.01em;
 }
+
 .notificacion.show {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  top: 60px !important;
+  opacity: 1;
+  pointer-events: auto;
+  top: 34px;
 }
-.notificacion.exito { background: #48c774 !important; color: #fff !important;}
-.notificacion.error { background: #e63946 !important; color: #fff !important;}
-.notificacion.info  { background: #1976d2 !important; color: #fff !important;}
+
+/* Tipos de mensaje */
+.notificacion.exito { background: #43b95a; color: #fff; }
+.notificacion.error { background: #e74c3c; color: #fff; }
+.notificacion.info  { background: #1976d2; color: #fff; }
+
+/* Adaptable a mobile: */
+@media (max-width: 600px) {
+  .notificacion {
+    top: 14px;
+    padding: 8px 12px;
+    font-size: 0.94rem;
+    min-width: 80px;
+    max-width: 96vw;
+    border-radius: 12px;
+  }
+}
+
 
 
 /* Contact Section */
