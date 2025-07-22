@@ -222,7 +222,7 @@ categoria: (r.categoria || r.categoría || '').trim().toLowerCase() || 'otros', 
         estado: r.estado ? r.estado.trim() : ''
    
       }));
-      console.log("CATEGORÍAS DETECTADAS:", productos.map(p => p.categoria));
+      
     actualizarCategorias();
     actualizarUI();
   } catch (e) {
@@ -621,3 +621,8 @@ emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
 
 // Llamar a la función para configurar el formulario de contacto
 setupContactForm();
+
+
+
+
+
