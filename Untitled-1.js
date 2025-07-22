@@ -582,3 +582,35 @@ window.mostrarModalProducto = mostrarModalProducto;
 window.mostrarNotificacion = mostrarNotificacion;
 window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
 window.guardarCarrito = guardarCarrito;
+
+
+// Initialize EmailJS with your public key
+
+js.init('o4IxJz0Zz-LQ8jYKG'); // Replace with your EmailJS public key
+// ===============================
+// CONTACT FORM
+// ===============================
+function setupContactForm() {
+  if (formContacto) {
+    formContacto.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const nombre = document.getElementById('nombre').value;
+      const email = document.getElementById('email').value;
+      const mensaje = document.getElementById('mensaje').value;
+
+      emailjs.send('service_89by24g', 'template_8mn7hdp', {
+        from_name: nombre,
+        from_email: email,
+        message: mensaje
+      })
+      .then(() => {
+        successMessage.classList.remove('hidden');
+        formContacto.reset();
+        setTimeout(() => successMessage.classList.add('hidden'), 3000);
+      }, (error) => {
+        console.error('Error al enviar el mensaje:', error);
+        mostrarNotificacion('Error al enviar el mensaje. Intenta de nuevo.', 'error');
+      });
+    });
+  }
+}
