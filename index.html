@@ -158,7 +158,9 @@
     <button class="cerrar-modal" aria-label="Cerrar modal">&times;</button>
     <div class="modal-flex">
       <div class="modal-carrusel">
+        <button class="modal-prev" aria-label="Anterior">&#8592;</button>
         <img src="" alt="Imagen del producto" class="modal-img">
+        <button class="modal-next" aria-label="Siguiente">&#8594;</button>
       </div>
       <div class="modal-info">
         <h2 class="modal-nombre"></h2>
@@ -166,7 +168,7 @@
         <span class="modal-stock disponible"></span>
         <p class="modal-descripcion"></p>
         <div class="modal-detalles">
-          <!-- Detalles del producto -->
+          <!-- Aquí puedes poner las medidas u otros detalles -->
         </div>
         <div class="modal-acciones">
           <input type="number" class="cantidad-modal-input" value="1" min="1">
@@ -175,10 +177,11 @@
       </div>
     </div>
     <div class="modal-thumbnails">
-      <!-- Miniaturas de imágenes -->
+      <!-- Aquí se mostrarán las miniaturas de las imágenes -->
     </div>
   </div>
 </div>
+
 
   <div id="aviso-pre-compra-modal" class="modal-aviso" hidden>
     <div class="modal-aviso-contenido">
@@ -286,7 +289,9 @@
     </div>
   </footer>
 
-
+  <button class="boton-flotante" aria-label="Volver arriba">
+    <i class="fas fa-arrow-up"></i>
+  </button>
 
   <script src="Untitled-1.js" defer></script>
  
