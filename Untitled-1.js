@@ -433,3 +433,17 @@ emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
 
 // Llamar a la función para configurar el formulario de contacto
 setupContactForm();
+function toggleCarrito() {
+  const panel = document.getElementById('carrito-panel');
+  const overlay = document.querySelector('.carrito-overlay');
+  if (!panel || !overlay) return;
+  const abierto = panel.classList.toggle('active');
+  overlay.classList.toggle('active', abierto);
+  document.body.classList.toggle('no-scroll', abierto);
+  if (abierto) renderizarCarrito?.();
+}
+
+// EN LA INICIALIZACIÓN (debe ejecutarse solo una vez al cargar)
+document.getElementById('carrito-btn-main')?.addEventListener('click', toggleCarrito);
+document.querySelector('.carrito-overlay')?.addEventListener('click', toggleCarrito);
+document.querySelector('.cerrar-carrito')?.addEventListener('click', toggleCarrito);
