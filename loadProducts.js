@@ -3,6 +3,27 @@
   const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE;
   let productos = [];
 
+  // Obtiene el CSV remoto y lo devuelve como texto
+  async function fetchCSV(url) {
+    const resp = await fetch(url, { cache: 'no-cache' });
+    if (!resp.ok) throw new Error('No se pudo obtener el CSV');
+    return resp.text();
+  }
+
+  // Parsea el CSV con PapaParse y retorna un array de objetos
+  function parseCSV(csvText) {
+    if (typeof Papa === 'undefined') throw new Error('PapaParse no disponible');
+    const { data, errors } = Papa.parse(csvText, {
+      header: true,
+      skipEmptyLines: true
+    });
+    if (errors.length) {
+      console.error('Errores al parsear CSV', errors);
+      throw new Error('Error al procesar los datos');
+    }
+    return data;
+  }
+
   function mostrarError(mensaje) {
     const contenedor = document.getElementById('galeria-productos');
     if (contenedor) contenedor.innerHTML = `<p class="error">${mensaje}</p>`;
@@ -32,6 +53,11 @@
       return;
     }
     contenedor.innerHTML = productos.map(crearProductoHTML).join('');
+    contenedor.querySelectorAll('img').forEach(img => {
+      img.addEventListener('error', () => {
+        img.src = PLACEHOLDER_IMAGE;
+      });
+    });
   }
 
   async function loadProductsFromSheets() {
@@ -41,21 +67,8 @@
     if (contenedor) contenedor.innerHTML = '';
 
     try {
-      const resp = await fetch(CSV_URL, { cache: 'no-cache' });
-      if (!resp.ok) throw new Error('No se pudo obtener el CSV');
-      const csv = await resp.text();
-
-      if (typeof Papa === 'undefined') throw new Error('PapaParse no disponible');
-
-      const { data, errors } = Papa.parse(csv, {
-        header: true,
-        skipEmptyLines: true
-      });
-
-      if (errors.length) {
-        console.error('Errores al parsear CSV', errors);
-        throw new Error('Error al procesar los datos');
-      }
+      const csv = await fetchCSV(CSV_URL);
+      const data = parseCSV(csv);
 
       productos = data.map(row => ({
         id: parseInt(row.id, 10) || 0,
@@ -69,7 +82,7 @@
       mostrarProductos(productos);
     } catch (err) {
       console.error(err);
-      mostrarError('No se pudieron cargar los productos.');
+      mostrarError('No se pudieron cargar los productos: ' + (err.message || err));
     } finally {
       if (loader) loader.hidden = true;
     }
