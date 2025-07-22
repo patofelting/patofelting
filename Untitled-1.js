@@ -135,6 +135,9 @@ function renderizarCarrito() {
             <button data-id="${i.id}" data-action="decrementar" aria-label="Reducir cantidad">-</button>
             <span class="carrito-item-cantidad">${i.cantidad}</span>
             <button data-id="${i.id}" data-action="incrementar" aria-label="Aumentar cantidad" ${disp <= 0 ? 'disabled' : ''}>+</button>
+            
+              
+            </button>
           </div>
         </div>
       </li>`;
@@ -165,6 +168,11 @@ function renderizarCarrito() {
       }
       guardarCarrito();
       actualizarUI();
+    } else if (target.classList.contains('eliminar-item')) {
+      carrito = carrito.filter(i => i.id !== id);
+      guardarCarrito();
+      actualizarUI();
+      mostrarNotificacion('Producto eliminado del carrito', 'info');
     }
   };
 }
@@ -210,10 +218,11 @@ async function cargarProductosDesdeSheets() {
         alto: parseFloat(r.alto) || null,
         ancho: parseFloat(r.ancho) || null,
         profundidad: parseFloat(r.profundidad) || null,
-        categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
-        vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
+categoria: (r.categoria || r.categoría || '').trim().toLowerCase() || 'otros', vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
         estado: r.estado ? r.estado.trim() : ''
+   
       }));
+      console.log("CATEGORÍAS DETECTADAS:", productos.map(p => p.categoria));
     actualizarCategorias();
     actualizarUI();
   } catch (e) {
@@ -226,8 +235,9 @@ async function cargarProductosDesdeSheets() {
 function actualizarCategorias() {
   if (!elementos.selectCategoria) return;
   const cats = ['todos', ...new Set(productos.map(p => 
-    (p.categoria || '').trim().toLowerCase()
-  ))];
+  (p.categoria || '').trim().toLowerCase()
+))];
+  
   elementos.selectCategoria.innerHTML = cats
     .map(cat => `<option value="${cat}">${cat.charAt(0).toUpperCase() + cat.slice(1)}</option>`)
     .join('');
@@ -316,41 +326,53 @@ function mostrarModalProducto(producto) {
   const agotado = disponibles <= 0;
 
   contenido.innerHTML = `
-    <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
-    <div class="modal-flex">
-      <div class="modal-carrusel">
-        <img src="${producto.imagenes[0] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
-      </div>
-      <div class="modal-info">
-        <h1 class="modal-nombre">${producto.nombre}</h1>
-        <p class="modal-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
-        <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">
-          ${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}
-        </p>
-        <p class="modal-medidas">
-          <b>Medidas:</b> ${producto.alto || '-'} x ${producto.ancho || '-'} x ${producto.profundidad || '-'} cm
-        </p>
-        <div class="modal-descripcion">
-          ${producto.descripcion || ''}
-        </div>
-        <div class="modal-acciones">
-          <input type="number" value="1" min="1" max="${disponibles}" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
-          <button class="boton-agregar-modal ${agotado ? 'agotado' : ''}" data-id="${producto.id}" ${agotado ? 'disabled' : ''}>
-            ${agotado ? 'Agotado' : 'Agregar al carrito'}
-          </button>
-        </div>
-      </div>
+  <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
+  <div class="modal-flex">
+    <div class="modal-carrusel">
+      <img src="${producto.imagenes[0] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
+    
     </div>
-  `;
+    <div class="modal-info">
+      <h1 class="modal-nombre">${producto.nombre}</h1>
+      <p class="modal-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
+      <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">
+        ${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}
+      </p>
+      <p class="modal-medidas">
+        <b>Medidas:</b> ${producto.alto || '-'} x ${producto.ancho || '-'} x ${producto.profundidad || '-'} cm
+      </p>
+      <div class="modal-descripcion">
+        ${producto.descripcion || ''}
+      </div>
+      ...
+    </div>
+  </div>
+`;
 
-  // Carrusel de imágenes (si hay varias)
+  // Carrusel
   if (producto.imagenes.length > 1) {
     let currentIndex = 0;
     const mainImage = contenido.querySelector('.modal-img');
-    // (Si quieres thumbnails o flechas, agrégalo aquí)
-    // ...
+    const thumbnails = contenido.querySelectorAll('.thumbnail');
+    function updateImage(index) {
+      currentIndex = index;
+      mainImage.src = producto.imagenes[index];
+      thumbnails.forEach((thumb, i) => {
+        thumb.classList.toggle('active', i === index);
+      });
+    }
+    contenido.querySelector('.modal-prev')?.addEventListener('click', () => {
+      const newIndex = (currentIndex - 1 + producto.imagenes.length) % producto.imagenes.length;
+      updateImage(newIndex);
+    });
+    contenido.querySelector('.modal-next')?.addEventListener('click', () => {
+      const newIndex = (currentIndex + 1) % producto.imagenes.length;
+      updateImage(newIndex);
+    });
+    thumbnails.forEach((thumb, i) => {
+      thumb.addEventListener('click', () => updateImage(i));
+    });
   }
-
   contenido.querySelector('.cerrar-modal').onclick = () => cerrarModal();
   const agregarBtn = contenido.querySelector('.boton-agregar-modal');
   agregarBtn.onclick = () => {
@@ -435,7 +457,7 @@ function inicializarMenuHamburguesa() {
   const menu = document.getElementById('menu');
   if (!hamburguesa || !menu) return;
   hamburguesa.addEventListener('click', function () {
-    const expanded = menu.classList.toggle('active');
+    const expanded = menu.classList.toggle('active'); // Usa .active (ajusta aquí si tu CSS usa .menu-abierto)
     hamburguesa.setAttribute('aria-expanded', expanded);
     document.body.classList.toggle('no-scroll', expanded);
   });
@@ -552,6 +574,13 @@ window.mostrarNotificacion = mostrarNotificacion;
 window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
 window.guardarCarrito = guardarCarrito;
 
+
+// Initialize EmailJS with your public key
+
+
+// ===============================
+// CONTACT FORM
+// ===============================
 // ===============================
 // CONTACT FORM
 // ===============================
