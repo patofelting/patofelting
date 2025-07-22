@@ -10,7 +10,7 @@ const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.c
 // 2. ESTADO GLOBAL
 // ===============================
 let productos = [];
-let carrito = [];
+
 let paginaActual = 1;
 let filtrosActuales = {
   precioMin: null,
@@ -35,12 +35,7 @@ const elementos = {
   selectCategoria: getElement('filtro-categoria'),
   precioMinInput: getElement('precio-min'),
   precioMaxInput: getElement('precio-max'),
-  botonResetearFiltros: getElement('boton-resetear-filtros'),
-  carritoPanel: document.getElementById('carrito-panel'),
-  carritoOverlay: document.querySelector('.carrito-overlay'),
-  btnVaciarCarrito: document.querySelector('.boton-vaciar-carrito'),
-  btnCerrarCarrito: document.querySelector('.cerrar-carrito'),
-  btnFinalizarCompra: document.querySelector('.boton-finalizar-compra'),
+  botonResetearFiltros: getElement('boton-resetear-filtros')
 };
 
 // ===============================
@@ -101,6 +96,7 @@ function actualizarCategorias() {
     .join('');
 }
 
+
 function filtrarProductos() {
   return productos.filter(p => {
     const { precioMin, precioMax, categoria, busqueda } = filtrosActuales;
@@ -118,25 +114,30 @@ function filtrarProductos() {
 // 6. RENDER DE PRODUCTOS Y PAGINACIÓN
 // ===============================
 function crearCardProducto(p) {
-  const agotado = p.stock <= 0;
+  // Calcular el stock disponible descontando lo que está en el carrito
+  const enCarrito = carrito.find(item => item.id === p.id);
+  const disponibles = p.cantidad - (enCarrito?.cantidad || 0);
+  const agotado = disponibles <= 0;
+
   return `
     <div class="producto-card" data-id="${p.id}">
-      <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img" loading="lazy">
+      <img src="${p.imagenes[0]}" class="producto-img" alt="${p.nombre}">
       <h3 class="producto-nombre">${p.nombre}</h3>
-      <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
-      <p class="producto-stock">
-        ${agotado ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${p.stock}`}
+      <p class="producto-precio">$U ${p.precio}</p>
+      <p class="producto-stock ${agotado ? "agotado" : ""}">
+        ${agotado ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${disponibles}`}
       </p>
       <div class="card-acciones">
-        <input type="number" value="1" min="1" max="${p.stock}" class="cantidad-input" id="cantidad-${p.id}" ${agotado ? 'disabled' : ''} style="background:#f7fff7;">
+        <input type="number" value="1" min="1" max="${disponibles}" class="cantidad-input" id="cantidad-${p.id}" ${agotado ? 'disabled' : ''}>
         <button class="boton-agregar${agotado ? ' agotado' : ''}" data-id="${p.id}" ${agotado ? 'disabled' : ''}>
-          ${agotado ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
+          ${agotado ? 'Agotado' : 'Agregar'}
         </button>
       </div>
       <button class="boton-detalles" data-id="${p.id}">🛈 Ver Detalle</button>
     </div>
   `;
 }
+
 
 function renderizarPaginacion(total) {
   const pages = Math.ceil(total / PRODUCTOS_POR_PAGINA);
@@ -266,7 +267,7 @@ function mostrarModalProducto(producto) {
 }
 
 // ===============================
-// 8. CARRITO DE COMPRAS Y STOCK
+// 8. CARRITO DE COMPRAS
 // ===============================
 function guardarCarrito() {
   localStorage.setItem(LS_CARRITO_KEY, JSON.stringify(carrito));
@@ -289,6 +290,162 @@ function actualizarContadorCarrito() {
     elementos.contadorCarrito.classList.toggle('visible', total > 0);
   }
 }
+
+function agregarAlCarrito(id, cantidad = 1) {
+  const producto = productos.find(p => p.id === id);
+  if (!producto) return;
+  const enCarrito = carrito.find(item => item.id === id);
+  const disponibles = producto.cantidad - (enCarrito?.cantidad || 0);
+
+  if (cantidad > disponibles) {
+    mostrarNotificacion('No hay más stock disponible', 'error');
+    return;
+  }
+  if (enCarrito) {
+    enCarrito.cantidad += cantidad;
+  } else {
+    carrito.push({ id: producto.id, nombre: producto.nombre, precio: producto.precio, cantidad, imagen: producto.imagenes[0] });
+  }
+  guardarCarrito();
+  actualizarUI();
+}
+
+  
+  // Restar stock del producto
+  prod.stock -= cantidad;
+  guardarCarrito();
+  renderizarProductos(); // Actualiza las cards y botones
+  renderizarCarrito();
+  mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
+
+
+
+// ===============================
+// 9. FILTROS Y EVENTOS
+// ===============================
+function aplicarFiltros() {
+  paginaActual = 1;
+  renderizarProductos();
+}
+
+function resetearFiltros() {
+  filtrosActuales = {
+    precioMin: null,
+    precioMax: null,
+    categoria: 'Todos',
+    busqueda: ''
+  };
+  if (elementos.inputBusqueda) elementos.inputBusqueda.value = '';
+  if (elementos.selectCategoria) elementos.selectCategoria.value = 'Todos';
+  if (elementos.precioMinInput) elementos.precioMinInput.value = '';
+  if (elementos.precioMaxInput) elementos.precioMaxInput.value = '';
+  aplicarFiltros();
+}
+elementos.selectCategoria?.addEventListener('change', (e) => {
+  filtrosActuales.categoria = e.target.value;
+  aplicarFiltros();
+});
+
+if (elementos.inputBusqueda) {
+  elementos.inputBusqueda.addEventListener('input', (e) => {
+    filtrosActuales.busqueda = e.target.value.toLowerCase();
+    aplicarFiltros();
+  });
+}
+if (elementos.selectCategoria) {
+  elementos.selectCategoria.addEventListener('change', (e) => {
+    filtrosActuales.categoria = e.target.value;
+    aplicarFiltros();
+  });
+}
+if (elementos.botonResetearFiltros) {
+  elementos.botonResetearFiltros.addEventListener('click', resetearFiltros);
+}
+
+// ===============================
+// 10. CONEXIÓN DE EVENTOS
+// ===============================
+function actualizarUI() {
+  renderizarProductos();
+  actualizarContadorCarrito();
+}
+
+function conectarEventoModal() {
+  if (!elementos.galeriaProductos) return;
+  elementos.galeriaProductos.onclick = (e) => {
+    const btn = e.target.closest('.boton-detalles');
+    if (btn) {
+      const id = +btn.dataset.id;
+      const producto = productos.find(p => p.id === id);
+      if (producto) mostrarModalProducto(producto);
+    }
+    const btnAgregar = e.target.closest('.boton-agregar');
+    if (btnAgregar) {
+      const id = +btnAgregar.dataset.id;
+      const cantidadInput = document.getElementById(`cantidad-${id}`);
+      const cantidad = cantidadInput ? parseInt(cantidadInput.value) : 1;
+      agregarAlCarrito(id, cantidad);
+    }
+  };
+}
+
+// ===============================
+// 11. INICIALIZACIÓN GENERAL
+// ===============================
+function init() {
+  cargarCarrito();
+  cargarProductosDesdeSheets();
+  conectarEventoModal();
+}
+
+if (document.readyState !== 'loading') {
+  init();
+} else {
+  document.addEventListener('DOMContentLoaded', init);
+}
+function setupContactForm() {
+  const formContacto = document.getElementById('formContacto');
+  const successMessage = document.getElementById('successMessage');
+  const errorMessage = document.getElementById('errorMessage');
+
+  if (formContacto) {
+    formContacto.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const nombre = document.getElementById('nombre').value;
+      const email = document.getElementById('email').value;
+      const mensaje = document.getElementById('mensaje').value;
+
+      emailjs.send('service_89by24g', 'template_8mn7hdp', {
+        from_name: nombre,
+        from_email: email,
+        message: mensaje
+      })
+      .then(() => {
+        successMessage.classList.remove('hidden');
+        errorMessage.classList.add('hidden');
+        formContacto.reset();
+        setTimeout(() => successMessage.classList.add('hidden'), 3000);
+      }, (error) => {
+        console.error('Error al enviar el mensaje:', error);
+        errorMessage.classList.remove('hidden');
+        successMessage.classList.add('hidden');
+        setTimeout(() => errorMessage.classList.add('hidden'), 3000);
+      });
+    });
+  }
+}
+
+// Inicializar EmailJS con tu clave pública
+emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
+
+// Llamar a la función para configurar el formulario de contacto
+setupContactForm();
+
+
+
+// ===============================
+// CARRITO DE COMPRAS MEJORADO
+// ===============================
 
 function agregarAlCarrito(id, cantidad = 1) {
   const prod = productos.find(p => p.id === id);
@@ -317,148 +474,38 @@ function agregarAlCarrito(id, cantidad = 1) {
   // Restar stock del producto
   prod.stock -= cantidad;
   guardarCarrito();
-  renderizarProductos(); // Actualiza las cards y botones
+  renderizarProductos(); // <<-- Vuelve a dibujar los productos y sus botones
   renderizarCarrito();
   mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
 }
-
+function crearCardProducto(p) {
+  const agotado = p.stock <= 0;
+  return `
+    <div class="producto-card" data-id="${p.id}">
+      <img src="${p.imagenes ? p.imagenes[0] : PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img">
+      <h3 class="producto-nombre">${p.nombre}</h3>
+      <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
+      <p class="producto-stock">${agotado ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${p.stock}`}</p>
+      <div class="card-acciones">
+        <input type="number" value="1" min="1" max="${p.stock}" class="cantidad-input" ${agotado ? 'disabled' : ''}>
+        <button class="boton-agregar${agotado ? ' agotado' : ''}" data-id="${p.id}" ${agotado ? 'disabled' : ''}>
+          ${agotado ? 'Agotado' : 'Agregar'}
+        </button>
+      </div>
+      <button class="boton-detalles" data-id="${p.id}">🛈 Ver Detalle</button>
+    </div>
+  `;
+}
 function vaciarCarrito() {
   if (carrito.length === 0) {
     mostrarNotificacion('El carrito ya está vacío', 'info');
     return;
   }
-  if (confirm('¿Estás seguro de vaciar el carrito?')) {
-    // Devuelve el stock a cada producto
-    carrito.forEach(item => {
-      const prod = productos.find(p => p.id === item.id);
-      if (prod) prod.stock += item.cantidad;
-    });
-    carrito = [];
-    guardarCarrito();
-    renderizarProductos(); // Actualiza los botones y stock
-    renderizarCarrito();
-    mostrarNotificacion('Carrito vaciado', 'info');
-    toggleCarrito();
-  }
+  carrito = [];
+  guardarCarrito();
+  actualizarUI();
+  mostrarNotificacion('Carrito vaciado', 'info');
 }
-
-function renderizarCarrito() {
-  if (!elementos.listaCarrito || !elementos.totalCarrito) return;
-  if (carrito.length === 0) {
-    elementos.listaCarrito.innerHTML = '<p class="carrito-vacio">Tu carrito está vacío</p>';
-    elementos.totalCarrito.textContent = 'Total: $U 0';
-    return;
-  }
-  let total = 0;
-  elementos.listaCarrito.innerHTML = carrito.map(item => {
-    total += item.precio * item.cantidad;
-    return `
-      <li class="carrito-item" data-id="${item.id}">
-        <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}">
-        <div class="carrito-item-info">
-          <span class="carrito-item-nombre">${item.nombre}</span>
-          <span class="carrito-item-cantidad">x${item.cantidad}</span>
-          <span class="carrito-item-precio">$U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
-        </div>
-      </li>
-    `;
-  }).join('');
-  elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
-}
-
-// ===============================
-// 9. EVENTOS Y UI
-// ===============================
-function toggleCarrito() {
-  if (!elementos.carritoPanel || !elementos.carritoOverlay) return;
-  const isOpen = elementos.carritoPanel.classList.toggle('active');
-  elementos.carritoOverlay.classList.toggle('active', isOpen);
-  document.body.classList.toggle('no-scroll', isOpen);
-  if (isOpen) renderizarCarrito();
-}
-
-// ===============================
-// 10. FILTROS Y BUSQUEDA
-// ===============================
-function aplicarFiltros() {
-  paginaActual = 1;
-  renderizarProductos();
-}
-
-function resetearFiltros() {
-  filtrosActuales = {
-    precioMin: null,
-    precioMax: null,
-    categoria: 'Todos',
-    busqueda: ''
-  };
-  if (elementos.inputBusqueda) elementos.inputBusqueda.value = '';
-  if (elementos.selectCategoria) elementos.selectCategoria.value = 'Todos';
-  if (elementos.precioMinInput) elementos.precioMinInput.value = '';
-  if (elementos.precioMaxInput) elementos.precioMaxInput.value = '';
-  aplicarFiltros();
-}
-
-// ===============================
-// 11. CONEXIÓN DE EVENTOS
-// ===============================
-function actualizarUI() {
-  renderizarProductos();
-  actualizarContadorCarrito();
-}
-
-function conectarEventoModal() {
-  if (!elementos.galeriaProductos) return;
-  elementos.galeriaProductos.onclick = (e) => {
-    const btn = e.target.closest('.boton-detalles');
-    if (btn) {
-      const id = +btn.dataset.id;
-      const producto = productos.find(p => p.id === id);
-      if (producto) mostrarModalProducto(producto);
-    }
-    const btnAgregar = e.target.closest('.boton-agregar');
-    if (btnAgregar) {
-      const id = +btnAgregar.dataset.id;
-      const cantidadInput = document.getElementById(`cantidad-${id}`);
-      const cantidad = cantidadInput ? parseInt(cantidadInput.value) : 1;
-      agregarAlCarrito(id, cantidad);
-    }
-  };
-}
-
-// Carrito abrir/cerrar
-document.getElementById('carrito-btn-main')?.addEventListener('click', toggleCarrito);
-document.querySelector('.carrito-overlay')?.addEventListener('click', toggleCarrito);
-document.querySelector('.cerrar-carrito')?.addEventListener('click', toggleCarrito);
-document.querySelector('.boton-vaciar-carrito')?.addEventListener('click', vaciarCarrito);
-
-// Filtros
-elementos.inputBusqueda?.addEventListener('input', (e) => {
-  filtrosActuales.busqueda = e.target.value.toLowerCase();
-  aplicarFiltros();
-});
-elementos.selectCategoria?.addEventListener('change', (e) => {
-  filtrosActuales.categoria = e.target.value;
-  aplicarFiltros();
-});
-elementos.botonResetearFiltros?.addEventListener('click', resetearFiltros);
-
-// ===============================
-// 12. INICIALIZACIÓN GENERAL
-// ===============================
-function init() {
-  cargarCarrito();
-  cargarProductosDesdeSheets();
-  conectarEventoModal();
-}
-
-if (document.readyState !== 'loading') {
-  init();
-} else {
-  document.addEventListener('DOMContentLoaded', init);
-}
-
-
 function setupContactForm() {
   const formContacto = document.getElementById('formContacto');
   const successMessage = document.getElementById('successMessage');
