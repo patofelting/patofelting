@@ -630,3 +630,9 @@ window.mostrarModalProducto = mostrarModalProducto;
 window.mostrarNotificacion = mostrarNotificacion;
 window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
 window.guardarCarrito = guardarCarrito;
+
+
+document.querySelector('.hamburguesa').addEventListener('click', function() {
+  this.classList.toggle('active');
+  document.getElementById('menu').classList.toggle('active');
+});
