@@ -520,6 +520,8 @@ blockquote {
   border-radius: 16px;
   box-shadow: 0 4px 18px rgba(100, 116, 139, 0.07);
   margin-bottom: 36px;
+  max-width: 100%;
+  position: relative;
 }
 
 .filtro-grupo {
@@ -535,67 +537,52 @@ blockquote {
   box-sizing: border-box;
 }
 
-.filtro-grupo h3 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #444b5d;
-  margin: 0 5px 0 0;
-  letter-spacing: 0.01em;
-  white-space: nowrap;
-}
-
 .filtro-grupo label {
-  font-size: 0.97rem;
+  font-size: 1rem;
   font-weight: 500;
   color: #4a5568;
-  margin: 0 2px 0 0;
-  white-space: nowrap;
-  align-items: center;
-  display: flex;
-  height: 32px;
 }
 
 .filtro-grupo select,
-.filtro-grupo input[type="number"],
-.filtro-grupo .input-rango-filtro {
-  height: 32px !important;
-  padding: 0 12px !important;
-  border-radius: 8px !important;
-  border: 1.2px solid var(--medium-gray, #d2dae6) !important;
-  background: #f7fafc !important;
-  font-size: 1rem !important;
+.filtro-grupo input[type="number"] {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1.2px solid #d2dae6;
+  background: #f7fafc;
+  font-size: 1rem;
+  min-width: 70px;
   box-sizing: border-box;
   transition: border-color 0.17s, background 0.17s;
   outline: none;
-  margin: 0;
 }
 
 .filtro-grupo select:focus,
 .filtro-grupo input[type="number"]:focus {
-  border-color: var(--primary-color, #2f855a) !important;
-  background: #fff !important;
+  border-color: var(--primary-color, #2f855a);
+  background: #fff;
 }
 
-.filtro-grupo .input-rango-filtro {
-  width: 80px !important;
-  min-width: 60px;
+.input-busqueda {
+  border-radius: 8px;
+  border: 1.2px solid #e2e8f0;
+  padding: 0 14px;
+  background: #fff;
+  font-size: 1rem;
+  height: 32px;
+  width: 100%;
+  min-width: 200px;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+  margin-left: 0;
+  margin-top: 10px;
 }
 
-.filtro-grupo input::placeholder {
-  color: #b0b7c3;
-  opacity: 1;
+.input-busqueda:focus {
+  border-color: var(--accent-color, #2e7d32);
 }
 
-/* Espacio entre labels e inputs en rango */
-.filtro-grupo.filtro-rango label {
-  margin-left: 6px;
-  margin-right: 4px;
-  min-width: 30px;
-  text-align: right;
-  padding: 0;
-}
-
-/* Botón aplicar */
+/* Botones */
 .aplicar-rango-btn {
   height: 32px;
   min-width: 85px;
@@ -608,17 +595,14 @@ blockquote {
   color: #fff;
   cursor: pointer;
   margin-left: 8px;
+  transition: background 0.14s;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.14s;
 }
-
 .aplicar-rango-btn:hover {
   background: var(--accent-color, #239136);
 }
-
-/* Botón Resetear Filtros */
 .boton-resetear-filtros {
   height: 32px;
   min-width: 115px;
@@ -629,58 +613,53 @@ blockquote {
   font-weight: 600;
   background: var(--medium-gray, #e2e8f0);
   color: var(--text-color, #4a5568);
-  margin-left: 0;
   transition: background 0.15s;
   box-shadow: 0 2px 8px rgba(180, 196, 222, 0.11);
   display: flex;
   align-items: center;
   justify-content: center;
 }
-
 .boton-resetear-filtros:hover {
   background: var(--dark-gray, #d0dae8);
   color: #fff;
 }
 
-/* Input Busqueda */
-.input-busqueda {
-  border-radius: 8px;
-  border: 1.2px solid var(--medium-gray, #e2e8f0);
-  padding: 0 14px;
-  background: #fff;
-  font-size: 1rem;
-  height: 32px;
-  min-width: 200px;
-  box-sizing: border-box;
-  transition: border-color 0.15s;
-  margin-left: 8px;
-}
-
-.input-busqueda:focus {
-  border-color: var(--accent-color, #805ad5);
-}
-
-/* Responsive para filtros */
-@media (max-width: 800px) {
+/* MOBILE! */
+@media (max-width: 700px) {
   .filtros-container {
     flex-direction: column;
     align-items: stretch;
-    gap: 12px;
-    padding: 8px 4px;
+    gap: 11px;
+    padding: 12px 6px;
+    margin-bottom: 20px;
   }
   .filtro-grupo {
     width: 100%;
-    min-width: 0;
     padding: 7px 8px;
     min-height: 0;
+    margin-bottom: 0;
+    flex-wrap: wrap;
     justify-content: flex-start;
+  }
+  .filtro-grupo label {
+    min-width: 72px;
+    margin-bottom: 4px;
   }
   .input-busqueda {
     min-width: 0;
     width: 100%;
     margin-left: 0;
+    margin-top: 7px;
+  }
+  .aplicar-rango-btn,
+  .boton-resetear-filtros {
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    margin-top: 7px;
   }
 }
+
 
 .galeria-productos {
   display: grid;
