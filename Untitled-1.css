@@ -1904,62 +1904,54 @@ button:active {
 #paginacion {
   display: flex;
   justify-content: center;
-  gap: 13px;
+  gap: 11px;
   margin-top: 28px;
-  padding-bottom: 15px;
+  padding-bottom: 14px;
 }
 
 #paginacion button {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: #444b5d;
-  font-size: 1.06rem;
+  color: #424242;
+  font-size: 1.05rem;
   font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: none;
+  transition:
+    background 0.18s cubic-bezier(.4,0,.2,1),
+    color 0.18s,
+    box-shadow 0.14s,
+    transform 0.14s;
   outline: none;
   cursor: pointer;
-  opacity: 0.86;
-  transition: 
-    background 0.15s cubic-bezier(.4,0,.2,1),
-    color 0.17s,
-    box-shadow 0.16s,
-    transform 0.13s;
-  position: relative;
 }
 
 #paginacion button:hover,
 #paginacion button:focus-visible {
-  background: rgba(76, 175, 80, 0.12);
+  background: rgba(76, 175, 80, 0.10); /* Verde muy suave al hover */
   color: var(--primary-color);
-  opacity: 1;
-  transform: scale(1.11);
+  transform: scale(1.08);
 }
 
 #paginacion button.active,
 #paginacion button.pagina-activa {
-  background: var(--primary-color);
-  color: #fff;
+  background: #e8f5e9; /* Verde MUY claro */
+  color: var(--primary-color);
   font-weight: 700;
-  opacity: 1;
-  box-shadow: 0 3px 14px 0 rgba(76,175,80,0.13), 0 0 0 5px rgba(76,175,80,0.09);
-  transform: scale(1.14);
+  box-shadow: 0 2px 8px 0 rgba(76,175,80,0.09);
+  transform: scale(1.11);
   z-index: 2;
 }
 
 @media (max-width: 600px) {
   #paginacion button {
-    width: 24px;
-    height: 24px;
-    font-size: 0.94rem;
-  }
-  #paginacion {
-    gap: 6px;
+    width: 26px;
+    height: 26px;
+    font-size: 0.95rem;
   }
 }
 
