@@ -2521,19 +2521,42 @@ body.no-scroll {
 }
 
 .modal-prev, .modal-next {
-  background: rgba(255,255,255,0.7);
-  border: none;
-  width: 40px;
-  height: 40px;
+  background: none !important;
+  border: none !important;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  font-size: 1.2rem;
+  font-size: 2.2rem;
+  color: var(--primary-color); /* Verde elegante */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none !important;
   cursor: pointer;
-  transition: var(--transition);
+  outline: none;
+  transition:
+    color 0.19s,
+    transform 0.15s cubic-bezier(.4,0,.2,1);
 }
 
-.modal-prev:hover, .modal-next:hover {
-  background: var(--primary-color);
-  color: white;
+.modal-prev:hover, .modal-next:hover,
+.modal-prev:focus-visible, .modal-next:focus-visible {
+  color: var(--accent-color);    /* Verde más oscuro en hover */
+  background: none !important;   /* Nunca fondo blanco */
+  transform: scale(1.14);
+  box-shadow: none;
+}
+.modal-prev:active, .modal-next:active {
+  background: none !important;   /* Elimina el círculo en click */
+  color: var(--success-color);
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.modal-prev svg, .modal-next svg {
+  width: 1em;
+  height: 1em;
+  pointer-events: none;
 }
 
 .modal-thumbnails {
