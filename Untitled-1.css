@@ -2039,3 +2039,23 @@ body.no-scroll {
   opacity: 1;
   border-color: var(--primary-color);
 }
+#successMessage, #errorMessage {
+  margin-top: 20px;
+  padding: 10px;
+  border-radius: 5px;
+  text-align: center;
+}
+
+#successMessage {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+#errorMessage {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.hidden {
+  display: none;
+}
