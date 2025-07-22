@@ -2142,20 +2142,50 @@ body.no-scroll {
 }
 
 .modal-prev, .modal-next {
-  background: rgba(255,255,255,0.7);
+  background: rgba(255,255,255,0.85);
   border: none;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  font-size: 1.2rem;
+  font-size: 1.55rem;
+  color: #444b5d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(44,62,80,0.09);
   cursor: pointer;
-  transition: var(--transition);
+  transition:
+    background 0.15s cubic-bezier(.4,0,.2,1),
+    color 0.14s,
+    box-shadow 0.16s,
+    transform 0.11s;
+  opacity: 0.93;
+  outline: none;
 }
 
-.modal-prev:hover, .modal-next:hover {
-  background: var(--primary-color);
-  color: white;
+.modal-prev:hover, .modal-next:hover,
+.modal-prev:focus-visible, .modal-next:focus-visible {
+  background: rgba(76,175,80,0.16);
+  color: var(--primary-color);
+  box-shadow: 0 4px 16px rgba(76,175,80,0.11);
+  transform: scale(1.09);
+  opacity: 1;
 }
+
+.modal-carrusel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-prev, .modal-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+.modal-prev { left: 10px; }
+.modal-next { right: 10px; }
 
 .modal-thumbnails {
   display: flex;
