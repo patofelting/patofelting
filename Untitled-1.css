@@ -2627,8 +2627,6 @@ body.no-scroll {
     padding: 1.5rem 0.7rem;
   }
 }
-
-
 body > .notificacion,
 html > body > .notificacion,
 body > div.notificacion,
@@ -2641,13 +2639,13 @@ html > body > div.notificacion {
   transform: translateX(-50%) !important;
   display: inline-block !important;
   min-width: 100px !important;
-  max-width: 320px !important;
+  max-width: 340px !important;
   width: auto !important;
   height: auto !important;
-  padding: 8px 18px !important;
+  padding: 10px 22px !important;
   border-radius: 16px !important;
-  font-size: 0.98rem !important;
-  font-weight: 600 !important;
+  font-size: 1.12rem !important;         /* <-- MÁS GRANDE AQUÍ */
+  font-weight: 700 !important;
   box-shadow: 0 3px 16px 0 rgba(44,62,80,0.08) !important;
   z-index: 9999 !important;
   background: #23272f !important;
@@ -2656,7 +2654,7 @@ html > body > div.notificacion {
   pointer-events: none !important;
   transition: opacity 0.19s, bottom 0.19s !important;
   text-align: center !important;
-  line-height: 1.4 !important;
+  line-height: 1.45 !important;
   box-sizing: border-box !important;
   margin: 0 !important;
   overflow: visible !important;
@@ -2685,9 +2683,9 @@ body > div.notificacion.info { background: #1976d2 !important; }
   html > body > div.notificacion {
     bottom: 10px !important;
     max-width: 96vw !important;
-    padding: 7px 11px !important;
-    font-size: 0.95rem !important;
-    border-radius: 11px !important;
+    padding: 10px 15px !important;
+    font-size: 1.05rem !important;      /* <-- MÁS GRANDE EN MOBILE */
+    border-radius: 12px !important;
   }
   body > .notificacion.show,
   html > body > .notificacion.show,
