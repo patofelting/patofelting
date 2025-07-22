@@ -114,7 +114,7 @@ button {
 .carrito-item-controls {
   display: flex;
   align-items: center;
-  gap: 18px; /* más separación, sensación de aire */
+  gap: 25px; /* Más espacio, más aire */
   margin-top: 4px;
 }
 
@@ -122,9 +122,9 @@ button {
   background: none;
   border: none;
   color: var(--primary-color);
-  font-size: 2rem; /* grande y visible */
-  width: auto;
-  height: auto;
+  font-size: 2.7rem; /* ¡MUCHO más grande! */
+  width: 40px;
+  height: 40px;
   border-radius: 0;
   padding: 0 2px;
   display: flex;
@@ -138,7 +138,7 @@ button {
 .carrito-item-controls button:hover,
 .carrito-item-controls button:focus-visible {
   color: var(--accent-color);
-  transform: scale(1.17);
+  transform: scale(1.14);
   background: none;
 }
 
@@ -150,8 +150,8 @@ button {
 }
 
 .carrito-item-cantidad {
-  min-width: 18px;
-  font-size: 1.15rem;
+  min-width: 22px;
+  font-size: 1.3rem;
   font-weight: 700;
   text-align: center;
   color: #22223b;
@@ -159,8 +159,9 @@ button {
   background: transparent;
   display: inline-block;
   line-height: 1;
-  padding: 0 2px;
+  padding: 0 3px;
 }
+
 @media (max-width: 520px) {
   .carrito-item-controls {
     gap: 11px;
