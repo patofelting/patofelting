@@ -1693,23 +1693,22 @@ body.no-scroll {
 }
 
 .carrito-item-controls {
-  display: flex;
+  display: flex; /* Esto los coloca en una fila */
   align-items: center;
-  gap: 10px;
+  gap: 10px; /* Espacio entre los botones */
   margin-top: 10px;
 }
 
 .carrito-item-controls button {
-  width: 25px;
-  height: 25px;
-  border-radius: 50%;
+  width: 25px; /* ¡Aquí está la clave! */
+  height: 25px; /* ¡Y aquí! */
+  border-radius: 50%; /* Para hacerlos circulares */
   background-color: var(--medium-gray);
   display: flex;
   align-items: center;
   justify-content: center;
   transition: var(--transition);
 }
-
 .carrito-item-controls button:hover {
   background-color: var(--dark-gray);
   color: white;
