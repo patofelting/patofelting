@@ -954,10 +954,12 @@ blockquote {
 }
 
 /* Contact Section */
+/* Contact Section */
 .contact {
   padding: 80px 20px;
   background: linear-gradient(135deg, #f5f7fa 0%, #e4e7eb 100%);
-  min-height: 100vh;
+  /* Se ajusta la altura mínima para que ocupe menos espacio */
+  min-height: auto; /* Cambiado de 100vh a auto */
   display: flex;
   justify-content: center;
   align-items: center;
