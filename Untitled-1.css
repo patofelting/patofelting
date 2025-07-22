@@ -905,10 +905,34 @@ blockquote {
 .eliminar-item {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border: none;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--error-color, #e53935);
+  cursor: pointer;
+  transition: background 0.17s, color 0.17s;
+  border-radius: 50%;
+}
+
+.eliminar-item .icon-trash {
+  display: block;
+  font-size: 20px;
+}
+
+.eliminar-item:hover {
+  background: rgba(229, 57, 53, 0.1);
+  color: #c62828;
+}
+
+.eliminar-item:active {
+  background: rgba(229, 57, 53, 0.2);
+}
+
+.eliminar-item:focus {
+  outline: 2px solid rgba(229, 57, 53, 0.4);
+  outline-offset: 2px;
 }
 
 
