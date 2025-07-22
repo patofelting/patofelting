@@ -135,9 +135,6 @@ function renderizarCarrito() {
             <button data-id="${i.id}" data-action="decrementar" aria-label="Reducir cantidad">-</button>
             <span class="carrito-item-cantidad">${i.cantidad}</span>
             <button data-id="${i.id}" data-action="incrementar" aria-label="Aumentar cantidad" ${disp <= 0 ? 'disabled' : ''}>+</button>
-            
-              
-            </button>
           </div>
         </div>
       </li>`;
@@ -168,11 +165,6 @@ function renderizarCarrito() {
       }
       guardarCarrito();
       actualizarUI();
-    } else if (target.classList.contains('eliminar-item')) {
-      carrito = carrito.filter(i => i.id !== id);
-      guardarCarrito();
-      actualizarUI();
-      mostrarNotificacion('Producto eliminado del carrito', 'info');
     }
   };
 }
@@ -218,11 +210,10 @@ async function cargarProductosDesdeSheets() {
         alto: parseFloat(r.alto) || null,
         ancho: parseFloat(r.ancho) || null,
         profundidad: parseFloat(r.profundidad) || null,
-categoria: (r.categoria || r.categoría || '').trim().toLowerCase() || 'otros', vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
+        categoria: (r.categoria || r.categoría || '').trim().toLowerCase() || 'otros',
+        vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
         estado: r.estado ? r.estado.trim() : ''
-   
       }));
-      
     actualizarCategorias();
     actualizarUI();
   } catch (e) {
@@ -234,10 +225,9 @@ categoria: (r.categoria || r.categoría || '').trim().toLowerCase() || 'otros', 
 
 function actualizarCategorias() {
   if (!elementos.selectCategoria) return;
-  const cats = ['todos', ...new Set(productos.map(p => 
-  (p.categoria || '').trim().toLowerCase()
-))];
-  
+  const cats = ['todos', ...new Set(productos.map(p =>
+    (p.categoria || '').trim().toLowerCase()
+  ))];
   elementos.selectCategoria.innerHTML = cats
     .map(cat => `<option value="${cat}">${cat.charAt(0).toUpperCase() + cat.slice(1)}</option>`)
     .join('');
@@ -272,7 +262,7 @@ function crearCardProducto(p) {
         ${agot ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${disp}`}
       </p>
       <div class="card-acciones">
-        <input type="number" value="1" min="1" max="${disp}" class="cantidad-input" id="cantidad-${p.id}" ${agot || disp === 1 ? 'disabled' : ''} style="background:#f7fff7;">
+        <input type="number" value="1" min="1" max="${disp}" class="cantidad-input" id="cantidad-${p.id}" ${agot ? 'disabled' : ''} style="background:#f7fff7;">
         <button class="boton-agregar${agot ? ' agotado' : ''}" data-id="${p.id}" ${agot ? 'disabled' : ''}>
           ${agot ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
         </button>
@@ -314,84 +304,95 @@ function renderizarProductos() {
 }
 
 // ===============================
-// MODAL DE PRODUCTO
+// MODAL DE PRODUCTO (CARRUSEL FULL)
 // ===============================
 function mostrarModalProducto(producto) {
   const modal = elementos.productoModal;
   const contenido = elementos.modalContenido;
   if (!modal || !contenido) return;
 
-  let currentIndex = 0;
+  // Renderiza el HTML del modal dinámicamente con las flechas y thumbnails:
+  contenido.innerHTML = `
+    <button class="cerrar-modal" aria-label="Cerrar modal">&times;</button>
+    <div class="modal-flex">
+      <div class="modal-carrusel" style="position:relative;">
+        <button class="modal-prev" aria-label="Anterior" style="position:absolute;top:45%;left:-24px;z-index:2;background:rgba(255,255,255,0.7);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:1.5em;display:${producto.imagenes.length > 1 ? '' : 'none'}">&#8592;</button>
+        <img src="${producto.imagenes[0] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}" style="border-radius:8px;max-width:230px;max-height:230px;object-fit:contain;">
+        <button class="modal-next" aria-label="Siguiente" style="position:absolute;top:45%;right:-24px;z-index:2;background:rgba(255,255,255,0.7);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:1.5em;display:${producto.imagenes.length > 1 ? '' : 'none'}">&#8594;</button>
+      </div>
+      <div class="modal-info">
+        <h2 class="modal-nombre" style="margin-top:0;font-weight:bold;color:#43a047">${producto.nombre}</h2>
+        <p class="modal-precio" style="font-size:1.1em;margin:2px 0 8px 0;font-weight:600;">$U ${producto.precio.toLocaleString('es-UY')}</p>
+        <span class="modal-stock ${producto.stock > 0 ? 'disponible' : 'agotado'}" style="font-weight:600;color:${producto.stock > 0 ? '#388e3c' : '#e53935'}">${producto.stock > 0 ? 'Disponible: ' + producto.stock : 'AGOTADO'}</span>
+        <p class="modal-descripcion" style="margin:7px 0 7px 0;">${producto.descripcion || ''}</p>
+        <div class="modal-detalles" style="margin-bottom:9px;"><b>Medidas:</b> ${producto.alto || '-'} x ${producto.ancho || '-'} x ${producto.profundidad || '-'} cm</div>
+        <div class="modal-acciones">
+          <input type="number" class="cantidad-modal-input" value="1" min="1" max="${producto.stock > 0 ? producto.stock : 1}" ${producto.stock === 0 ? 'disabled' : ''} style="width:44px;padding:4px;margin-right:7px;">
+          <button class="boton-agregar-modal" ${producto.stock === 0 ? 'disabled' : ''} style="padding:8px 18px;background:#4caf50;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:500;">AGREGAR AL CARRITO</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-thumbnails" style="margin-top:14px;display:flex;gap:4px;justify-content:center;">
+      ${producto.imagenes.map((img, i) =>
+        `<img src="${img}" class="modal-thumbnail${i === 0 ? ' active' : ''}" data-idx="${i}" style="width:38px;height:38px;margin:3px;cursor:pointer;border-radius:6px;border:2px solid ${i === 0 ? '#4caf50' : '#eee'};object-fit:cover;">`
+      ).join('')}
+    </div>
+  `;
 
-  // Elementos
+  // Estado carrusel
+  let currentIndex = 0;
   const mainImg = contenido.querySelector('.modal-img');
   const prevBtn = contenido.querySelector('.modal-prev');
   const nextBtn = contenido.querySelector('.modal-next');
-  const thumbs = contenido.querySelector('.modal-thumbnails');
+  const thumbs = contenido.querySelectorAll('.modal-thumbnail');
 
-  // --- Render Imagen principal y thumbnails ---
   function renderImage(idx) {
     mainImg.src = producto.imagenes[idx] || PLACEHOLDER_IMAGE;
     mainImg.alt = producto.nombre;
-    // Miniaturas activas
-    if (thumbs) {
-      thumbs.querySelectorAll('.modal-thumbnail').forEach((el, i) =>
-        el.classList.toggle('active', i === idx)
-      );
-    }
-  }
-
-  // Thumbnails
-  if (producto.imagenes.length > 1) {
-    thumbs.innerHTML = producto.imagenes.map((img, i) =>
-      `<img src="${img}" class="modal-thumbnail${i === 0 ? ' active' : ''}" data-idx="${i}" style="width:38px;height:38px;margin:3px;cursor:pointer;border-radius:6px;border:1.5px solid #eee;">`
-    ).join('');
-    thumbs.querySelectorAll('.modal-thumbnail').forEach(thumb => {
-      thumb.onclick = function () {
-        currentIndex = +thumb.dataset.idx;
-        renderImage(currentIndex);
-      };
+    thumbs.forEach((el, i) => {
+      el.classList.toggle('active', i === idx);
+      el.style.borderColor = i === idx ? '#4caf50' : '#eee';
     });
-    prevBtn.style.display = nextBtn.style.display = '';
-  } else {
-    thumbs.innerHTML = '';
-    prevBtn.style.display = nextBtn.style.display = 'none';
+  }
+  // Thumbnails click
+  thumbs.forEach(thumb => {
+    thumb.onclick = function () {
+      currentIndex = +thumb.dataset.idx;
+      renderImage(currentIndex);
+    };
+  });
+  // Botones prev/next
+  if (prevBtn && nextBtn) {
+    prevBtn.onclick = function () {
+      currentIndex = (currentIndex - 1 + producto.imagenes.length) % producto.imagenes.length;
+      renderImage(currentIndex);
+    };
+    nextBtn.onclick = function () {
+      currentIndex = (currentIndex + 1) % producto.imagenes.length;
+      renderImage(currentIndex);
+    };
   }
 
-  // Botones prev/next
-  prevBtn.onclick = function() {
-    currentIndex = (currentIndex - 1 + producto.imagenes.length) % producto.imagenes.length;
-    renderImage(currentIndex);
-  };
-  nextBtn.onclick = function() {
-    currentIndex = (currentIndex + 1) % producto.imagenes.length;
-    renderImage(currentIndex);
-  };
+  // SWIPE mobile
+  let touchStartX = null;
+  mainImg.addEventListener('touchstart', (e) => {
+    touchStartX = e.touches[0].clientX;
+  });
+  mainImg.addEventListener('touchend', (e) => {
+    if (touchStartX === null) return;
+    let deltaX = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(deltaX) > 50) {
+      if (deltaX > 0) {
+        if (prevBtn) prevBtn.click();
+      } else {
+        if (nextBtn) nextBtn.click();
+      }
+    }
+    touchStartX = null;
+  });
 
-  // --- Resto igual ---
-  // ... (aquí sigues rellenando nombre, precio, stock, medidas, etc)
-  contenido.querySelector('.modal-nombre').innerText = producto.nombre;
-  contenido.querySelector('.modal-precio').innerText = `$U ${producto.precio.toLocaleString('es-UY')}`;
-  contenido.querySelector('.modal-descripcion').innerText = producto.descripcion || '';
-
-  // Stock y clase
-  const stockEl = contenido.querySelector('.modal-stock');
-  const disp = producto.stock || 0;
-  stockEl.innerText = disp > 0 ? `Disponible: ${disp}` : 'AGOTADO';
-  stockEl.className = 'modal-stock ' + (disp > 0 ? 'disponible' : 'agotado');
-
-  // Medidas
-  contenido.querySelector('.modal-detalles').innerHTML =
-    `<b>Medidas:</b> ${producto.alto || '-'} x ${producto.ancho || '-'} x ${producto.profundidad || '-'} cm`;
-
-  // Reset cantidad
+  // Cantidad y Agregar al carrito
   const cantidadInput = contenido.querySelector('.cantidad-modal-input');
-  cantidadInput.value = 1;
-  cantidadInput.min = 1;
-  cantidadInput.max = disp > 0 ? disp : 1;
-  cantidadInput.disabled = disp === 0;
-
-  // Botón agregar al carrito
   contenido.querySelector('.boton-agregar-modal').onclick = () => {
     const cantidad = parseInt(cantidadInput.value) || 1;
     agregarAlCarrito(producto.id, cantidad);
@@ -420,20 +421,6 @@ function mostrarModalProducto(producto) {
     }, 300);
   }
 }
-const mainImage = contenido.querySelector('.modal-img');
-const prevBtn = contenido.querySelector('.modal-prev');
-const nextBtn = contenido.querySelector('.modal-next');
-let currentIndex = 0;
-
-prevBtn.addEventListener('click', () => {
-  currentIndex = (currentIndex - 1 + producto.imagenes.length) % producto.imagenes.length;
-  mainImage.src = producto.imagenes[currentIndex];
-});
-nextBtn.addEventListener('click', () => {
-  currentIndex = (currentIndex + 1) % producto.imagenes.length;
-  mainImage.src = producto.imagenes[currentIndex];
-});
-
 
 // ===============================
 // EVENTO CLICK EN DETALLE DEL PRODUCTO
@@ -496,7 +483,7 @@ function inicializarMenuHamburguesa() {
   const menu = document.getElementById('menu');
   if (!hamburguesa || !menu) return;
   hamburguesa.addEventListener('click', function () {
-    const expanded = menu.classList.toggle('active'); // Usa .active (ajusta aquí si tu CSS usa .menu-abierto)
+    const expanded = menu.classList.toggle('active');
     hamburguesa.setAttribute('aria-expanded', expanded);
     document.body.classList.toggle('no-scroll', expanded);
   });
@@ -613,15 +600,8 @@ window.mostrarNotificacion = mostrarNotificacion;
 window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
 window.guardarCarrito = guardarCarrito;
 
-
-// Initialize EmailJS with your public key
-
-
 // ===============================
-// CONTACT FORM
-// ===============================
-// ===============================
-// CONTACT FORM
+// CONTACT FORM (si lo usás)
 // ===============================
 function setupContactForm() {
   const formContacto = document.getElementById('formContacto');
@@ -655,29 +635,7 @@ function setupContactForm() {
   }
 }
 
-// Inicializar EmailJS con tu clave pública
-emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
-
-// Llamar a la función para configurar el formulario de contacto
-setupContactForm();
-
-
-let touchStartX = null;
-mainImage.addEventListener('touchstart', (e) => {
-  touchStartX = e.touches[0].clientX;
-});
-mainImage.addEventListener('touchend', (e) => {
-  if (touchStartX === null) return;
-  let deltaX = e.changedTouches[0].clientX - touchStartX;
-  if (Math.abs(deltaX) > 50) { // puedes ajustar el umbral
-    if (deltaX > 0) {
-      prevBtn.click();
-    } else {
-      nextBtn.click();
-    }
-  }
-  touchStartX = null;
-});
-
-
-
+if (typeof emailjs !== 'undefined' && emailjs.init) {
+  emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Tu clave pública
+  setupContactForm();
+}
