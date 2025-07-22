@@ -111,56 +111,64 @@ button {
 }
 
 /* CARRITO */
+.carrito-item-controls {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 6px;
+}
+
 .carrito-item-controls button {
-  background: #fff;                      /* fondo blanco real */
-  border: 1.2px solid #e1e7ec;           /* borde gris MUY claro */
-  color: #2e7d32;                        /* verde sutil, o #212529 para ultra limpio */
+  background: #fff;
+  border: 1px solid #e6e8eb;
+  color: #23a455;
   font-size: 2rem;
-  width: 42px;
-  height: 42px;
-  border-radius: 8px;                    /* menos redondeado, más minimal */
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: 
-    background 0.12s cubic-bezier(.4,0,.2,1),
-    color 0.12s cubic-bezier(.4,0,.2,1),
-    border 0.13s cubic-bezier(.4,0,.2,1),
-    box-shadow 0.11s;
-  font-weight: 600;                      /* menos bold */
+  transition:
+    background 0.14s cubic-bezier(.4,0,.2,1),
+    border-color 0.13s cubic-bezier(.4,0,.2,1),
+    color 0.13s cubic-bezier(.4,0,.2,1),
+    transform 0.13s cubic-bezier(.4,0,.2,1);
+  font-weight: 600;
   box-shadow: none;
   outline: none;
+  padding: 0;
 }
 
 .carrito-item-controls button:hover,
 .carrito-item-controls button:focus-visible {
-  background: #f3fbf7;
-  border: 1.4px solid var(--primary-color); /* leve border verde */
-  color: var(--primary-color);
-  box-shadow: 0 2px 8px 0 rgba(76,175,80,0.08);
-  transform: scale(1.06);
+  background: #f4fbf5;
+  border-color: #76d7aa;
+  color: #11803a;
+  transform: scale(1.07);
 }
 
 .carrito-item-controls button:disabled {
-  background: #f7f7f7;
-  border: 1.2px solid #ececec;
-  color: #bdbdbd;
+  background: #fafbfc;
+  border-color: #e9ecef;
+  color: #bbb;
   opacity: 0.52;
   cursor: not-allowed;
   transform: none;
 }
 
 .carrito-item-cantidad {
-  min-width: 32px;
-  font-size: 1.23rem;
+  min-width: 30px;
+  font-size: 1.18rem;
   font-weight: 600;
   text-align: center;
-  color: #212529;
+  color: #22223b;
   background: transparent;
   display: inline-block;
   line-height: 1;
 }
+
 /* Ajustes de mobile: igual de grande pero menos gap */
 @media (max-width: 520px) {
   .carrito-item-controls {
