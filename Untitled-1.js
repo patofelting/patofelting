@@ -10,7 +10,7 @@ const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.c
 // 2. ESTADO GLOBAL
 // ===============================
 let productos = [];
-
+let carrito = [];
 let paginaActual = 1;
 let filtrosActuales = {
   precioMin: null,
@@ -35,7 +35,12 @@ const elementos = {
   selectCategoria: getElement('filtro-categoria'),
   precioMinInput: getElement('precio-min'),
   precioMaxInput: getElement('precio-max'),
-  botonResetearFiltros: getElement('boton-resetear-filtros')
+  botonResetearFiltros: getElement('boton-resetear-filtros'),
+  carritoPanel: document.getElementById('carrito-panel'),
+  carritoOverlay: document.querySelector('.carrito-overlay'),
+  btnVaciarCarrito: document.querySelector('.boton-vaciar-carrito'),
+  btnCerrarCarrito: document.querySelector('.cerrar-carrito'),
+  btnFinalizarCompra: document.querySelector('.boton-finalizar-compra'),
 };
 
 // ===============================
@@ -95,7 +100,6 @@ function actualizarCategorias() {
     .map(cat => `<option value="${cat}">${cat}</option>`)
     .join('');
 }
-
 
 function filtrarProductos() {
   return productos.filter(p => {
@@ -262,7 +266,7 @@ function mostrarModalProducto(producto) {
 }
 
 // ===============================
-// 8. CARRITO DE COMPRAS
+// 8. CARRITO DE COMPRAS Y STOCK
 // ===============================
 function guardarCarrito() {
   localStorage.setItem(LS_CARRITO_KEY, JSON.stringify(carrito));
@@ -318,9 +322,63 @@ function agregarAlCarrito(id, cantidad = 1) {
   mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
 }
 
+function vaciarCarrito() {
+  if (carrito.length === 0) {
+    mostrarNotificacion('El carrito ya está vacío', 'info');
+    return;
+  }
+  if (confirm('¿Estás seguro de vaciar el carrito?')) {
+    // Devuelve el stock a cada producto
+    carrito.forEach(item => {
+      const prod = productos.find(p => p.id === item.id);
+      if (prod) prod.stock += item.cantidad;
+    });
+    carrito = [];
+    guardarCarrito();
+    renderizarProductos(); // Actualiza los botones y stock
+    renderizarCarrito();
+    mostrarNotificacion('Carrito vaciado', 'info');
+    toggleCarrito();
+  }
+}
+
+function renderizarCarrito() {
+  if (!elementos.listaCarrito || !elementos.totalCarrito) return;
+  if (carrito.length === 0) {
+    elementos.listaCarrito.innerHTML = '<p class="carrito-vacio">Tu carrito está vacío</p>';
+    elementos.totalCarrito.textContent = 'Total: $U 0';
+    return;
+  }
+  let total = 0;
+  elementos.listaCarrito.innerHTML = carrito.map(item => {
+    total += item.precio * item.cantidad;
+    return `
+      <li class="carrito-item" data-id="${item.id}">
+        <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}">
+        <div class="carrito-item-info">
+          <span class="carrito-item-nombre">${item.nombre}</span>
+          <span class="carrito-item-cantidad">x${item.cantidad}</span>
+          <span class="carrito-item-precio">$U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
+        </div>
+      </li>
+    `;
+  }).join('');
+  elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
+}
 
 // ===============================
-// 9. FILTROS Y EVENTOS
+// 9. EVENTOS Y UI
+// ===============================
+function toggleCarrito() {
+  if (!elementos.carritoPanel || !elementos.carritoOverlay) return;
+  const isOpen = elementos.carritoPanel.classList.toggle('active');
+  elementos.carritoOverlay.classList.toggle('active', isOpen);
+  document.body.classList.toggle('no-scroll', isOpen);
+  if (isOpen) renderizarCarrito();
+}
+
+// ===============================
+// 10. FILTROS Y BUSQUEDA
 // ===============================
 function aplicarFiltros() {
   paginaActual = 1;
@@ -340,29 +398,9 @@ function resetearFiltros() {
   if (elementos.precioMaxInput) elementos.precioMaxInput.value = '';
   aplicarFiltros();
 }
-elementos.selectCategoria?.addEventListener('change', (e) => {
-  filtrosActuales.categoria = e.target.value;
-  aplicarFiltros();
-});
-
-if (elementos.inputBusqueda) {
-  elementos.inputBusqueda.addEventListener('input', (e) => {
-    filtrosActuales.busqueda = e.target.value.toLowerCase();
-    aplicarFiltros();
-  });
-}
-if (elementos.selectCategoria) {
-  elementos.selectCategoria.addEventListener('change', (e) => {
-    filtrosActuales.categoria = e.target.value;
-    aplicarFiltros();
-  });
-}
-if (elementos.botonResetearFiltros) {
-  elementos.botonResetearFiltros.addEventListener('click', resetearFiltros);
-}
 
 // ===============================
-// 10. CONEXIÓN DE EVENTOS
+// 11. CONEXIÓN DE EVENTOS
 // ===============================
 function actualizarUI() {
   renderizarProductos();
@@ -388,8 +426,25 @@ function conectarEventoModal() {
   };
 }
 
+// Carrito abrir/cerrar
+document.getElementById('carrito-btn-main')?.addEventListener('click', toggleCarrito);
+document.querySelector('.carrito-overlay')?.addEventListener('click', toggleCarrito);
+document.querySelector('.cerrar-carrito')?.addEventListener('click', toggleCarrito);
+document.querySelector('.boton-vaciar-carrito')?.addEventListener('click', vaciarCarrito);
+
+// Filtros
+elementos.inputBusqueda?.addEventListener('input', (e) => {
+  filtrosActuales.busqueda = e.target.value.toLowerCase();
+  aplicarFiltros();
+});
+elementos.selectCategoria?.addEventListener('change', (e) => {
+  filtrosActuales.categoria = e.target.value;
+  aplicarFiltros();
+});
+elementos.botonResetearFiltros?.addEventListener('click', resetearFiltros);
+
 // ===============================
-// 11. INICIALIZACIÓN GENERAL
+// 12. INICIALIZACIÓN GENERAL
 // ===============================
 function init() {
   cargarCarrito();
@@ -402,6 +457,8 @@ if (document.readyState !== 'loading') {
 } else {
   document.addEventListener('DOMContentLoaded', init);
 }
+
+
 function setupContactForm() {
   const formContacto = document.getElementById('formContacto');
   const successMessage = document.getElementById('successMessage');
@@ -439,78 +496,3 @@ emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
 
 // Llamar a la función para configurar el formulario de contacto
 setupContactForm();
-
-
-
-// ===============================
-// CARRITO DE COMPRAS MEJORADO
-// ===============================
-
-function agregarAlCarrito(id, cantidad = 1) {
-  const prod = productos.find(p => p.id === id);
-  if (!prod || prod.stock <= 0) {
-    mostrarNotificacion('Producto agotado', 'error');
-    return;
-  }
-  cantidad = Math.min(cantidad, prod.stock);
-
-  let itemCarrito = carrito.find(i => i.id === id);
-  if (itemCarrito) {
-    if (itemCarrito.cantidad + cantidad > prod.stock) {
-      mostrarNotificacion('No hay más stock disponible', 'error');
-      return;
-    }
-    itemCarrito.cantidad += cantidad;
-  } else {
-    carrito.push({
-      id: prod.id,
-      nombre: prod.nombre,
-      precio: prod.precio,
-      cantidad: cantidad,
-      imagen: prod.imagenes ? prod.imagenes[0] : PLACEHOLDER_IMAGE
-    });
-  }
-  // Restar stock del producto
-  prod.stock -= cantidad;
-  guardarCarrito();
-  renderizarProductos(); // <<-- Vuelve a dibujar los productos y sus botones
-  renderizarCarrito();
-  mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
-}
-function crearCardProducto(p) {
-  const agotado = p.stock <= 0;
-  return `
-    <div class="producto-card" data-id="${p.id}">
-      <img src="${p.imagenes ? p.imagenes[0] : PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img">
-      <h3 class="producto-nombre">${p.nombre}</h3>
-      <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
-      <p class="producto-stock">${agotado ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${p.stock}`}</p>
-      <div class="card-acciones">
-        <input type="number" value="1" min="1" max="${p.stock}" class="cantidad-input" ${agotado ? 'disabled' : ''}>
-        <button class="boton-agregar${agotado ? ' agotado' : ''}" data-id="${p.id}" ${agotado ? 'disabled' : ''}>
-          ${agotado ? 'Agotado' : 'Agregar'}
-        </button>
-      </div>
-      <button class="boton-detalles" data-id="${p.id}">🛈 Ver Detalle</button>
-    </div>
-  `;
-}
-function vaciarCarrito() {
-  if (carrito.length === 0) {
-    mostrarNotificacion('El carrito ya está vacío', 'info');
-    return;
-  }
-  if (confirm('¿Estás seguro de vaciar el carrito?')) {
-    // Devuelve el stock a cada producto
-    carrito.forEach(item => {
-      const prod = productos.find(p => p.id === item.id);
-      if (prod) prod.stock += item.cantidad;
-    });
-    carrito = [];
-    guardarCarrito();
-    renderizarProductos(); // Actualiza los botones y stock
-    renderizarCarrito();
-    mostrarNotificacion('Carrito vaciado', 'info');
-    toggleCarrito();
-  }
-}
