@@ -954,160 +954,129 @@ blockquote {
 }
 
 /* Contact Section */
-/* Contact Section */
-/* Estilos mejorados para la sección de Contacto */
 .contact {
   padding: 80px 20px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7eb 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-family: var(--font-family);
-}
-
-.contact-container {
-  max-width: 800px;
-  width: 100%;
-  margin: 0 auto;
-  text-align: center;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .contact h2 {
   font-size: 2.5rem;
   margin-bottom: 1.5rem;
-  color: var(--primary-color);
-  font-weight: var(--font-weight-bold);
+  color: #1a1a1a;
+  font-weight: 600;
   letter-spacing: -0.025em;
   line-height: 1.2;
-  position: relative;
-  padding-bottom: 15px;
-}
-
-.contact h2::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 80px;
-  height: 4px;
-  background-color: var(--accent-color);
-  border-radius: 2px;
 }
 
 .contact p {
   font-size: 1.125rem;
-  color: var(--dark-gray);
+  color: #4a5568;
   margin-bottom: 2.5rem;
   max-width: 600px;
-  line-height: var(--line-height);
-  margin-left: auto;
-  margin-right: auto;
+  line-height: 1.6;
 }
 
-.contact-form {
+form {
   display: flex;
   flex-direction: column;
   max-width: 500px;
   width: 100%;
   margin: 0 auto;
   background: #ffffff;
-  padding: 2.5rem;
+  padding: 2rem;
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.contact-form:hover {
+form:hover {
   transform: translateY(-5px);
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
 }
 
-.form-group {
-  margin-bottom: 1.5rem;
-  text-align: left;
-}
-
-.form-group label {
-  display: block;
+label {
   margin-bottom: 0.5rem;
   font-size: 0.875rem;
-  font-weight: var(--font-weight-bold);
-  color: var(--text-color);
+  font-weight: 500;
+  color: #2d3748;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.form-control {
+input, textarea {
   width: 100%;
-  padding: 0.875rem 1rem;
-  border: 1px solid var(--medium-gray);
-  border-radius: 6px;
+  padding: 0.875rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   font-size: 1rem;
-  color: var(--text-color);
-  background-color: #f8f9fa;
+  color: #2d3748;
+  background-color: #f7fafc;
   transition: all 0.3s ease;
 }
 
-.form-control:focus {
-  border-color: var(--primary-color);
+input:focus, textarea:focus {
+  border-color: #2f855a;
   background-color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+  box-shadow: 0 0 0 3px rgba(47, 133, 90, 0.2);
   outline: none;
 }
 
-textarea.form-control {
+textarea {
   resize: vertical;
-  min-height: 150px;
+  min-height: 120px;
 }
 
-.submit-btn {
+button {
   padding: 0.875rem 2rem;
-  background-color: var(--primary-color);
-  color: var(--light-text);
+  background-color: #2f855a;
+  color: #ffffff;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 1rem;
-  font-weight: var(--font-weight-bold);
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  width: 100%;
-  margin-top: 1rem;
 }
 
-.submit-btn:hover {
-  background-color: var(--accent-color);
+button:hover {
+  background-color: #276749;
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.submit-btn:active {
+button:active {
   transform: translateY(0);
 }
 
-/* Mensajes de estado */
-.form-message {
+#successMessage, #errorMessage {
   margin-top: 1.5rem;
   padding: 1rem;
-  border-radius: var(--border-radius);
+  border-radius: 8px;
   font-size: 0.875rem;
   text-align: center;
   opacity: 0;
   animation: fadeIn 0.5s ease forwards;
 }
 
-.form-message.success {
-  background-color: var(--success-color);
-  color: var(--light-text);
+#successMessage {
+  background-color: #004225;
+  color: #ffffff;
 }
 
-.form-message.error {
-  background-color: var(--error-color);
-  color: #ffffff;
+#errorMessage {
+  background-color: #fef2f2;
+  color: #9b2c2c;
+}
+
+.hidden {
+  display: none;
 }
 
 @keyframes fadeIn {
@@ -1121,40 +1090,17 @@ textarea.form-control {
   }
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .contact {
-    padding: 60px 15px;
+    padding: 40px 15px;
   }
-  
+
   .contact h2 {
     font-size: 2rem;
   }
-  
-  .contact p {
-    font-size: 1rem;
-  }
-  
-  .contact-form {
-    padding: 1.5rem;
-  }
-}
 
-@media (max-width: 576px) {
-  .contact h2 {
-    font-size: 1.75rem;
-  }
-  
-  .form-group {
-    margin-bottom: 1.25rem;
-  }
-  
-  .form-control {
-    padding: 0.75rem;
-  }
-  
-  .submit-btn {
-    padding: 0.75rem;
+  form {
+    padding: 1.5rem;
   }
 }
 /* FAQ Section */
