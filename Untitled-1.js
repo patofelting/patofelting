@@ -420,6 +420,19 @@ function mostrarModalProducto(producto) {
     }, 300);
   }
 }
+const mainImage = contenido.querySelector('.modal-img');
+const prevBtn = contenido.querySelector('.modal-prev');
+const nextBtn = contenido.querySelector('.modal-next');
+let currentIndex = 0;
+
+prevBtn.addEventListener('click', () => {
+  currentIndex = (currentIndex - 1 + producto.imagenes.length) % producto.imagenes.length;
+  mainImage.src = producto.imagenes[currentIndex];
+});
+nextBtn.addEventListener('click', () => {
+  currentIndex = (currentIndex + 1) % producto.imagenes.length;
+  mainImage.src = producto.imagenes[currentIndex];
+});
 
 
 // ===============================
@@ -649,6 +662,22 @@ emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
 setupContactForm();
 
 
+let touchStartX = null;
+mainImage.addEventListener('touchstart', (e) => {
+  touchStartX = e.touches[0].clientX;
+});
+mainImage.addEventListener('touchend', (e) => {
+  if (touchStartX === null) return;
+  let deltaX = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(deltaX) > 50) { // puedes ajustar el umbral
+    if (deltaX > 0) {
+      prevBtn.click();
+    } else {
+      nextBtn.click();
+    }
+  }
+  touchStartX = null;
+});
 
 
 
