@@ -2612,10 +2612,10 @@ html > body > .notificacion,
 body > div.notificacion,
 html > body > div.notificacion {
   position: fixed !important;
-  top: 32px !important;
+  bottom: 32px !important;
   left: 50% !important;
+  top: auto !important;
   right: auto !important;
-  bottom: auto !important;
   transform: translateX(-50%) !important;
   display: inline-block !important;
   min-width: 100px !important;
@@ -2632,7 +2632,7 @@ html > body > div.notificacion {
   color: #fff !important;
   opacity: 0 !important;
   pointer-events: none !important;
-  transition: opacity 0.19s, top 0.19s !important;
+  transition: opacity 0.19s, bottom 0.19s !important;
   text-align: center !important;
   line-height: 1.4 !important;
   box-sizing: border-box !important;
@@ -2646,7 +2646,7 @@ body > div.notificacion.show,
 html > body > div.notificacion.show {
   opacity: 1 !important;
   pointer-events: auto !important;
-  top: 48px !important;
+  bottom: 48px !important;
 }
 
 body > .notificacion.exito,
@@ -2661,10 +2661,17 @@ body > div.notificacion.info { background: #1976d2 !important; }
   html > body > .notificacion,
   body > div.notificacion,
   html > body > div.notificacion {
-    top: 10px !important;
-    max-width: 95vw !important;
-    padding: 6px 11px !important;
+    bottom: 10px !important;
+    max-width: 96vw !important;
+    padding: 7px 11px !important;
     font-size: 0.95rem !important;
     border-radius: 11px !important;
   }
+  body > .notificacion.show,
+  html > body > .notificacion.show,
+  body > div.notificacion.show,
+  html > body > div.notificacion.show {
+    bottom: 24px !important;
+  }
 }
+
