@@ -12,7 +12,7 @@
   --success-color: #388E3C; /* Verde más oscuro para éxito */
   --error-color: #f44336;
   --warning-color: #FFA000; /* Ámbar para advertencias */
-  --border-radius: 8px;
+  --border-radius: 12px;
   --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   --transition: all 0.3s ease;
   --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -685,22 +685,24 @@ blockquote {
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--medium-gray);
+  background-color: var(--primary-color);
+  color: white;
 }
 
 .carrito-header h2 {
   font-size: 1.5rem;
-  color: var(--primary-color);
+  color: white;
 }
 
 .cerrar-carrito {
   font-size: 1.5rem;
   background: none;
-  color: var(--dark-gray);
+  color: white;
   transition: var(--transition);
 }
 
 .cerrar-carrito:hover {
-  color: var(--text-color);
+  color: var(--light-text);
 }
 
 .lista-carrito {
@@ -709,7 +711,8 @@ blockquote {
   padding: 20px;
 }
 
-.carrito-vacio {  text-align: center;
+.carrito-vacio {
+  text-align: center;
   color: var(--dark-gray);
   padding: 20px;
 }
@@ -720,6 +723,7 @@ blockquote {
   margin-bottom: 15px;
   padding-bottom: 15px;
   border-bottom: 1px solid var(--medium-gray);
+  align-items: center;
 }
 
 .carrito-item-img {
@@ -727,6 +731,7 @@ blockquote {
   height: 70px;
   object-fit: cover;
   border-radius: var(--border-radius);
+  background-color: var(--light-gray);
 }
 
 .carrito-item-info {
@@ -784,10 +789,17 @@ blockquote {
   transition: var(--transition);
   background: none;
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .eliminar-item:hover {
   color: #c62828;
+}
+
+.eliminar-item i {
+  font-size: 1.2rem;
 }
 
 .carrito-footer {
@@ -1103,6 +1115,7 @@ button:active {
     padding: 1.5rem;
   }
 }
+
 /* FAQ Section */
 /* FAQ Section Styles */
 .faq-section {
@@ -1606,7 +1619,7 @@ body.no-scroll {
 
 .faq-toggle[aria-expanded="true"] + .faq-content {
   padding: 15px 20px;
-  max-height:  500px;
+  max-height: 500px;
 }
 
 .faq-more {
@@ -1722,10 +1735,17 @@ body.no-scroll {
   transition: var(--transition);
   background: none;
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .eliminar-item:hover {
   color: #c62828;
+}
+
+.eliminar-item i {
+  font-size: 1.2rem;
 }
 
 .carrito-footer {
