@@ -4,7 +4,7 @@
 const CONFIG = {
   PRODUCTOS_POR_PAGINA: 6,
   LS_CARRITO_KEY: 'carrito',
-  CSV_URL: window.SHEET_CSV_URL || 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ.../pub?output=csv',
+  CSV_URL: window.SHEET_CSV_URL || 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv',
   PLACEHOLDER_IMAGE: window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen',
   CACHE_BUSTER: '?v=' + new Date().getTime() // Evitar caché
 };
