@@ -45,29 +45,7 @@
     <h2>Tu Carrito</h2>
     <button class="cerrar-carrito" aria-label="Cerrar carrito">×</button>
   </div>
-  <ul id="lista-carrito" class="lista-carrito">
-    <li class="carrito-item">
-      <img src="URL_IMG" alt="Nombre del producto" class="carrito-item-img">
-      <div class="carrito-item-info">
-        <div class="carrito-item-nombre">
-          Estegosaurio Rosa <span class="carrito-item-subtotal">$U 550</span>
-        </div>
-        <div class="carrito-item-controls">
-          <button type="button" aria-label="Quitar uno">−</button>
-          <span class="carrito-item-cantidad">1</span>
-          <button type="button" aria-label="Agregar uno">+</button>
-          <button class="eliminar-item" aria-label="Eliminar producto">
-            <svg class="icon-trash" xmlns="http://www.w3.org/2000/svg" fill="none"
-              viewBox="0 0 24 24" stroke="currentColor" width="18" height="18">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M6 7h12M9 7V4h6v3m2 0v14a2 2 0 01-2 2H8a2 2 0 01-2-2V7h12z"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-    </li>
-    <!-- ...más productos -->
-  </ul>
+  <ul id="lista-carrito" class="lista-carrito"></ul>
   <div class="carrito-footer">
     <p id="total">Total: $U 0</p>
     <div class="carrito-acciones">
@@ -77,6 +55,7 @@
   </div>
 </div>
 <div class="carrito-overlay"></div>
+
 
 
 <section id="inicio" class="hero">
@@ -236,7 +215,7 @@
   </div>
 </section>
 
-<section class="faq-section">
+<section class="faq-section" id="preguntas">
   <h2>Preguntas Frecuentes</h2>
   <div class="faq-item" data-category="envios">
     <button class="faq-toggle" aria-expanded="false">¿A qué lugares realizan envíos?</button>
@@ -307,7 +286,8 @@
     </div>
   </footer>
 
-
+  <button class="boton-flotante" aria-label="Volver arriba">
+    <i class="fas fa-arrow-up"></i>
   </button>
 
   <script src="Untitled-1.js" defer></script>
