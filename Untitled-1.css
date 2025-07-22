@@ -2604,3 +2604,67 @@ body.no-scroll {
   opacity: 1;
   border-color: var(--primary-color);
 }
+
+
+
+body > .notificacion,
+html > body > .notificacion,
+body > div.notificacion,
+html > body > div.notificacion {
+  position: fixed !important;
+  top: 32px !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translateX(-50%) !important;
+  display: inline-block !important;
+  min-width: 100px !important;
+  max-width: 320px !important;
+  width: auto !important;
+  height: auto !important;
+  padding: 8px 18px !important;
+  border-radius: 16px !important;
+  font-size: 0.98rem !important;
+  font-weight: 600 !important;
+  box-shadow: 0 3px 16px 0 rgba(44,62,80,0.08) !important;
+  z-index: 9999 !important;
+  background: #23272f !important;
+  color: #fff !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.19s, top 0.19s !important;
+  text-align: center !important;
+  line-height: 1.4 !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  overflow: visible !important;
+}
+
+body > .notificacion.show,
+html > body > .notificacion.show,
+body > div.notificacion.show,
+html > body > div.notificacion.show {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  top: 48px !important;
+}
+
+body > .notificacion.exito,
+body > div.notificacion.exito { background: #43b95a !important; }
+body > .notificacion.error,
+body > div.notificacion.error { background: #e74c3c !important; }
+body > .notificacion.info,
+body > div.notificacion.info { background: #1976d2 !important; }
+
+@media (max-width: 600px) {
+  body > .notificacion,
+  html > body > .notificacion,
+  body > div.notificacion,
+  html > body > div.notificacion {
+    top: 10px !important;
+    max-width: 95vw !important;
+    padding: 6px 11px !important;
+    font-size: 0.95rem !important;
+    border-radius: 11px !important;
+  }
+}
