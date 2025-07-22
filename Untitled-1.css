@@ -2318,3 +2318,7 @@ body > div.notificacion.info { background: #1976d2 !important; }
 body.no-scroll {
   overflow: hidden;
 }
+
+
+.modal-img { display: none; }
+.modal-img.activa { display: block; }
