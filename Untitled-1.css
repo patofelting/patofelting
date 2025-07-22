@@ -637,8 +637,8 @@ blockquote {
 
 .modal-img {
   max-width: 400px;
-  min-width: 300px;
-  max-height: 500px;
+  min-width: 98vw;
+  max-height: 60vh;
   aspect-ratio: 1/1;
   object-fit: contain;
   border-radius: 22px;
