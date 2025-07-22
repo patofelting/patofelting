@@ -1331,31 +1331,46 @@ blockquote {
 /* Notificaciones */
 .notificacion {
   position: fixed;
-  top: 32px;
+  top: 30px;
   left: 50%;
   transform: translateX(-50%);
-  min-width: 240px;
-  max-width: 90vw;
-  padding: 15px 26px;
-  border-radius: 11px;
-  font-size: 1.07rem;
-  font-weight: 600;
-  box-shadow: 0 4px 24px rgba(44,62,80,0.14);
+  min-width: 170px;
+  max-width: 320px;
+  width: max-content;
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-size: 0.98rem;
+  font-weight: 500;
+  box-shadow: 0 2px 14px rgba(44,62,80,0.09);
   z-index: 9999;
   background: #23272f;
   color: #fff;
   opacity: 0;
   pointer-events: none;
-  transition:
-    opacity 0.25s,
-    top 0.3s;
+  transition: opacity 0.21s, top 0.21s;
   text-align: center;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
 }
 
 .notificacion.show {
   opacity: 1;
   pointer-events: auto;
-  top: 52px;
+  top: 45px;
+}
+
+/* Tipos */
+.notificacion.exito {
+  background: #48c774;
+  color: #fff;
+}
+.notificacion.error {
+  background: #e63946;
+  color: #fff;
+}
+.notificacion.info {
+  background: #1976d2;
+  color: #fff;
 }
 
 /* Tipos de notificación */
