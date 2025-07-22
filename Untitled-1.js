@@ -321,110 +321,79 @@ function mostrarModalProducto(producto) {
   const contenido = elementos.modalContenido;
   if (!modal || !contenido) return;
 
-  // Actualiza dinámicamente los campos
-  contenido.querySelector('.modal-img').src = producto.imagenes[0] || PLACEHOLDER_IMAGE;
-  contenido.querySelector('.modal-img').alt = producto.nombre;
+  // Imagen principal
+  const mainImg = contenido.querySelector('.modal-img');
+  mainImg.src = producto.imagenes[0] || PLACEHOLDER_IMAGE;
+  mainImg.alt = producto.nombre;
+
+  // Nombre, precio, stock, descripción
   contenido.querySelector('.modal-nombre').innerText = producto.nombre;
   contenido.querySelector('.modal-precio').innerText = `$U ${producto.precio.toLocaleString('es-UY')}`;
   contenido.querySelector('.modal-descripcion').innerText = producto.descripcion || '';
-  contenido.querySelector('.modal-stock').innerText = producto.stock > 0 ? `Disponible: ${producto.stock}` : 'AGOTADO';
-  contenido.querySelector('.modal-stock').className = 'modal-stock ' + (producto.stock > 0 ? 'disponible' : 'agotado');
 
-  // Medidas, si quieres mostrarlas:
-  let detallesHTML = `<b>Medidas:</b> ${producto.alto || '-'} x ${producto.ancho || '-'} x ${producto.profundidad || '-'} cm`;
-  contenido.querySelector('.modal-detalles').innerHTML = detallesHTML;
+  // Stock y clase
+  const stockEl = contenido.querySelector('.modal-stock');
+  const disp = producto.stock || 0;
+  stockEl.innerText = disp > 0 ? `Disponible: ${disp}` : 'AGOTADO';
+  stockEl.className = 'modal-stock ' + (disp > 0 ? 'disponible' : 'agotado');
 
-  // Miniaturas si hay varias imágenes
-  let thumbnails = '';
-  if (producto.imagenes && producto.imagenes.length > 1) {
-    thumbnails = producto.imagenes.map((img, idx) =>
-      `<img src="${img}" class="modal-thumbnail" data-idx="${idx}" style="width:36px;height:36px;object-fit:cover;border-radius:5px;margin:2px;cursor:pointer;">`
+  // Medidas
+  contenido.querySelector('.modal-detalles').innerHTML =
+    `<b>Medidas:</b> ${producto.alto || '-'} x ${producto.ancho || '-'} x ${producto.profundidad || '-'} cm`;
+
+  // Reset cantidad
+  const cantidadInput = contenido.querySelector('.cantidad-modal-input');
+  cantidadInput.value = 1;
+  cantidadInput.min = 1;
+  cantidadInput.max = disp > 0 ? disp : 1;
+  cantidadInput.disabled = disp === 0;
+
+  // Miniaturas
+  const thumbs = contenido.querySelector('.modal-thumbnails');
+  if (producto.imagenes.length > 1) {
+    thumbs.innerHTML = producto.imagenes.map((img, i) =>
+      `<img src="${img}" class="modal-thumbnail${i === 0 ? ' active' : ''}" data-idx="${i}" style="width:38px;height:38px;margin:3px;cursor:pointer;border-radius:6px;border:1.5px solid #eee;">`
     ).join('');
-    contenido.querySelector('.modal-thumbnails').innerHTML = thumbnails;
-
-    // Evento de cambio de imagen principal al clickear una miniatura
-    contenido.querySelectorAll('.modal-thumbnail').forEach(thumb => {
-      thumb.onclick = function() {
-        contenido.querySelector('.modal-img').src = producto.imagenes[+thumb.dataset.idx];
-      }
+    // Evento para cambiar imagen principal
+    thumbs.querySelectorAll('.modal-thumbnail').forEach(thumb => {
+      thumb.onclick = function () {
+        mainImg.src = producto.imagenes[+thumb.dataset.idx];
+        thumbs.querySelectorAll('.modal-thumbnail').forEach(el => el.classList.remove('active'));
+        thumb.classList.add('active');
+      };
     });
   } else {
-    contenido.querySelector('.modal-thumbnails').innerHTML = '';
+    thumbs.innerHTML = '';
   }
-
-  // Botón cerrar
-  contenido.querySelector('.cerrar-modal').onclick = () => cerrarModal();
 
   // Botón agregar al carrito
   contenido.querySelector('.boton-agregar-modal').onclick = () => {
-    const cantidad = +(contenido.querySelector('.cantidad-modal-input').value || 1);
+    const cantidad = parseInt(cantidadInput.value) || 1;
     agregarAlCarrito(producto.id, cantidad);
     cerrarModal();
   };
 
-  // Abre el modal
+  // Botón cerrar
+  contenido.querySelector('.cerrar-modal').onclick = cerrarModal;
+
+  // Cerrar al hacer click fuera
+  modal.onclick = (e) => { if (e.target === modal) cerrarModal(); };
+
+  // Mostrar el modal
   modal.style.display = 'flex';
   setTimeout(() => {
     modal.classList.add('visible');
     document.body.classList.add('no-scroll');
   }, 10);
 
-  // Cierra al click afuera del modal
-  modal.onclick = e => {
-    if (e.target === modal) cerrarModal();
-  };
-
   function cerrarModal() {
     modal.classList.remove('visible');
-    setTimeout(() => { modal.style.display = 'none'; document.body.classList.remove('no-scroll'); }, 300);
+    setTimeout(() => {
+      modal.style.display = 'none';
+      document.body.classList.remove('no-scroll');
+    }, 300);
   }
 }
-  // Carrusel
-  if (producto.imagenes.length > 1) {
-    let currentIndex = 0;
-    const mainImage = contenido.querySelector('.modal-img');
-    const thumbnails = contenido.querySelectorAll('.thumbnail');
-    function updateImage(index) {
-      currentIndex = index;
-      mainImage.src = producto.imagenes[index];
-      thumbnails.forEach((thumb, i) => {
-        thumb.classList.toggle('active', i === index);
-      });
-    }
-    contenido.querySelector('.modal-prev')?.addEventListener('click', () => {
-      const newIndex = (currentIndex - 1 + producto.imagenes.length) % producto.imagenes.length;
-      updateImage(newIndex);
-    });
-    contenido.querySelector('.modal-next')?.addEventListener('click', () => {
-      const newIndex = (currentIndex + 1) % producto.imagenes.length;
-      updateImage(newIndex);
-    });
-    thumbnails.forEach((thumb, i) => {
-      thumb.addEventListener('click', () => updateImage(i));
-    });
-  }
-  contenido.querySelector('.cerrar-modal').onclick = () => cerrarModal();
-  const agregarBtn = contenido.querySelector('.boton-agregar-modal');
-  agregarBtn.onclick = () => {
-    const cantidad = +(contenido.querySelector('.cantidad-modal-input').value || 1);
-    agregarAlCarrito(producto.id, cantidad);
-    cerrarModal();
-  };
-  modal.style.display = 'flex';
-  setTimeout(() => {
-    modal.classList.add('visible');
-    document.body.classList.add('no-scroll');
-  }, 10);
-
-  modal.onclick = e => {
-    if (e.target === modal) cerrarModal();
-  };
-
-  function cerrarModal() {
-    modal.classList.remove('visible');
-    setTimeout(() => { modal.style.display = 'none'; document.body.classList.remove('no-scroll'); }, 300);
-  }
-
 
 // ===============================
 // EVENTO CLICK EN DETALLE DEL PRODUCTO
