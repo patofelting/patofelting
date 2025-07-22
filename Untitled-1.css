@@ -1058,23 +1058,18 @@ blockquote {
 
 /* ==== Botones cantidad ==== */
 .carrito-item-controls button {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: var(--medium-gray, #f0f2f6);
-  color: #444b5d;
-  border: none;
-  font-size: 1.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.14s, color 0.14s;
-  box-shadow: none;
-  cursor: pointer;
-  user-select: none;
-  padding: 0;
+  font-size: 2.6rem !important;
+  width: 54px !important;
+  height: 54px !important;
+  min-width: 54px !important;
+  min-height: 54px !important;
+  background: #fff !important;
+  color: #2e7d32 !important;
+  border-radius: 8px !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
 }
-
 .carrito-item-controls button:hover {
   background-color: var(--dark-gray, #b0b7c3);
   color: #fff;
@@ -1089,14 +1084,12 @@ blockquote {
 }
 
 .carrito-item-cantidad {
-  min-width: 26px;
-  text-align: center;
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: #444b5d;
-  line-height: 32px;
-  background: transparent;
-  display: inline-block;
+  font-size: 1.7rem !important;
+  min-width: 38px !important;
+  color: #22223b !important;
+  text-align: center !important;
+  background: transparent !important;
+  padding: 0 !important;
 }
 
 /* ==== Botón eliminar (tacho) ==== */
