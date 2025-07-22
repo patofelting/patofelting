@@ -591,6 +591,10 @@ js.init('o4IxJz0Zz-LQ8jYKG'); // Replace with your EmailJS public key
 // CONTACT FORM
 // ===============================
 function setupContactForm() {
+  const formContacto = document.getElementById('formContacto');
+  const successMessage = document.getElementById('successMessage');
+  const errorMessage = document.getElementById('errorMessage');
+
   if (formContacto) {
     formContacto.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -605,12 +609,21 @@ function setupContactForm() {
       })
       .then(() => {
         successMessage.classList.remove('hidden');
+        errorMessage.classList.add('hidden');
         formContacto.reset();
         setTimeout(() => successMessage.classList.add('hidden'), 3000);
       }, (error) => {
         console.error('Error al enviar el mensaje:', error);
-        mostrarNotificacion('Error al enviar el mensaje. Intenta de nuevo.', 'error');
+        errorMessage.classList.remove('hidden');
+        successMessage.classList.add('hidden');
+        setTimeout(() => errorMessage.classList.add('hidden'), 3000);
       });
     });
   }
 }
+
+// Inicializar EmailJS con tu clave pública
+emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
+
+// Llamar a la función para configurar el formulario de contacto
+setupContactForm();
