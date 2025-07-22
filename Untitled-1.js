@@ -303,59 +303,119 @@ function mostrarModalProducto(producto) {
   const modal = elementos.productoModal;
   const contenido = elementos.modalContenido;
   if (!modal || !contenido) return;
+
   const enCarrito = carrito.find(item => item.id === producto.id) || { cantidad: 0 };
   const disponibles = Math.max(0, producto.stock - enCarrito.cantidad);
   const agotado = disponibles <= 0;
-  contenido.innerHTML = `
-    <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
-    <div class="modal-flex">
-      <div class="modal-carrusel">
-        <img src="${producto.imagenes[0] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
-      </div>
-      <div class="modal-info">
-        <h1 class="modal-nombre">${producto.nombre}</h1>
-        <p class="modal-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
-        <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">
-          ${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}
-        </p>
-        <div class="modal-descripcion">${producto.descripcion || ''}</div>
-        ${producto.adicionales ? `<div class="modal-adicionales"><strong>Extras:</strong> ${producto.adicionales}</div>` : ''}
-        ${(producto.alto || producto.ancho || producto.profundidad) ? `
-          <div class="modal-medidas">
-            <strong>Medidas:</strong>
-            <ul>
-              ${producto.alto ? `<li>Alto: ${producto.alto} cm</li>` : ''}
-              ${producto.ancho ? `<li>Ancho: ${producto.ancho} cm</li>` : ''}
-              ${producto.profundidad ? `<li>Profundidad: ${producto.profundidad} cm</li>` : ''}
-            </ul>
-          </div>` : ''}
-        <div class="modal-acciones">
-          <button class="boton-agregar-modal ${agotado ? 'agotado' : ''}" data-id="${producto.id}" ${agotado ? 'disabled' : ''}>
-            ${agotado ? 'Agotado' : 'Agregar al carrito'}
-          </button>
+
+  // Si hay más de una imagen arma carrusel, sino solo muestra la imagen principal
+  let currentIndex = 0;
+
+  function renderCarrusel() {
+    contenido.innerHTML = `
+      <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
+      <div class="modal-flex">
+        <div class="modal-carrusel">
+          <img src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
+          ${
+            producto.imagenes.length > 1
+              ? `
+          <div class="modal-controls">
+            <button class="modal-prev" aria-label="Imagen anterior" ${currentIndex === 0 ? 'disabled' : ''}>
+              <svg width="26" height="26" viewBox="0 0 26 26"><polyline points="17 22 9 13 17 4" fill="none" stroke="#2e7d32" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="modal-next" aria-label="Siguiente imagen" ${currentIndex === producto.imagenes.length - 1 ? 'disabled' : ''}>
+              <svg width="26" height="26" viewBox="0 0 26 26"><polyline points="9 4 17 13 9 22" fill="none" stroke="#2e7d32" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          `
+              : ''
+          }
+          <div class="modal-thumbnails">
+            ${producto.imagenes
+              .map(
+                (img, i) =>
+                  `<img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}">`
+              )
+              .join('')}
+          </div>
+        </div>
+        <div class="modal-info">
+          <h1 class="modal-nombre">${producto.nombre}</h1>
+          <p class="modal-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
+          <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">
+            ${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}
+          </p>
+          <div class="modal-descripcion">
+            ${producto.descripcion || ''}
+            <br>
+            ${producto.adicionales ? `<small><b>Adicionales:</b> ${producto.adicionales}</small><br>` : ''}
+            ${
+              producto.alto || producto.ancho || producto.profundidad
+                ? `<small><b>Medidas:</b> ${producto.alto ? producto.alto + ' cm (alto)' : ''} ${producto.ancho ? ' x ' + producto.ancho + ' cm (ancho)' : ''} ${producto.profundidad ? ' x ' + producto.profundidad + ' cm (prof.)' : ''}</small>`
+                : ''
+            }
+          </div>
+          <div class="modal-acciones">
+            <input type="number" value="1" min="1" max="${disponibles}" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
+            <button class="boton-agregar-modal ${agotado ? 'agotado' : ''}" data-id="${producto.id}" ${agotado ? 'disabled' : ''}>
+              ${agotado ? 'Agotado' : 'Agregar al carrito'}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  `;
-  contenido.querySelector('.cerrar-modal').onclick = () => cerrarModal();
-  const agregarBtn = contenido.querySelector('.boton-agregar-modal');
-  agregarBtn.onclick = () => {
-    agregarAlCarrito(producto.id, 1);
-    cerrarModal();
-  };
+    `;
+    // Listeners para cerrar modal, agregar al carrito, carrusel y miniaturas
+    contenido.querySelector('.cerrar-modal').onclick = () => cerrarModal();
+    contenido.querySelector('.boton-agregar-modal')?.addEventListener('click', () => {
+      const cantidad = +(contenido.querySelector('.cantidad-modal-input').value || 1);
+      agregarAlCarrito(producto.id, cantidad);
+      cerrarModal();
+    });
+
+    // Miniaturas clickeables
+    contenido.querySelectorAll('.thumbnail').forEach((thumb, i) => {
+      thumb.onclick = () => {
+        currentIndex = i;
+        renderCarrusel();
+      };
+    });
+    // Flechas
+    contenido.querySelector('.modal-prev')?.addEventListener('click', () => {
+      if (currentIndex > 0) {
+        currentIndex--;
+        renderCarrusel();
+      }
+    });
+    contenido.querySelector('.modal-next')?.addEventListener('click', () => {
+      if (currentIndex < producto.imagenes.length - 1) {
+        currentIndex++;
+        renderCarrusel();
+      }
+    });
+  }
+
+  renderCarrusel();
+
   modal.style.display = 'flex';
   setTimeout(() => {
     modal.classList.add('visible');
     document.body.classList.add('no-scroll');
   }, 10);
+
   modal.onclick = e => {
     if (e.target === modal) cerrarModal();
   };
+
   function cerrarModal() {
     modal.classList.remove('visible');
-    setTimeout(() => { modal.style.display = 'none'; document.body.classList.remove('no-scroll'); }, 300);
+    setTimeout(() => {
+      modal.style.display = 'none';
+      document.body.classList.remove('no-scroll');
+    }, 300);
   }
 }
+
 
 // ===============================
 // CLICK EN DETALLE DEL PRODUCTO
