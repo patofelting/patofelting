@@ -984,7 +984,8 @@ blockquote {
 form {
   display: flex;
   flex-direction: column;
-  max-width: 500px;
+  /* Reducimos el ancho máximo del formulario */
+  max-width: 400px; /* Ajusta este valor según tu preferencia */
   width: 100%;
   margin: 0 auto;
   background: #ffffff;
@@ -1009,7 +1010,7 @@ label {
 }
 
 input, textarea {
-  width: 100%;
+  width: 100%; /* Sigue ocupando el 100% del contenedor del formulario */
   padding: 0.875rem;
   margin-bottom: 1.5rem;
   border: 1px solid #e2e8f0;
@@ -1044,6 +1045,9 @@ button {
   transition: all 0.3s ease;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  /* Asegura que el botón no se estire más allá del formulario */
+  align-self: center; /* Centra el botón si es más pequeño que el formulario */
+  max-width: 100%; /* Evita que el botón se estire más allá del 100% */
 }
 
 button:hover {
@@ -1101,8 +1105,11 @@ button:active {
 
   form {
     padding: 1.5rem;
+    /* En pantallas más pequeñas, el formulario puede ocupar un poco más de ancho */
+    max-width: 90%; /* Ajusta según sea necesario para móviles */
   }
 }
+
 /* FAQ Section */
 .faq-section {
   padding: 40px 15px;
