@@ -1905,55 +1905,49 @@ button:active {
   display: flex;
   justify-content: center;
   gap: 11px;
-  margin-top: 28px;
-  padding-bottom: 14px;
+  margin-top: 30px;
+  padding-bottom: 15px;
 }
 
 #paginacion button {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: #424242;
+  color: #444b5d;
   font-size: 1.05rem;
   font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
   transition:
-    background 0.18s cubic-bezier(.4,0,.2,1),
-    color 0.18s,
-    box-shadow 0.14s,
-    transform 0.14s;
+    background 0.15s cubic-bezier(.4,0,.2,1),
+    color 0.15s cubic-bezier(.4,0,.2,1),
+    box-shadow 0.13s cubic-bezier(.4,0,.2,1),
+    transform 0.13s cubic-bezier(.4,0,.2,1);
   outline: none;
   cursor: pointer;
+  box-shadow: none;
 }
 
 #paginacion button:hover,
 #paginacion button:focus-visible {
-  background: rgba(76, 175, 80, 0.10); /* Verde muy suave al hover */
+  background: rgba(76, 175, 80, 0.13);
   color: var(--primary-color);
-  transform: scale(1.08);
+  transform: scale(1.07);
 }
 
 #paginacion button.active,
 #paginacion button.pagina-activa {
-  background: #e8f5e9; /* Verde MUY claro */
-  color: var(--primary-color);
+  background: var(--primary-color);
+  color: #fff;   /* El número se pone blanco solo en el activo */
   font-weight: 700;
-  box-shadow: 0 2px 8px 0 rgba(76,175,80,0.09);
-  transform: scale(1.11);
+  transform: scale(1.12);
+  box-shadow: 0 2px 10px 0 rgba(76,175,80,0.09);
   z-index: 2;
 }
 
-@media (max-width: 600px) {
-  #paginacion button {
-    width: 26px;
-    height: 26px;
-    font-size: 0.95rem;
-  }
-}
 
 
 /* Responsive Styles */
