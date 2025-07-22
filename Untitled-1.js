@@ -586,7 +586,10 @@ window.guardarCarrito = guardarCarrito;
 
 // Initialize EmailJS with your public key
 
-js.init('o4IxJz0Zz-LQ8jYKG'); // Replace with your EmailJS public key
+
+// ===============================
+// CONTACT FORM
+// ===============================
 // ===============================
 // CONTACT FORM
 // ===============================
