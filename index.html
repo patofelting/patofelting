@@ -12,7 +12,6 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
   <!-- Font Awesome para íconos -->
  
-
   <!-- Configuración global de la aplicación -->
   <script>
     window.SHEET_CSV_URL =
@@ -42,20 +41,43 @@
   </nav>
 
   <div id="carrito-panel" class="carrito-panel">
-    <div class="carrito-header">
-      <h2>Tu Carrito</h2>
-      <button class="cerrar-carrito" aria-label="Cerrar carrito">×</button>
-    </div>
-    <ul id="lista-carrito" class="lista-carrito"></ul>
-    <div class="carrito-footer">
-      <p id="total">Total: $U 0</p>
-      <div class="carrito-acciones">
-        <button class="boton-vaciar-carrito">Vaciar Carrito</button>
-        <button class="boton-finalizar-compra">Finalizar Compra</button>
+  <div class="carrito-header">
+    <h2>Tu Carrito</h2>
+    <button class="cerrar-carrito" aria-label="Cerrar carrito">×</button>
+  </div>
+  <ul id="lista-carrito" class="lista-carrito">
+    <li class="carrito-item">
+      <img src="URL_IMG" alt="Nombre del producto" class="carrito-item-img">
+      <div class="carrito-item-info">
+        <div class="carrito-item-nombre">
+          Estegosaurio Rosa <span class="carrito-item-subtotal">$U 550</span>
+        </div>
+        <div class="carrito-item-controls">
+          <button type="button" aria-label="Quitar uno">−</button>
+          <span class="carrito-item-cantidad">1</span>
+          <button type="button" aria-label="Agregar uno">+</button>
+          <button class="eliminar-item" aria-label="Eliminar producto">
+            <svg class="icon-trash" xmlns="http://www.w3.org/2000/svg" fill="none"
+              viewBox="0 0 24 24" stroke="currentColor" width="18" height="18">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M6 7h12M9 7V4h6v3m2 0v14a2 2 0 01-2 2H8a2 2 0 01-2-2V7h12z"/>
+            </svg>
+          </button>
+        </div>
       </div>
+    </li>
+    <!-- ...más productos -->
+  </ul>
+  <div class="carrito-footer">
+    <p id="total">Total: $U 0</p>
+    <div class="carrito-acciones">
+      <button class="boton-vaciar-carrito">Vaciar Carrito</button>
+      <button class="boton-finalizar-compra">Finalizar Compra</button>
     </div>
   </div>
-  <div class="carrito-overlay"></div>
+</div>
+<div class="carrito-overlay"></div>
+
 
 <section id="inicio" class="hero">
   <!-- Video optimizado con poster de carga -->
