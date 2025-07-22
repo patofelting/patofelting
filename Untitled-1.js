@@ -321,12 +321,55 @@ function mostrarModalProducto(producto) {
   const contenido = elementos.modalContenido;
   if (!modal || !contenido) return;
 
-  // Imagen principal
-  const mainImg = contenido.querySelector('.modal-img');
-  mainImg.src = producto.imagenes[0] || PLACEHOLDER_IMAGE;
-  mainImg.alt = producto.nombre;
+  let currentIndex = 0;
 
-  // Nombre, precio, stock, descripción
+  // Elementos
+  const mainImg = contenido.querySelector('.modal-img');
+  const prevBtn = contenido.querySelector('.modal-prev');
+  const nextBtn = contenido.querySelector('.modal-next');
+  const thumbs = contenido.querySelector('.modal-thumbnails');
+
+  // --- Render Imagen principal y thumbnails ---
+  function renderImage(idx) {
+    mainImg.src = producto.imagenes[idx] || PLACEHOLDER_IMAGE;
+    mainImg.alt = producto.nombre;
+    // Miniaturas activas
+    if (thumbs) {
+      thumbs.querySelectorAll('.modal-thumbnail').forEach((el, i) =>
+        el.classList.toggle('active', i === idx)
+      );
+    }
+  }
+
+  // Thumbnails
+  if (producto.imagenes.length > 1) {
+    thumbs.innerHTML = producto.imagenes.map((img, i) =>
+      `<img src="${img}" class="modal-thumbnail${i === 0 ? ' active' : ''}" data-idx="${i}" style="width:38px;height:38px;margin:3px;cursor:pointer;border-radius:6px;border:1.5px solid #eee;">`
+    ).join('');
+    thumbs.querySelectorAll('.modal-thumbnail').forEach(thumb => {
+      thumb.onclick = function () {
+        currentIndex = +thumb.dataset.idx;
+        renderImage(currentIndex);
+      };
+    });
+    prevBtn.style.display = nextBtn.style.display = '';
+  } else {
+    thumbs.innerHTML = '';
+    prevBtn.style.display = nextBtn.style.display = 'none';
+  }
+
+  // Botones prev/next
+  prevBtn.onclick = function() {
+    currentIndex = (currentIndex - 1 + producto.imagenes.length) % producto.imagenes.length;
+    renderImage(currentIndex);
+  };
+  nextBtn.onclick = function() {
+    currentIndex = (currentIndex + 1) % producto.imagenes.length;
+    renderImage(currentIndex);
+  };
+
+  // --- Resto igual ---
+  // ... (aquí sigues rellenando nombre, precio, stock, medidas, etc)
   contenido.querySelector('.modal-nombre').innerText = producto.nombre;
   contenido.querySelector('.modal-precio').innerText = `$U ${producto.precio.toLocaleString('es-UY')}`;
   contenido.querySelector('.modal-descripcion').innerText = producto.descripcion || '';
@@ -348,24 +391,6 @@ function mostrarModalProducto(producto) {
   cantidadInput.max = disp > 0 ? disp : 1;
   cantidadInput.disabled = disp === 0;
 
-  // Miniaturas
-  const thumbs = contenido.querySelector('.modal-thumbnails');
-  if (producto.imagenes.length > 1) {
-    thumbs.innerHTML = producto.imagenes.map((img, i) =>
-      `<img src="${img}" class="modal-thumbnail${i === 0 ? ' active' : ''}" data-idx="${i}" style="width:38px;height:38px;margin:3px;cursor:pointer;border-radius:6px;border:1.5px solid #eee;">`
-    ).join('');
-    // Evento para cambiar imagen principal
-    thumbs.querySelectorAll('.modal-thumbnail').forEach(thumb => {
-      thumb.onclick = function () {
-        mainImg.src = producto.imagenes[+thumb.dataset.idx];
-        thumbs.querySelectorAll('.modal-thumbnail').forEach(el => el.classList.remove('active'));
-        thumb.classList.add('active');
-      };
-    });
-  } else {
-    thumbs.innerHTML = '';
-  }
-
   // Botón agregar al carrito
   contenido.querySelector('.boton-agregar-modal').onclick = () => {
     const cantidad = parseInt(cantidadInput.value) || 1;
@@ -375,9 +400,10 @@ function mostrarModalProducto(producto) {
 
   // Botón cerrar
   contenido.querySelector('.cerrar-modal').onclick = cerrarModal;
-
-  // Cerrar al hacer click fuera
   modal.onclick = (e) => { if (e.target === modal) cerrarModal(); };
+
+  // Mostrar imagen actual
+  renderImage(currentIndex);
 
   // Mostrar el modal
   modal.style.display = 'flex';
@@ -394,6 +420,7 @@ function mostrarModalProducto(producto) {
     }, 300);
   }
 }
+
 
 // ===============================
 // EVENTO CLICK EN DETALLE DEL PRODUCTO
