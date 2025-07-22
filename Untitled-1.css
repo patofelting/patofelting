@@ -114,18 +114,18 @@ button {
 .carrito-item-controls {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-top: 4px;
+  gap: 22px;        /* más espacio */
+  margin-top: 6px;
 }
 
 .carrito-item-controls button {
   background: #f2f3f5;
   border: none;
-  color: #22223b;
-  font-size: 1.5rem;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+  color: #212529;
+  font-size: 2.15rem;      /* ¡grande! */
+  width: 46px;             /* más ancho */
+  height: 46px;            /* más alto */
+  border-radius: 12px;
   padding: 0;
   display: flex;
   align-items: center;
@@ -133,9 +133,9 @@ button {
   box-shadow: none;
   cursor: pointer;
   transition: 
-    background 0.15s cubic-bezier(.4,0,.2,1),
-    color 0.15s cubic-bezier(.4,0,.2,1),
-    transform 0.11s;
+    background 0.14s cubic-bezier(.4,0,.2,1),
+    color 0.14s cubic-bezier(.4,0,.2,1),
+    transform 0.10s;
   font-weight: 700;
   outline: none;
 }
@@ -156,9 +156,9 @@ button {
 }
 
 .carrito-item-cantidad {
-  min-width: 24px;
-  font-size: 1.15rem;
-  font-weight: 700;
+  min-width: 36px;
+  font-size: 1.6rem;
+  font-weight: 800;
   text-align: center;
   color: #22223b;
   background: transparent;
@@ -167,60 +167,20 @@ button {
   padding: 0 2px;
 }
 
-/* Ajuste a la línea del producto */
-.carrito-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 13px;
-  margin-bottom: 15px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid var(--medium-gray);
-}
-
-.carrito-item-img {
-  width: 58px;
-  height: 58px;
-  object-fit: cover;
-  border-radius: 9px;
-  background: #f2f2f2;
-  flex-shrink: 0;
-}
-
-.carrito-item-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.carrito-item-nombre {
-  font-weight: 600;
-  margin-bottom: 2px;
-  font-size: 1rem;
-  color: #212529;
-  line-height: 1.22;
-}
-
-.carrito-item-subtotal {
-  color: var(--primary-color);
-  font-weight: 600;
-  font-size: 1rem;
-  margin-top: 2px;
-  margin-bottom: 2px;
-}
-
-
+/* Ajustes de mobile: igual de grande pero menos gap */
 @media (max-width: 520px) {
   .carrito-item-controls {
-    gap: 11px;
+    gap: 14px;
   }
   .carrito-item-controls button {
-    font-size: 1.55rem;
-    padding: 0 1px;
+    font-size: 1.7rem;
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
   }
   .carrito-item-cantidad {
-    font-size: 1rem;
-    min-width: 14px;
+    font-size: 1.18rem;
+    min-width: 22px;
   }
 }
 
