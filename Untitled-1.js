@@ -632,21 +632,6 @@ emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
 setupContactForm();
 
 
-// FAQ acordeón simple y minimalista
-document.querySelectorAll('.faq-toggle').forEach(btn => {
-  btn.addEventListener('click', function() {
-    const expanded = this.getAttribute('aria-expanded') === 'true';
-    // Cierra todos
-    document.querySelectorAll('.faq-toggle').forEach(b => {
-      b.setAttribute('aria-expanded', 'false');
-      if (b.nextElementSibling) b.nextElementSibling.hidden = true;
-    });
-    // Abre solo el clickeado
-    if (!expanded) {
-      this.setAttribute('aria-expanded', 'true');
-      if (this.nextElementSibling) this.nextElementSibling.hidden = false;
-    }
-  });
-});
+
 
 
