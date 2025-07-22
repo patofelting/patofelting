@@ -1700,8 +1700,8 @@ body.no-scroll {
 }
 
 .carrito-item-controls button {
-  width: 25px; /* ¡Aquí está la clave! */
-  height: 25px; /* ¡Y aquí! */
+  width: 10px; /* ¡Aquí está la clave! */
+  height: 10px; /* ¡Y aquí! */
   border-radius: 50%; /* Para hacerlos circulares */
   background-color: var(--medium-gray);
   display: flex;
