@@ -2605,6 +2605,28 @@ body.no-scroll {
   border-color: var(--primary-color);
 }
 
+/* Centra todo el contenido del bloque contacto */
+#contacto {
+  text-align: center;
+}
+
+/* Centra el formulario y su card */
+#contacto .contacto-form-card {
+  margin-left: auto;
+  margin-right: auto;
+  /* Asegura que esté alineado debajo del texto */
+  display: block;
+}
+
+/* Opcional: ajusta el ancho en mobile para mejor respuesta */
+@media (max-width: 600px) {
+  #contacto .contacto-form-card {
+    width: 95%;
+    min-width: unset;
+    max-width: 99vw;
+    padding: 1.5rem 0.7rem;
+  }
+}
 
 
 body > .notificacion,
