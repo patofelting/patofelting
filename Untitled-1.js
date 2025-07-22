@@ -433,6 +433,10 @@ emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
 
 // Llamar a la función para configurar el formulario de contacto
 setupContactForm();
+
+
+// ===============================// 12. CARRITO DE COMPRAS
+// ===============================
 function toggleCarrito() {
   const panel = document.getElementById('carrito-panel');
   const overlay = document.querySelector('.carrito-overlay');
@@ -440,9 +444,37 @@ function toggleCarrito() {
   const abierto = panel.classList.toggle('active');
   overlay.classList.toggle('active', abierto);
   document.body.classList.toggle('no-scroll', abierto);
-  if (abierto) renderizarCarrito?.();
+  if (abierto) renderizarCarrito(); // <--- ESTA LÍNEA ES FUNDAMENTAL
 }
+console.log(localStorage.getItem('carrito'));
+console.log(carrito);
 
+function renderizarCarrito() {
+  if (!elementos.listaCarrito || !elementos.totalCarrito) return;
+  if (carrito.length === 0) {
+    elementos.listaCarrito.innerHTML = '<p class="carrito-vacio">Tu carrito está vacío</p>';
+    elementos.totalCarrito.textContent = 'Total: $U 0';
+    return;
+  }
+  elementos.listaCarrito.innerHTML = carrito.map(i => {
+    return `
+      <li class="carrito-item">
+        <img src="${i.imagen}" alt="${i.nombre}" class="carrito-item-img" />
+        <div class="carrito-item-info">
+          <span class="carrito-item-nombre">${i.nombre}</span>
+          <span class="carrito-item-cantidad">${i.cantidad}</span>
+          <span class="carrito-item-subtotal">$U ${(i.precio * i.cantidad).toLocaleString('es-UY')}</span>
+        </div>
+      </li>
+    `;
+  }).join('');
+  // ...
+}
+function actualizarTotalCarrito() {
+  if (!elementos.totalCarrito) return;
+  const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+  elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
+}
 // EN LA INICIALIZACIÓN (debe ejecutarse solo una vez al cargar)
 document.getElementById('carrito-btn-main')?.addEventListener('click', toggleCarrito);
 document.querySelector('.carrito-overlay')?.addEventListener('click', toggleCarrito);
