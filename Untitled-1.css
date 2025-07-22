@@ -1943,60 +1943,52 @@ body.no-scroll {
 .modal-carrusel {
   position: relative;
 }
-
 .modal-controls {
   position: absolute;
   top: 50%;
   left: 0; right: 0;
+  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  pointer-events: none; /* <- Las flechas sí tendrán pointer-events */
-  z-index: 5;
+  pointer-events: none;
+  z-index: 3;
 }
 
-.modal-prev,
-.modal-next {
+.modal-prev, .modal-next {
   pointer-events: auto;
-  background: rgba(255,255,255,0.98);
+  background: rgba(255,255,255,0.93);
   border: none;
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  font-size: 1.7rem;
-  color: #349849;
+  color: #27a844; /* Verde */
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 10px rgba(44,62,80,0.13);
+  font-size: 1.6rem;
   cursor: pointer;
-  transition: 
-    background 0.19s cubic-bezier(.4,0,.2,1),
-    color 0.17s,
-    box-shadow 0.17s,
-    transform 0.11s;
-  outline: none;
-  position: relative;
-  /* SIEMPRE centradas en Y, NO suben/bajan */
-  top: 0; 
-  margin: 0 12px;
+  transition: background 0.18s, color 0.17s, box-shadow 0.15s, transform 0.12s;
+  margin: 0 8px;
+  transform: translateY(-50%);
 }
+
 
 .modal-prev:hover, .modal-next:hover,
 .modal-prev:focus-visible, .modal-next:focus-visible {
-  background: #e5f8ea;
-  color: #267a34;
-  box-shadow: 0 4px 14px rgba(44,62,80,0.19);
-  /* Sin transform de translateY, así NO se mueve! */
-  transform: scale(1.13); /* Solo suaviza el hover */
-  z-index: 10;
+  background: #e6f9ee;
+  color: #178135;
+  transform: translateY(-50%) scale(1.14);
+  box-shadow: 0 4px 16px rgba(44,62,80,0.13);
 }
 
-.modal-prev:active, .modal-next:active {
-  background: #caf1d8;
-  color: #1d5634;
-  box-shadow: 0 2px 8px rgba(44,62,80,0.10);
-  transform: scale(1.09);
+/* Si quieres que la imagen nunca se achique por las flechas */
+.modal-img {
+  max-width: 100%;
+  max-height: 400px;
+  border-radius: var(--border-radius);
+  display: block;
+  margin: 0 auto;
 }
 
 /* Responsive */
