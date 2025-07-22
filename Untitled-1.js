@@ -565,30 +565,6 @@ function init() {
   cargarCarrito();
   cargarProductosDesdeSheets();
   inicializarEventos();
-
-  // FAQ acordeón simple y minimalista (solo una vez)
-  document.querySelectorAll('.faq-toggle').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const expanded = this.getAttribute('aria-expanded') === 'true';
-      // Cierra todos
-      document.querySelectorAll('.faq-toggle').forEach(b => {
-        b.setAttribute('aria-expanded', 'false');
-        if (b.nextElementSibling) b.nextElementSibling.hidden = true;
-      });
-      // Abre solo el clickeado
-      if (!expanded) {
-        this.setAttribute('aria-expanded', 'true');
-        if (this.nextElementSibling) this.nextElementSibling.hidden = false;
-      }
-    });
-  });
-
-  // Menú sección activa
-  window.addEventListener('scroll', marcarMenuActivo);
-  window.addEventListener('DOMContentLoaded', marcarMenuActivo);
-
-  // EmailJS - Formulario de contacto
-  setupContactForm();
 }
 
 // Arranque seguro, una sola vez:
@@ -607,6 +583,13 @@ window.mostrarNotificacion = mostrarNotificacion;
 window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
 window.guardarCarrito = guardarCarrito;
 
+
+// Initialize EmailJS with your public key
+
+
+// ===============================
+// CONTACT FORM
+// ===============================
 // ===============================
 // CONTACT FORM
 // ===============================
@@ -645,6 +628,28 @@ function setupContactForm() {
 // Inicializar EmailJS con tu clave pública
 emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
 
+// Llamar a la función para configurar el formulario de contacto
+setupContactForm();
+
+
+// FAQ acordeón simple y minimalista
+document.querySelectorAll('.faq-toggle').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const expanded = this.getAttribute('aria-expanded') === 'true';
+    // Cierra todos
+    document.querySelectorAll('.faq-toggle').forEach(b => {
+      b.setAttribute('aria-expanded', 'false');
+      if (b.nextElementSibling) b.nextElementSibling.hidden = true;
+    });
+    // Abre solo el clickeado
+    if (!expanded) {
+      this.setAttribute('aria-expanded', 'true');
+      if (this.nextElementSibling) this.nextElementSibling.hidden = false;
+    }
+  });
+});
+
+
 // ====================
 // MENÚ SECCIÓN ACTIVA
 // ====================
@@ -672,3 +677,6 @@ function marcarMenuActivo() {
     }
   });
 }
+
+window.addEventListener('scroll', marcarMenuActivo);
+window.addEventListener('DOMContentLoaded', marcarMenuActivo);
