@@ -1905,64 +1905,64 @@ button:active {
   display: flex;
   justify-content: center;
   gap: 13px;
-  margin-top: 32px;
-  padding-bottom: 12px;
+  margin-top: 28px;
+  padding-bottom: 15px;
 }
 
 #paginacion button {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #444b5d;
+  font-size: 1.06rem;
+  font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none;
-  border-radius: 50%;
-  background: rgba(60, 60, 60, 0.08);
-  color: #495057;
-  font-size: 1.09rem;
-  font-weight: 600;
-  letter-spacing: 0.5px;
   box-shadow: none;
-  transition: 
-    background 0.20s cubic-bezier(.4,0,.2,1),
-    color 0.20s cubic-bezier(.4,0,.2,1),
-    box-shadow 0.20s cubic-bezier(.4,0,.2,1),
-    transform 0.16s cubic-bezier(.4,0,.2,1);
   outline: none;
   cursor: pointer;
-  opacity: 0.88;
+  opacity: 0.86;
+  transition: 
+    background 0.15s cubic-bezier(.4,0,.2,1),
+    color 0.17s,
+    box-shadow 0.16s,
+    transform 0.13s;
+  position: relative;
 }
 
 #paginacion button:hover,
 #paginacion button:focus-visible {
-  background: rgba(76, 175, 80, 0.19); /* Verde sutil al hover */
+  background: rgba(76, 175, 80, 0.12);
   color: var(--primary-color);
-  transform: translateY(-2px) scale(1.06);
   opacity: 1;
-  box-shadow: 0 2px 14px rgba(76,175,80,0.07);
+  transform: scale(1.11);
 }
 
 #paginacion button.active,
 #paginacion button.pagina-activa {
   background: var(--primary-color);
   color: #fff;
-  transform: scale(1.14);
+  font-weight: 700;
   opacity: 1;
-  box-shadow: 0 4px 16px rgba(76,175,80,0.13), 0 0 0 4px rgba(76,175,80,0.10);
+  box-shadow: 0 3px 14px 0 rgba(76,175,80,0.13), 0 0 0 5px rgba(76,175,80,0.09);
+  transform: scale(1.14);
   z-index: 2;
 }
 
 @media (max-width: 600px) {
   #paginacion button {
-    width: 29px;
-    height: 29px;
-    font-size: 0.96rem;
+    width: 24px;
+    height: 24px;
+    font-size: 0.94rem;
   }
   #paginacion {
-    gap: 7px;
+    gap: 6px;
   }
 }
-/* General Styles */
+
 
 /* Responsive Styles */
 @media (max-width: 992px) {
