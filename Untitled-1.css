@@ -111,11 +111,20 @@ button {
 }
 
 /* CARRITO */
-.carrito-item-controls {
-  display: flex;
-  align-items: center;
-  gap: 22px;        /* más espacio */
-  margin-top: 6px;
+.carrito-item-controls button {
+  font-size: 2.6rem !important;
+  width: 56px !important;
+  height: 56px !important;
+  min-width: 56px !important;
+  min-height: 56px !important;
+  background: #e8f5e9 !important;
+  color: #2e7d32 !important;
+  border-radius: 14px !important;
+  padding: 0 !important;
+}
+.carrito-item-cantidad {
+  font-size: 1.7rem !important;
+  min-width: 42px !important;
 }
 
 .carrito-item-controls button {
@@ -156,8 +165,8 @@ button {
 }
 
 .carrito-item-cantidad {
-  min-width: 36px;
-  font-size: 1.6rem;
+
+  
   font-weight: 800;
   text-align: center;
   color: #22223b;
