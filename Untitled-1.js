@@ -662,20 +662,6 @@ emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
 setupContactForm();
 
 
-let touchStartX = null;
-mainImage.addEventListener('touchstart', (e) => {
-  touchStartX = e.touches[0].clientX;
-});
-mainImage.addEventListener('touchend', (e) => {
-  if (touchStartX === null) return;
-  let deltaX = e.changedTouches[0].clientX - touchStartX;
-  if (Math.abs(deltaX) > 50) { // puedes ajustar el umbral
-    if (deltaX > 0) {
-      prevBtn.click();
-    } else {
-      nextBtn.click();
-    }
-  }
-  touchStartX = null;
-});
+
+
 
