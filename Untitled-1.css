@@ -1929,6 +1929,8 @@ button:active {
   outline: none;
   cursor: pointer;
   box-shadow: none;
+  padding: 0;        /* <-- muy importante */
+  line-height: 1;    /* <-- muy importante */
 }
 
 #paginacion button:hover,
@@ -1940,11 +1942,11 @@ button:active {
 
 #paginacion button.active,
 #paginacion button.pagina-activa {
-  background: var(--primary-color);
-  color: #fff;   /* El número se pone blanco solo en el activo */
+  background: transparent; /* Sin fondo */
+  color: var(--primary-color);   /* El número en verde */
   font-weight: 700;
-  transform: scale(1.12);
-  box-shadow: 0 2px 10px 0 rgba(76,175,80,0.09);
+  transform: scale(1.14);
+  box-shadow: none;
   z-index: 2;
 }
 
