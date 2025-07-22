@@ -104,11 +104,67 @@ button {
 }
 
 .hamburguesa {
-  font-size: 1.5rem;
-  display: none;
-  background: none;
-  color: var(--text-color);
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 10px;
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-radius: 12px;
 }
+
+.hamburguesa:focus {
+  outline: none;
+  background: #f1f1f1; /* o #eee, un gris muy suave */
+}
+
+.hamburguesa svg {
+  transition: transform 0.3s cubic-bezier(.5,1.8,.5,1);
+}
+
+.menu {
+  transition: max-height 0.4s cubic-bezier(.5,1.8,.5,1);
+  overflow: hidden;
+}
+.menu.active {
+  /* abre con deslizamiento */
+  max-height: 600px;
+}
+.hamburguesa {
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.hamburger-bar {
+  width: 26px;
+  height: 3px;
+  background: #333; /* o var(--primary-color) para combinar */
+  border-radius: 2px;
+  transition: 0.3s;
+}
+
+.hamburguesa.active .hamburger-bar:nth-child(1) {
+  transform: translateY(9px) rotate(45deg);
+}
+.hamburguesa.active .hamburger-bar:nth-child(2) {
+  opacity: 0;
+}
+.hamburguesa.active .hamburger-bar:nth-child(3) {
+  transform: translateY(-9px) rotate(-45deg);
+}
+
 
 /* CARRITO */
 .carrito-item-controls {
