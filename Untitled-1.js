@@ -321,77 +321,78 @@ function mostrarModalProducto(producto) {
   const contenido = elementos.modalContenido;
   if (!modal || !contenido) return;
 
-  // Imagen principal
-  const mainImg = contenido.querySelector('.modal-img');
-  mainImg.src = producto.imagenes[0] || PLACEHOLDER_IMAGE;
-  mainImg.alt = producto.nombre;
+  const enCarrito = carrito.find(item => item.id === producto.id) || { cantidad: 0 };
+  const disponibles = Math.max(0, producto.stock - enCarrito.cantidad);
+  const agotado = disponibles <= 0;
 
-  // Nombre, precio, stock, descripción
-  contenido.querySelector('.modal-nombre').innerText = producto.nombre;
-  contenido.querySelector('.modal-precio').innerText = `$U ${producto.precio.toLocaleString('es-UY')}`;
-  contenido.querySelector('.modal-descripcion').innerText = producto.descripcion || '';
+  contenido.innerHTML = `
+  <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
+  <div class="modal-flex">
+    <div class="modal-carrusel">
+      <img src="${producto.imagenes[0] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
+    
+    </div>
+    <div class="modal-info">
+      <h1 class="modal-nombre">${producto.nombre}</h1>
+      <p class="modal-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
+      <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">
+        ${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}
+      </p>
+      <p class="modal-medidas">
+        <b>Medidas:</b> ${producto.alto || '-'} x ${producto.ancho || '-'} x ${producto.profundidad || '-'} cm
+      </p>
+      <div class="modal-descripcion">
+        ${producto.descripcion || ''}
+      </div>
+      ...
+    </div>
+  </div>
+`;
 
-  // Stock y clase
-  const stockEl = contenido.querySelector('.modal-stock');
-  const disp = producto.stock || 0;
-  stockEl.innerText = disp > 0 ? `Disponible: ${disp}` : 'AGOTADO';
-  stockEl.className = 'modal-stock ' + (disp > 0 ? 'disponible' : 'agotado');
-
-  // Medidas
-  contenido.querySelector('.modal-detalles').innerHTML =
-    `<b>Medidas:</b> ${producto.alto || '-'} x ${producto.ancho || '-'} x ${producto.profundidad || '-'} cm`;
-
-  // Reset cantidad
-  const cantidadInput = contenido.querySelector('.cantidad-modal-input');
-  cantidadInput.value = 1;
-  cantidadInput.min = 1;
-  cantidadInput.max = disp > 0 ? disp : 1;
-  cantidadInput.disabled = disp === 0;
-
-  // Miniaturas
-  const thumbs = contenido.querySelector('.modal-thumbnails');
+  // Carrusel
   if (producto.imagenes.length > 1) {
-    thumbs.innerHTML = producto.imagenes.map((img, i) =>
-      `<img src="${img}" class="modal-thumbnail${i === 0 ? ' active' : ''}" data-idx="${i}" style="width:38px;height:38px;margin:3px;cursor:pointer;border-radius:6px;border:1.5px solid #eee;">`
-    ).join('');
-    // Evento para cambiar imagen principal
-    thumbs.querySelectorAll('.modal-thumbnail').forEach(thumb => {
-      thumb.onclick = function () {
-        mainImg.src = producto.imagenes[+thumb.dataset.idx];
-        thumbs.querySelectorAll('.modal-thumbnail').forEach(el => el.classList.remove('active'));
-        thumb.classList.add('active');
-      };
+    let currentIndex = 0;
+    const mainImage = contenido.querySelector('.modal-img');
+    const thumbnails = contenido.querySelectorAll('.thumbnail');
+    function updateImage(index) {
+      currentIndex = index;
+      mainImage.src = producto.imagenes[index];
+      thumbnails.forEach((thumb, i) => {
+        thumb.classList.toggle('active', i === index);
+      });
+    }
+    contenido.querySelector('.modal-prev')?.addEventListener('click', () => {
+      const newIndex = (currentIndex - 1 + producto.imagenes.length) % producto.imagenes.length;
+      updateImage(newIndex);
     });
-  } else {
-    thumbs.innerHTML = '';
+    contenido.querySelector('.modal-next')?.addEventListener('click', () => {
+      const newIndex = (currentIndex + 1) % producto.imagenes.length;
+      updateImage(newIndex);
+    });
+    thumbnails.forEach((thumb, i) => {
+      thumb.addEventListener('click', () => updateImage(i));
+    });
   }
-
-  // Botón agregar al carrito
-  contenido.querySelector('.boton-agregar-modal').onclick = () => {
-    const cantidad = parseInt(cantidadInput.value) || 1;
+  contenido.querySelector('.cerrar-modal').onclick = () => cerrarModal();
+  const agregarBtn = contenido.querySelector('.boton-agregar-modal');
+  agregarBtn.onclick = () => {
+    const cantidad = +(contenido.querySelector('.cantidad-modal-input').value || 1);
     agregarAlCarrito(producto.id, cantidad);
     cerrarModal();
   };
-
-  // Botón cerrar
-  contenido.querySelector('.cerrar-modal').onclick = cerrarModal;
-
-  // Cerrar al hacer click fuera
-  modal.onclick = (e) => { if (e.target === modal) cerrarModal(); };
-
-  // Mostrar el modal
   modal.style.display = 'flex';
   setTimeout(() => {
     modal.classList.add('visible');
     document.body.classList.add('no-scroll');
   }, 10);
 
+  modal.onclick = e => {
+    if (e.target === modal) cerrarModal();
+  };
+
   function cerrarModal() {
     modal.classList.remove('visible');
-    setTimeout(() => {
-      modal.style.display = 'none';
-      document.body.classList.remove('no-scroll');
-    }, 300);
+    setTimeout(() => { modal.style.display = 'none'; document.body.classList.remove('no-scroll'); }, 300);
   }
 }
 
