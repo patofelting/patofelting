@@ -955,124 +955,174 @@ blockquote {
 
 /* Contact Section */
 .contact {
-  padding: 80px 20px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7eb 100%);
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
+  padding: 80px 20px;
+  background: linear-gradient(120deg, #e0e7ff 0%, #f5f7fa 100%);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .contact h2 {
-  font-size: 2.5rem;
-  margin-bottom: 1.5rem;
-  color: #1a1a1a;
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  line-height: 1.2;
+  font-size: 2.7rem;
+  color: #191c24;
+  margin-bottom: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  background: linear-gradient(90deg, #2f855a 20%, #805ad5 80%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .contact p {
-  font-size: 1.125rem;
-  color: #4a5568;
-  margin-bottom: 2.5rem;
-  max-width: 600px;
+  font-size: 1.2rem;
+  color: #425466;
+  margin-bottom: 2.2rem;
+  max-width: 540px;
   line-height: 1.6;
+  opacity: 0.93;
 }
 
 form {
-  display: flex;
-  flex-direction: column;
-  max-width: 500px;
+  background: rgba(255, 255, 255, 0.76);
+  border-radius: 20px;
+  box-shadow: 0 8px 36px rgba(70, 76, 123, 0.13), 0 1.5px 8px rgba(130, 130, 173, 0.10);
+  padding: 2.4rem 2.1rem;
+  max-width: 440px;
   width: 100%;
   margin: 0 auto;
-  background: #ffffff;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(5px);
+  transition: box-shadow 0.35s cubic-bezier(.25,.8,.25,1), transform 0.25s;
+  border: 1.5px solid #e7eaf3;
 }
 
 form:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+  transform: translateY(-8px) scale(1.01);
+  box-shadow: 0 16px 48px rgba(70, 76, 123, 0.17);
 }
 
 label {
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #2d3748;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-input, textarea {
-  width: 100%;
-  padding: 0.875rem;
-  margin-bottom: 1.5rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  margin-bottom: 0.45rem;
   font-size: 1rem;
-  color: #2d3748;
-  background-color: #f7fafc;
-  transition: all 0.3s ease;
+  color: #393e56;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.03em;
 }
 
-input:focus, textarea:focus {
-  border-color: #2f855a;
-  background-color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(47, 133, 90, 0.2);
-  outline: none;
+.input-group {
+  position: relative;
+  margin-bottom: 1.6rem;
+}
+
+input,
+textarea {
+  width: 100%;
+  padding: 1.1rem 1rem 1.1rem 2.7rem;
+  border: 1.2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 1.04rem;
+  color: #212639;
+  background: rgba(247, 250, 252, 0.95);
+  transition: all 0.29s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 2px 8px 0 rgba(126, 144, 164, 0.06);
+}
+
+input:focus,
+textarea:focus {
+  border-color: #805ad5;
+  background: #fff;
+  box-shadow: 0 0 0 2.5px rgba(128,90,213, 0.17);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #7c8ca7;
+  opacity: 1;
+  transition: color 0.21s;
+}
+
+input:focus::placeholder,
+textarea:focus::placeholder {
+  color: #b5bacd;
+  opacity: 0.8;
+}
+
+.input-group svg {
+  position: absolute;
+  top: 50%;
+  left: 0.85rem;
+  transform: translateY(-50%);
+  font-size: 1.19em;
+  color: #805ad5;
+  opacity: 0.72;
+  pointer-events: none;
+  transition: color 0.18s;
+}
+
+input:focus ~ svg,
+textarea:focus ~ svg {
+  color: #2f855a;
+  opacity: 1;
 }
 
 textarea {
+  min-height: 118px;
   resize: vertical;
-  min-height: 120px;
 }
 
 button {
-  padding: 0.875rem 2rem;
-  background-color: #2f855a;
-  color: #ffffff;
+  padding: 1.02rem 0;
+  background: linear-gradient(90deg, #2f855a 40%, #805ad5 100%);
+  color: #fff;
   border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 500;
+  border-radius: 10px;
+  font-size: 1.08rem;
+  font-weight: 600;
+  box-shadow: 0 3px 18px rgba(128, 90, 213, 0.08);
   cursor: pointer;
-  transition: all 0.3s ease;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  transition: background 0.22s, box-shadow 0.23s, transform 0.13s;
+  margin-top: 0.2rem;
 }
 
 button:hover {
-  background-color: #276749;
-  transform: translateY(-2px);
+  background: linear-gradient(90deg, #276749 40%, #4f3cd1 100%);
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 8px 32px rgba(47, 133, 90, 0.12);
 }
 
 button:active {
-  transform: translateY(0);
+  transform: scale(0.99);
+  background: #2f855a;
 }
 
 #successMessage, #errorMessage {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  border-radius: 8px;
-  font-size: 0.875rem;
+  margin-top: 1.6rem;
+  padding: 1.12rem;
+  border-radius: 10px;
+  font-size: 1.03rem;
   text-align: center;
   opacity: 0;
-  animation: fadeIn 0.5s ease forwards;
+  animation: fadeIn 0.55s ease forwards;
 }
 
 #successMessage {
-  background-color: #004225;
-  color: #ffffff;
+  background: linear-gradient(90deg, #2f855a 30%, #38a169 100%);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(47,133,90,0.08);
 }
 
 #errorMessage {
-  background-color: #fef2f2;
-  color: #9b2c2c;
+  background-color: #fff4f4;
+  color: #d62c2c;
+  border: 1.2px solid #ffd3d3;
 }
 
 .hidden {
@@ -1080,29 +1130,19 @@ button:active {
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(14px);}
+  to { opacity: 1; transform: translateY(0);}
 }
 
 @media (max-width: 768px) {
-  .contact {
-    padding: 40px 15px;
-  }
-
-  .contact h2 {
-    font-size: 2rem;
-  }
-
-  form {
-    padding: 1.5rem;
-  }
+  .contact { padding: 40px 6px;}
+  .contact h2 { font-size: 1.55rem;}
+  form { padding: 1.1rem;}
 }
+
+::-webkit-scrollbar {width: 7px; background: #eee;}
+::-webkit-scrollbar-thumb {background: #b2bad6; border-radius: 6px;}
+
 /* FAQ Section */
 /* FAQ Section Styles */
 .faq-section {
