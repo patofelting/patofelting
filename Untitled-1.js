@@ -650,33 +650,3 @@ document.querySelectorAll('.faq-toggle').forEach(btn => {
 });
 
 
-// ====================
-// MENÚ SECCIÓN ACTIVA
-// ====================
-function marcarMenuActivo() {
-  const secciones = ['inicio', 'sobre', 'productos', 'contacto', 'preguntas'];
-  let seccionActual = secciones[0];
-  const offset = 90; // Ajusta según altura navbar
-
-  for (const id of secciones) {
-    const seccion = document.getElementById(id);
-    if (seccion) {
-      const top = seccion.getBoundingClientRect().top + window.scrollY - offset;
-      if (window.scrollY >= top - 5) {
-        seccionActual = id;
-      }
-    }
-  }
-  document.querySelectorAll('.menu li a').forEach(a => {
-    if (a.getAttribute('href') === '#' + seccionActual) {
-      a.classList.add('active');
-      a.setAttribute('aria-current', 'page');
-    } else {
-      a.classList.remove('active');
-      a.removeAttribute('aria-current');
-    }
-  });
-}
-
-window.addEventListener('scroll', marcarMenuActivo);
-window.addEventListener('DOMContentLoaded', marcarMenuActivo);
