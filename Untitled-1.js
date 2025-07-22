@@ -135,8 +135,8 @@ function renderizarCarrito() {
             <button data-id="${i.id}" data-action="decrementar" aria-label="Reducir cantidad">-</button>
             <span class="carrito-item-cantidad">${i.cantidad}</span>
             <button data-id="${i.id}" data-action="incrementar" aria-label="Aumentar cantidad" ${disp <= 0 ? 'disabled' : ''}>+</button>
-            
-              
+            <button data-id="${i.id}" class="eliminar-item" aria-label="Eliminar del carrito">
+              <i class="fas fa-trash"></i>
             </button>
           </div>
         </div>
@@ -218,11 +218,10 @@ async function cargarProductosDesdeSheets() {
         alto: parseFloat(r.alto) || null,
         ancho: parseFloat(r.ancho) || null,
         profundidad: parseFloat(r.profundidad) || null,
-categoria: (r.categoria || r.categoría || '').trim().toLowerCase() || 'otros', vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
+        categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
+        vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
         estado: r.estado ? r.estado.trim() : ''
-   
       }));
-      
     actualizarCategorias();
     actualizarUI();
   } catch (e) {
@@ -234,10 +233,7 @@ categoria: (r.categoria || r.categoría || '').trim().toLowerCase() || 'otros', 
 
 function actualizarCategorias() {
   if (!elementos.selectCategoria) return;
-  const cats = ['todos', ...new Set(productos.map(p => 
-  (p.categoria || '').trim().toLowerCase()
-))];
-  
+  const cats = ['todos', ...new Set(productos.map(p => p.categoria))];
   elementos.selectCategoria.innerHTML = cats
     .map(cat => `<option value="${cat}">${cat.charAt(0).toUpperCase() + cat.slice(1)}</option>`)
     .join('');
@@ -326,28 +322,41 @@ function mostrarModalProducto(producto) {
   const agotado = disponibles <= 0;
 
   contenido.innerHTML = `
-  <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
-  <div class="modal-flex">
-    <div class="modal-carrusel">
-      <img src="${producto.imagenes[0] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
-    
-    </div>
-    <div class="modal-info">
-      <h1 class="modal-nombre">${producto.nombre}</h1>
-      <p class="modal-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
-      <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">
-        ${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}
-      </p>
-      <p class="modal-medidas">
-        <b>Medidas:</b> ${producto.alto || '-'} x ${producto.ancho || '-'} x ${producto.profundidad || '-'} cm
-      </p>
-      <div class="modal-descripcion">
-        ${producto.descripcion || ''}
+    <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
+    <div class="modal-flex">
+      <div class="modal-carrusel">
+        <img src="${producto.imagenes[0] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
+        ${producto.imagenes.length > 1 ? `
+          <div class="modal-controls">
+            <button class="modal-prev" aria-label="Imagen anterior">‹</button>
+            <button class="modal-next" aria-label="Siguiente imagen">›</button>
+          </div>
+        ` : ''}
       </div>
-      ...
+      <div class="modal-info">
+        <h1 class="modal-nombre">${producto.nombre}</h1>
+        <p class="modal-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
+        <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">
+          ${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}
+        </p>
+        <div class="modal-descripcion">
+          ${producto.descripcion || ''}
+        </div>
+        <div class="modal-thumbnails">
+          ${producto.imagenes.map((img, i) => `
+            <img src="${img}" class="thumbnail ${i === 0 ? 'active' : ''}" 
+                 data-index="${i}" alt="Miniatura ${i + 1}">
+          `).join('')}
+        </div>
+        <div class="modal-acciones">
+          <input type="number" value="1" min="1" max="${disponibles}" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
+          <button class="boton-agregar-modal ${agotado ? 'agotado' : ''}" data-id="${producto.id}" ${agotado ? 'disabled' : ''}>
+            ${agotado ? 'Agotado' : 'Agregar al carrito'}
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
-`;
+  `;
 
   // Carrusel
   if (producto.imagenes.length > 1) {
@@ -621,8 +630,3 @@ emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
 
 // Llamar a la función para configurar el formulario de contacto
 setupContactForm();
-
-
-
-
-
