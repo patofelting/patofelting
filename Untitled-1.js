@@ -329,7 +329,7 @@ function mostrarModalProducto(producto) {
   <div class="modal-flex">
     <div class="modal-carrusel">
       <img src="${producto.imagenes[0] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
-      ...
+    
     </div>
     <div class="modal-info">
       <h1 class="modal-nombre">${producto.nombre}</h1>
