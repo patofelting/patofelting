@@ -440,172 +440,71 @@ setupContactForm();
 // CARRITO DE COMPRAS MEJORADO
 // ===============================
 
-// ======================
-// ESTADO GLOBAL
-// ======================
-const state = {
-  productos: [], // Aquí cargarás tus productos
-  carrito: [],
-  // ... otros estados
-};
-
-// ======================
-// FUNCIONES DEL PRODUCTO
-// ======================
 function agregarAlCarrito(id, cantidad = 1) {
-  const producto = state.productos.find(p => p.id === id);
-  
-  if (!producto) {
-    mostrarNotificacion('Producto no encontrado', 'error');
-    return false;
-  }
-
-  // Verificar stock
-  if (producto.stock <= 0) {
+  const prod = productos.find(p => p.id === id);
+  if (!prod || prod.stock <= 0) {
     mostrarNotificacion('Producto agotado', 'error');
-    return false;
-  }
-
-  // Calcular cantidad máxima disponible
-  const itemExistente = state.carrito.find(item => item.id === id);
-  const disponible = producto.stock - (itemExistente?.cantidad || 0);
-  
-  if (disponible <= 0) {
-    mostrarNotificacion('No hay suficiente stock disponible', 'error');
-    return false;
-  }
-
-  // Actualizar stock del producto
-  producto.stock -= cantidad;
-  
-  // Actualizar carrito
-  if (itemExistente) {
-    itemExistente.cantidad += cantidad;
-  } else {
-    state.carrito.push({
-      id,
-      nombre: producto.nombre,
-      precio: producto.precio,
-      cantidad,
-      imagen: producto.imagenes[0] || 'img/placeholder.png'
-    });
-  }
-
-  guardarCarrito();
-  mostrarNotificacion(`"${producto.nombre}" añadido al carrito`, 'exito');
-  return true;
-}
-
-// ======================
-// FUNCIONES DEL CARRITO
-// ======================
-function renderizarCarrito() {
-  const lista = document.getElementById('lista-carrito');
-  const totalCarrito = document.getElementById('total');
-  
-  if (!lista || !totalCarrito) return;
-  
-  if (state.carrito.length === 0) {
-    lista.innerHTML = '<p class="carrito-vacio">Tu carrito está vacío</p>';
-    totalCarrito.textContent = 'Total: $U 0';
     return;
   }
-  
-  let total = 0;
-  lista.innerHTML = state.carrito.map(item => {
-    total += item.precio * item.cantidad;
-    return `
-      <li class="carrito-item" data-id="${item.id}">
-        <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}">
-        <div class="carrito-item-info">
-          <span class="carrito-item-nombre">${item.nombre}</span>
-          <span class="carrito-item-precio">$U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
-          <span class="carrito-item-cantidad">Cantidad: ${item.cantidad}</span>
-        </div>
-      </li>
-    `;
-  }).join('');
-  
-  totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
-}
+  cantidad = Math.min(cantidad, prod.stock);
 
+  let itemCarrito = carrito.find(i => i.id === id);
+  if (itemCarrito) {
+    if (itemCarrito.cantidad + cantidad > prod.stock) {
+      mostrarNotificacion('No hay más stock disponible', 'error');
+      return;
+    }
+    itemCarrito.cantidad += cantidad;
+  } else {
+    carrito.push({
+      id: prod.id,
+      nombre: prod.nombre,
+      precio: prod.precio,
+      cantidad: cantidad,
+      imagen: prod.imagenes ? prod.imagenes[0] : PLACEHOLDER_IMAGE
+    });
+  }
+  // Restar stock del producto
+  prod.stock -= cantidad;
+  guardarCarrito();
+  renderizarProductos(); // <<-- Vuelve a dibujar los productos y sus botones
+  renderizarCarrito();
+  mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
+}
+function crearCardProducto(p) {
+  const agotado = p.stock <= 0;
+  return `
+    <div class="producto-card" data-id="${p.id}">
+      <img src="${p.imagenes ? p.imagenes[0] : PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img">
+      <h3 class="producto-nombre">${p.nombre}</h3>
+      <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
+      <p class="producto-stock">${agotado ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${p.stock}`}</p>
+      <div class="card-acciones">
+        <input type="number" value="1" min="1" max="${p.stock}" class="cantidad-input" ${agotado ? 'disabled' : ''}>
+        <button class="boton-agregar${agotado ? ' agotado' : ''}" data-id="${p.id}" ${agotado ? 'disabled' : ''}>
+          ${agotado ? 'Agotado' : 'Agregar'}
+        </button>
+      </div>
+      <button class="boton-detalles" data-id="${p.id}">🛈 Ver Detalle</button>
+    </div>
+  `;
+}
 function vaciarCarrito() {
-  if (state.carrito.length === 0) {
+  if (carrito.length === 0) {
     mostrarNotificacion('El carrito ya está vacío', 'info');
     return;
   }
-
   if (confirm('¿Estás seguro de vaciar el carrito?')) {
-    // Restaurar stock de los productos
-    state.carrito.forEach(item => {
-      const producto = state.productos.find(p => p.id === item.id);
-      if (producto) {
-        producto.stock += item.cantidad;
-      }
+    // Devuelve el stock a cada producto
+    carrito.forEach(item => {
+      const prod = productos.find(p => p.id === item.id);
+      if (prod) prod.stock += item.cantidad;
     });
-    
-    state.carrito = [];
+    carrito = [];
     guardarCarrito();
+    renderizarProductos(); // Actualiza los botones y stock
     renderizarCarrito();
     mostrarNotificacion('Carrito vaciado', 'info');
+    toggleCarrito();
   }
 }
-
-// ======================
-// RENDERIZADO DE PRODUCTOS
-// ======================
-function renderizarProductos() {
-  const galeria = document.getElementById('galeria-productos');
-  if (!galeria) return;
-  
-  galeria.innerHTML = state.productos.map(producto => `
-    <div class="producto-card" data-id="${producto.id}">
-      <img src="${producto.imagenes[0]}" alt="${producto.nombre}" class="producto-img">
-      <div class="producto-info">
-        <h3 class="producto-nombre">${producto.nombre}</h3>
-        <p class="producto-precio">${formatearPrecio(producto.precio)}</p>
-        <p class="producto-stock ${producto.stock <= 0 ? 'agotado' : 'disponible'}">
-          ${producto.stock <= 0 ? 'AGOTADO' : `Stock: ${producto.stock}`}
-        </p>
-      </div>
-      <div class="producto-acciones">
-        <button class="boton-comprar ${producto.stock <= 0 ? 'disabled' : ''}" 
-                data-id="${producto.id}" 
-                ${producto.stock <= 0 ? 'disabled' : ''}>
-          ${producto.stock <= 0 ? 'AGOTADO' : 'COMPRAR'}
-        </button>
-      </div>
-    </div>
-  `).join('');
-}
-
-// ======================
-// EVENT LISTENERS
-// ======================
-function setupEventListeners() {
-  // Botón de vaciar carrito
-  document.querySelector('.boton-vaciar-carrito').addEventListener('click', vaciarCarrito);
-  
-  // Botones de compra
-  document.getElementById('galeria-productos').addEventListener('click', (e) => {
-    if (e.target.classList.contains('boton-comprar')) {
-      const productoId = parseInt(e.target.dataset.id);
-      agregarAlCarrito(productoId, 1); // Compra de 1 unidad
-      renderizarProductos(); // Actualiza la vista de productos
-    }
-  });
-}
-
-// ======================
-// INICIALIZACIÓN
-// ======================
-document.addEventListener('DOMContentLoaded', () => {
-  // Cargar productos (debes implementar esta función)
-  cargarProductos().then(() => {
-    renderizarProductos();
-    setupEventListeners();
-  });
-  
-  // Cargar carrito
-  cargarCarrito();
-});
