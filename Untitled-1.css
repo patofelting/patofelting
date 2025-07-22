@@ -2618,6 +2618,16 @@ body.no-scroll {
   display: block;
 }
 
+
+#contacto label {
+  display: block;
+  text-align: center;
+  margin-bottom: 5px;
+  font-weight: 600;
+  font-size: 0.96em;
+  letter-spacing: 0.01em;
+  color: #2a2c2f;
+}
 /* Opcional: ajusta el ancho en mobile para mejor respuesta */
 @media (max-width: 600px) {
   #contacto .contacto-form-card {
