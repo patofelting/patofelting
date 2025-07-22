@@ -954,31 +954,34 @@ blockquote {
 }
 
 /* Contact Section */
+/* Contact Section */
 .contact {
   padding: 80px 20px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7eb 100%);
+  background: linear-gradient(135deg, var(--light-gray) 0%, #e4e7eb 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-family);
 }
 
 .contact h2 {
   font-size: 2.5rem;
   margin-bottom: 1.5rem;
-  color: #1a1a1a;
-  font-weight: 600;
+  color: var(--text-color);
+  font-weight: var(--font-weight-bold);
   letter-spacing: -0.025em;
   line-height: 1.2;
+  text-align: center;
 }
 
 .contact p {
   font-size: 1.125rem;
-  color: #4a5568;
+  color: var(--dark-gray);
   margin-bottom: 2.5rem;
   max-width: 600px;
-  line-height: 1.6;
+  line-height: var(--line-height);
+  text-align: center;
 }
 
 form {
@@ -989,21 +992,21 @@ form {
   margin: 0 auto;
   background: #ffffff;
   padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  transition: var(--transition);
 }
 
 form:hover {
   transform: translateY(-5px);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
 }
 
 label {
   margin-bottom: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #2d3748;
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-color);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -1011,19 +1014,19 @@ label {
 input, textarea {
   width: 100%;
   padding: 0.875rem;
-  margin-bottom: 1.5rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--medium-gray);
+  border-radius: var(--border-radius);
   font-size: 1rem;
-  color: #2d3748;
-  background-color: #f7fafc;
-  transition: all 0.3s ease;
+  color: var(--text-color);
+  background-color: var(--light-gray);
+  transition: var(--transition);
 }
 
 input:focus, textarea:focus {
-  border-color: #2f855a;
+  border-color: var(--primary-color);
   background-color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(47, 133, 90, 0.2);
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
   outline: none;
 }
 
@@ -1034,20 +1037,21 @@ textarea {
 
 button {
   padding: 0.875rem 2rem;
-  background-color: #2f855a;
-  color: #ffffff;
+  background-color: var(--primary-color);
+  color: var(--light-text);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: var(--font-weight-bold);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--transition);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  width: 100%;
 }
 
 button:hover {
-  background-color: #276749;
+  background-color: var(--accent-color);
   transform: translateY(-2px);
 }
 
@@ -1058,21 +1062,21 @@ button:active {
 #successMessage, #errorMessage {
   margin-top: 1.5rem;
   padding: 1rem;
-  border-radius: 8px;
-  font-size: 0.875rem;
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-small);
   text-align: center;
   opacity: 0;
   animation: fadeIn 0.5s ease forwards;
 }
 
 #successMessage {
-  background-color: #004225;
-  color: #ffffff;
+  background-color: var(--success-color);
+  color: var(--light-text);
 }
 
 #errorMessage {
-  background-color: #fef2f2;
-  color: #9b2c2c;
+  background-color: var(--error-color);
+  color: #ffffff;
 }
 
 .hidden {
