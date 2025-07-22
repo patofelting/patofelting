@@ -1904,59 +1904,65 @@ button:active {
 #paginacion {
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: 13px;
   margin-top: 32px;
-  padding-bottom: 8px;
-  user-select: none;
+  padding-bottom: 12px;
 }
 
 #paginacion button {
-  width: 38px;
-  height: 38px;
-  border: none;
-  border-radius: 50%;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--medium-gray);
-  color: var(--dark-gray);
-  font-weight: 700;
-  font-size: 1.15rem;
-  box-shadow: 0 1px 4px rgba(44,62,80,0.06);
-  transition: background 0.18s, color 0.18s, box-shadow 0.19s, transform 0.13s;
+  border: none;
+  border-radius: 50%;
+  background: rgba(60, 60, 60, 0.08);
+  color: #495057;
+  font-size: 1.09rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  box-shadow: none;
+  transition: 
+    background 0.20s cubic-bezier(.4,0,.2,1),
+    color 0.20s cubic-bezier(.4,0,.2,1),
+    box-shadow 0.20s cubic-bezier(.4,0,.2,1),
+    transform 0.16s cubic-bezier(.4,0,.2,1);
   outline: none;
   cursor: pointer;
+  opacity: 0.88;
 }
 
 #paginacion button:hover,
 #paginacion button:focus-visible {
-  background-color: var(--primary-color);
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(76,175,80,0.11);
+  background: rgba(76, 175, 80, 0.19); /* Verde sutil al hover */
+  color: var(--primary-color);
   transform: translateY(-2px) scale(1.06);
+  opacity: 1;
+  box-shadow: 0 2px 14px rgba(76,175,80,0.07);
 }
 
 #paginacion button.active,
 #paginacion button.pagina-activa {
-  background-color: var(--primary-color);
+  background: var(--primary-color);
   color: #fff;
-  box-shadow: 0 6px 22px rgba(76,175,80,0.13);
-  transform: scale(1.16);
+  transform: scale(1.14);
+  opacity: 1;
+  box-shadow: 0 4px 16px rgba(76,175,80,0.13), 0 0 0 4px rgba(76,175,80,0.10);
   z-index: 2;
-  border: 2.5px solid #fff;
 }
 
 @media (max-width: 600px) {
   #paginacion button {
-    width: 28px;
-    height: 28px;
-    font-size: 0.98rem;
+    width: 29px;
+    height: 29px;
+    font-size: 0.96rem;
   }
   #paginacion {
-    gap: 5px;
+    gap: 7px;
   }
 }
-
+/* General Styles */
 
 /* Responsive Styles */
 @media (max-width: 992px) {
