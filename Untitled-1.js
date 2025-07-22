@@ -288,30 +288,36 @@ function actualizarContadorCarrito() {
 
 function agregarAlCarrito(id, cantidad = 1) {
   const prod = productos.find(p => p.id === id);
-  if (!prod) return mostrarNotificacion('Producto no encontrado', 'error');
-  cantidad = parseInt(cantidad, 10);
-  if (isNaN(cantidad) || cantidad < 1) return mostrarNotificacion('Cantidad inválida', 'error');
-  const enCarrito = carrito.find(item => item.id === id);
-  const disponibles = Math.max(0, prod.stock - (enCarrito?.cantidad || 0));
-  if (cantidad > disponibles) {
-    mostrarNotificacion(`Solo hay ${disponibles} unidades disponibles`, 'error');
+  if (!prod || prod.stock <= 0) {
+    mostrarNotificacion('Producto agotado', 'error');
     return;
   }
-  if (enCarrito) {
-    enCarrito.cantidad += cantidad;
+  cantidad = Math.min(cantidad, prod.stock);
+
+  let itemCarrito = carrito.find(i => i.id === id);
+  if (itemCarrito) {
+    if (itemCarrito.cantidad + cantidad > prod.stock) {
+      mostrarNotificacion('No hay más stock disponible', 'error');
+      return;
+    }
+    itemCarrito.cantidad += cantidad;
   } else {
     carrito.push({
-      id,
+      id: prod.id,
       nombre: prod.nombre,
       precio: prod.precio,
-      cantidad,
-      imagen: prod.imagenes[0] || PLACEHOLDER_IMAGE
+      cantidad: cantidad,
+      imagen: prod.imagenes ? prod.imagenes[0] : PLACEHOLDER_IMAGE
     });
   }
+  // Restar stock del producto
+  prod.stock -= cantidad;
   guardarCarrito();
-  actualizarUI();
+  renderizarProductos(); // Actualiza las cards y botones
+  renderizarCarrito();
   mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
 }
+
 
 // ===============================
 // 9. FILTROS Y EVENTOS
