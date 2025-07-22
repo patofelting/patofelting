@@ -112,70 +112,55 @@ button {
 
 /* CARRITO */
 .carrito-item-controls button {
-  font-size: 2.6rem !important;
-  width: 56px !important;
-  height: 56px !important;
-  min-width: 56px !important;
-  min-height: 56px !important;
-  background: #e8f5e9 !important;
-  color: #2e7d32 !important;
-  border-radius: 14px !important;
-  padding: 0 !important;
-}
-.carrito-item-cantidad {
-  font-size: 1.7rem !important;
-  min-width: 42px !important;
-}
-
-.carrito-item-controls button {
-  background: #f2f3f5;
-  border: none;
-  color: #212529;
-  font-size: 2.15rem;      /* ¡grande! */
-  width: 46px;             /* más ancho */
-  height: 46px;            /* más alto */
-  border-radius: 12px;
-  padding: 0;
+  background: #fff;                      /* fondo blanco real */
+  border: 1.2px solid #e1e7ec;           /* borde gris MUY claro */
+  color: #2e7d32;                        /* verde sutil, o #212529 para ultra limpio */
+  font-size: 2rem;
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;                    /* menos redondeado, más minimal */
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: none;
   cursor: pointer;
   transition: 
-    background 0.14s cubic-bezier(.4,0,.2,1),
-    color 0.14s cubic-bezier(.4,0,.2,1),
-    transform 0.10s;
-  font-weight: 700;
+    background 0.12s cubic-bezier(.4,0,.2,1),
+    color 0.12s cubic-bezier(.4,0,.2,1),
+    border 0.13s cubic-bezier(.4,0,.2,1),
+    box-shadow 0.11s;
+  font-weight: 600;                      /* menos bold */
+  box-shadow: none;
   outline: none;
 }
 
 .carrito-item-controls button:hover,
 .carrito-item-controls button:focus-visible {
-  background: var(--primary-color);
-  color: #fff;
-  transform: scale(1.08);
+  background: #f3fbf7;
+  border: 1.4px solid var(--primary-color); /* leve border verde */
+  color: var(--primary-color);
+  box-shadow: 0 2px 8px 0 rgba(76,175,80,0.08);
+  transform: scale(1.06);
 }
 
 .carrito-item-controls button:disabled {
-  background: #ececec;
+  background: #f7f7f7;
+  border: 1.2px solid #ececec;
   color: #bdbdbd;
-  opacity: 0.62;
+  opacity: 0.52;
   cursor: not-allowed;
   transform: none;
 }
 
 .carrito-item-cantidad {
-
-  
-  font-weight: 800;
+  min-width: 32px;
+  font-size: 1.23rem;
+  font-weight: 600;
   text-align: center;
-  color: #22223b;
+  color: #212529;
   background: transparent;
   display: inline-block;
   line-height: 1;
-  padding: 0 2px;
 }
-
 /* Ajustes de mobile: igual de grande pero menos gap */
 @media (max-width: 520px) {
   .carrito-item-controls {
