@@ -542,6 +542,12 @@ function setupContactForm() {
   }
 }
 
+// Inicializar EmailJS con tu clave pública
+emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
+
+// Llamar a la función para configurar el formulario de contacto
+setupContactForm();
+
 // ===============================
 // INICIALIZACIÓN GENERAL
 // ===============================
