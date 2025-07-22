@@ -2705,3 +2705,12 @@ body > div.notificacion.info { background: #1976d2 !important; }
   }
 }
 
+.modal-medidas {
+  font-size: 0.97rem;
+  color: #484848;
+  margin-bottom: 7px;
+}
+.modal-medidas b {
+  font-weight: 700;
+  color: var(--primary-color, #3bb04a);
+}
