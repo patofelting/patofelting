@@ -1963,39 +1963,22 @@ body.no-scroll {
   z-index: 3;
 }
 
-.modal-prev,
-.modal-next {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;       /* Quita fondo */
-  border: none;           /* Sin borde */
-  color: #2e7d32;         /* Verde, puedes cambiarlo */
-  font-size: 2.4rem;      /* Tamaño grande */
+.modal-prev, .modal-next {
+  pointer-events: auto;
+  background: rgba(255,255,255,0.93);
+  border: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: #27a844; /* Verde */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
   cursor: pointer;
-  z-index: 10;
-  padding: 0;
-  transition: color 0.2s;
-  outline: none;
-  box-shadow: none;
-}
-
-.modal-prev {
-  left: 22px;
-}
-
-.modal-next {
-  right: 22px;
-}
-
-.modal-prev:hover,
-.modal-next:hover,
-.modal-prev:focus,
-.modal-next:focus {
-  color: #43a047;        /* Un verde más claro al pasar mouse */
-  background: none;      /* Sigue sin fondo */
-  box-shadow: none;      /* Sin sombra */
-  outline: none;
+  transition: background 0.18s, color 0.17s, box-shadow 0.15s, transform 0.12s;
+  margin: 0 8px;
+  transform: translateY(-50%);
 }
 
 
