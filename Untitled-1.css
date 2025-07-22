@@ -955,80 +955,78 @@ blockquote {
 
 /* Contact Section */
 .contact {
-  padding: 80px 0;
-  background-color: var(--light-gray);
+  padding: 60px 20px;
+  background-color: #f9f9f9;
+  text-align: center;
 }
 
 .contact h2 {
-  text-align: center;
-  font-size: 2.5rem;
+  font-size: 2.25rem;
   margin-bottom: 20px;
-  color: var(--primary-color);
+  color: #333;
+  font-weight: 500;
 }
 
 .contact p {
+  font-size: 1rem;
+  color: #666;
+  margin-bottom: 30px;
+}
+
+#successMessage, #errorMessage {
+  margin-top: 20px;
+  padding: 10px;
+  border-radius: 5px;
   text-align: center;
-  max-width: 700px;
-  margin: 0 auto 30px;
 }
 
-.contact-form {
-  max-width: 600px;
-  margin: 0 auto;
-  background-color: white;
-  padding: 30px;
-  border-radius: var(--border-radius);
-  box-shadow: var(--box-shadow);
+#successMessage {
+  background-color: #d4edda;
+  color: #155724;
 }
 
-.form-group {
+#errorMessage {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.hidden {
+  display: none;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+label {
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+input, textarea {
+  width: 100%;
+  max-width: 400px;
+  padding: 10px;
   margin-bottom: 20px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: var(--font-weight-bold);
-}
-
-.form-group input,
-.form-group textarea {
-  width: 100%;
-  padding: 10px 15px;
-  border: 1px solid var(--medium-gray);
-  border-radius: var(--border-radius);
-  font-family: inherit;
-  transition: var(--transition);
-}
-
-.form-group input:focus,
-.form-group textarea:focus {
-  border-color: var(--primary-color);
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
-}
-
-.submit-button {
-  width: 100%;
-  padding: 12px;
-  background-color: var(--primary-color);
+button {
+  padding: 10px 20px;
+  background-color: #007bff;
   color: white;
-  border-radius: var(--border-radius);
-  font-weight: var(--font-weight-bold);
-  transition: var(--transition);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
 }
 
-.submit-button:hover {
-  background-color: var(--accent-color);
+button:hover {
+  background-color: #0056b3;
 }
-
-.success-message {
-  text-align: center;
-  color: var(--success-color);
-  margin-top: 15px;
-  font-weight: var(--font-weight-bold);
-}
-
 /* FAQ Section */
 /* FAQ Section Styles */
 .faq-section {
