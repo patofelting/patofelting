@@ -12,6 +12,8 @@
   --success-color: #388E3C; /* Verde más oscuro para éxito */
   --error-color: #f44336;
   --warning-color: #FFA000; /* Ámbar para advertencias */
+  --cart-width: 400px; /* Ancho base del carrito */
+  --overlay-color: rgba(0, 0, 0, 0.75); /* Fondo para modales */
   --border-radius: 8px;
   --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   --transition: all 0.3s ease;
@@ -516,7 +518,7 @@ blockquote {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: var(--overlay-color);
   display: none;
   justify-content: center;
   align-items: center;
@@ -580,6 +582,7 @@ blockquote {
   max-height: 400px;
   object-fit: contain;
   border-radius: var(--border-radius);
+  border: 1px solid var(--medium-gray);
 }
 
 .modal-info {
@@ -656,9 +659,9 @@ blockquote {
 .carrito-panel {
   position: fixed;
   top: 0;
-  right: -400px;
+  right: calc(-1 * var(--cart-width));
   width: 100%;
-  max-width: 400px;
+  max-width: var(--cart-width);
   height: 100vh;
   background-color: white;
   box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
@@ -678,7 +681,12 @@ blockquote {
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--medium-gray);
+  position: sticky;
+  top: 0;
+  background-color: var(--background-color);
+  z-index: 10;
 }
+
 
 .carrito-header h2 {
   font-size: 1.5rem;
@@ -756,6 +764,10 @@ blockquote {
   transition: var(--transition);
 }
 
+.carrito-item-controls button:active {
+  transform: scale(0.9);
+}
+
 .carrito-item-controls button:hover {
   background-color: var(--dark-gray);
   color: white;
@@ -790,10 +802,11 @@ blockquote {
 }
 
 .total {
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   font-weight: 700;
   margin-bottom: 15px;
   text-align: right;
+  color: var(--primary-color);
 }
 
 .carrito-acciones {
@@ -811,20 +824,28 @@ blockquote {
 .boton-vaciar-carrito {
   background-color: var(--medium-gray);
   color: var(--text-color);
+  box-shadow: var(--box-shadow);
 }
 
 .boton-vaciar-carrito:hover {
   background-color: var(--dark-gray);
   color: white;
 }
+.boton-vaciar-carrito:active {
+  transform: scale(0.98);
+}
 
 .boton-finalizar-compra {
   background-color: var(--primary-color);
   color: white;
+  box-shadow: var(--box-shadow);
 }
 
 .boton-finalizar-compra:hover {
   background-color: var(--accent-color);
+}
+.boton-finalizar-compra:active {
+  transform: scale(0.98);
 }
 
 .carrito-overlay {
@@ -1066,7 +1087,7 @@ blockquote {
   padding: 0 20px;
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.3s ease;
+  transition: max-height 0.3s ease, padding 0.3s ease;
 }
 
 .faq-toggle[aria-expanded="true"] + .faq-content {
@@ -1250,6 +1271,7 @@ blockquote {
   
   .carrito-panel {
     max-width: 100%;
+    right: calc(-1 * var(--cart-width));
   }
   
   /* Modal responsive */
@@ -1410,6 +1432,20 @@ body.no-scroll {
   border-color: var(--primary-color);
 }
 
+/* FAQ Section heading injected via pseudo-element */
+.faq-item:first-of-type {
+  margin-top: 40px;
+}
+.faq-item:first-of-type::before {
+  content: 'Preguntas Frecuentes';
+  display: block;
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 20px;
+}
+
 /* FAQ mejorado */
 .faq-item {
   margin-bottom: 10px;
@@ -1455,7 +1491,7 @@ body.no-scroll {
   padding: 0 20px;
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.3s ease;
+  transition: max-height 0.3s ease, padding 0.3s ease;
   background-color: white;
 }
 
