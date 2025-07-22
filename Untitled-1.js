@@ -135,8 +135,8 @@ function renderizarCarrito() {
             <button data-id="${i.id}" data-action="decrementar" aria-label="Reducir cantidad">-</button>
             <span class="carrito-item-cantidad">${i.cantidad}</span>
             <button data-id="${i.id}" data-action="incrementar" aria-label="Aumentar cantidad" ${disp <= 0 ? 'disabled' : ''}>+</button>
-            <button data-id="${i.id}" class="eliminar-item" aria-label="Eliminar del carrito">
-              <i class="fas fa-trash"></i>
+            
+              
             </button>
           </div>
         </div>
