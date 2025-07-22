@@ -321,34 +321,64 @@ function mostrarModalProducto(producto) {
   const contenido = elementos.modalContenido;
   if (!modal || !contenido) return;
 
-  const enCarrito = carrito.find(item => item.id === producto.id) || { cantidad: 0 };
-  const disponibles = Math.max(0, producto.stock - enCarrito.cantidad);
-  const agotado = disponibles <= 0;
+  // Actualiza dinámicamente los campos
+  contenido.querySelector('.modal-img').src = producto.imagenes[0] || PLACEHOLDER_IMAGE;
+  contenido.querySelector('.modal-img').alt = producto.nombre;
+  contenido.querySelector('.modal-nombre').innerText = producto.nombre;
+  contenido.querySelector('.modal-precio').innerText = `$U ${producto.precio.toLocaleString('es-UY')}`;
+  contenido.querySelector('.modal-descripcion').innerText = producto.descripcion || '';
+  contenido.querySelector('.modal-stock').innerText = producto.stock > 0 ? `Disponible: ${producto.stock}` : 'AGOTADO';
+  contenido.querySelector('.modal-stock').className = 'modal-stock ' + (producto.stock > 0 ? 'disponible' : 'agotado');
 
-  contenido.innerHTML = `
-  <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
-  <div class="modal-flex">
-    <div class="modal-carrusel">
-      <img src="${producto.imagenes[0] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
-    
-    </div>
-    <div class="modal-info">
-      <h1 class="modal-nombre">${producto.nombre}</h1>
-      <p class="modal-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
-      <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">
-        ${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}
-      </p>
-      <p class="modal-medidas">
-        <b>Medidas:</b> ${producto.alto || '-'} x ${producto.ancho || '-'} x ${producto.profundidad || '-'} cm
-      </p>
-      <div class="modal-descripcion">
-        ${producto.descripcion || ''}
-      </div>
-      ...
-    </div>
-  </div>
-`;
+  // Medidas, si quieres mostrarlas:
+  let detallesHTML = `<b>Medidas:</b> ${producto.alto || '-'} x ${producto.ancho || '-'} x ${producto.profundidad || '-'} cm`;
+  contenido.querySelector('.modal-detalles').innerHTML = detallesHTML;
 
+  // Miniaturas si hay varias imágenes
+  let thumbnails = '';
+  if (producto.imagenes && producto.imagenes.length > 1) {
+    thumbnails = producto.imagenes.map((img, idx) =>
+      `<img src="${img}" class="modal-thumbnail" data-idx="${idx}" style="width:36px;height:36px;object-fit:cover;border-radius:5px;margin:2px;cursor:pointer;">`
+    ).join('');
+    contenido.querySelector('.modal-thumbnails').innerHTML = thumbnails;
+
+    // Evento de cambio de imagen principal al clickear una miniatura
+    contenido.querySelectorAll('.modal-thumbnail').forEach(thumb => {
+      thumb.onclick = function() {
+        contenido.querySelector('.modal-img').src = producto.imagenes[+thumb.dataset.idx];
+      }
+    });
+  } else {
+    contenido.querySelector('.modal-thumbnails').innerHTML = '';
+  }
+
+  // Botón cerrar
+  contenido.querySelector('.cerrar-modal').onclick = () => cerrarModal();
+
+  // Botón agregar al carrito
+  contenido.querySelector('.boton-agregar-modal').onclick = () => {
+    const cantidad = +(contenido.querySelector('.cantidad-modal-input').value || 1);
+    agregarAlCarrito(producto.id, cantidad);
+    cerrarModal();
+  };
+
+  // Abre el modal
+  modal.style.display = 'flex';
+  setTimeout(() => {
+    modal.classList.add('visible');
+    document.body.classList.add('no-scroll');
+  }, 10);
+
+  // Cierra al click afuera del modal
+  modal.onclick = e => {
+    if (e.target === modal) cerrarModal();
+  };
+
+  function cerrarModal() {
+    modal.classList.remove('visible');
+    setTimeout(() => { modal.style.display = 'none'; document.body.classList.remove('no-scroll'); }, 300);
+  }
+}
   // Carrusel
   if (producto.imagenes.length > 1) {
     let currentIndex = 0;
@@ -394,7 +424,7 @@ function mostrarModalProducto(producto) {
     modal.classList.remove('visible');
     setTimeout(() => { modal.style.display = 'none'; document.body.classList.remove('no-scroll'); }, 300);
   }
-}
+
 
 // ===============================
 // EVENTO CLICK EN DETALLE DEL PRODUCTO
