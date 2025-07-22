@@ -96,6 +96,7 @@ function actualizarCategorias() {
     .join('');
 }
 
+
 function filtrarProductos() {
   return productos.filter(p => {
     const { precioMin, precioMax, categoria, busqueda } = filtrosActuales;
@@ -333,6 +334,10 @@ function resetearFiltros() {
   if (elementos.precioMaxInput) elementos.precioMaxInput.value = '';
   aplicarFiltros();
 }
+elementos.selectCategoria?.addEventListener('change', (e) => {
+  filtrosActuales.categoria = e.target.value;
+  aplicarFiltros();
+});
 
 if (elementos.inputBusqueda) {
   elementos.inputBusqueda.addEventListener('input', (e) => {
