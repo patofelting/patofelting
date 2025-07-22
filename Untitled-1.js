@@ -679,10 +679,3 @@ mainImage.addEventListener('touchend', (e) => {
   touchStartX = null;
 });
 
-document.querySelectorAll('.producto-img').forEach(img => {
-  img.addEventListener('click', () => {
-    img.classList.toggle('zoomed');
-    img.style.cursor = img.classList.contains('zoomed') ? 'zoom-out' : 'zoom-in';
-  });
-});
-
