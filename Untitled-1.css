@@ -114,59 +114,57 @@ button {
 .carrito-item-controls {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 16px;
   margin-top: 6px;
 }
 
 .carrito-item-controls button {
-  background: #fff;
-  border: 1px solid #e6e8eb;
-  color: #23a455;
-  font-size: 2rem;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
+  background: none;
+  border: none;
+  color: #2e7d32;
+  font-size: 2.2rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition:
-    background 0.14s cubic-bezier(.4,0,.2,1),
-    border-color 0.13s cubic-bezier(.4,0,.2,1),
-    color 0.13s cubic-bezier(.4,0,.2,1),
-    transform 0.13s cubic-bezier(.4,0,.2,1);
+    color 0.12s cubic-bezier(.4,0,.2,1),
+    background 0.13s cubic-bezier(.4,0,.2,1),
+    transform 0.11s;
   font-weight: 600;
   box-shadow: none;
   outline: none;
-  padding: 0;
 }
 
 .carrito-item-controls button:hover,
 .carrito-item-controls button:focus-visible {
   background: #f4fbf5;
-  border-color: #76d7aa;
-  color: #11803a;
-  transform: scale(1.07);
+  color: #43a047;
+  transform: scale(1.09);
 }
 
 .carrito-item-controls button:disabled {
-  background: #fafbfc;
-  border-color: #e9ecef;
-  color: #bbb;
-  opacity: 0.52;
+  color: #bdbdbd;
+  background: none;
+  opacity: 0.45;
   cursor: not-allowed;
   transform: none;
 }
 
 .carrito-item-cantidad {
-  min-width: 30px;
+  min-width: 32px;
   font-size: 1.18rem;
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
-  color: #22223b;
+  color: #212529;
   background: transparent;
   display: inline-block;
   line-height: 1;
+  padding: 0;
 }
 
 /* Ajustes de mobile: igual de grande pero menos gap */
