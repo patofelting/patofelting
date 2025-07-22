@@ -630,3 +630,11 @@ emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
 
 // Llamar a la función para configurar el formulario de contacto
 setupContactForm();
+
+const contenedor = document.querySelector('.modal-carrusel');
+contenedor.innerHTML = ''; // Limpia el contenedor
+contenedor.appendChild(nuevaImagen); // Muestra la nueva imagen principal
+
+
+imagenes.forEach(img => img.classList.remove('activa'));
+imagenes[indiceActivo].classList.add('activa');
