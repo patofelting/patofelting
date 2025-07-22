@@ -1338,33 +1338,45 @@ blockquote {
 /* Notificaciones */
 .notificacion {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
-  padding: 15px 20px;
-  border-radius: var(--border-radius);
-  color: white;
-  box-shadow: var(--box-shadow);
-  transform: translateY(100px);
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 240px;
+  max-width: 90vw;
+  padding: 15px 26px;
+  border-radius: 11px;
+  font-size: 1.07rem;
+  font-weight: 600;
+  box-shadow: 0 4px 24px rgba(44,62,80,0.14);
+  z-index: 9999;
+  background: #23272f;
+  color: #fff;
   opacity: 0;
-  transition: var(--transition);
-  z-index: 2100;
+  pointer-events: none;
+  transition:
+    opacity 0.25s,
+    top 0.3s;
+  text-align: center;
 }
 
 .notificacion.show {
-  transform: translateY(0);
   opacity: 1;
+  pointer-events: auto;
+  top: 52px;
 }
 
+/* Tipos de notificación */
 .notificacion.exito {
-  background-color: var(--success-color);
+  background: #48c774;
+  color: #fff;
 }
-
 .notificacion.error {
-  background-color: var(--error-color);
+  background: #e63946;
+  color: #fff;
 }
-
 .notificacion.info {
-  background-color: #2196F3;
+  background: #1976d2;
+  color: #fff;
 }
 
 /* Contact Section */
