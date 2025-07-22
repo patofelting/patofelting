@@ -114,53 +114,101 @@ button {
 .carrito-item-controls {
   display: flex;
   align-items: center;
-  gap: 25px; /* Más espacio, más aire */
+  gap: 14px;
   margin-top: 4px;
 }
 
 .carrito-item-controls button {
-  background: none;
+  background: #f2f3f5;
   border: none;
-  color: var(--primary-color);
-  font-size: 2.7rem; /* ¡MUCHO más grande! */
-  width: 40px;
-  height: 40px;
-  border-radius: 0;
-  padding: 0 2px;
+  color: #22223b;
+  font-size: 1.5rem;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.13s, transform 0.13s;
-  cursor: pointer;
   box-shadow: none;
+  cursor: pointer;
+  transition: 
+    background 0.15s cubic-bezier(.4,0,.2,1),
+    color 0.15s cubic-bezier(.4,0,.2,1),
+    transform 0.11s;
+  font-weight: 700;
+  outline: none;
 }
 
 .carrito-item-controls button:hover,
 .carrito-item-controls button:focus-visible {
-  color: var(--accent-color);
-  transform: scale(1.14);
-  background: none;
+  background: var(--primary-color);
+  color: #fff;
+  transform: scale(1.08);
 }
 
 .carrito-item-controls button:disabled {
+  background: #ececec;
   color: #bdbdbd;
-  opacity: 0.38;
+  opacity: 0.62;
   cursor: not-allowed;
-  background: none;
+  transform: none;
 }
 
 .carrito-item-cantidad {
-  min-width: 22px;
-  font-size: 1.3rem;
+  min-width: 24px;
+  font-size: 1.15rem;
   font-weight: 700;
   text-align: center;
   color: #22223b;
-  letter-spacing: 1px;
   background: transparent;
   display: inline-block;
   line-height: 1;
-  padding: 0 3px;
+  padding: 0 2px;
 }
+
+/* Ajuste a la línea del producto */
+.carrito-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--medium-gray);
+}
+
+.carrito-item-img {
+  width: 58px;
+  height: 58px;
+  object-fit: cover;
+  border-radius: 9px;
+  background: #f2f2f2;
+  flex-shrink: 0;
+}
+
+.carrito-item-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.carrito-item-nombre {
+  font-weight: 600;
+  margin-bottom: 2px;
+  font-size: 1rem;
+  color: #212529;
+  line-height: 1.22;
+}
+
+.carrito-item-subtotal {
+  color: var(--primary-color);
+  font-weight: 600;
+  font-size: 1rem;
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
 
 @media (max-width: 520px) {
   .carrito-item-controls {
