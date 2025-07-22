@@ -834,9 +834,15 @@ blockquote {
 
 .modal-img {
   width: 100%;
-  max-height: 400px;
-  object-fit: contain;
+  max-width: 450px;       /* antes era 100% o 350px, ahora dale más ancho */
+  max-height: 480px;      /* subí la altura máxima, ajusta a tu gusto */
+  object-fit: contain;    /* No recorta ni deforma, muestra todo el producto */
   border-radius: var(--border-radius);
+  box-shadow: 0 6px 36px 0 rgba(60,90,110,0.07); /* opcional: más “Apple” */
+  background: #fafbfc;    /* leve fondo si la imagen es PNG */
+  display: block;
+  margin: 0 auto;         /* centra horizontalmente */
+  transition: box-shadow 0.24s;
 }
 
 .modal-info {
