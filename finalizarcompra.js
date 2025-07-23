@@ -12,22 +12,24 @@ const CONFIG = {
 };
 
 // ==================== ESTADO GLOBAL ====================
-// Obtener el carrito desde la URL (si existe)
-const params = new URLSearchParams(window.location.search);
 let carrito = [];
-
+const params = new URLSearchParams(window.location.search);
 if (params.has('carrito')) {
   try {
     carrito = JSON.parse(decodeURIComponent(params.get('carrito')));
-    // Si querés, lo guardás en sessionStorage para el resto de la sesión en ese dominio:
     sessionStorage.setItem('carritoActual', JSON.stringify(carrito));
   } catch (e) {
     carrito = [];
   }
 } else {
-  // Fallback: intentá levantarlo del sessionStorage de este dominio (si está)
   carrito = JSON.parse(sessionStorage.getItem('carritoActual')) || [];
 }
+let estado = {
+  carrito,
+  mp: null,
+  map: null,
+  marker: null
+};
 
 // ==================== INICIALIZACIÓN ====================
 document.addEventListener('DOMContentLoaded', async () => {
@@ -190,7 +192,6 @@ function calcularCostoEnvio() {
   return 0;
 }
 
-
 // ==================== MAPA ====================
 function inicializarMapa() {
   const mapElement = document.getElementById('map');
@@ -348,3 +349,4 @@ function validarDatosEnvio(datos = null) {
   }
   return true;
 }
+
