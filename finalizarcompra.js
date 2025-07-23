@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Carga carrito desde sessionStorage
   const carrito = JSON.parse(sessionStorage.getItem('carritoActual')) || [];
   const COSTOS_ENVIO = { retiro: 0, montevideo: 150, interior: 300 };
-  const numeroWhatsApp = "59894955466"; // Cambia por el tuyo
+  const numeroWhatsApp = "+59894955466"; // Cambia por el tuyo
 
   // Mostrar productos y resumen
   function mostrarResumenCarrito() {
