@@ -648,9 +648,12 @@ window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
 window.guardarCarrito = guardarCarrito;
 
 
+
 document.getElementById('btn-entendido-aviso').addEventListener('click', function() {
-  // Guardar en sessionStorage
-  sessionStorage.setItem('carritoActual', JSON.stringify(carrito));
-  // Redirigir
-  window.location.href = 'finalizarcompra.html';
+  // Codificar el carrito para URL (versión compacta)
+  const carritoCodificado = LZString.compressToEncodedURIComponent(JSON.stringify(carrito));
+  
+  // Redirigir con el carrito en la URL
+  window.location.href = `finalizarcompra.html?carrito=${carritoCodificado}`;
 });
+
