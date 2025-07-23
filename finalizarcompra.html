@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -8,114 +7,88 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="finalizarcompra.css">
-  
 </head>
 <body>
     <div class="container">
-
-        <div class="container">
-  <a href="index.html" class="boton boton-volver">
-    <i class="fas fa-arrow-left icono" aria-hidden="true"></i> Volver
-  </a>
-        <h1><i class="fas fa-shopping-cart icono"></i> Finalizar Compra</h1>
-        
-        <!-- Sección del carrito -->
-        <section id="resumen-pedido">
-            <h2><i class="fas fa-box-open icono"></i> Resumen de tu Pedido</h2>
-            <ul id="lista-productos"></ul>
-            <div id="detalle-total"></div>
-            <p id="total-pedido" class="total"></p>
-
-
-        </section>
-        
-        <!-- Sección de envío -->
-        <section id="datos-envio">
-            <h2><i class="fas fa-truck icono"></i> Datos de Envío</h2>
-            <form id="checkout-form">
-                <div class="form-group">
-                    <label for="first-name"><i class="fas fa-user icono"></i> Nombre *</label>
-                    <input type="text" id="first-name" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="last-name"><i class="fas fa-user icono"></i> Apellido *</label>
-                    <input type="text" id="last-name" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="country"><i class="fas fa-globe icono"></i> País / Región</label>
-                    <select id="country" disabled>
-                        <option value="UY" selected>Uruguay</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="department"><i class="fas fa-map-marker-alt icono"></i> Departamento *</label>
-                    <select id="department" required>
-                        <option value="">Selecciona un departamento</option>
-                        <option value="Artigas">Artigas</option>
-                        <option value="Canelones">Canelones</option>
-                        <option value="Cerro Largo">Cerro Largo</option>
-                        <option value="Colonia">Colonia</option>
-                        <option value="Durazno">Durazno</option>
-                        <option value="Flores">Flores</option>
-                        <option value value="Florida">Florida</option>
-                        <option value="Lavalleja">Lavalleja</option>
-                        <option value="Maldonado">Maldonado</option>
-                        <option value="Montevideo">Montevideo</option>
-                        <option value="Paysandú">Paysandú</option>
-                        <option value="Rio Negro">Río Negro</option>
-                        <option value="Rivera">Rivera</option>
-                        <option value="Rocha">Rocha</option>
-                        <option value="Salto">Salto</option>
-                        <option value="San José">San José</option>
-                        <option value="Soriano">Soriano</option>
-                        <option value="Tacuarembó">Tacuarembó</option>
-                        <option value="Treinta y Tres">Treinta y Tres</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="address"><i class="fas fa-home icono"></i> Dirección completa *</label>
-                    <input type="text" id="address" placeholder="Calle, número, apartamento (si aplica)" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="postal-code"><i class="fas fa-envelope icono"></i> Código Postal *</label>
-                    <input type="text" id="postal-code" required>
-                </div>
-
-                <button type="button" id="search-button" class="boton mapa-btn">
-                    <i class="fas fa-map-marked-alt icono"></i> Buscar en Mapa
-                </button>
-            </form>
-        </section>
-
-        <!-- Mapa -->
-        <section id="mapa-section">
-            <h2><i class="fas fa-map icono"></i> Ubicación</h2>
-            <div id="map"></div>
-        </section>
-
-        <!-- Opciones de envío -->
-        <section id="opciones-envio-seccion">
-            <h2><i class="fas fa-shipping-fast icono"></i> Método de Envío</h2>
-            <div id="opciones-envio"></div>
-        </section>
-
-      <!-- Métodos de pago -->
-
-
-  <!-- Botón de WhatsApp con más accesibilidad -->
-  <button id="btn-whatsapp" class="boton whatsapp-btn" aria-label="Pagar por WhatsApp">
-    <i class="fab fa-whatsapp icono" aria-hidden="true"></i> 
-    <span>Contactarse con el vendedor</span>
-  </button>
-</section>
+      <a href="index.html" class="boton boton-volver">
+        <i class="fas fa-arrow-left icono" aria-hidden="true"></i> Volver
+      </a>
+      <h1><i class="fas fa-shopping-cart icono"></i> Finalizar Compra</h1>
+      
+      <!-- Resumen del Carrito -->
+      <section id="resumen-pedido">
+        <h2><i class="fas fa-box-open icono"></i> Resumen de tu Pedido</h2>
+        <ul id="lista-productos"></ul>
+        <div id="detalle-total"></div>
+        <p id="total-pedido" class="total"></p>
+      </section>
+      
+      <!-- Método de Envío (Radio Buttons) -->
+      <section id="opciones-envio-seccion">
+        <h2><i class="fas fa-shipping-fast icono"></i> Método de Envío</h2>
+        <div class="form-group">
+          <label><input type="radio" name="envio" value="retiroLocal" checked> Retiro en local (Gratis)</label><br>
+          <label><input type="radio" name="envio" value="envioMontevideo"> Envío a Montevideo ($150)</label><br>
+          <label><input type="radio" name="envio" value="envioInterior"> Envío al Interior ($300)</label>
+        </div>
+      </section>
+      
+      <!-- Formulario Datos del Cliente -->
+      <section id="datos-envio">
+        <h2><i class="fas fa-truck icono"></i> Datos de Envío</h2>
+        <form id="checkout-form" autocomplete="off">
+          <div class="form-group">
+            <label for="first-name"><i class="fas fa-user icono"></i> Nombre *</label>
+            <input type="text" id="first-name" required>
+          </div>
+          <div class="form-group">
+            <label for="last-name"><i class="fas fa-user icono"></i> Apellido *</label>
+            <input type="text" id="last-name" required>
+          </div>
+          <!-- Solo se muestran estos campos si hay envío (no retiro) -->
+          <div class="form-group envio-campos" style="display:none;">
+            <label for="department"><i class="fas fa-map-marker-alt icono"></i> Departamento *</label>
+            <select id="department">
+              <option value="">Selecciona un departamento</option>
+              <option value="Artigas">Artigas</option>
+              <option value="Canelones">Canelones</option>
+              <option value="Cerro Largo">Cerro Largo</option>
+              <option value="Colonia">Colonia</option>
+              <option value="Durazno">Durazno</option>
+              <option value="Flores">Flores</option>
+              <option value="Florida">Florida</option>
+              <option value="Lavalleja">Lavalleja</option>
+              <option value="Maldonado">Maldonado</option>
+              <option value="Montevideo">Montevideo</option>
+              <option value="Paysandú">Paysandú</option>
+              <option value="Rio Negro">Río Negro</option>
+              <option value="Rivera">Rivera</option>
+              <option value="Rocha">Rocha</option>
+              <option value="Salto">Salto</option>
+              <option value="San José">San José</option>
+              <option value="Soriano">Soriano</option>
+              <option value="Tacuarembó">Tacuarembó</option>
+              <option value="Treinta y Tres">Treinta y Tres</option>
+            </select>
+          </div>
+          <div class="form-group envio-campos" style="display:none;">
+            <label for="address"><i class="fas fa-home icono"></i> Dirección completa *</label>
+            <input type="text" id="address" placeholder="Calle, número, apartamento (si aplica)">
+          </div>
+          <div class="form-group envio-campos" style="display:none;">
+            <label for="postal-code"><i class="fas fa-envelope icono"></i> Código Postal *</label>
+            <input type="text" id="postal-code">
+          </div>
+        </form>
+      </section>
+      <!-- Botón de WhatsApp -->
+      <button id="btn-whatsapp" class="boton whatsapp-btn" aria-label="Pagar por WhatsApp" style="margin-top: 2em;">
+        <i class="fab fa-whatsapp icono" aria-hidden="true"></i> 
+        <span>Contactar por WhatsApp</span>
+      </button>
+    </div>
     <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <script src="finalizarcompra.js"></script>
 </body>
 </html>
