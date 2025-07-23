@@ -649,7 +649,7 @@ window.guardarCarrito = guardarCarrito;
 
 
 document.getElementById('btn-entendido-aviso').addEventListener('click', function() {
-  sessionStorage.setItem('carritoActual', JSON.stringify(carrito));
-  window.location.href = 'finalizarcompra.html';
+  // Codifica el carrito para pasarlo por la URL
+  const carritoStr = encodeURIComponent(JSON.stringify(carrito));
+  window.location.href = 'https://metododepago.vercel.app/?carrito=' + carritoStr;
 });
-
