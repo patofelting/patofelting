@@ -648,6 +648,12 @@ window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
 window.guardarCarrito = guardarCarrito;
 
 document.getElementById('btn-entendido-aviso').addEventListener('click', function() {
+  if (carrito.length === 0) {
+    mostrarNotificacion('El carrito está vacío', 'error');
+    return;
+  }
+  // Mostrar un indicador de carga
+  mostrarNotificacion('Redirigiendo...', 'info');
   // Guardar el carrito en sessionStorage
   sessionStorage.setItem('carritoActual', JSON.stringify(carrito));
   // Redirigir a la página de finalización
