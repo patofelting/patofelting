@@ -648,16 +648,18 @@ window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
 window.guardarCarrito = guardarCarrito;
 
 document.getElementById('btn-entendido-aviso').addEventListener('click', function() {
-  if (carrito.length === 0) {
-    mostrarNotificacion('El carrito está vacío', 'error');
-    return;
+  try {
+    if (carrito.length === 0) {
+      mostrarNotificacion('El carrito está vacío', 'error');
+      return;
+    }
+    // Guardar el carrito en sessionStorage
+    sessionStorage.setItem('carritoActual', JSON.stringify(carrito));
+    // Redirigir a la página de finalización
+    window.location.href = 'finalizarcompra.html';
+  } catch (error) {
+    console.error('Error al guardar el carrito o redirigir:', error);
+    mostrarNotificacion('Error al procesar la compra. Por favor, inténtalo de nuevo.', 'error');
   }
-  // Mostrar un indicador de carga
-  mostrarNotificacion('Redirigiendo...', 'info');
-  // Guardar el carrito en sessionStorage
-  sessionStorage.setItem('carritoActual', JSON.stringify(carrito));
-  // Redirigir a la página de finalización
-  window.location.href = 'finalizarcompra.html';
 });
-
 
