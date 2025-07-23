@@ -153,6 +153,22 @@ function renderizarCarrito() {
   const total = carrito.reduce((sum, i) => sum + i.precio * i.cantidad, 0);
   elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
 }
+// =======================
+// REDIRECCIÓN DESDE AVISO DE COMPRA
+// =======================
+
+
+document.addEventListener('DOMContentLoaded', function() {
+  var btnEntendido = document.getElementById('btn-entendido-aviso');
+  if (btnEntendido) {
+    btnEntendido.addEventListener('click', function() {
+      // 1. Guarda el carrito actual en sessionStorage para la página de pago
+      sessionStorage.setItem('carritoActual', JSON.stringify(carrito));
+      // 2. Redirige a la página de pago
+      window.location.href = 'https://patofelting.github.io/metododepago/';
+    });
+  }
+});
 
 // ===============================
 // ABRIR Y CERRAR CARRITO
