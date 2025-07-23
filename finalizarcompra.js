@@ -13,17 +13,16 @@ const CONFIG = {
 
 // ==================== ESTADO GLOBAL ====================
 let carrito = [];
-const params = new URLSearchParams(window.location.search);
-if (params.has('carrito')) {
-  try {
-    carrito = JSON.parse(decodeURIComponent(params.get('carrito')));
-    sessionStorage.setItem('carritoActual', JSON.stringify(carrito));
-  } catch (e) {
-    carrito = [];
-  }
-} else {
-  carrito = JSON.parse(sessionStorage.getItem('carritoActual')) || [];
+
+// Cargar carrito desde sessionStorage (método más confiable)
+try {
+  const carritoGuardado = sessionStorage.getItem('carritoActual');
+  carrito = carritoGuardado ? JSON.parse(carritoGuardado) : [];
+} catch (e) {
+  console.error('Error al cargar carrito:', e);
+  carrito = [];
 }
+
 let estado = {
   carrito,
   mp: null,
@@ -34,14 +33,18 @@ let estado = {
 // ==================== INICIALIZACIÓN ====================
 document.addEventListener('DOMContentLoaded', async () => {
   try {
+    // Verificar si hay productos en el carrito
     if (estado.carrito.length === 0) {
       mostrarNotificacion('No hay productos en el carrito', '#ff9800');
-      setTimeout(() => window.location.href = '/index.html', 3000); // Ajusta la URL si lo necesitas
+      setTimeout(() => window.location.href = 'index.html', 3000);
       return;
     }
 
     await inicializarAplicacion();
     configurarEventListeners();
+    
+    // Debug: mostrar carrito cargado
+    console.log('Carrito cargado:', estado.carrito);
   } catch (error) {
     console.error('Error en inicialización:', error);
     mostrarNotificacion('Error al cargar la página', '#f44336');
@@ -49,31 +52,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function inicializarAplicacion() {
-  await cargarSdkMercadoPago();
   mostrarResumenPedido();
   renderizarOpcionesEnvio();
   inicializarMapa();
-  renderizarMercadoPago();
 }
 
 function configurarEventListeners() {
+  // Botón de WhatsApp
   document.getElementById('btn-whatsapp')?.addEventListener('click', enviarPorWhatsApp);
+  
+  // Botón de búsqueda en mapa
   document.getElementById('search-button')?.addEventListener('click', buscarDireccionEnMapa);
 
-  // Delegación de eventos para botones de eliminar producto
+  // Eliminar productos del carrito
   document.getElementById('lista-productos')?.addEventListener('click', (e) => {
     if (e.target.closest('.btn-eliminar')) {
-      const nombre = e.target.closest('.btn-eliminar').dataset.nombre;
-      quitarProductoDelCarrito(nombre);
+      const id = e.target.closest('.btn-eliminar').dataset.id;
+      quitarProductoDelCarrito(id);
     }
   });
 
-  // Eventos para opciones de envío
+  // Opciones de envío
   document.querySelectorAll('input[name="envio"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-      mostrarResumenPedido();
-      renderizarMercadoPago();
-    });
+    radio.addEventListener('change', mostrarResumenPedido);
   });
 }
 
@@ -86,23 +87,28 @@ function mostrarResumenPedido() {
 
   if (!listaProductos || !detalleTotal) return;
 
-  listaProductos.innerHTML = carrito.length ? '' : '<li class="no-productos">No hay productos en el carrito</li>';
+  // Mostrar mensaje si no hay productos
+  if (carrito.length === 0) {
+    listaProductos.innerHTML = '<li class="no-productos">No hay productos en el carrito</li>';
+    detalleTotal.innerHTML = '';
+    if (totalPedido) totalPedido.textContent = 'Total: $ 0';
+    return;
+  }
 
-  carrito.forEach(item => {
-    const li = document.createElement('li');
-    li.className = 'producto-item';
-    li.innerHTML = `
+  // Generar lista de productos
+  listaProductos.innerHTML = carrito.map(item => `
+    <li class="producto-item">
       <span class="producto-nombre">${escapeHtml(item.nombre)}</span>
       <span class="producto-cantidad">${item.cantidad} x</span>
       <span class="producto-precio">$ ${item.precio.toFixed(2)}</span>
       <span class="producto-subtotal">$ ${(item.precio * item.cantidad).toFixed(2)}</span>
-      <button class="btn-eliminar" data-nombre="${escapeHtml(item.nombre)}">
+      <button class="btn-eliminar" data-id="${item.id}">
         <i class="fas fa-trash"></i>
       </button>
-    `;
-    listaProductos.appendChild(li);
-  });
+    </li>
+  `).join('');
 
+  // Calcular y mostrar totales
   const { subtotal, envio, total } = calcularTotales();
 
   detalleTotal.innerHTML = `
@@ -132,8 +138,8 @@ function calcularTotales() {
   return { subtotal, envio, total };
 }
 
-function quitarProductoDelCarrito(nombre) {
-  const index = estado.carrito.findIndex(item => item.nombre === nombre);
+function quitarProductoDelCarrito(id) {
+  const index = estado.carrito.findIndex(item => item.id === id);
   if (index >= 0) {
     estado.carrito.splice(index, 1);
     actualizarEstadoCarrito();
@@ -145,7 +151,6 @@ function actualizarEstadoCarrito() {
   try {
     sessionStorage.setItem('carritoActual', JSON.stringify(estado.carrito));
     mostrarResumenPedido();
-    renderizarMercadoPago();
   } catch (e) {
     console.error('Error al actualizar carrito:', e);
     mostrarNotificacion('Error al actualizar el carrito', '#f44336');
@@ -255,26 +260,27 @@ function enviarPorWhatsApp() {
   if (!validarDatosEnvio(datos)) return;
 
   const mensaje = generarMensajeWhatsApp(datos);
-  window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${mensaje}`, '_blank');
+  window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`, '_blank');
 }
 
 function generarMensajeWhatsApp(datos) {
   const { subtotal, envio, total } = calcularTotales();
   const { metodoEnvio } = obtenerInfoEnvio();
 
-  let mensaje = `¡Hola! Quiero hacer un pedido:%0A%0A*Productos:*%0A`;
+  let mensaje = `¡Hola! Quiero hacer un pedido:\n\n*Productos:*\n`;
   estado.carrito.forEach(item => {
-    mensaje += `- ${item.nombre} x ${item.cantidad}: $${(item.precio * item.cantidad).toFixed(2)}%0A`;
+    mensaje += `- ${item.nombre} x ${item.cantidad}: $${(item.precio * item.cantidad).toFixed(2)}\n`;
   });
 
-  mensaje += `%0A*Subtotal:* $${subtotal.toFixed(2)}%0A`;
-  mensaje += `*${metodoEnvio}:* $${envio.toFixed(2)}%0A`;
-  mensaje += `*Total:* $${total.toFixed(2)}%0A%0A`;
-  mensaje += `*Datos de envío:*%0A`;
-  mensaje += `Nombre: ${datos.name} ${datos.surname}%0A`;
-  mensaje += `Departamento: ${document.getElementById('department').value}%0A`;
-  mensaje += `Dirección: ${document.getElementById('address').value}%0A`;
-  mensaje += `%0A¿Cómo procedemos con el pago?`;
+  mensaje += `\n*Subtotal:* $${subtotal.toFixed(2)}\n`;
+  mensaje += `*${metodoEnvio}:* $${envio.toFixed(2)}\n`;
+  mensaje += `*Total:* $${total.toFixed(2)}\n\n`;
+  mensaje += `*Datos de envío:*\n`;
+  mensaje += `Nombre: ${datos.name} ${datos.surname}\n`;
+  mensaje += `Teléfono: ${datos.phone || 'No proporcionado'}\n`;
+  mensaje += `Departamento: ${document.getElementById('department').value}\n`;
+  mensaje += `Dirección: ${document.getElementById('address').value}\n`;
+  mensaje += `\n¿Cómo procedemos con el pago?`;
 
   return mensaje;
 }
@@ -306,19 +312,10 @@ function obtenerDatosPago() {
   return {
     name: document.getElementById('first-name')?.value.trim() || '',
     surname: document.getElementById('last-name')?.value.trim() || '',
+    phone: document.getElementById('phone')?.value.trim() || '',
     address: {
-      zip_code: document.getElementById('postal-code')?.value.trim() || '',
       street_name: document.getElementById('address')?.value.trim() || ''
     }
-  };
-}
-
-function obtenerUrlsRetorno() {
-  const baseUrl = window.location.origin;
-  return {
-    success: `${baseUrl}/pago-exitoso`,
-    failure: `${baseUrl}/pago-fallido`,
-    pending: `${baseUrl}/pago-pendiente`
   };
 }
 
