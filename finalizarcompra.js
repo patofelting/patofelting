@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     if (estado.carrito.length === 0) {
       mostrarNotificacion('No hay productos en el carrito', '#ff9800');
-      setTimeout(() => window.location.href = '/catalogo', 3000); // Ajusta la URL si lo necesitas
+      setTimeout(() => window.location.href = '/index.html', 3000); // Ajusta la URL si lo necesitas
       return;
     }
 
