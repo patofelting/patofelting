@@ -165,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
       // 1. Guarda el carrito actual en sessionStorage para la página de pago
       sessionStorage.setItem('carritoActual', JSON.stringify(carrito));
       // 2. Redirige a la página de pago
-      window.location.href = 'https://patofelting.github.io/metododepago/';
+      window.location.href =  'finalizarcompra.html';
     });
   }
 });
