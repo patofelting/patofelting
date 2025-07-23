@@ -82,45 +82,53 @@ document.addEventListener('DOMContentLoaded', function() {
     const total = subtotal + costoEnvio;
 
     // Mensaje WhatsApp
-document.getElementById('btn-whatsapp').addEventListener('click', function() {
-  // Trae el carrito de sessionStorage
-  const carrito = JSON.parse(sessionStorage.getItem('carritoActual')) || [];
-  if (!carrito.length) {
-    alert("El carrito está vacío.");
+function enviarPorWhatsApp() {
+  if (!estado.carrito || !estado.carrito.length) {
+    mostrarNotificacion('No hay productos en el carrito', '#ff9800');
     return;
   }
 
-  // Trae los datos del formulario
-  const nombre = document.getElementById('first-name').value.trim();
-  const apellido = document.getElementById('last-name').value.trim();
-  const departamento = document.getElementById('department').value;
-  const direccion = document.getElementById('address').value.trim();
-  const postal = document.getElementById('postal-code').value.trim();
+  // Toma los campos y valida
+  const nombre = document.getElementById('first-name')?.value.trim();
+  const apellido = document.getElementById('last-name')?.value.trim();
+  const departamento = document.getElementById('department')?.value;
+  const direccion = document.getElementById('address')?.value.trim();
+  const postal = document.getElementById('postal-code')?.value.trim();
 
-  if (!nombre || !apellido || !departamento || !direccion || !postal) {
-    alert("Completa todos los campos de envío antes de continuar.");
-    return;
+  // Si el envío NO es "Retiro en local", obligar a llenar todo
+  if (!document.getElementById('retiroLocal')?.checked) {
+    if (!nombre || !apellido || !departamento || !direccion || !postal) {
+      mostrarNotificacion('Complete todos los campos de envío', '#ff9800');
+      return;
+    }
   }
 
-  // Generar mensaje del carrito
+  // Generar mensaje
   let mensaje = `¡Hola! Quiero hacer un pedido en Patofelting:%0A%0A`;
   mensaje += `*Datos de envío:*%0A`;
-  mensaje += `Nombre: ${nombre} ${apellido}%0A`;
-  mensaje += `Departamento: ${departamento}%0A`;
-  mensaje += `Dirección: ${direccion}%0A`;
-  mensaje += `Código Postal: ${postal}%0A%0A`;
+  mensaje += `Nombre: ${nombre || "-"} ${apellido || "-"}%0A`;
+  mensaje += `Departamento: ${departamento || "-"}%0A`;
+  mensaje += `Dirección: ${direccion || "-"}%0A`;
+  mensaje += `Código Postal: ${postal || "-"}%0A%0A`;
   mensaje += `*Productos:*%0A`;
 
   let total = 0;
-  carrito.forEach(item => {
+  estado.carrito.forEach(item => {
     mensaje += `- ${item.nombre} x${item.cantidad}: $${(item.precio * item.cantidad).toFixed(2)}%0A`;
     total += item.precio * item.cantidad;
   });
 
-  mensaje += `%0ATotal productos: $${total.toFixed(2)}%0A`;
+  // Costo de envío
+  let costoEnvio = calcularCostoEnvio();
+  if (costoEnvio > 0) {
+    mensaje += `%0ACosto de envío: $${costoEnvio.toFixed(2)}%0A`;
+    total += costoEnvio;
+  }
+  mensaje += `%0ATotal: $${total.toFixed(2)}%0A`;
   mensaje += `%0A¿Cómo seguimos con el pago?`;
 
-  // Abre WhatsApp con tu número
+  // Usar tu número de WhatsApp en formato internacional (59894955466)
   window.open(`https://wa.me/59894955466?text=${mensaje}`, '_blank');
-});
+}
+
 
