@@ -82,16 +82,36 @@ document.addEventListener('DOMContentLoaded', function() {
     const total = subtotal + costoEnvio;
 
     // Mensaje WhatsApp
-    let mensaje = `¡Hola! Quiero hacer un pedido en Patofelting.%0A
-*Datos del cliente:*%0A
-Nombre: ${nombre} ${apellido}%0A
-${tipoEnvio === "retiro" ? "*Retiro en local*" : "*Envío*"}%0A
-${envioDetalle ? envioDetalle.replace(/\n/g, "%0A") : ""}
-%0A*Productos:*%0A${productosDetalle.replace(/\n/g, "%0A")}
-%0A*Subtotal:* $${subtotal.toFixed(2)}%0A*Envío:* $${costoEnvio.toFixed(2)}%0A*Total a pagar:* $${total.toFixed(2)}
-%0A¿Me confirmás si está todo bien para avanzar?`;
+  function enviarPorWhatsApp() {
+  if (estado.carrito.length === 0) {
+    mostrarNotificacion('No hay productos en el carrito', '#ff9800');
+    return;
+  }
 
-    // Abrir WhatsApp
-    window.open(`https://wa.me/${numeroWhatsApp}?text=${mensaje}`, '_blank');
+  const datos = obtenerDatosPago();
+  if (!validarDatosEnvio(datos)) return;
+
+  const mensaje = generarMensajeWhatsApp(datos);
+  window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${mensaje}`, '_blank');
+}
+
+function generarMensajeWhatsApp(datos) {
+  const { subtotal, envio, total } = calcularTotales();
+  const { metodoEnvio } = obtenerInfoEnvio();
+
+  let mensaje = `¡Hola! Quiero hacer un pedido:%0A%0A*Productos:*%0A`;
+  estado.carrito.forEach(item => {
+    mensaje += `- ${item.nombre} x ${item.cantidad}: $${(item.precio * item.cantidad).toFixed(2)}%0A`;
   });
-});
+
+  mensaje += `%0A*Subtotal:* $${subtotal.toFixed(2)}%0A`;
+  mensaje += `*${metodoEnvio}:* $${envio.toFixed(2)}%0A`;
+  mensaje += `*Total:* $${total.toFixed(2)}%0A%0A`;
+  mensaje += `*Datos de envío:*%0A`;
+  mensaje += `Nombre: ${datos.name} ${datos.surname}%0A`;
+  mensaje += `Departamento: ${document.getElementById('department').value}%0A`;
+  mensaje += `Dirección: ${document.getElementById('address').value}%0A`;
+  mensaje += `%0A¿Cómo procedemos con el pago?`;
+
+  return mensaje;
+}
