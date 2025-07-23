@@ -11,6 +11,18 @@ const CONFIG = {
   MAP_ZOOM: 13
 };
 
+const params = new URLSearchParams(window.location.search);
+if (params.has('carrito')) {
+  try {
+    carrito = JSON.parse(LZString.decompressFromEncodedURIComponent(params.get('carrito')));
+    console.log('Carrito cargado desde URL:', carrito);
+  } catch (e) {
+    console.error('Error al cargar carrito desde URL:', e);
+    carrito = cargarCarrito(); // Usar el método anterior como fallback
+  }
+}
+
+
 // ==================== ESTADO GLOBAL ====================
 let carrito = [];
 
@@ -346,4 +358,3 @@ function validarDatosEnvio(datos = null) {
   }
   return true;
 }
-
