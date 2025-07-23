@@ -632,3 +632,6 @@ window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
 window.guardarCarrito = guardarCarrito;
 
 
+document.getElementById('btn-entendido-aviso').addEventListener('click', function() {
+  window.location.href = 'https://patofelting.github.io/metododepago/';
+});
