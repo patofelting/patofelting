@@ -647,13 +647,11 @@ window.mostrarNotificacion = mostrarNotificacion;
 window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
 window.guardarCarrito = guardarCarrito;
 
-
-
 document.getElementById('btn-entendido-aviso').addEventListener('click', function() {
-  // Codificar el carrito para URL (versión compacta)
-  const carritoCodificado = LZString.compressToEncodedURIComponent(JSON.stringify(carrito));
-  
-  // Redirigir con el carrito en la URL
-  window.location.href = `finalizarcompra.html?carrito=${carritoCodificado}`;
+  // Guardar el carrito en sessionStorage
+  sessionStorage.setItem('carritoActual', JSON.stringify(carrito));
+  // Redirigir a la página de finalización
+  window.location.href = 'finalizarcompra.html';
 });
+
 
