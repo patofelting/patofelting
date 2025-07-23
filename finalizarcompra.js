@@ -12,18 +12,21 @@ const CONFIG = {
 };
 
 // ==================== ESTADO GLOBAL ====================
-let estado = {
-  carrito: JSON.parse(sessionStorage.getItem('carritoActual')) || [],
-  mp: null,
-  map: null,
-  marker: null
-};
-// --- NO USAR return fuera de función ---
-// Solo redirige si está vacío, pero NO uses return en el scope global.
-if (estado.carrito.length === 0) {
-  mostrarNotificacion('No hay productos en el carrito', '#ff9800');
-  setTimeout(() => window.location.href = 'index.html', 3000); // Cambia '/' por la URL de tu catálogo/landing
+// Obtener el carrito desde la URL (si existe)
+const params = new URLSearchParams(window.location.search);
+let carrito = [];
 
+if (params.has('carrito')) {
+  try {
+    carrito = JSON.parse(decodeURIComponent(params.get('carrito')));
+    // Si querés, lo guardás en sessionStorage para el resto de la sesión en ese dominio:
+    sessionStorage.setItem('carritoActual', JSON.stringify(carrito));
+  } catch (e) {
+    carrito = [];
+  }
+} else {
+  // Fallback: intentá levantarlo del sessionStorage de este dominio (si está)
+  carrito = JSON.parse(sessionStorage.getItem('carritoActual')) || [];
 }
 
 // ==================== INICIALIZACIÓN ====================
