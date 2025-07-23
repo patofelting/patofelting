@@ -22,8 +22,8 @@ let estado = {
 // Solo redirige si está vacío, pero NO uses return en el scope global.
 if (estado.carrito.length === 0) {
   mostrarNotificacion('No hay productos en el carrito', '#ff9800');
-  setTimeout(() => window.location.href = '/', 3000); // Cambia '/' por la URL de tu catálogo/landing
-  // return;  // ¡NO va acá!
+  setTimeout(() => window.location.href = 'index.html', 3000); // Cambia '/' por la URL de tu catálogo/landing
+
 }
 
 // ==================== INICIALIZACIÓN ====================
