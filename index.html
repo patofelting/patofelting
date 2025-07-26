@@ -209,7 +209,46 @@
   </div>
 </div>
 
-  <section id="contacto" class="contact">
+<div id="modal-checkout" class="modal-aviso" hidden>
+  <div class="modal-aviso-contenido">
+    <h3>Completa tus datos para finalizar el pedido</h3>
+    <form id="form-checkout" autocomplete="off">
+      <div class="form-group">
+        <label>Nombre *</label>
+        <input type="text" id="checkout-nombre" required>
+      </div>
+      <div class="form-group">
+        <label>Apellido *</label>
+        <input type="text" id="checkout-apellido" required>
+      </div>
+      <div class="form-group">
+        <label>Método de entrega *</label>
+        <select id="checkout-envio" required>
+          <option value="">Seleccioná una opción</option>
+          <option value="retiro">Retiro en Local (Gratis)</option>
+          <option value="montevideo">Envío Montevideo ($150)</option>
+          <option value="interior">Envío Interior ($300)</option>
+        </select>
+      </div>
+      <div class="form-group" id="checkout-direccion-group" style="display:none;">
+        <label>Dirección de entrega *</label>
+        <input type="text" id="checkout-direccion">
+      </div>
+      <div class="form-group" id="checkout-cpostal-group" style="display:none;">
+        <label>Código Postal *</label>
+        <input type="text" id="checkout-cpostal">
+      </div>
+      <div style="margin-bottom:8px;">
+        <strong id="checkout-total"></strong>
+      </div>
+      <button type="submit" class="boton-aviso-entendido">Finalizar y enviar por WhatsApp</button>
+      <button type="button" class="boton-aviso-cancelar" id="checkout-cancelar">Cancelar</button>
+    </form>
+  </div>
+</div>
+
+
+<section id="contacto" class="contact">
   <div class="container">
     <h2>Contáctame</h2>
     <p>¿Tienes alguna pregunta, una idea para una figura personalizada o simplemente quieres saludar? ¡No dudes en contactarme!</p>
