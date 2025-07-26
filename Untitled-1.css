@@ -6000,19 +6000,6 @@ button:disabled:hover,
   transform: none;
 }
 
- :root {
-            --primary-color: #8FBC8F;
-            --accent-color: #98FB98;
-            --secondary-color: #32CD32;
-            --text-color: #2F4F2F;
-            --light-text: #ffffff;
-            --background-color: #F5FFF5;
-            --font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            --font-size-base: 1rem;
-            --font-size-small: 0.875rem;
-            --line-height: 1.6;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
 
         * {
             margin: 0;
