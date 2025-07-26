@@ -647,19 +647,94 @@ window.mostrarNotificacion = mostrarNotificacion;
 window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
 window.guardarCarrito = guardarCarrito;
 
-document.getElementById('btn-entendido-aviso').addEventListener('click', function() {
-  try {
-    if (carrito.length === 0) {
-      mostrarNotificacion('El carrito está vacío', 'error');
+
+
+
+
+// Al final de tu Untitled-1.js, después de DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
+  // Botón "Sí, he leído y deseo continuar"
+  document.getElementById('btn-entendido-aviso')?.addEventListener('click', function() {
+    document.getElementById('aviso-pre-compra-modal').hidden = true;
+    document.getElementById('modal-checkout').hidden = false;
+    document.body.classList.add('modal-open');
+    mostrarCheckoutTotal();
+  });
+
+  // Botón cancelar (en el modal de checkout)
+  document.getElementById('checkout-cancelar')?.addEventListener('click', function() {
+    document.getElementById('modal-checkout').hidden = true;
+    document.body.classList.remove('modal-open');
+  });
+
+  // Mostrar/ocultar dirección según método
+  document.getElementById('checkout-envio')?.addEventListener('change', function() {
+    const envio = this.value;
+    document.getElementById('checkout-direccion-group').style.display =
+      envio === 'montevideo' || envio === 'interior' ? 'block' : 'none';
+    document.getElementById('checkout-cpostal-group').style.display =
+      envio === 'montevideo' || envio === 'interior' ? 'block' : 'none';
+    mostrarCheckoutTotal();
+  });
+
+  // Calcular precio dinámico en el modal
+  function mostrarCheckoutTotal() {
+    let total = calcularTotalPedido();
+    let envio = document.getElementById('checkout-envio')?.value;
+    let envioTxt = '';
+    if (envio === 'montevideo') { total += 150; envioTxt = ' (incluye $150 envío)'; }
+    else if (envio === 'interior') { total += 300; envioTxt = ' (incluye $300 envío)'; }
+    document.getElementById('checkout-total').textContent = `Total a pagar: $${total}${envioTxt}`;
+  }
+
+  // Al enviar el form, armar WhatsApp y enviar
+  document.getElementById('form-checkout')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    // Valida los datos
+    const nombre = document.getElementById('checkout-nombre').value.trim();
+    const apellido = document.getElementById('checkout-apellido').value.trim();
+    const envio = document.getElementById('checkout-envio').value;
+    const direccion = document.getElementById('checkout-direccion').value.trim();
+    const cpostal = document.getElementById('checkout-cpostal').value.trim();
+
+    if (!nombre || !apellido || !envio || (envio !== 'retiro' && (!direccion || !cpostal))) {
+      alert('Por favor, completá todos los campos obligatorios.');
       return;
     }
-    // Guardar el carrito en sessionStorage
-    sessionStorage.setItem('carritoActual', JSON.stringify(carrito));
-    // Redirigir a la página de finalización
-    window.location.href = 'finalizarcompra.html';
-  } catch (error) {
-    console.error('Error al guardar el carrito o redirigir:', error);
-    mostrarNotificacion('Error al procesar la compra. Por favor, inténtalo de nuevo.', 'error');
+
+    let mensaje = `¡Hola! Quiero comprar:%0A`;
+    let total = calcularTotalPedido();
+    let txtEnvio = '';
+    if (envio === 'retiro') txtEnvio = 'Retiro en local (Gratis)';
+    if (envio === 'montevideo') { total += 150; txtEnvio = 'Envío a Montevideo ($150)'; }
+    if (envio === 'interior') { total += 300; txtEnvio = 'Envío al interior ($300)'; }
+
+    mensaje += `*Datos del comprador:*%0A`;
+    mensaje += `Nombre: ${nombre} ${apellido}%0A`;
+    mensaje += `Método de entrega: ${txtEnvio}%0A`;
+    if (envio !== 'retiro') {
+      mensaje += `Dirección: ${direccion}%0A`;
+      mensaje += `Código Postal: ${cpostal}%0A`;
+    }
+    mensaje += `%0A*Pedido:*%0A`;
+
+    // Asumiendo que tu carrito es una variable global 'carrito' o en sessionStorage
+    let carrito = window.carrito || JSON.parse(sessionStorage.getItem('carritoActual')) || [];
+    carrito.forEach(item => {
+      mensaje += `- ${item.nombre} x${item.cantidad}: $${(item.precio * item.cantidad).toFixed(2)}%0A`;
+    });
+
+    mensaje += `%0ATotal a pagar: $${total}%0A`;
+    mensaje += `%0A¿Podemos coordinar el pago?`;
+
+    window.open(`https://wa.me/59894955466?text=${mensaje}`, '_blank');
+    // Cierra el modal
+    document.getElementById('modal-checkout').hidden = true;
+    document.body.classList.remove('modal-open');
+  });
+
+  function calcularTotalPedido() {
+    let carrito = window.carrito || JSON.parse(sessionStorage.getItem('carritoActual')) || [];
+    return carrito.reduce((acum, item) => acum + (item.precio * item.cantidad), 0);
   }
 });
-
