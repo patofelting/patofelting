@@ -3049,3 +3049,31 @@ body > div.notificacion.info { background: #1976d2 !important; }
   background-color: var(--primary-color);
   border-radius: 10px;
 }
+/* Mercado Pago button */
+.boton-mercado-pago {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--border-radius);
+  transition: var(--transition);
+  background-color: #009ee3;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.boton-mercado-pago img {
+  width: 24px;
+  height: auto;
+}
+.boton-mercado-pago .spinner {
+  width: 24px;
+  height: 24px;
+}
+.boton-mercado-pago:hover:not(:disabled) {
+  background-color: #007dc1;
+}
+.boton-mercado-pago:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
