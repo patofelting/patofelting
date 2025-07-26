@@ -209,41 +209,22 @@
   </div>
 </div>
 
-<div id="modal-checkout" class="modal-aviso" hidden>
-  <div class="modal-aviso-contenido">
-    <h3>Completa tus datos para finalizar el pedido</h3>
-    <form id="form-checkout" autocomplete="off">
-      <div class="form-group">
-        <label>Nombre *</label>
-        <input type="text" id="checkout-nombre" required>
-      </div>
-      <div class="form-group">
-        <label>Apellido *</label>
-        <input type="text" id="checkout-apellido" required>
-      </div>
-      <div class="form-group">
-        <label>Método de entrega *</label>
-        <select id="checkout-envio" required>
-          <option value="">Seleccioná una opción</option>
-          <option value="retiro">Retiro en Local (Gratis)</option>
-          <option value="montevideo">Envío Montevideo ($150)</option>
-          <option value="interior">Envío Interior ($300)</option>
-        </select>
-      </div>
-      <div class="form-group" id="checkout-direccion-group" style="display:none;">
-        <label>Dirección de entrega *</label>
-        <input type="text" id="checkout-direccion">
-      </div>
-      <div class="form-group" id="checkout-cpostal-group" style="display:none;">
-        <label>Código Postal *</label>
-        <input type="text" id="checkout-cpostal">
-      </div>
-      <div style="margin-bottom:8px;">
-        <strong id="checkout-total"></strong>
-      </div>
-      <button type="submit" class="boton-aviso-entendido">Finalizar y enviar por WhatsApp</button>
-      <button type="button" class="boton-aviso-cancelar" id="checkout-cancelar">Cancelar</button>
+<div id="modal-datos-envio" class="modal-datos-envio" role="dialog" aria-modal="true" hidden>
+  <div class="modal-envio-contenido">
+    <h3>Completa tus datos de envío</h3>
+    <form id="form-envio">
+      <input type="text" id="input-nombre" placeholder="Nombre" required>
+      <input type="text" id="input-apellido" placeholder="Apellido" required>
+      <input type="text" id="input-direccion" placeholder="Dirección" required>
+      <select id="select-envio" required>
+        <option value="">Seleccionar método de envío</option>
+        <option value="retiro">Retiro en local (Gratis)</option>
+        <option value="montevideo">Envío Montevideo ($150)</option>
+        <option value="interior">Envío Interior ($300)</option>
+      </select>
+      <button type="submit" class="boton-confirmar-envio">Confirmar y Enviar por WhatsApp</button>
     </form>
+    <button id="btn-cerrar-modal-envio" class="boton-cerrar-envio">Cancelar</button>
   </div>
 </div>
 
