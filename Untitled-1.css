@@ -1,7 +1,7 @@
 /* Base Styles & Variables */
 :root {
   /* Patofelting Brand Colors */
-  --primary-color:  #3CB371;    /* Verde Patofelting - principal */
+  --primary-color: #76C043;    /* Verde Patofelting - principal */
   --secondary-color: #B4F1D9;  /* Verde menta muy suave */
   --accent-color: #28705b;     /* Verde oscuro para acentos */
   --footer-bg: #ECFFF2;        /* Fondo pastel extra suave */
@@ -552,6 +552,7 @@ blockquote {
   margin-bottom: 36px;
   max-width: 100%;
   position: relative;
+  justify-content: center; /* Centra todos los elementos horizontalmente */
 }
 
 .filtro-grupo {
@@ -565,12 +566,24 @@ blockquote {
   box-shadow: 0 1.5px 7px rgba(116, 123, 143, 0.09);
   min-height: 44px;
   box-sizing: border-box;
+  justify-content: center; /* Centra los elementos dentro del grupo */
+}
+
+/* Ajuste para el grupo de precio (min y max) */
+.filtro-grupo.precio {
+  display: flex;
+  flex-direction: row; /* Asegura que estén en fila */
+  align-items: center;
+  justify-content: center; /* Centra horizontalmente */
+  gap: 5px; /* Reduce el gap para que queden más juntos */
 }
 
 .filtro-grupo label {
   font-size: 1rem;
   font-weight: 500;
   color: #4a5568;
+  text-align: center; /* Centra el texto de las etiquetas */
+  min-width: 40px; /* Asegura un ancho mínimo para "min" y "max" */
 }
 
 .filtro-grupo select,
@@ -585,6 +598,7 @@ blockquote {
   box-sizing: border-box;
   transition: border-color 0.17s, background 0.17s;
   outline: none;
+  text-align: center; /* Centra el valor dentro del input/select */
 }
 
 .filtro-grupo select:focus,
@@ -606,12 +620,77 @@ blockquote {
   transition: border-color 0.15s;
   margin-left: 0;
   margin-top: 10px;
+  text-align: center; /* Centra el texto del input de búsqueda */
 }
 
 .input-busqueda:focus {
   border-color: var(--accent-color, #2e7d32);
 }
 
+/* Estilo para el botón Resetear filtros */
+.boton-resetear-filtros {
+  height: 32px;
+  min-width: 115px;
+  padding: 0 20px;
+  border-radius: 8px;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  background: var(--medium-gray, #e2e8f0);
+  color: var(--text-color, #4a5568);
+  transition: background 0.15s;
+  box-shadow: 0 2px 8px rgba(180, 196, 222, 0.11);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.boton-resetear-filtros:hover {
+  background: var(--dark-gray, #d0dae8);
+  color: #fff;
+}
+
+/* Media Query para móviles */
+@media (max-width: 700px) {
+  .filtros-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 11px;
+    padding: 12px 6px;
+    margin-bottom: 20px;
+  }
+
+  .filtro-grupo {
+    width: 100%;
+    padding: 7px 8px;
+    min-height: 0;
+    margin-bottom: 0;
+    flex-wrap: wrap;
+    justify-content: center; /* Centra en móvil */
+  }
+
+  .filtro-grupo label {
+    min-width: 72px;
+    margin-bottom: 4px;
+    text-align: center; /* Centra en móvil */
+  }
+
+  .input-busqueda {
+    min-width: 0;
+    width: 100%;
+    margin-left: 0;
+    margin-top: 7px;
+    text-align: center; /* Centra en móvil */
+  }
+
+  .boton-resetear-filtros {
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    margin-top: 7px;
+  }
+}
 /* Botones */
 .aplicar-rango-btn {
   height: 32px;
