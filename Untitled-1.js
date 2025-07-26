@@ -5,6 +5,7 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
+const MP_ACCESS_TOKEN = window.MP_ACCESS_TOKEN || '';
 
 // ===============================
 // ESTADO GLOBAL
@@ -41,6 +42,7 @@ const elementos = {
   carritoOverlay: document.querySelector('.carrito-overlay'),
   btnVaciarCarrito: document.querySelector('.boton-vaciar-carrito'),
   btnFinalizarCompra: document.querySelector('.boton-finalizar-compra'),
+  btnMercadoPago: null,
   btnCerrarCarrito: document.querySelector('.cerrar-carrito'),
   avisoPreCompraModal: getElement('aviso-pre-compra-modal'),
   btnEntendidoAviso: getElement('btn-entendido-aviso'),
@@ -79,6 +81,7 @@ function cargarCarrito() {
   try {
     carrito = JSON.parse(localStorage.getItem(LS_CARRITO_KEY)) || [];
     actualizarContadorCarrito();
+    actualizarBotonMercadoPago();
   } catch {
     carrito = [];
   }
@@ -96,6 +99,7 @@ function vaciarCarrito() {
     actualizarUI();
     mostrarNotificacion('Carrito vaciado', 'info');
     toggleCarrito(false);
+    actualizarBotonMercadoPago();
   }
 }
 
@@ -138,6 +142,7 @@ function agregarAlCarrito(id, cantidad = 1) {
   guardarCarrito();
   actualizarUI();
   mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
+  actualizarBotonMercadoPago();
 }
 
 function renderizarCarrito() {
@@ -146,6 +151,7 @@ function renderizarCarrito() {
   if (carrito.length === 0) {
     elementos.listaCarrito.innerHTML = '<p class="carrito-vacio">Tu carrito está vacío</p>';
     elementos.totalCarrito.textContent = 'Total: $U 0';
+    actualizarBotonMercadoPago();
     return;
   }
   
@@ -156,7 +162,7 @@ function renderizarCarrito() {
     
     return `
     <li class="carrito-item" data-id="${item.id}">
-      <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}" loading="lazy">
+      <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'">
       <div class="carrito-item-info">
         <span class="carrito-item-nombre">${item.nombre}</span>
         <span class="carrito-item-precio">$U ${item.precio.toLocaleString('es-UY')} c/u</span>
@@ -217,6 +223,8 @@ function renderizarCarrito() {
       renderizarCarrito();
     });
   });
+
+  actualizarBotonMercadoPago();
 }
 
 // ===============================
@@ -277,6 +285,7 @@ async function cargarProductosDesdeSheets() {
       }));
     actualizarCategorias();
     actualizarUI();
+    actualizarBotonMercadoPago();
   } catch (e) {
     if (elementos.galeriaProductos)
       elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos.</p>';
@@ -314,7 +323,7 @@ function crearCardProducto(p) {
   const agot = disp <= 0;
   return `
     <div class="producto-card" data-id="${p.id}">
-      <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img" loading="lazy">
+      <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'">
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
       <p class="producto-stock">
@@ -380,7 +389,7 @@ function mostrarModalProducto(producto) {
       <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
       <div class="modal-flex">
         <div class="modal-carrusel">
-          <img src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
+          <img src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}" onerror="this.src='${PLACEHOLDER_IMAGE}'">
           ${
             producto.imagenes.length > 1
               ? `
@@ -399,7 +408,7 @@ function mostrarModalProducto(producto) {
             ${producto.imagenes
               .map(
                 (img, i) =>
-                  `<img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}">`
+                  `<img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}" onerror="this.src='${PLACEHOLDER_IMAGE}'">`
               )
               .join('')}
           </div>
@@ -722,6 +731,83 @@ function configurarEnvioWhatsApp() {
 }
 
 // ===============================
+// MERCADO PAGO INTEGRATION
+// ===============================
+function insertarBotonMercadoPago() {
+  const cont = document.querySelector('.carrito-acciones');
+  if (!cont) return;
+  const btn = document.createElement('button');
+  btn.id = 'btn-mercado-pago';
+  btn.className = 'boton-mercado-pago';
+  btn.innerHTML = `<img src="https://www.mercadopago.com/org-img/MP3/home/logomp3.gif" alt="Mercado Pago" loading="lazy"> Pagar con Mercado Pago`;
+  cont.appendChild(btn);
+  elementos.btnMercadoPago = btn;
+  btn.dataset.text = btn.innerHTML;
+  btn.addEventListener('click', iniciarPagoMercadoPago);
+  actualizarBotonMercadoPago();
+}
+
+function actualizarBotonMercadoPago() {
+  const btn = elementos.btnMercadoPago;
+  if (!btn) return;
+  const vacio = carrito.length === 0;
+  btn.disabled = vacio;
+  btn.style.display = vacio ? 'none' : 'block';
+}
+
+function setMercadoPagoLoading(state) {
+  const btn = elementos.btnMercadoPago;
+  if (!btn) return;
+  if (state) {
+    btn.disabled = true;
+    btn.innerHTML = `<svg class="spinner" viewBox="0 0 50 50"><circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"/></svg>`;
+  } else {
+    btn.innerHTML = btn.dataset.text;
+    actualizarBotonMercadoPago();
+  }
+}
+
+async function iniciarPagoMercadoPago() {
+  if (carrito.length === 0) return;
+  if (!MP_ACCESS_TOKEN) {
+    mostrarNotificacion('Integración de pago no configurada', 'error');
+    return;
+  }
+  const total = carrito.reduce((sum, i) => sum + i.precio * i.cantidad, 0);
+  const body = {
+    items: [
+      {
+        title: 'Compra en Patofelting',
+        quantity: 1,
+        unit_price: total,
+        currency_id: 'UYU'
+      }
+    ]
+  };
+  try {
+    setMercadoPagoLoading(true);
+    const resp = await fetch('https://api.mercadopago.com/checkout/preferences', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${MP_ACCESS_TOKEN}`
+      },
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.message || 'No se pudo generar la preferencia');
+    const url = data.init_point || data.sandbox_init_point;
+    if (!url) throw new Error('Enlace de pago no disponible');
+    window.location.href = url;
+  } catch (e) {
+    console.error('Mercado Pago', e);
+    mostrarNotificacion('Ocurrió un error al iniciar el pago', 'error');
+  } finally {
+    setMercadoPagoLoading(false);
+  }
+}
+
+// ===============================
 // INICIALIZACIÓN GENERAL
 // ===============================
 function inicializarEventos() {
@@ -829,6 +915,7 @@ function init() {
   inicializarMenuHamburguesa();
   inicializarFAQ();
   setupContactForm();
+  insertarBotonMercadoPago();
 
   // Ocultar modales y loader al inicio
   if (elementos.avisoPreCompraModal) elementos.avisoPreCompraModal.style.display = 'none';
