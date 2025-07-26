@@ -67,6 +67,19 @@ function mostrarNotificacion(mensaje, tipo = 'exito') {
   }, 2500);
 }
 
+function normalizarUrlImagen(url) {
+  if (!url) return PLACEHOLDER_IMAGE;
+  const driveMatch = url.match(/https?:\/\/drive\.google\.com\/file\/d\/([^/]+)/);
+  if (driveMatch) {
+    return `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
+  }
+  const openMatch = url.match(/https?:\/\/drive\.google\.com\/open\?id=([^&]+)/);
+  if (openMatch) {
+    return `https://drive.google.com/uc?export=download&id=${openMatch[1]}`;
+  }
+  return url;
+}
+
 // ===============================
 // CARRITO: GUARDAR, CARGAR Y RENDERIZAR
 // ===============================
@@ -245,7 +258,9 @@ async function cargarProductosDesdeSheets() {
         nombre: r.nombre.trim(),
         descripcion: r.descripcion || '',
         precio: parseFloat(r.precio) || 0,
-        imagenes: (r.foto && r.foto.trim() !== "") ? r.foto.split(',').map(x => x.trim()) : [PLACEHOLDER_IMAGE],
+        imagenes: (r.foto && r.foto.trim() !== "")
+          ? r.foto.split(',').map(x => normalizarUrlImagen(x.trim()))
+          : [PLACEHOLDER_IMAGE],
         adicionales: r.adicionales ? r.adicionales.trim() : '',
         alto: parseFloat(r.alto) || null,
         ancho: parseFloat(r.ancho) || null,
@@ -288,7 +303,7 @@ function crearCardProducto(p) {
   const agot = p.vendido === true;
   return `
     <div class="producto-card" data-id="${p.id}">
-      <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img" loading="lazy">
+      <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img" loading="lazy" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';">
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
       ${agot ? '<p class="producto-stock"><span class="texto-agotado">Agotado</span></p>' : ''}
@@ -349,7 +364,7 @@ function mostrarModalProducto(producto) {
       <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
       <div class="modal-flex">
         <div class="modal-carrusel">
-          <img src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
+          <img src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';">
           ${
             producto.imagenes.length > 1
               ? `
@@ -368,7 +383,7 @@ function mostrarModalProducto(producto) {
             ${producto.imagenes
               .map(
                 (img, i) =>
-                  `<img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}">`
+                  `<img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';">`
               )
               .join('')}
           </div>
