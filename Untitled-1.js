@@ -135,23 +135,69 @@ function agregarAlCarrito(id, cantidad = 1) {
 
 function renderizarCarrito() {
   if (!elementos.listaCarrito || !elementos.totalCarrito) return;
+  
   if (carrito.length === 0) {
     elementos.listaCarrito.innerHTML = '<p class="carrito-vacio">Tu carrito está vacío</p>';
     elementos.totalCarrito.textContent = 'Total: $U 0';
     return;
   }
-  elementos.listaCarrito.innerHTML = carrito.map(i => `
-      <li class="carrito-item">
-        ${i.imagen ? `<img src="${i.imagen}" class="carrito-item-img" alt="${i.nombre}" loading="lazy">` : ''}
-        <div class="carrito-item-info">
-          <span class="carrito-item-nombre">${i.nombre}</span>
-          <span class="carrito-item-subtotal">$U ${(i.precio * i.cantidad).toLocaleString('es-UY')}</span>
-          <span class="carrito-item-cantidad">Cantidad: ${i.cantidad}</span>
+  
+  elementos.listaCarrito.innerHTML = carrito.map(item => `
+    <li class="carrito-item" data-id="${item.id}">
+      <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}" loading="lazy">
+      <div class="carrito-item-info">
+        <span class="carrito-item-nombre">${item.nombre}</span>
+        <span class="carrito-item-precio">$U ${item.precio.toLocaleString('es-UY')} c/u</span>
+        <div class="carrito-item-controls">
+          <button class="disminuir-cantidad" data-id="${item.id}" aria-label="Reducir cantidad">-</button>
+          <span class="carrito-item-cantidad">${item.cantidad}</span>
+          <button class="aumentar-cantidad" data-id="${item.id}" aria-label="Aumentar cantidad">+</button>
         </div>
-      </li>
-    `).join('');
-  const total = carrito.reduce((sum, i) => sum + i.precio * i.cantidad, 0);
+        <span class="carrito-item-subtotal">Subtotal: $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
+      </div>
+      <button class="eliminar-item" data-id="${item.id}" aria-label="Eliminar producto">
+        <i class="fas fa-trash"></i>
+      </button>
+    </li>
+  `).join('');
+
+  // Actualizar el total
+  const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
   elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
+  
+  // Agregar eventos a los botones
+  document.querySelectorAll('.disminuir-cantidad').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = parseInt(e.target.dataset.id);
+      const item = carrito.find(item => item.id === id);
+      if (item && item.cantidad > 1) {
+        item.cantidad--;
+        guardarCarrito();
+        renderizarCarrito();
+      }
+    });
+  });
+
+  document.querySelectorAll('.aumentar-cantidad').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = parseInt(e.target.dataset.id);
+      const item = carrito.find(item => item.id === id);
+      if (item) {
+        item.cantidad++;
+        guardarCarrito();
+        renderizarCarrito();
+      }
+    });
+  });
+
+  document.querySelectorAll('.eliminar-item').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = parseInt(e.target.dataset.id);
+      carrito = carrito.filter(item => item.id !== id);
+      guardarCarrito();
+      renderizarCarrito();
+    });
+  });
 }
 // =======================
 // REDIRECCIÓN DESDE AVISO DE COMPRA
@@ -663,40 +709,52 @@ function actualizarResumenPedido() {
   const resumenProductos = document.getElementById('resumen-productos');
   const resumenTotal = document.getElementById('resumen-total');
   
-  if (resumenProductos && resumenTotal) {
-    let html = '';
-    let subtotal = 0;
-    
-    // Verificar si hay productos en el carrito
-    if (carrito.length === 0) {
-      html = '<p class="carrito-vacio">No hay productos en el carrito</p>';
-    } else {
-      carrito.forEach(item => {
-        const itemTotal = item.precio * item.cantidad;
-        subtotal += itemTotal;
-        html += `
-          <div class="resumen-item">
-            <span>${item.nombre} x${item.cantidad}</span>
-            <span>$U ${itemTotal.toLocaleString('es-UY')}</span>
-          </div>
-        `;
-      });
-      
-      // Agregar línea de subtotal
-      html += `
-        <div class="resumen-item resumen-subtotal">
-          <span>Subtotal:</span>
-          <span>$U ${subtotal.toLocaleString('es-UY')}</span>
-        </div>
-      `;
-    }
-    
-    resumenProductos.innerHTML = html;
-    // Actualizamos solo el subtotal aquí, el total con envío se calcula al seleccionar método
-    resumenTotal.textContent = `$U ${subtotal.toLocaleString('es-UY')}`;
-  }
-}
+  if (!resumenProductos || !resumenTotal) return;
 
+  if (carrito.length === 0) {
+    resumenProductos.innerHTML = '<p class="carrito-vacio">No hay productos en el carrito</p>';
+    resumenTotal.textContent = '$U 0';
+    return;
+  }
+
+  let html = '';
+  let subtotal = 0;
+  
+  carrito.forEach(item => {
+    const itemTotal = item.precio * item.cantidad;
+    subtotal += itemTotal;
+    html += `
+      <div class="resumen-item">
+        <span>${item.nombre} x${item.cantidad}</span>
+        <span>$U ${itemTotal.toLocaleString('es-UY')}</span>
+      </div>
+    `;
+  });
+
+  // Agregar línea de subtotal
+  html += `
+    <div class="resumen-item resumen-subtotal">
+      <span>Subtotal:</span>
+      <span>$U ${subtotal.toLocaleString('es-UY')}</span>
+    </div>
+  `;
+
+  resumenProductos.innerHTML = html;
+  
+  // Obtener método de envío seleccionado
+  const envioSelect = document.getElementById('select-envio');
+  const metodoEnvio = envioSelect ? envioSelect.value : 'retiro';
+  let costoEnvio = 0;
+
+  if (metodoEnvio === 'montevideo') {
+    costoEnvio = 150;
+  } else if (metodoEnvio === 'interior') {
+    costoEnvio = 300;
+  }
+
+  const total = subtotal + costoEnvio;
+  resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
+}
 // Cerrar modal de envío
 document.getElementById('btn-cerrar-modal-envio').addEventListener('click', function() {
   const modalEnvio = document.getElementById('modal-datos-envio');
@@ -793,4 +851,26 @@ document.getElementById('form-envio').addEventListener('submit', function(e) {
     mostrarNotificacion('Pedido enviado con éxito', 'exito');
     document.getElementById('form-envio').reset();
   }, 300);
+});
+
+// En la función inicializarEventos(), verifica que tengas esto:
+elementos.btnFinalizarCompra?.addEventListener('click', () => {
+  if (carrito.length === 0) {
+    mostrarNotificacion('El carrito está vacío', 'error');
+    return;
+  }
+  
+  // Mostrar aviso pre-compra
+  elementos.avisoPreCompraModal.style.display = 'flex';
+  
+  // Actualizar resumen ANTES de mostrar el modal de envío
+  document.getElementById('btn-entendido-aviso').onclick = function() {
+    elementos.avisoPreCompraModal.style.display = 'none';
+    const modalEnvio = document.getElementById('modal-datos-envio');
+    modalEnvio.hidden = false;
+    setTimeout(() => {
+      modalEnvio.classList.add('visible');
+      actualizarResumenPedido(); // Actualizar aquí también por si acaso
+    }, 10);
+  };
 });
