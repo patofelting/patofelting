@@ -209,25 +209,67 @@
   </div>
 </div>
 
+<!-- Modal para completar datos de envío -->
 <div id="modal-datos-envio" class="modal-datos-envio" role="dialog" aria-modal="true" hidden>
   <div class="modal-envio-contenido">
-    <h3>Completa tus datos de envío</h3>
-    <form id="form-envio">
-      <input type="text" id="input-nombre" placeholder="Nombre" required>
-      <input type="text" id="input-apellido" placeholder="Apellido" required>
-      <input type="text" id="input-direccion" placeholder="Dirección" required>
-      <select id="select-envio" required>
-        <option value="">Seleccionar método de envío</option>
-        <option value="retiro">Retiro en local (Gratis)</option>
-        <option value="montevideo">Envío Montevideo ($150)</option>
-        <option value="interior">Envío Interior ($300)</option>
-      </select>
-      <button type="submit" class="boton-confirmar-envio">Confirmar y Enviar por WhatsApp</button>
+    <button id="btn-cerrar-modal-envio" class="cerrar-modal-envio" aria-label="Cerrar modal">×</button>
+    <div class="modal-envio-header">
+      <h3>Completa tus datos</h3>
+      <p>Finalizá tu compra ingresando la información de envío</p>
+    </div>
+    
+    <form id="form-envio" class="form-envio">
+      <div class="form-grupo">
+        <label for="input-nombre">Nombre*</label>
+        <input type="text" id="input-nombre" placeholder="Ej: María" required>
+      </div>
+      
+      <div class="form-grupo">
+        <label for="input-apellido">Apellido*</label>
+        <input type="text" id="input-apellido" placeholder="Ej: González" required>
+      </div>
+      
+      <div class="form-grupo">
+        <label for="input-telefono">Teléfono*</label>
+        <input type="tel" id="input-telefono" placeholder="Ej: 099123456" required>
+      </div>
+      
+      <div class="form-grupo" id="grupo-direccion">
+        <label for="input-direccion">Dirección*</label>
+        <input type="text" id="input-direccion" placeholder="Ej: Av. 18 de Julio 1234" required>
+        <small class="ayuda-texto">Solo si seleccionás envío</small>
+      </div>
+      
+      <div class="form-grupo">
+        <label for="select-envio">Método de envío*</label>
+        <select id="select-envio" required>
+          <option value="">Seleccionar método</option>
+          <option value="retiro">Retiro en local (Gratis)</option>
+          <option value="montevideo">Envío Montevideo ($150)</option>
+          <option value="interior">Envío Interior ($300)</option>
+        </select>
+      </div>
+      
+      <div class="form-notas">
+        <label for="input-notas">Notas adicionales</label>
+        <textarea id="input-notas" placeholder="Detalles especiales, horarios preferidos, etc." rows="3"></textarea>
+      </div>
+      
+      <div class="resumen-pedido">
+        <h4>Resumen de tu pedido</h4>
+        <div id="resumen-productos"></div>
+        <div class="resumen-total">
+          <span>Total:</span>
+          <span id="resumen-total">$U 0</span>
+        </div>
+      </div>
+      
+      <button type="submit" class="boton-confirmar-envio">
+        <i class="fab fa-whatsapp"></i> Enviar pedido por WhatsApp
+      </button>
     </form>
-    <button id="btn-cerrar-modal-envio" class="boton-cerrar-envio">Cancelar</button>
   </div>
 </div>
-
 
 <section id="contacto" class="contact">
   <div class="container">
