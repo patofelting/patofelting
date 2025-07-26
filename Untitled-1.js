@@ -641,6 +641,8 @@ window.guardarCarrito = guardarCarrito;
 
 // Reemplaza la sección del final del Untitled-1.js con esto:
 
+// Reemplaza completamente la sección final del archivo JS con esto:
+
 // Mostrar el modal de datos de envío luego del pre-compra
 document.getElementById('btn-entendido-aviso').addEventListener('click', function() {
   document.getElementById('aviso-pre-compra-modal').hidden = true;
@@ -653,28 +655,47 @@ document.getElementById('btn-entendido-aviso').addEventListener('click', functio
   }, 10);
   
   // Llenar el resumen del pedido
+  actualizarResumenPedido();
+});
+
+// Función para actualizar el resumen del pedido
+function actualizarResumenPedido() {
   const resumenProductos = document.getElementById('resumen-productos');
   const resumenTotal = document.getElementById('resumen-total');
   
   if (resumenProductos && resumenTotal) {
     let html = '';
-    let total = 0;
+    let subtotal = 0;
     
-    carrito.forEach(item => {
-      const subtotal = item.precio * item.cantidad;
-      total += subtotal;
+    // Verificar si hay productos en el carrito
+    if (carrito.length === 0) {
+      html = '<p class="carrito-vacio">No hay productos en el carrito</p>';
+    } else {
+      carrito.forEach(item => {
+        const itemTotal = item.precio * item.cantidad;
+        subtotal += itemTotal;
+        html += `
+          <div class="resumen-item">
+            <span>${item.nombre} x${item.cantidad}</span>
+            <span>$U ${itemTotal.toLocaleString('es-UY')}</span>
+          </div>
+        `;
+      });
+      
+      // Agregar línea de subtotal
       html += `
-        <div class="resumen-item">
-          <span>${item.nombre} x${item.cantidad}</span>
+        <div class="resumen-item resumen-subtotal">
+          <span>Subtotal:</span>
           <span>$U ${subtotal.toLocaleString('es-UY')}</span>
         </div>
       `;
-    });
+    }
     
     resumenProductos.innerHTML = html;
-    resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
+    // Actualizamos solo el subtotal aquí, el total con envío se calcula al seleccionar método
+    resumenTotal.textContent = `$U ${subtotal.toLocaleString('es-UY')}`;
   }
-});
+}
 
 // Cerrar modal de envío
 document.getElementById('btn-cerrar-modal-envio').addEventListener('click', function() {
@@ -683,6 +704,36 @@ document.getElementById('btn-cerrar-modal-envio').addEventListener('click', func
   setTimeout(() => {
     modalEnvio.hidden = true;
   }, 300);
+});
+
+// Actualizar total cuando cambia el método de envío
+document.getElementById('select-envio').addEventListener('change', function() {
+  const grupoDireccion = document.getElementById('grupo-direccion');
+  const resumenTotal = document.getElementById('resumen-total');
+  
+  // Mostrar/ocultar campo dirección
+  if (this.value === 'retiro') {
+    grupoDireccion.style.display = 'none';
+    document.getElementById('input-direccion').required = false;
+  } else {
+    grupoDireccion.style.display = 'flex';
+    document.getElementById('input-direccion').required = true;
+  }
+  
+  // Calcular nuevo total con envío
+  if (resumenTotal && carrito.length > 0) {
+    const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+    let costoEnvio = 0;
+    
+    if (this.value === 'montevideo') {
+      costoEnvio = 150;
+    } else if (this.value === 'interior') {
+      costoEnvio = 300;
+    }
+    
+    const total = subtotal + costoEnvio;
+    resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
+  }
 });
 
 // Validar y enviar por WhatsApp
@@ -703,7 +754,7 @@ document.getElementById('form-envio').addEventListener('submit', function(e) {
   }
 
   // Calcular total con envío
-  let total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+  let subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
   let envioTxt = 'Retiro en local (Gratis)';
   let costoEnvio = 0;
   
@@ -715,14 +766,19 @@ document.getElementById('form-envio').addEventListener('submit', function(e) {
     envioTxt = `Envío Interior ($U ${costoEnvio})`;
   }
   
-  total += costoEnvio;
+  const total = subtotal + costoEnvio;
 
   // Crear mensaje detallado
-  let productosMsg = carrito.map(item => 
-    `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`
-  ).join('\n');
+  let productosMsg = '';
+  if (carrito.length === 0) {
+    productosMsg = 'No hay productos en el carrito';
+  } else {
+    productosMsg = carrito.map(item => 
+      `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`
+    ).join('\n');
+  }
   
-  const mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*Productos:*\n${productosMsg}\n\n*Datos del cliente:*\n👤 ${nombre} ${apellido}\n📞 ${telefono}\n\n*Envío:*\n${envioTxt}\n${envio !== 'retiro' ? `📍 Dirección: ${direccion}\n` : ''}\n*Total:* $U ${total.toLocaleString('es-UY')}\n\n${notas ? `*Notas:*\n${notas}` : ''}`;
+  const mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*Productos:*\n${productosMsg}\n\n*Datos del cliente:*\n👤 ${nombre} ${apellido}\n📞 ${telefono}\n\n*Envío:*\n${envioTxt}\n${envio !== 'retiro' ? `📍 Dirección: ${direccion}\n` : ''}\n*Subtotal:* $U ${subtotal.toLocaleString('es-UY')}\n*Costo de envío:* $U ${costoEnvio.toLocaleString('es-UY')}\n*Total a pagar:* $U ${total.toLocaleString('es-UY')}\n\n${notas ? `*Notas:*\n${notas}` : ''}`;
 
   // Abrir WhatsApp
   window.open(`https://wa.me/59894955466?text=${encodeURIComponent(mensaje)}`, '_blank');
@@ -737,16 +793,4 @@ document.getElementById('form-envio').addEventListener('submit', function(e) {
     mostrarNotificacion('Pedido enviado con éxito', 'exito');
     document.getElementById('form-envio').reset();
   }, 300);
-});
-
-// Mostrar/ocultar campo dirección según método de envío
-document.getElementById('select-envio').addEventListener('change', function() {
-  const grupoDireccion = document.getElementById('grupo-direccion');
-  if (this.value === 'retiro') {
-    grupoDireccion.style.display = 'none';
-    document.getElementById('input-direccion').required = false;
-  } else {
-    grupoDireccion.style.display = 'flex';
-    document.getElementById('input-direccion').required = true;
-  }
 });
