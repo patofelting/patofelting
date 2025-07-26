@@ -564,6 +564,62 @@ blockquote {
   width: 100%;
 }
 
+
+.filtro-precio, .filtros-precio, .filtros-precio-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 10px 0 18px 0;
+  width: 100%;
+}
+
+.input-rango-filtro {
+  min-width: 90px;
+  padding: 6px 8px;
+  border: 1px solid #dde6e3;
+  border-radius: 5px;
+  font-size: 1rem;
+  text-align: center;
+  margin: 0 2px;
+}
+
+.filtro-precio label, .filtros-precio label {
+  min-width: 35px;
+  color: var(--accent-color, #2E7D32);
+  font-weight: 500;
+  text-align: right;
+}
+
+.aplicar-rango-btn {
+  background: #3CB371;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 7px 18px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-left: 10px;
+  transition: background 0.2s;
+  box-shadow: 0 1px 6px rgba(60,179,113,0.07);
+}
+.aplicar-rango-btn:hover {
+  background: #31945a;
+}
+
+@media (max-width: 700px) {
+  .filtro-precio, .filtros-precio, .filtros-precio-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .aplicar-rango-btn {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
 .filtro-grupo {
   display: flex;
   align-items: center;
