@@ -1,0 +1,261 @@
+/* Base Styles & Variables */
+:root {
+  --primary-color: #4CAF50; /* Verde principal */
+  --secondary-color: #8BC34A; /* Verde secundario */
+  --accent-color: #2E7D32; /* Verde oscuro para acentos */
+  --text-color: #333;
+  --light-text: #f8f8f8;
+  --background-color: #fff;
+  --light-gray: #f5f5f5;
+  --medium-gray: #e0e0e0;
+  --dark-gray: #555;
+  --success-color: #388E3C; /* Verde más oscuro para éxito */
+  --error-color: #f44336;
+  --warning-color: #FFA000; /* Ámbar para advertencias */
+  --border-radius: 8px;
+  --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --transition: all 0.3s ease;
+  --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --font-size-base: 16px;
+  --font-size-small: 14px;
+  --font-size-large: 18px;
+  --font-weight-normal: 400;
+  --font-weight-bold: 700;
+  --line-height: 1.6;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: var(--font-size-base);
+}
+
+body {
+  font-family: var(--font-family);
+  line-height: var(--line-height);
+  color: var(--text-color);
+  background-color: var(--background-color);
+  overflow-x: hidden;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Navigation */
+.nav {
+  background-color: var(--background-color);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  position: fixed;
+  width: 100%;
+  top: 0;
+  z-index: 1000;
+}
+
+.nav-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.logo-text {
+  font-size: 1.5rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--primary-color);
+}
+
+.hamburguesa {
+  font-size: 1.5rem;
+  display: none;
+  background: none;
+  color: var(--text-color);
+}
+
+.menu {
+  display: flex;
+  list-style: none;
+  gap: 20px;
+}
+
+.menu li a {
+  padding: 5px 10px;
+  transition: var(--transition);
+  font-weight: var(--font-weight-normal);
+}
+
+.menu li a:hover {
+  color: var(--primary-color);
+}
+
+/* Estilos específicos para la página de política */
+body.policy-page {
+  padding-top: 80px;
+}
+
+.policy-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 0 20px;
+}
+
+.policy-container h1 {
+  color: var(--primary-color);
+  margin-bottom: 1.5rem;
+  font-size: 2rem;
+}
+
+.policy-container h2 {
+  color: var(--accent-color);
+  margin: 1.5rem 0 1rem 0;
+  font-size: 1.5rem;
+}
+
+.policy-container h3 {
+  color: var(--primary-color);
+  margin: 1.2rem 0 0.8rem 0;
+}
+
+.policy-container p, 
+.policy-container li {
+  margin-bottom: 0.8rem;
+  line-height: 1.6;
+}
+
+.policy-container ul {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+/* NOTIFICACIÓN */
+.notificacion {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 15px 20px;
+  border-radius: var(--border-radius);
+  color: white;
+  box-shadow: var(--box-shadow);
+  transform: translateY(100px);
+  opacity: 0;
+  transition: var(--transition);
+  z-index: 2100;
+}
+
+.notificacion.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.notificacion.exito {
+  background-color: var(--success-color);
+}
+
+.notificacion.error {
+  background-color: var(--error-color);
+}
+
+.notificacion.info {
+  background-color: #2196F3;
+}
+
+/* Footer */
+.footer {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 30px 0;
+  text-align: center;
+}
+
+.footer-content {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.footer p {
+  margin-bottom: 10px;
+}
+
+.footer a {
+  color: white;
+  transition: var(--transition);
+}
+
+.footer a:hover {
+  opacity: 0.8;
+}
+
+.footer i {
+  margin-right: 5px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .hamburguesa {
+    display: block;
+  }
+  .menu {
+    position: fixed;
+    top: 80px;
+    left: 0;
+    width: 100%;
+    background-color: white;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0;
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+    transform: translateY(-150%);
+    transition: transform 0.3s ease;
+    z-index: 999;
+  }
+  .menu.active {
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 576px) {
+  .nav-container {
+    padding: 10px 15px;
+  }
+  .logo-text {
+    font-size: 1.2rem;
+  }
+}
