@@ -1,7 +1,10 @@
+
+
+
 /* Base Styles & Variables */
 :root {
   /* Patofelting Brand Colors */
-    --primary-color: #3CB371;    /* Verde Patofelting principal (si lo usás en otros lados) */
+  --primary-color: #3CB371;    /* Verde Patofelting principal (si lo usás en otros lados) */
   --secondary-color: #B4F1D9;
   --accent-color: #28705b;
   --button-color: #3CB371;     /* Verde botón */
@@ -588,7 +591,10 @@ blockquote {
   min-width: 35px;
   color: var(--accent-color, #2E7D32);
   font-weight: 500;
-  text-align: right;
+  text-align: center; /* Cambiado de 'right' a 'center' para centrar */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .aplicar-rango-btn {
@@ -622,7 +628,7 @@ blockquote {
 
 .filtro-grupo.filtro-rango {
   display: grid;
-  grid-template-columns: auto 48px 110px 48px 110px auto;
+  grid-template-columns: auto auto 110px auto 110px auto;
   align-items: center;
   justify-content: center;
   gap: 0 8px;
@@ -638,7 +644,7 @@ blockquote {
 }
 .filtro-grupo.filtro-rango label[for="precio-min"] {
   grid-column: 2/3;
-  justify-self: end;
+  justify-self: center; /* Cambiado de 'end' a 'center' */
   font-weight: 600;
 }
 #precio-min {
@@ -693,7 +699,7 @@ blockquote {
   }
  .filtro-grupo.filtro-rango label[for="precio-max"] {
   grid-column: 4/5;
-  justify-self: end;
+  justify-self: center; /* Cambiado de 'end' a 'center' */
   font-weight: 600;
 }
 
@@ -1545,16 +1551,11 @@ blockquote {
     border-radius: 12px;
   }
 }
-
-
-
-/* Contact Section */
 /* Contact Section */
 .contact {
   padding: 80px 20px;
   background: linear-gradient(135deg, #f5f7fa 0%, #e4e7eb 100%);
-  /* Se ajusta la altura mínima para que ocupe menos espacio */
-  min-height: auto; /* Cambiado de 100vh a auto */
+  min-height: auto;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1581,8 +1582,7 @@ blockquote {
 form {
   display: flex;
   flex-direction: column;
-  /* Reducimos el ancho máximo del formulario */
-  max-width: 400px; /* Ajusta este valor según tu preferencia */
+  max-width: 400px;
   width: 100%;
   margin: 0 auto;
   background: #ffffff;
@@ -1607,7 +1607,7 @@ label {
 }
 
 input, textarea {
-  width: 100%; /* Sigue ocupando el 100% del contenedor del formulario */
+  width: 100%;
   padding: 0.875rem;
   margin-bottom: 1.5rem;
   border: 1px solid #e2e8f0;
@@ -1630,9 +1630,9 @@ textarea {
   min-height: 120px;
 }
 
-button {
+button[type="submit"] {
   padding: 0.875rem 2rem;
-  background-color: #2f855a;
+  background-color: #3CB371; /* Color específico solicitado */
   color: #ffffff;
   border: none;
   border-radius: 8px;
@@ -1642,17 +1642,16 @@ button {
   transition: all 0.3s ease;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  /* Asegura que el botón no se estire más allá del formulario */
-  align-self: center; /* Centra el botón si es más pequeño que el formulario */
-  max-width: 100%; /* Evita que el botón se estire más allá del 100% */
+  align-self: center;
+  max-width: 100%;
 }
 
-button:hover {
-  background-color: #276749;
+button[type="submit"]:hover {
+  background-color: #2E8B57;
   transform: translateY(-2px);
 }
 
-button:active {
+button[type="submit"]:active {
   transform: translateY(0);
 }
 
@@ -1702,8 +1701,7 @@ button:active {
 
   form {
     padding: 1.5rem;
-    /* En pantallas más pequeñas, el formulario puede ocupar un poco más de ancho */
-    max-width: 90%; /* Ajusta según sea necesario para móviles */
+    max-width: 90%;
   }
 }
 
@@ -1831,32 +1829,100 @@ button:active {
 
 /* Footer */
 .footer {
-  background-color: var(--primary-color);
-  color: white;
-  padding: 30px 0;
+  background: var(--footer-gradient, radial-gradient(circle at 80% 10%, #B4F1D9 0%, #ECFFF2 100%));
+  color: var(--text-color, #246655);
+  border-top-left-radius: var(--footer-radius, 38px);
+  border-top-right-radius: var(--footer-radius, 38px);
+  box-shadow: var(--footer-shadow, 0 8px 38px rgba(120, 192, 67, 0.07));
+  padding: 52px 0 30px 0;
   text-align: center;
+  font-family: var(--font-family);
+  font-size: 1.09rem;
+  letter-spacing: 0.01em;
 }
 
 .footer-content {
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
+  padding: 0 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
 }
 
-.footer p {
-  margin-bottom: 10px;
+.footer p,
+.footer a,
+.footer-nav a {
+  color: var(--text-color, #246655);
+  opacity: 0.94;
+  margin-bottom: 6px;
+  font-size: 1.04em;
+  transition: color 0.18s, opacity 0.2s;
 }
 
 .footer a {
-  color: white;
-  transition: var(--transition);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
 }
 
-.footer a:hover {
-  opacity: 0.8;
+.footer a:hover,
+.footer-nav a:hover {
+  color: var(--primary-color, #76C043);
+  opacity: 1;
+  text-shadow: 0 1px 8px rgba(184, 255, 156, 0.12);
 }
 
-.footer i {
-  margin-right: 5px;
+.footer-nav {
+  display: flex;
+  gap: 30px;
+  justify-content: center;
+  margin-bottom: 15px;
+}
+
+.footer-nav a {
+  font-size: 0.99em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.footer-copyright {
+  opacity: 0.85;
+  margin-top: 12px;
+  font-size: 0.93em;
+}
+
+.footer-social {
+  display: flex;
+  gap: 16px;
+  margin: 18px 0;
+}
+
+.footer-social a {
+  font-size: 1.4rem;
+  color: var(--primary-color, #76C043);
+  opacity: 0.82;
+}
+
+.footer-social a:hover {
+  color: var(--accent-color, #28705b);
+  opacity: 1;
+}
+
+@media (max-width: 700px) {
+  .footer {
+    padding: 36px 0 18px 0;
+    font-size: 1em;
+  }
+  .footer-nav {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .footer-content {
+    padding: 0 7px;
+  }
 }
 
 /* Loader */
@@ -1930,8 +1996,8 @@ button:active {
   outline: none;
   cursor: pointer;
   box-shadow: none;
-  padding: 0;        /* <-- muy importante */
-  line-height: 1;    /* <-- muy importante */
+  padding: 0;
+  line-height: 1;
 }
 
 #paginacion button:hover,
@@ -1943,15 +2009,13 @@ button:active {
 
 #paginacion button.active,
 #paginacion button.pagina-activa {
-  background: transparent; /* Sin fondo */
-  color: var(--primary-color);   /* El número en verde */
+  background: transparent;
+  color: var(--primary-color);
   font-weight: 700;
   transform: scale(1.14);
   box-shadow: none;
   z-index: 2;
 }
-
-
 
 /* Responsive Styles */
 @media (max-width: 992px) {
@@ -2239,7 +2303,7 @@ body.no-scroll {
 
 .faq-toggle[aria-expanded="true"] + .faq-content {
   padding: 15px 20px;
-  max-height:  500px;
+  max-height: 500px;
 }
 
 .faq-more {
@@ -2316,16 +2380,16 @@ body.no-scroll {
 }
 
 .carrito-item-controls {
-  display: flex; /* Esto los coloca en una fila */
+  display: flex;
   align-items: center;
-  gap: 10px; /* Espacio entre los botones */
+  gap: 10px;
   margin-top: 10px;
 }
 
 .carrito-item-controls button {
-  width: 10px; /* ¡Aquí está la clave! */
-  height: 10px; /* ¡Y aquí! */
-  border-radius: 50%; /* Para hacerlos circulares */
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
   background-color: var(--medium-gray);
   display: flex;
   align-items: center;
@@ -2714,7 +2778,7 @@ body.no-scroll {
   height: 44px;
   border-radius: 50%;
   font-size: 2.2rem;
-  color: var(--primary-color); /* Verde elegante */
+  color: var(--primary-color);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2728,13 +2792,13 @@ body.no-scroll {
 
 .modal-prev:hover, .modal-next:hover,
 .modal-prev:focus-visible, .modal-next:focus-visible {
-  color: var(--accent-color);    /* Verde más oscuro en hover */
-  background: none !important;   /* Nunca fondo blanco */
+  color: var(--accent-color);
+  background: none !important;
   transform: scale(1.14);
   box-shadow: none;
 }
 .modal-prev:active, .modal-next:active {
-  background: none !important;   /* Elimina el círculo en click */
+  background: none !important;
   color: var(--success-color);
   box-shadow: none !important;
   outline: none !important;
@@ -2770,9 +2834,9 @@ body.no-scroll {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;  /* Centra verticalmente si deseas */
-  min-height: 85vh;         /* Ajusta según tu preferencia de altura */
-  background: #f5f8fa;      /* Suave, pero puedes dejarlo blanco si prefieres */
+  justify-content: center;
+  min-height: 85vh;
+  background: #f5f8fa;
   text-align: center;
   padding: 40px 0;
 }
@@ -2811,7 +2875,7 @@ body.no-scroll {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  align-items: center;      /* Centra inputs y botón */
+  align-items: center;
 }
 
 #formContacto label {
@@ -2851,7 +2915,7 @@ body.no-scroll {
 }
 
 #formContacto button {
-  background: #4CAF50;
+  background: #3CB371; /* Color específico solicitado */
   color: #fff;
   font-weight: 800;
   letter-spacing: 1px;
@@ -2866,7 +2930,7 @@ body.no-scroll {
   box-shadow: 0 2px 10px rgba(76, 175, 80, 0.06);
 }
 #formContacto button:hover, #formContacto button:focus {
-  background: #388E3C;
+  background: #2E8B57;
   transform: translateY(-2px) scale(1.02);
 }
 
@@ -2922,7 +2986,7 @@ html > body > div.notificacion {
   height: auto !important;
   padding: 10px 22px !important;
   border-radius: 16px !important;
-  font-size: 1.12rem !important;         /* <-- MÁS GRANDE AQUÍ */
+  font-size: 1.12rem !important;
   font-weight: 700 !important;
   box-shadow: 0 3px 16px 0 rgba(44,62,80,0.08) !important;
   z-index: 9999 !important;
@@ -2962,7 +3026,7 @@ body > div.notificacion.info { background: #1976d2 !important; }
     bottom: 10px !important;
     max-width: 96vw !important;
     padding: 10px 15px !important;
-    font-size: 1.05rem !important;      /* <-- MÁS GRANDE EN MOBILE */
+    font-size: 1.05rem !important;
     border-radius: 12px !important;
   }
   body > .notificacion.show,
@@ -3170,7 +3234,7 @@ body > div.notificacion.info { background: #1976d2 !important; }
 
 .footer {
   background: var(--footer-gradient, radial-gradient(circle at 80% 10%, #B4F1D9 0%, #ECFFF2 100%));
-  color: var(--text-color, #246655); /* Texto mucho más oscuro y legible */
+  color: var(--text-color, #246655);
   border-top-left-radius: var(--footer-radius, 38px);
   border-top-right-radius: var(--footer-radius, 38px);
   box-shadow: var(--footer-shadow, 0 8px 38px rgba(120, 192, 67, 0.07));
