@@ -5,7 +5,7 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
-const STOCK_API_URL = 'https://script.google.com/macros/s/AKfycbwMFWe0EU_g3Xu9hpNnIww9SVtGxU7ZMJj2dcCL0gbNe6Sj46dlfT3w8D5Fvb2cebKwKw/exec';
+
 
 // ===============================
 // ESTADO GLOBAL
@@ -20,24 +20,10 @@ let filtrosActuales = {
   busqueda: ''
 };
 
+// ===============================
+// FUNCIONES AUXILIARES
+// ===============================
 
-// ===============================
-// FUNCIONES AUXILIARES - Agrega esta función
-// ===============================
-async function verificarStock(id, cantidad) {
-  try {
-    const response = await fetch(STOCK_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, cantidad })
-    });
-    const data = await response.json();
-    return data.success ? data.stockRestante : false;
-  } catch (error) {
-    console.error('Error al verificar stock:', error);
-    return false;
-  }
-}
 // ===============================
 // REFERENCIAS AL DOM
 // ===============================
@@ -129,23 +115,21 @@ function actualizarContadorCarrito() {
 async function agregarAlCarrito(id, cantidad = 1) {
   const prod = productos.find(p => p.id === id);
   if (!prod) return mostrarNotificacion('Producto no encontrado', 'error');
-  
+
   cantidad = parseInt(cantidad, 10);
   if (isNaN(cantidad) || cantidad < 1) return mostrarNotificacion('Cantidad inválida', 'error');
-  
-  // Verificar stock con el servidor
+
   const stockDisponible = await verificarStock(id, cantidad);
   if (stockDisponible === false) {
     return mostrarNotificacion('Error al verificar el stock', 'error');
   }
-  
+
   if (cantidad > stockDisponible) {
     mostrarNotificacion(`Solo hay ${stockDisponible} unidades disponibles de ${prod.nombre}`, 'error');
     return;
   }
-  
+
   const enCarrito = carrito.find(item => item.id === id);
-  
   if (enCarrito) {
     enCarrito.cantidad += cantidad;
   } else {
@@ -157,10 +141,13 @@ async function agregarAlCarrito(id, cantidad = 1) {
       imagen: prod.imagenes[0] || PLACEHOLDER_IMAGE
     });
   }
-  
-  // Actualizar el stock localmente para reflejar los cambios
+
+  // Actualizar el stock localmente
   prod.stock = stockDisponible;
-  
+
+  // Recargar productos para sincronizar el stock
+  await cargarProductosDesdeSheets();
+
   guardarCarrito();
   actualizarUI();
   mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
@@ -284,32 +271,23 @@ async function cargarProductosDesdeSheets() {
         elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles en este momento.</p>';
       return;
     }
-
-    // Cargar productos con verificación de stock en paralelo
-    productos = await Promise.all(data
+    productos = data
       .filter(r => r.id && r.nombre && r.precio)
-      .map(async r => {
-        // Verificar stock actual desde la API
-        const stockResponse = await verificarStock(r.id, 0); // Consulta sin modificar
-        const stockActual = stockResponse !== false ? stockResponse : parseInt(r.cantidad, 10) || 0;
-        
-        return {
-          id: parseInt(r.id, 10),
-          nombre: r.nombre.trim(),
-          descripcion: r.descripcion || '',
-          precio: parseFloat(r.precio) || 0,
-          stock: stockActual,
-          imagenes: (r.foto && r.foto.trim() !== "") ? r.foto.split(',').map(x => x.trim()) : [PLACEHOLDER_IMAGE],
-          adicionales: r.adicionales ? r.adicionales.trim() : '',
-          alto: parseFloat(r.alto) || null,
-          ancho: parseFloat(r.ancho) || null,
-          profundidad: parseFloat(r.profundidad) || null,
-          categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
-          vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
-          estado: r.estado ? r.estado.trim() : ''
-        };
+      .map(r => ({
+        id: parseInt(r.id, 10),
+        nombre: r.nombre.trim(),
+        descripcion: r.descripcion || '',
+        precio: parseFloat(r.precio) || 0,
+        stock: parseInt(r.cantidad, 10) || 0,
+        imagenes: (r.foto && r.foto.trim() !== "") ? r.foto.split(',').map(x => x.trim()) : [PLACEHOLDER_IMAGE],
+        adicionales: r.adicionales ? r.adicionales.trim() : '',
+        alto: parseFloat(r.alto) || null,
+        ancho: parseFloat(r.ancho) || null,
+        profundidad: parseFloat(r.profundidad) || null,
+        categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
+        vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
+        estado: r.estado ? r.estado.trim() : ''
       }));
-
     actualizarCategorias();
     actualizarUI();
   } catch (e) {
@@ -643,7 +621,8 @@ function setupContactForm() {
 // FUNCIONES PARA FINALIZAR COMPRA
 // ===============================
 function actualizarResumenPedido() {
-  const { resumenProductos, resumenTotal } = elementos;
+  const resumenProductos = document.getElementById('resumen-productos');
+  const resumenTotal = document.getElementById('resumen-total');
   
   if (!resumenProductos || !resumenTotal) return;
 
@@ -667,6 +646,7 @@ function actualizarResumenPedido() {
     `;
   });
 
+  // Agregar línea de subtotal
   html += `
     <div class="resumen-item resumen-subtotal">
       <span>Subtotal:</span>
@@ -676,6 +656,7 @@ function actualizarResumenPedido() {
 
   resumenProductos.innerHTML = html;
   
+  // Obtener método de envío seleccionado
   const envioSelect = document.getElementById('select-envio');
   const metodoEnvio = envioSelect ? envioSelect.value : 'retiro';
   let costoEnvio = 0;
@@ -690,8 +671,8 @@ function actualizarResumenPedido() {
   resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
 }
 
-async function configurarEnvioWhatsApp() {
-  const formEnvio = elementos.formEnvio;
+function configurarEnvioWhatsApp() {
+  const formEnvio = document.getElementById('form-envio');
   if (!formEnvio) return;
 
   formEnvio.addEventListener('submit', async function(e) {
@@ -710,69 +691,55 @@ async function configurarEnvioWhatsApp() {
       return;
     }
 
-    // Verificar stock antes de finalizar
+    // Calcular total con envío
+    let subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+    let envioTxt = 'Retiro en local (Gratis)';
+    let costoEnvio = 0;
+    
+    if (envio === 'montevideo') {
+      costoEnvio = 150;
+      envioTxt = `Envío Montevideo ($U ${costoEnvio})`;
+    } else if (envio === 'interior') {
+      costoEnvio = 300;
+      envioTxt = `Envío Interior ($U ${costoEnvio})`;
+    }
+    
+    const total = subtotal + costoEnvio;
+
+    // Verificar y reservar stock sin await dentro del bucle
+    let stockReservado = true;
+    const reservaPromises = [];
     for (const item of carrito) {
-      const stockResponse = await verificarStock(item.id, item.cantidad);
-      if (!stockResponse) {
-        mostrarNotificacion(`Lo sentimos, ${item.nombre} ya no tiene suficiente stock`, 'error');
-        return;
+      if (!item.id || isNaN(item.cantidad) || item.cantidad <= 0) {
+        console.error('Datos inválidos en carrito:', item);
+        mostrarNotificacion('Error: Datos inválidos en el carrito', 'error');
+        stockReservado = false;
+        break;
+      }
+      console.log(`Intentando reservar stock para ID: ${item.id}, Cantidad: ${item.cantidad}`);
+      reservaPromises.push(reservarStock(item.id, item.cantidad));
+    }
+
+    if (stockReservado && reservaPromises.length > 0) {
+      try {
+        const resultados = await Promise.all(reservaPromises);
+        stockReservado = resultados.every(result => result === true);
+        if (!stockReservado) {
+          console.error('Alguna reserva de stock falló:', resultados);
+          mostrarNotificacion('No se pudo reservar el stock para todos los productos. Intenta de nuevo.', 'error');
+          return;
+        }
+      } catch (error) {
+        console.error('Error en el proceso de reserva de stock:', error);
+        mostrarNotificacion('Error al procesar la reserva de stock: ' + error.message, 'error');
+        stockReservado = false;
       }
     }
 
-    // Calcular total con envío
-    let subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-    let envioTxt = 'Retiro en local (Gratis)';
-    let costoEnvio = 0;
-    
-    if (envio === 'montevideo') {
-      costoEnvio = 150;
-      envioTxt = `Envío Montevideo ($U ${costoEnvio})`;
-    } else if (envio === 'interior') {
-      costoEnvio = 300;
-      envioTxt = `Envío Interior ($U ${costoEnvio})`;
+    if (!stockReservado) {
+      mostrarNotificacion('No se pudo reservar el stock. Intenta de nuevo.', 'error');
+      return;
     }
-    
-    const total = subtotal + costoEnvio;
-
-    // Crear mensaje detallado
-    let productosMsg = carrito.map(item => 
-      `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`
-    ).join('\n');
-    
-    const mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*Productos:*\n${productosMsg}\n\n*Datos del cliente:*\n👤 ${nombre} ${apellido}\n📞 ${telefono}\n\n*Envío:*\n${envioTxt}\n${envio !== 'retiro' ? `📍 Dirección: ${direccion}\n` : ''}\n*Subtotal:* $U ${subtotal.toLocaleString('es-UY')}\n*Costo de envío:* $U ${costoEnvio.toLocaleString('es-UY')}\n*Total a pagar:* $U ${total.toLocaleString('es-UY')}\n\n${notas ? `*Notas:*\n${notas}` : ''}`;
-
-    // Abrir WhatsApp
-    window.open(`https://wa.me/59893566283?text=${encodeURIComponent(mensaje)}`, '_blank');
-    
-    // Cerrar modal y limpiar carrito
-    elementos.modalDatosEnvio.classList.remove('visible');
-    setTimeout(() => {
-      elementos.modalDatosEnvio.hidden = true;
-      carrito = [];
-      guardarCarrito();
-      actualizarUI();
-      mostrarNotificacion('Pedido enviado con éxito', 'exito');
-      formEnvio.reset();
-    }, 300);
-  });
-}
-
-
-
-    // Calcular total con envío
-    let subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-    let envioTxt = 'Retiro en local (Gratis)';
-    let costoEnvio = 0;
-    
-    if (envio === 'montevideo') {
-      costoEnvio = 150;
-      envioTxt = `Envío Montevideo ($U ${costoEnvio})`;
-    } else if (envio === 'interior') {
-      costoEnvio = 300;
-      envioTxt = `Envío Interior ($U ${costoEnvio})`;
-    }
-    
-    const total = subtotal + costoEnvio;
 
     // Crear mensaje detallado
     let productosMsg = '';
@@ -799,8 +766,8 @@ async function configurarEnvioWhatsApp() {
       mostrarNotificacion('Pedido enviado con éxito', 'exito');
       document.getElementById('form-envio').reset();
     }, 300);
-  
-
+  });
+}
 
 // ===============================
 // INICIALIZACIÓN GENERAL
@@ -941,27 +908,24 @@ window.mostrarNotificacion = mostrarNotificacion;
 window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
 window.guardarCarrito = guardarCarrito;
 
-
 async function reservarStock(id, cantidad) {
-  const url = 'https://script.google.com/macros/s/AKfycbwMFWe0EU_g3Xu9hpNnIww9SVtGxU7ZMJj2dcCL0gbNe6Sj46dlfT3w8D5Fvb2cebKwKw/exec'; // <-- URL COMPLETA
-  const body = JSON.stringify({ id, cantidad });
-
   try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body
+    const response = await fetch(STOCK_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, cantidad, action: 'reserve' })
     });
-    const data = await res.json();
+    const data = await response.json();
     if (data.success) {
       // OK: continúa con el pago
       return true;
     } else {
-      alert("¡Lo sentimos! " + (data.error || "Stock insuficiente."));
+      mostrarNotificacion(`¡Lo sentimos! ${data.error || 'Stock insuficiente.'}`, 'error');
       return false;
     }
-  } catch (e) {
-    alert("Error de conexión con el servidor. Intenta de nuevo.");
+  } catch (error) {
+    console.error('Error al reservar stock:', error);
+    mostrarNotificacion('Error de conexión con el servidor. Intenta de nuevo.', 'error');
     return false;
   }
 }
