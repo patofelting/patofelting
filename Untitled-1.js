@@ -158,17 +158,6 @@ function renderizarCarrito() {
 // =======================
 
 
-document.addEventListener('DOMContentLoaded', function() {
-  var btnEntendido = document.getElementById('btn-entendido-aviso');
-  if (btnEntendido) {
-    btnEntendido.addEventListener('click', function() {
-      // 1. Guarda el carrito actual en sessionStorage para la página de pago
-      sessionStorage.setItem('carritoActual', JSON.stringify(carrito));
-      // 2. Redirige a la página de pago
-      window.location.href =  'finalizarcompra.html';
-    });
-  }
-});
 
 // ===============================
 // ABRIR Y CERRAR CARRITO
