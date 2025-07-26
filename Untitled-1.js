@@ -692,10 +692,12 @@ function actualizarResumenPedido() {
 
 async function configurarEnvioWhatsApp() {
   const formEnvio = elementos.formEnvio;
+  const btnSubmit = formEnvio?.querySelector('button[type="submit"]');
   if (!formEnvio) return;
 
-  formEnvio.addEventListener('submit', async function(e) {
+  formEnvio.addEventListener('submit', async function (e) {
     e.preventDefault();
+    if (btnSubmit) btnSubmit.disabled = true;
 
     // Validar campos
     const nombre = document.getElementById('input-nombre').value.trim();
@@ -704,47 +706,41 @@ async function configurarEnvioWhatsApp() {
     const direccion = document.getElementById('input-direccion').value.trim();
     const envio = document.getElementById('select-envio').value;
     const notas = document.getElementById('input-notas').value.trim();
-    
+
     if (!nombre || !apellido || !telefono || (!direccion && envio !== 'retiro') || !envio) {
       mostrarNotificacion('Por favor completa todos los campos obligatorios', 'error');
+      if (btnSubmit) btnSubmit.disabled = false;
       return;
     }
 
-    // Verificar stock antes de finalizar
+    // ---- Validar stock en tiempo real de TODOS los productos antes de enviar
     for (const item of carrito) {
-      const stockResponse = await verificarStock(item.id, item.cantidad);
-      if (!stockResponse) {
-        mostrarNotificacion(`Lo sentimos, ${item.nombre} ya no tiene suficiente stock`, 'error');
+      const stockActual = await verificarStock(item.id, item.cantidad);
+      if (stockActual === false || stockActual < item.cantidad) {
+        mostrarNotificacion(`Stock insuficiente de "${item.nombre}" (${stockActual} disponible)`, 'error');
+        if (btnSubmit) btnSubmit.disabled = false;
         return;
       }
     }
 
-    // Calcular total con envío
+    // Calcular totales y preparar mensaje
     let subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
     let envioTxt = 'Retiro en local (Gratis)';
     let costoEnvio = 0;
-    
-    if (envio === 'montevideo') {
-      costoEnvio = 150;
-      envioTxt = `Envío Montevideo ($U ${costoEnvio})`;
-    } else if (envio === 'interior') {
-      costoEnvio = 300;
-      envioTxt = `Envío Interior ($U ${costoEnvio})`;
-    }
-    
+    if (envio === 'montevideo') { costoEnvio = 150; envioTxt = `Envío Montevideo ($U ${costoEnvio})`; }
+    else if (envio === 'interior') { costoEnvio = 300; envioTxt = `Envío Interior ($U ${costoEnvio})`; }
     const total = subtotal + costoEnvio;
 
-    // Crear mensaje detallado
-    let productosMsg = carrito.map(item => 
+    let productosMsg = carrito.map(item =>
       `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`
     ).join('\n');
-    
+
     const mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*Productos:*\n${productosMsg}\n\n*Datos del cliente:*\n👤 ${nombre} ${apellido}\n📞 ${telefono}\n\n*Envío:*\n${envioTxt}\n${envio !== 'retiro' ? `📍 Dirección: ${direccion}\n` : ''}\n*Subtotal:* $U ${subtotal.toLocaleString('es-UY')}\n*Costo de envío:* $U ${costoEnvio.toLocaleString('es-UY')}\n*Total a pagar:* $U ${total.toLocaleString('es-UY')}\n\n${notas ? `*Notas:*\n${notas}` : ''}`;
 
-    // Abrir WhatsApp
+    // WhatsApp
     window.open(`https://wa.me/59893566283?text=${encodeURIComponent(mensaje)}`, '_blank');
-    
-    // Cerrar modal y limpiar carrito
+
+    // Limpiar todo y feedback visual
     elementos.modalDatosEnvio.classList.remove('visible');
     setTimeout(() => {
       elementos.modalDatosEnvio.hidden = true;
@@ -753,11 +749,10 @@ async function configurarEnvioWhatsApp() {
       actualizarUI();
       mostrarNotificacion('Pedido enviado con éxito', 'exito');
       formEnvio.reset();
+      if (btnSubmit) btnSubmit.disabled = false;
     }, 300);
   });
 }
-
-
 
     // Calcular total con envío
     let subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
@@ -786,8 +781,7 @@ async function configurarEnvioWhatsApp() {
     
     const mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*Productos:*\n${productosMsg}\n\n*Datos del cliente:*\n👤 ${nombre} ${apellido}\n📞 ${telefono}\n\n*Envío:*\n${envioTxt}\n${envio !== 'retiro' ? `📍 Dirección: ${direccion}\n` : ''}\n*Subtotal:* $U ${subtotal.toLocaleString('es-UY')}\n*Costo de envío:* $U ${costoEnvio.toLocaleString('es-UY')}\n*Total a pagar:* $U ${total.toLocaleString('es-UY')}\n\n${notas ? `*Notas:*\n${notas}` : ''}`;
 
-    // Abrir WhatsApp
-    window.open(`https://wa.me/59894955466?text=${encodeURIComponent(mensaje)}`, '_blank');
+   
     
     // Cerrar modal y limpiar carrito
     document.getElementById('modal-datos-envio').classList.remove('visible');
@@ -799,8 +793,8 @@ async function configurarEnvioWhatsApp() {
       mostrarNotificacion('Pedido enviado con éxito', 'exito');
       document.getElementById('form-envio').reset();
     }, 300);
-  });
-}
+  
+
 
 // ===============================
 // INICIALIZACIÓN GENERAL
