@@ -110,15 +110,19 @@ function actualizarContadorCarrito() {
 function agregarAlCarrito(id, cantidad = 1) {
   const prod = productos.find(p => p.id === id);
   if (!prod) return mostrarNotificacion('Producto no encontrado', 'error');
+  
   cantidad = parseInt(cantidad, 10);
   if (isNaN(cantidad) || cantidad < 1) return mostrarNotificacion('Cantidad inválida', 'error');
+  
   const enCarrito = carrito.find(item => item.id === id);
   const enCarritoCant = enCarrito ? enCarrito.cantidad : 0;
   const disponibles = Math.max(0, prod.stock - enCarritoCant);
+  
   if (cantidad > disponibles) {
-    mostrarNotificacion(`Solo hay ${disponibles} unidades disponibles`, 'error');
+    mostrarNotificacion(`Solo hay ${disponibles} unidades disponibles de ${prod.nombre}`, 'error');
     return;
   }
+  
   if (enCarrito) {
     enCarrito.cantidad += cantidad;
   } else {
@@ -130,6 +134,7 @@ function agregarAlCarrito(id, cantidad = 1) {
       imagen: prod.imagenes[0] || PLACEHOLDER_IMAGE
     });
   }
+  
   guardarCarrito();
   actualizarUI();
   mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
@@ -144,7 +149,12 @@ function renderizarCarrito() {
     return;
   }
   
-  elementos.listaCarrito.innerHTML = carrito.map(item => `
+  elementos.listaCarrito.innerHTML = carrito.map(item => {
+    const producto = productos.find(p => p.id === item.id);
+    const stockDisponible = producto ? producto.stock : 0;
+    const maxCantidad = Math.min(stockDisponible, item.cantidad + stockDisponible);
+    
+    return `
     <li class="carrito-item" data-id="${item.id}">
       <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}" loading="lazy">
       <div class="carrito-item-info">
@@ -153,7 +163,7 @@ function renderizarCarrito() {
         <div class="carrito-item-controls">
           <button class="disminuir-cantidad" data-id="${item.id}" aria-label="Reducir cantidad">-</button>
           <span class="carrito-item-cantidad">${item.cantidad}</span>
-          <button class="aumentar-cantidad" data-id="${item.id}" aria-label="Aumentar cantidad">+</button>
+          <button class="aumentar-cantidad" data-id="${item.id}" aria-label="Aumentar cantidad" ${item.cantidad >= stockDisponible ? 'disabled' : ''}>+</button>
         </div>
         <span class="carrito-item-subtotal">Subtotal: $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
       </div>
@@ -161,7 +171,8 @@ function renderizarCarrito() {
         <i class="fas fa-trash"></i>
       </button>
     </li>
-  `).join('');
+    `;
+  }).join('');
 
   // Actualizar el total
   const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
@@ -184,10 +195,16 @@ function renderizarCarrito() {
     btn.addEventListener('click', (e) => {
       const id = parseInt(e.target.dataset.id);
       const item = carrito.find(item => item.id === id);
-      if (item) {
-        item.cantidad++;
-        guardarCarrito();
-        renderizarCarrito();
+      const producto = productos.find(p => p.id === id);
+      
+      if (item && producto) {
+        if (item.cantidad < producto.stock) {
+          item.cantidad++;
+          guardarCarrito();
+          renderizarCarrito();
+        } else {
+          mostrarNotificacion(`No hay más stock disponible de ${producto.nombre}`, 'error');
+        }
       }
     });
   });
