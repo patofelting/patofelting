@@ -5,6 +5,7 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
+const STOCK_API_URL = 'https://script.google.com/macros/s/AKfycbwMFWe0EU_g3Xu9hpNnIww9SVtGxU7ZMJj2dcCL0gbNe6Sj46dlfT3w8D5Fvb2cebKwKw/exec';
 
 // ===============================
 // ESTADO GLOBAL
@@ -19,6 +20,24 @@ let filtrosActuales = {
   busqueda: ''
 };
 
+
+// ===============================
+// FUNCIONES AUXILIARES - Agrega esta función
+// ===============================
+async function verificarStock(id, cantidad) {
+  try {
+    const response = await fetch(STOCK_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, cantidad })
+    });
+    const data = await response.json();
+    return data.success ? data.stockRestante : false;
+  } catch (error) {
+    console.error('Error al verificar stock:', error);
+    return false;
+  }
+}
 // ===============================
 // REFERENCIAS AL DOM
 // ===============================
@@ -47,7 +66,9 @@ const elementos = {
   btnCancelarAviso: getElement('btn-cancelar-aviso'),
   productLoader: getElement('product-loader'),
   hamburguesa: document.querySelector('.hamburguesa'),
-  menu: getElement('menu')
+  menu: getElement('menu'),
+  modalDatosEnvio: getElement('modal-datos-envio'),
+  formEnvio: getElement('form-envio')
 };
 
 // ===============================
@@ -105,18 +126,26 @@ function actualizarContadorCarrito() {
   }
 }
 
-function agregarAlCarrito(id, cantidad = 1) {
+async function agregarAlCarrito(id, cantidad = 1) {
   const prod = productos.find(p => p.id === id);
   if (!prod) return mostrarNotificacion('Producto no encontrado', 'error');
+  
   cantidad = parseInt(cantidad, 10);
   if (isNaN(cantidad) || cantidad < 1) return mostrarNotificacion('Cantidad inválida', 'error');
-  const enCarrito = carrito.find(item => item.id === id);
-  const enCarritoCant = enCarrito ? enCarrito.cantidad : 0;
-  const disponibles = Math.max(0, prod.stock - enCarritoCant);
-  if (cantidad > disponibles) {
-    mostrarNotificacion(`Solo hay ${disponibles} unidades disponibles`, 'error');
+  
+  // Verificar stock con el servidor
+  const stockDisponible = await verificarStock(id, cantidad);
+  if (stockDisponible === false) {
+    return mostrarNotificacion('Error al verificar el stock', 'error');
+  }
+  
+  if (cantidad > stockDisponible) {
+    mostrarNotificacion(`Solo hay ${stockDisponible} unidades disponibles de ${prod.nombre}`, 'error');
     return;
   }
+  
+  const enCarrito = carrito.find(item => item.id === id);
+  
   if (enCarrito) {
     enCarrito.cantidad += cantidad;
   } else {
@@ -128,6 +157,10 @@ function agregarAlCarrito(id, cantidad = 1) {
       imagen: prod.imagenes[0] || PLACEHOLDER_IMAGE
     });
   }
+  
+  // Actualizar el stock localmente para reflejar los cambios
+  prod.stock = stockDisponible;
+  
   guardarCarrito();
   actualizarUI();
   mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
@@ -142,7 +175,12 @@ function renderizarCarrito() {
     return;
   }
   
-  elementos.listaCarrito.innerHTML = carrito.map(item => `
+  elementos.listaCarrito.innerHTML = carrito.map(item => {
+    const producto = productos.find(p => p.id === item.id);
+    const stockDisponible = producto ? producto.stock : 0;
+    const maxCantidad = Math.min(stockDisponible, item.cantidad + stockDisponible);
+    
+    return `
     <li class="carrito-item" data-id="${item.id}">
       <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}" loading="lazy">
       <div class="carrito-item-info">
@@ -151,7 +189,7 @@ function renderizarCarrito() {
         <div class="carrito-item-controls">
           <button class="disminuir-cantidad" data-id="${item.id}" aria-label="Reducir cantidad">-</button>
           <span class="carrito-item-cantidad">${item.cantidad}</span>
-          <button class="aumentar-cantidad" data-id="${item.id}" aria-label="Aumentar cantidad">+</button>
+          <button class="aumentar-cantidad" data-id="${item.id}" aria-label="Aumentar cantidad" ${item.cantidad >= stockDisponible ? 'disabled' : ''}>+</button>
         </div>
         <span class="carrito-item-subtotal">Subtotal: $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
       </div>
@@ -159,7 +197,8 @@ function renderizarCarrito() {
         <i class="fas fa-trash"></i>
       </button>
     </li>
-  `).join('');
+    `;
+  }).join('');
 
   // Actualizar el total
   const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
@@ -182,10 +221,16 @@ function renderizarCarrito() {
     btn.addEventListener('click', (e) => {
       const id = parseInt(e.target.dataset.id);
       const item = carrito.find(item => item.id === id);
-      if (item) {
-        item.cantidad++;
-        guardarCarrito();
-        renderizarCarrito();
+      const producto = productos.find(p => p.id === id);
+      
+      if (item && producto) {
+        if (item.cantidad < producto.stock) {
+          item.cantidad++;
+          guardarCarrito();
+          renderizarCarrito();
+        } else {
+          mostrarNotificacion(`No hay más stock disponible de ${producto.nombre}`, 'error');
+        }
       }
     });
   });
@@ -199,11 +244,6 @@ function renderizarCarrito() {
     });
   });
 }
-// =======================
-// REDIRECCIÓN DESDE AVISO DE COMPRA
-// =======================
-
-
 
 // ===============================
 // ABRIR Y CERRAR CARRITO
@@ -244,23 +284,32 @@ async function cargarProductosDesdeSheets() {
         elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles en este momento.</p>';
       return;
     }
-    productos = data
+
+    // Cargar productos con verificación de stock en paralelo
+    productos = await Promise.all(data
       .filter(r => r.id && r.nombre && r.precio)
-      .map(r => ({
-        id: parseInt(r.id, 10),
-        nombre: r.nombre.trim(),
-        descripcion: r.descripcion || '',
-        precio: parseFloat(r.precio) || 0,
-        stock: parseInt(r.cantidad, 10) || 0,
-        imagenes: (r.foto && r.foto.trim() !== "") ? r.foto.split(',').map(x => x.trim()) : [PLACEHOLDER_IMAGE],
-        adicionales: r.adicionales ? r.adicionales.trim() : '',
-        alto: parseFloat(r.alto) || null,
-        ancho: parseFloat(r.ancho) || null,
-        profundidad: parseFloat(r.profundidad) || null,
-        categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
-        vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
-        estado: r.estado ? r.estado.trim() : ''
+      .map(async r => {
+        // Verificar stock actual desde la API
+        const stockResponse = await verificarStock(r.id, 0); // Consulta sin modificar
+        const stockActual = stockResponse !== false ? stockResponse : parseInt(r.cantidad, 10) || 0;
+        
+        return {
+          id: parseInt(r.id, 10),
+          nombre: r.nombre.trim(),
+          descripcion: r.descripcion || '',
+          precio: parseFloat(r.precio) || 0,
+          stock: stockActual,
+          imagenes: (r.foto && r.foto.trim() !== "") ? r.foto.split(',').map(x => x.trim()) : [PLACEHOLDER_IMAGE],
+          adicionales: r.adicionales ? r.adicionales.trim() : '',
+          alto: parseFloat(r.alto) || null,
+          ancho: parseFloat(r.ancho) || null,
+          profundidad: parseFloat(r.profundidad) || null,
+          categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
+          vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
+          estado: r.estado ? r.estado.trim() : ''
+        };
       }));
+
     actualizarCategorias();
     actualizarUI();
   } catch (e) {
@@ -359,7 +408,6 @@ function mostrarModalProducto(producto) {
   const disponibles = Math.max(0, producto.stock - enCarrito.cantidad);
   const agotado = disponibles <= 0;
 
-  // Si hay más de una imagen arma carrusel, sino solo muestra la imagen principal
   let currentIndex = 0;
 
   function renderCarrusel() {
@@ -467,7 +515,6 @@ function mostrarModalProducto(producto) {
   }
 }
 
-
 // ===============================
 // CLICK EN DETALLE DEL PRODUCTO
 // ===============================
@@ -529,7 +576,6 @@ function inicializarFAQ() {
       const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
       toggle.setAttribute('aria-expanded', !isExpanded);
       
-      // (Continúa FAQ interactivo)
       const content = toggle.nextElementSibling;
       if (content) content.hidden = isExpanded;
     });
@@ -593,119 +639,11 @@ function setupContactForm() {
   }
 }
 
-// Inicializar EmailJS con tu clave pública
-emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
-
-// Llamar a la función para configurar el formulario de contacto
-setupContactForm();
-
 // ===============================
-// INICIALIZACIÓN GENERAL
+// FUNCIONES PARA FINALIZAR COMPRA
 // ===============================
-function inicializarEventos() {
-  // Carrito
-  elementos.carritoBtnMain?.addEventListener('click', () => toggleCarrito(true));
-  elementos.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
-  elementos.btnCerrarCarrito?.addEventListener('click', () => toggleCarrito(false));
-  elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
-  elementos.btnFinalizarCompra?.addEventListener('click', () => {
-    if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
-    elementos.avisoPreCompraModal.style.display = 'flex';
-  });
-  elementos.btnEntendidoAviso?.addEventListener('click', () => {
-    mostrarNotificacion('Compra finalizada con éxito', 'exito');
-    carrito = [];
-    guardarCarrito();
-    actualizarUI();
-    toggleCarrito(false);
-    elementos.avisoPreCompraModal.style.display = 'none';
-  });
-  elementos.btnCancelarAviso?.addEventListener('click', () => {
-    elementos.avisoPreCompraModal.style.display = 'none';
-  });
-
-  // Filtros
-  elementos.inputBusqueda?.addEventListener('input', (e) => {
-    filtrosActuales.busqueda = e.target.value.toLowerCase();
-    aplicarFiltros();
-  });
-  elementos.selectCategoria?.addEventListener('change', (e) => {
-    filtrosActuales.categoria = e.target.value.toLowerCase();
-    aplicarFiltros();
-  });
-  document.querySelectorAll('.aplicar-rango-btn').forEach(boton => {
-    boton.addEventListener('click', () => {
-      filtrosActuales.precioMin = elementos.precioMinInput.value ? parseFloat(elementos.precioMinInput.value) : null;
-      filtrosActuales.precioMax = elementos.precioMaxInput.value ? parseFloat(elementos.precioMaxInput.value) : null;
-      aplicarFiltros();
-    });
-  });
-  elementos.botonResetearFiltros?.addEventListener('click', resetearFiltros);
-
-  // Modal de producto y botones agregar
-  conectarEventoModal();
-}
-
-// ===============================
-// INICIALIZADOR ÚNICO
-// ===============================
-function init() {
-  inicializarMenuHamburguesa();
-  inicializarFAQ();
-  setupContactForm();
-
-  // Ocultar modales y loader al inicio
-  if (elementos.avisoPreCompraModal) elementos.avisoPreCompraModal.style.display = 'none';
-  if (elementos.productoModal) elementos.productoModal.style.display = 'none';
-  if (elementos.productLoader) {
-    elementos.productLoader.style.display = 'none';
-    elementos.productLoader.hidden = true;
-  }
-  cargarCarrito();
-  cargarProductosDesdeSheets();
-  inicializarEventos();
-}
-
-// Arranque seguro
-if (document.readyState !== 'loading') {
-  init();
-} else {
-  document.addEventListener('DOMContentLoaded', init);
-}
-
-// ==== FUNCIONES GLOBALES POR SI SE NECESITAN EN EL HTML ====
-window.resetearFiltros = resetearFiltros;
-window.toggleCarrito = toggleCarrito;
-window.agregarAlCarrito = agregarAlCarrito;
-window.mostrarModalProducto = mostrarModalProducto;
-window.mostrarNotificacion = mostrarNotificacion;
-window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
-window.guardarCarrito = guardarCarrito;
-
-
-
-
-
-
-// Mostrar el modal de datos de envío luego del pre-compra
-document.getElementById('btn-entendido-aviso').addEventListener('click', function() {
-  document.getElementById('aviso-pre-compra-modal').hidden = true;
-  
-  // Mostrar el modal de envío con animación
-  const modalEnvio = document.getElementById('modal-datos-envio');
-  modalEnvio.hidden = false;
-  setTimeout(() => {
-    modalEnvio.classList.add('visible');
-  }, 10);
-  
-  // Llenar el resumen del pedido
-  actualizarResumenPedido();
-});
-
-// Función para actualizar el resumen del pedido
 function actualizarResumenPedido() {
-  const resumenProductos = document.getElementById('resumen-productos');
-  const resumenTotal = document.getElementById('resumen-total');
+  const { resumenProductos, resumenTotal } = elementos;
   
   if (!resumenProductos || !resumenTotal) return;
 
@@ -729,7 +667,6 @@ function actualizarResumenPedido() {
     `;
   });
 
-  // Agregar línea de subtotal
   html += `
     <div class="resumen-item resumen-subtotal">
       <span>Subtotal:</span>
@@ -739,7 +676,6 @@ function actualizarResumenPedido() {
 
   resumenProductos.innerHTML = html;
   
-  // Obtener método de envío seleccionado
   const envioSelect = document.getElementById('select-envio');
   const metodoEnvio = envioSelect ? envioSelect.value : 'retiro';
   let costoEnvio = 0;
@@ -753,100 +689,279 @@ function actualizarResumenPedido() {
   const total = subtotal + costoEnvio;
   resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
 }
-// Cerrar modal de envío
-document.getElementById('btn-cerrar-modal-envio').addEventListener('click', function() {
-  const modalEnvio = document.getElementById('modal-datos-envio');
-  modalEnvio.classList.remove('visible');
-  setTimeout(() => {
-    modalEnvio.hidden = true;
-  }, 300);
-});
 
-// Actualizar total cuando cambia el método de envío
-document.getElementById('select-envio').addEventListener('change', function() {
-  const grupoDireccion = document.getElementById('grupo-direccion');
-  const resumenTotal = document.getElementById('resumen-total');
-  
-  // Mostrar/ocultar campo dirección
-  if (this.value === 'retiro') {
-    grupoDireccion.style.display = 'none';
-    document.getElementById('input-direccion').required = false;
-  } else {
-    grupoDireccion.style.display = 'flex';
-    document.getElementById('input-direccion').required = true;
-  }
-  
-  // Calcular nuevo total con envío
-  if (resumenTotal && carrito.length > 0) {
-    const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+async function configurarEnvioWhatsApp() {
+  const formEnvio = elementos.formEnvio;
+  if (!formEnvio) return;
+
+  formEnvio.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    // Validar campos
+    const nombre = document.getElementById('input-nombre').value.trim();
+    const apellido = document.getElementById('input-apellido').value.trim();
+    const telefono = document.getElementById('input-telefono').value.trim();
+    const direccion = document.getElementById('input-direccion').value.trim();
+    const envio = document.getElementById('select-envio').value;
+    const notas = document.getElementById('input-notas').value.trim();
+    
+    if (!nombre || !apellido || !telefono || (!direccion && envio !== 'retiro') || !envio) {
+      mostrarNotificacion('Por favor completa todos los campos obligatorios', 'error');
+      return;
+    }
+
+    // Verificar stock antes de finalizar
+    for (const item of carrito) {
+      const stockResponse = await verificarStock(item.id, item.cantidad);
+      if (!stockResponse) {
+        mostrarNotificacion(`Lo sentimos, ${item.nombre} ya no tiene suficiente stock`, 'error');
+        return;
+      }
+    }
+
+    // Calcular total con envío
+    let subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+    let envioTxt = 'Retiro en local (Gratis)';
     let costoEnvio = 0;
     
-    if (this.value === 'montevideo') {
+    if (envio === 'montevideo') {
       costoEnvio = 150;
-    } else if (this.value === 'interior') {
+      envioTxt = `Envío Montevideo ($U ${costoEnvio})`;
+    } else if (envio === 'interior') {
       costoEnvio = 300;
+      envioTxt = `Envío Interior ($U ${costoEnvio})`;
     }
     
     const total = subtotal + costoEnvio;
-    resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
-  }
-});
 
-// Validar y enviar por WhatsApp
-document.getElementById('form-envio').addEventListener('submit', function(e) {
-  e.preventDefault();
-
-  // Validar campos
-  const nombre = document.getElementById('input-nombre').value.trim();
-  const apellido = document.getElementById('input-apellido').value.trim();
-  const telefono = document.getElementById('input-telefono').value.trim();
-  const direccion = document.getElementById('input-direccion').value.trim();
-  const envio = document.getElementById('select-envio').value;
-  const notas = document.getElementById('input-notas').value.trim();
-  
-  if (!nombre || !apellido || !telefono || (!direccion && envio !== 'retiro') || !envio) {
-    mostrarNotificacion('Por favor completa todos los campos obligatorios', 'error');
-    return;
-  }
-
-  // Calcular total con envío
-  let subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-  let envioTxt = 'Retiro en local (Gratis)';
-  let costoEnvio = 0;
-  
-  if (envio === 'montevideo') {
-    costoEnvio = 150;
-    envioTxt = `Envío Montevideo ($U ${costoEnvio})`;
-  } else if (envio === 'interior') {
-    costoEnvio = 300;
-    envioTxt = `Envío Interior ($U ${costoEnvio})`;
-  }
-  
-  const total = subtotal + costoEnvio;
-
-  // Crear mensaje detallado
-  let productosMsg = '';
-  if (carrito.length === 0) {
-    productosMsg = 'No hay productos en el carrito';
-  } else {
-    productosMsg = carrito.map(item => 
+    // Crear mensaje detallado
+    let productosMsg = carrito.map(item => 
       `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`
     ).join('\n');
+    
+    const mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*Productos:*\n${productosMsg}\n\n*Datos del cliente:*\n👤 ${nombre} ${apellido}\n📞 ${telefono}\n\n*Envío:*\n${envioTxt}\n${envio !== 'retiro' ? `📍 Dirección: ${direccion}\n` : ''}\n*Subtotal:* $U ${subtotal.toLocaleString('es-UY')}\n*Costo de envío:* $U ${costoEnvio.toLocaleString('es-UY')}\n*Total a pagar:* $U ${total.toLocaleString('es-UY')}\n\n${notas ? `*Notas:*\n${notas}` : ''}`;
+
+    // Abrir WhatsApp
+    window.open(`https://wa.me/59893566283?text=${encodeURIComponent(mensaje)}`, '_blank');
+    
+    // Cerrar modal y limpiar carrito
+    elementos.modalDatosEnvio.classList.remove('visible');
+    setTimeout(() => {
+      elementos.modalDatosEnvio.hidden = true;
+      carrito = [];
+      guardarCarrito();
+      actualizarUI();
+      mostrarNotificacion('Pedido enviado con éxito', 'exito');
+      formEnvio.reset();
+    }, 300);
+  });
+}
+
+
+
+    // Calcular total con envío
+    let subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+    let envioTxt = 'Retiro en local (Gratis)';
+    let costoEnvio = 0;
+    
+    if (envio === 'montevideo') {
+      costoEnvio = 150;
+      envioTxt = `Envío Montevideo ($U ${costoEnvio})`;
+    } else if (envio === 'interior') {
+      costoEnvio = 300;
+      envioTxt = `Envío Interior ($U ${costoEnvio})`;
+    }
+    
+    const total = subtotal + costoEnvio;
+
+    // Crear mensaje detallado
+    let productosMsg = '';
+    if (carrito.length === 0) {
+      productosMsg = 'No hay productos en el carrito';
+    } else {
+      productosMsg = carrito.map(item => 
+        `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`
+      ).join('\n');
+    }
+    
+    const mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*Productos:*\n${productosMsg}\n\n*Datos del cliente:*\n👤 ${nombre} ${apellido}\n📞 ${telefono}\n\n*Envío:*\n${envioTxt}\n${envio !== 'retiro' ? `📍 Dirección: ${direccion}\n` : ''}\n*Subtotal:* $U ${subtotal.toLocaleString('es-UY')}\n*Costo de envío:* $U ${costoEnvio.toLocaleString('es-UY')}\n*Total a pagar:* $U ${total.toLocaleString('es-UY')}\n\n${notas ? `*Notas:*\n${notas}` : ''}`;
+
+    // Abrir WhatsApp
+    window.open(`https://wa.me/59894955466?text=${encodeURIComponent(mensaje)}`, '_blank');
+    
+    // Cerrar modal y limpiar carrito
+    document.getElementById('modal-datos-envio').classList.remove('visible');
+    setTimeout(() => {
+      document.getElementById('modal-datos-envio').hidden = true;
+      carrito = [];
+      guardarCarrito();
+      actualizarUI();
+      mostrarNotificacion('Pedido enviado con éxito', 'exito');
+      document.getElementById('form-envio').reset();
+    }, 300);
+  
+
+
+// ===============================
+// INICIALIZACIÓN GENERAL
+// ===============================
+function inicializarEventos() {
+  // Carrito
+  elementos.carritoBtnMain?.addEventListener('click', () => toggleCarrito(true));
+  elementos.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
+  elementos.btnCerrarCarrito?.addEventListener('click', () => toggleCarrito(false));
+  elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
+  
+  elementos.btnFinalizarCompra?.addEventListener('click', () => {
+    if (carrito.length === 0) {
+      mostrarNotificacion('El carrito está vacío', 'error');
+      return;
+    }
+    
+    // Mostrar aviso pre-compra
+    elementos.avisoPreCompraModal.style.display = 'flex';
+  });
+
+  elementos.btnEntendidoAviso?.addEventListener('click', function() {
+    elementos.avisoPreCompraModal.style.display = 'none';
+    const modalEnvio = document.getElementById('modal-datos-envio');
+    modalEnvio.hidden = false;
+    setTimeout(() => {
+      modalEnvio.classList.add('visible');
+      actualizarResumenPedido();
+    }, 10);
+  });
+
+  elementos.btnCancelarAviso?.addEventListener('click', () => {
+    elementos.avisoPreCompraModal.style.display = 'none';
+  });
+
+  // Cerrar modal de envío
+  document.getElementById('btn-cerrar-modal-envio')?.addEventListener('click', function() {
+    const modalEnvio = document.getElementById('modal-datos-envio');
+    modalEnvio.classList.remove('visible');
+    setTimeout(() => {
+      modalEnvio.hidden = true;
+    }, 300);
+  });
+
+  // Actualizar total cuando cambia el método de envío
+  document.getElementById('select-envio')?.addEventListener('change', function() {
+    const grupoDireccion = document.getElementById('grupo-direccion');
+    const resumenTotal = document.getElementById('resumen-total');
+    
+    // Mostrar/ocultar campo dirección
+    if (this.value === 'retiro') {
+      grupoDireccion.style.display = 'none';
+      document.getElementById('input-direccion').required = false;
+    } else {
+      grupoDireccion.style.display = 'flex';
+      document.getElementById('input-direccion').required = true;
+    }
+    
+    // Calcular nuevo total con envío
+    if (resumenTotal && carrito.length > 0) {
+      const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+      let costoEnvio = 0;
+      
+      if (this.value === 'montevideo') {
+        costoEnvio = 150;
+      } else if (this.value === 'interior') {
+        costoEnvio = 300;
+      }
+      
+      const total = subtotal + costoEnvio;
+      resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
+    }
+  });
+
+  // Filtros
+  elementos.inputBusqueda?.addEventListener('input', (e) => {
+    filtrosActuales.busqueda = e.target.value.toLowerCase();
+    aplicarFiltros();
+  });
+  elementos.selectCategoria?.addEventListener('change', (e) => {
+    filtrosActuales.categoria = e.target.value.toLowerCase();
+    aplicarFiltros();
+  });
+  document.querySelectorAll('.aplicar-rango-btn').forEach(boton => {
+    boton.addEventListener('click', () => {
+      filtrosActuales.precioMin = elementos.precioMinInput.value ? parseFloat(elementos.precioMinInput.value) : null;
+      filtrosActuales.precioMax = elementos.precioMaxInput.value ? parseFloat(elementos.precioMaxInput.value) : null;
+      aplicarFiltros();
+    });
+  });
+  elementos.botonResetearFiltros?.addEventListener('click', resetearFiltros);
+
+  // Modal de producto y botones agregar
+  conectarEventoModal();
+
+  // Configurar envío por WhatsApp
+  configurarEnvioWhatsApp();
+}
+
+// ===============================
+// INICIALIZADOR ÚNICO
+// ===============================
+function init() {
+  // Inicializar EmailJS con tu clave pública
+  emailjs.init('o4IxJz0Zz-LQ8jYKG');
+
+  inicializarMenuHamburguesa();
+  inicializarFAQ();
+  setupContactForm();
+
+  // Ocultar modales y loader al inicio
+  if (elementos.avisoPreCompraModal) elementos.avisoPreCompraModal.style.display = 'none';
+  if (elementos.productoModal) elementos.productoModal.style.display = 'none';
+  if (elementos.modalDatosEnvio) elementos.modalDatosEnvio.hidden = true;
+  if (elementos.productLoader) {
+    elementos.productLoader.style.display = 'none';
+    elementos.productLoader.hidden = true;
   }
   
-  const mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*Productos:*\n${productosMsg}\n\n*Datos del cliente:*\n👤 ${nombre} ${apellido}\n📞 ${telefono}\n\n*Envío:*\n${envioTxt}\n${envio !== 'retiro' ? `📍 Dirección: ${direccion}\n` : ''}\n*Subtotal:* $U ${subtotal.toLocaleString('es-UY')}\n*Costo de envío:* $U ${costoEnvio.toLocaleString('es-UY')}\n*Total a pagar:* $U ${total.toLocaleString('es-UY')}\n\n${notas ? `*Notas:*\n${notas}` : ''}`;
+  cargarCarrito();
+  cargarProductosDesdeSheets();
+  inicializarEventos();
+}
 
-  // Abrir WhatsApp
-  window.open(`https://wa.me/59893566283?text=${encodeURIComponent(mensaje)}`, '_blank');
-  
-  // Cerrar modal y limpiar carrito
-  document.getElementById('modal-datos-envio').classList.remove('visible');
-  setTimeout(() => {
-    document.getElementById('modal-datos-envio').hidden = true;
-    carrito = [];
-    guardarCarrito();
-    actualizarUI();
-    mostrarNotificacion('Pedido enviado con éxito', 'exito');
-    document.getElementById('form-envio').reset();
-  }, 300);
-});
+// Arranque seguro
+if (document.readyState !== 'loading') {
+  init();
+} else {
+  document.addEventListener('DOMContentLoaded', init);
+}
+
+// ==== FUNCIONES GLOBALES POR SI SE NECESITAN EN EL HTML ====
+window.resetearFiltros = resetearFiltros;
+window.toggleCarrito = toggleCarrito;
+window.agregarAlCarrito = agregarAlCarrito;
+window.mostrarModalProducto = mostrarModalProducto;
+window.mostrarNotificacion = mostrarNotificacion;
+window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
+window.guardarCarrito = guardarCarrito;
+
+
+async function reservarStock(id, cantidad) {
+  const url = 'https://script.google.com/macros/s/AKfycbwMFWe0EU_g3Xu9hpNnIww9SVtGxU7ZMJj2dcCL0gbNe6Sj46dlfT3w8D5Fvb2cebKwKw/exec'; // <-- URL COMPLETA
+  const body = JSON.stringify({ id, cantidad });
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body
+    });
+    const data = await res.json();
+    if (data.success) {
+      // OK: continúa con el pago
+      return true;
+    } else {
+      alert("¡Lo sentimos! " + (data.error || "Stock insuficiente."));
+      return false;
+    }
+  } catch (e) {
+    alert("Error de conexión con el servidor. Intenta de nuevo.");
+    return false;
+  }
+}
