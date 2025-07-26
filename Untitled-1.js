@@ -757,25 +757,7 @@ async function configurarEnvioWhatsApp() {
   });
 }
 
-function configurarEnvioWhatsApp() {
-  const formEnvio = document.getElementById('form-envio');
-  if (!formEnvio) return;
 
-  formEnvio.addEventListener('submit', function(e) {
-    e.preventDefault();
-
-    // Validar campos
-    const nombre = document.getElementById('input-nombre').value.trim();
-    const apellido = document.getElementById('input-apellido').value.trim();
-    const telefono = document.getElementById('input-telefono').value.trim();
-    const direccion = document.getElementById('input-direccion').value.trim();
-    const envio = document.getElementById('select-envio').value;
-    const notas = document.getElementById('input-notas').value.trim();
-    
-    if (!nombre || !apellido || !telefono || (!direccion && envio !== 'retiro') || !envio) {
-      mostrarNotificacion('Por favor completa todos los campos obligatorios', 'error');
-      return;
-    }
 
     // Calcular total con envío
     let subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
