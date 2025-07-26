@@ -639,48 +639,114 @@ window.guardarCarrito = guardarCarrito;
 
 
 
+// Reemplaza la sección del final del Untitled-1.js con esto:
+
 // Mostrar el modal de datos de envío luego del pre-compra
 document.getElementById('btn-entendido-aviso').addEventListener('click', function() {
   document.getElementById('aviso-pre-compra-modal').hidden = true;
-  document.getElementById('modal-datos-envio').hidden = false;
+  
+  // Mostrar el modal de envío con animación
+  const modalEnvio = document.getElementById('modal-datos-envio');
+  modalEnvio.hidden = false;
+  setTimeout(() => {
+    modalEnvio.classList.add('visible');
+  }, 10);
+  
+  // Llenar el resumen del pedido
+  const resumenProductos = document.getElementById('resumen-productos');
+  const resumenTotal = document.getElementById('resumen-total');
+  
+  if (resumenProductos && resumenTotal) {
+    let html = '';
+    let total = 0;
+    
+    carrito.forEach(item => {
+      const subtotal = item.precio * item.cantidad;
+      total += subtotal;
+      html += `
+        <div class="resumen-item">
+          <span>${item.nombre} x${item.cantidad}</span>
+          <span>$U ${subtotal.toLocaleString('es-UY')}</span>
+        </div>
+      `;
+    });
+    
+    resumenProductos.innerHTML = html;
+    resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
+  }
 });
 
-// Cancelar envío (volver atrás)
+// Cerrar modal de envío
 document.getElementById('btn-cerrar-modal-envio').addEventListener('click', function() {
-  document.getElementById('modal-datos-envio').hidden = true;
-  // Si querés, podés volver a mostrar el pre-compra:
-  // document.getElementById('aviso-pre-compra-modal').hidden = false;
+  const modalEnvio = document.getElementById('modal-datos-envio');
+  modalEnvio.classList.remove('visible');
+  setTimeout(() => {
+    modalEnvio.hidden = true;
+  }, 300);
 });
 
 // Validar y enviar por WhatsApp
 document.getElementById('form-envio').addEventListener('submit', function(e) {
   e.preventDefault();
 
-  // Recopilar datos
+  // Validar campos
   const nombre = document.getElementById('input-nombre').value.trim();
   const apellido = document.getElementById('input-apellido').value.trim();
+  const telefono = document.getElementById('input-telefono').value.trim();
   const direccion = document.getElementById('input-direccion').value.trim();
   const envio = document.getElementById('select-envio').value;
-  if (!nombre || !apellido || (!direccion && envio !== 'retiro')) {
-    alert('Por favor completa todos los campos.');
+  const notas = document.getElementById('input-notas').value.trim();
+  
+  if (!nombre || !apellido || !telefono || (!direccion && envio !== 'retiro') || !envio) {
+    mostrarNotificacion('Por favor completa todos los campos obligatorios', 'error');
     return;
   }
 
-  let envioTxt = '';
-  if (envio === 'retiro') envioTxt = 'Retiro en local (Gratis)';
-  if (envio === 'montevideo') envioTxt = 'Envío Montevideo ($150)';
-  if (envio === 'interior') envioTxt = 'Envío Interior ($300)';
+  // Calcular total con envío
+  let total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+  let envioTxt = 'Retiro en local (Gratis)';
+  let costoEnvio = 0;
+  
+  if (envio === 'montevideo') {
+    costoEnvio = 150;
+    envioTxt = `Envío Montevideo ($U ${costoEnvio})`;
+  } else if (envio === 'interior') {
+    costoEnvio = 300;
+    envioTxt = `Envío Interior ($U ${costoEnvio})`;
+  }
+  
+  total += costoEnvio;
 
-  // Armá el mensaje del pedido
-  let productosMsg = '';
-  (carrito || []).forEach(item => {
-    productosMsg += `- ${item.nombre} x ${item.cantidad}: $${(item.precio * item.cantidad).toFixed(2)}\n`;
-  });
-  const mensaje = encodeURIComponent(
-    `¡Hola! Quiero hacer un pedido:\n\nProductos:\n${productosMsg}\nMétodo de envío: ${envioTxt}\nNombre: ${nombre} ${apellido}\n${envio !== 'retiro' ? 'Dirección: ' + direccion + '\n' : ''}`
-  );
-  // Número vendedor, con el 598... de Uruguay
-  window.open(`https://wa.me/59894955466?text=${mensaje}`, '_blank');
-  // Cerrar modal después de enviar
-  document.getElementById('modal-datos-envio').hidden = true;
+  // Crear mensaje detallado
+  let productosMsg = carrito.map(item => 
+    `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`
+  ).join('\n');
+  
+  const mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*Productos:*\n${productosMsg}\n\n*Datos del cliente:*\n👤 ${nombre} ${apellido}\n📞 ${telefono}\n\n*Envío:*\n${envioTxt}\n${envio !== 'retiro' ? `📍 Dirección: ${direccion}\n` : ''}\n*Total:* $U ${total.toLocaleString('es-UY')}\n\n${notas ? `*Notas:*\n${notas}` : ''}`;
+
+  // Abrir WhatsApp
+  window.open(`https://wa.me/59894955466?text=${encodeURIComponent(mensaje)}`, '_blank');
+  
+  // Cerrar modal y limpiar carrito
+  document.getElementById('modal-datos-envio').classList.remove('visible');
+  setTimeout(() => {
+    document.getElementById('modal-datos-envio').hidden = true;
+    carrito = [];
+    guardarCarrito();
+    actualizarUI();
+    mostrarNotificacion('Pedido enviado con éxito', 'exito');
+    document.getElementById('form-envio').reset();
+  }, 300);
+});
+
+// Mostrar/ocultar campo dirección según método de envío
+document.getElementById('select-envio').addEventListener('change', function() {
+  const grupoDireccion = document.getElementById('grupo-direccion');
+  if (this.value === 'retiro') {
+    grupoDireccion.style.display = 'none';
+    document.getElementById('input-direccion').required = false;
+  } else {
+    grupoDireccion.style.display = 'flex';
+    document.getElementById('input-direccion').required = true;
+  }
 });
