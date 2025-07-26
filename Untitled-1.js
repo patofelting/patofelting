@@ -821,33 +821,7 @@ if (document.readyState !== 'loading') {
 }
 
 
-// Generar burbujas que suben
-        document.addEventListener('DOMContentLoaded', function() {
-            const bubblesContainer = document.getElementById('bubbles');
-            const bubbleCount = 25;
-            
-            for (let i = 0; i < bubbleCount; i++) {
-                const bubble = document.createElement('div');
-                bubble.classList.add('bubble');
-                
-                // Tamaño aleatorio
-                const size = Math.random() * 30 + 10;
-                bubble.style.width = `${size}px`;
-                bubble.style.height = `${size}px`;
-                
-                // Posición inicial aleatoria
-                bubble.style.left = `${Math.random() * 100}%`;
-                
-                // Animación aleatoria
-                bubble.style.animationDuration = `${Math.random() * 10 + 8}s`;
-                bubble.style.animationDelay = `${Math.random() * 5}s`;
-                
-                // Opacidad aleatoria
-                bubble.style.opacity = Math.random() * 0.4 + 0.1;
-                
-                bubblesContainer.appendChild(bubble);
-            }
-        });
+
 
 // ==== FUNCIONES GLOBALES POR SI SE NECESITAN EN EL HTML ====
 window.resetearFiltros = resetearFiltros;
