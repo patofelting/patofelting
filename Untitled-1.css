@@ -1,29 +1,28 @@
 /* Base Styles & Variables */
 :root {
   --primary-color: #4CAF50; /* Verde principal */
-  --secondary-color: #8BC34A; /* Verde secundario */
-  --accent-color: #2E7D32; /* Verde oscuro para acentos */
-  --text-color: #333;
-  --light-text: #f8f8f8;
-  --background-color: #fff;
+  --secondary-color: #32CD32; /* Verde lima */
+  --accent-color: #98FB98; /* Verde claro pastel */
+  --text-color: #2F4F2F; /* Verde oscuro para texto */
+  --light-text: #ffffff; /* Texto claro */
+  --background-color: #F5FFF5; /* Fondo verde muy claro */
   --light-gray: #f5f5f5;
   --medium-gray: #e0e0e0;
   --dark-gray: #555;
-  --success-color: #388E3C; /* Verde más oscuro para éxito */
+  --success-color: #388E3C;
   --error-color: #f44336;
-  --warning-color: #FFA000; /* Ámbar para advertencias */
+  --warning-color: #FFA000;
   --border-radius: 8px;
   --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  --transition: all 0.3s ease;
-  --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  --font-size-base: 16px;
-  --font-size-small: 14px;
-  --font-size-large: 18px;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-size-base: 1rem;
+  --font-size-small: 0.875rem;
+  --font-size-large: 1.125rem;
   --font-weight-normal: 400;
   --font-weight-bold: 700;
   --line-height: 1.6;
 }
-
 * {
   margin: 0;
   padding: 0;
