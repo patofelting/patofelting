@@ -3010,3 +3010,42 @@ body > div.notificacion.info { background: #1976d2 !important; }
     font-size: 1.5rem;
   }
 }
+
+/* Agrega esto al archivo CSS */
+.resumen-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.resumen-subtotal {
+  font-weight: 600;
+  border-top: 2px solid #ddd;
+  margin-top: 8px;
+  padding-top: 12px;
+}
+
+.carrito-vacio {
+  color: #666;
+  text-align: center;
+  padding: 10px;
+  font-style: italic;
+}
+
+#resumen-productos {
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 5px;
+  margin-bottom: 15px;
+}
+
+/* Scrollbar para el resumen */
+#resumen-productos::-webkit-scrollbar {
+  width: 5px;
+}
+
+#resumen-productos::-webkit-scrollbar-thumb {
+  background-color: var(--primary-color);
+  border-radius: 10px;
+}
