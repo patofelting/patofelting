@@ -4,8 +4,7 @@
 const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
-
-
+const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
 // ===============================
 // ESTADO GLOBAL
@@ -19,10 +18,6 @@ let filtrosActuales = {
   categoria: 'todos',
   busqueda: ''
 };
-
-// ===============================
-// FUNCIONES AUXILIARES
-// ===============================
 
 // ===============================
 // REFERENCIAS AL DOM
@@ -112,22 +107,12 @@ function actualizarContadorCarrito() {
   }
 }
 
-async function agregarAlCarrito(id, cantidad = 1) {
+function agregarAlCarrito(id, cantidad = 1) {
   const prod = productos.find(p => p.id === id);
   if (!prod) return mostrarNotificacion('Producto no encontrado', 'error');
 
   cantidad = parseInt(cantidad, 10);
   if (isNaN(cantidad) || cantidad < 1) return mostrarNotificacion('Cantidad inválida', 'error');
-
-  const stockDisponible = await verificarStock(id, cantidad);
-  if (stockDisponible === false) {
-    return mostrarNotificacion('Error al verificar el stock', 'error');
-  }
-
-  if (cantidad > stockDisponible) {
-    mostrarNotificacion(`Solo hay ${stockDisponible} unidades disponibles de ${prod.nombre}`, 'error');
-    return;
-  }
 
   const enCarrito = carrito.find(item => item.id === id);
   if (enCarrito) {
@@ -141,12 +126,6 @@ async function agregarAlCarrito(id, cantidad = 1) {
       imagen: prod.imagenes[0] || PLACEHOLDER_IMAGE
     });
   }
-
-  // Actualizar el stock localmente
-  prod.stock = stockDisponible;
-
-  // Recargar productos para sincronizar el stock
-  await cargarProductosDesdeSheets();
 
   guardarCarrito();
   actualizarUI();
@@ -163,10 +142,6 @@ function renderizarCarrito() {
   }
   
   elementos.listaCarrito.innerHTML = carrito.map(item => {
-    const producto = productos.find(p => p.id === item.id);
-    const stockDisponible = producto ? producto.stock : 0;
-    const maxCantidad = Math.min(stockDisponible, item.cantidad + stockDisponible);
-    
     return `
     <li class="carrito-item" data-id="${item.id}">
       <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}" loading="lazy">
@@ -176,7 +151,7 @@ function renderizarCarrito() {
         <div class="carrito-item-controls">
           <button class="disminuir-cantidad" data-id="${item.id}" aria-label="Reducir cantidad">-</button>
           <span class="carrito-item-cantidad">${item.cantidad}</span>
-          <button class="aumentar-cantidad" data-id="${item.id}" aria-label="Aumentar cantidad" ${item.cantidad >= stockDisponible ? 'disabled' : ''}>+</button>
+          <button class="aumentar-cantidad" data-id="${item.id}" aria-label="Aumentar cantidad">+</button>
         </div>
         <span class="carrito-item-subtotal">Subtotal: $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
       </div>
@@ -187,11 +162,9 @@ function renderizarCarrito() {
     `;
   }).join('');
 
-  // Actualizar el total
   const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
   elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
   
-  // Agregar eventos a los botones
   document.querySelectorAll('.disminuir-cantidad').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const id = parseInt(e.target.dataset.id);
@@ -208,16 +181,10 @@ function renderizarCarrito() {
     btn.addEventListener('click', (e) => {
       const id = parseInt(e.target.dataset.id);
       const item = carrito.find(item => item.id === id);
-      const producto = productos.find(p => p.id === id);
-      
-      if (item && producto) {
-        if (item.cantidad < producto.stock) {
-          item.cantidad++;
-          guardarCarrito();
-          renderizarCarrito();
-        } else {
-          mostrarNotificacion(`No hay más stock disponible de ${producto.nombre}`, 'error');
-        }
+      if (item) {
+        item.cantidad++;
+        guardarCarrito();
+        renderizarCarrito();
       }
     });
   });
@@ -278,7 +245,6 @@ async function cargarProductosDesdeSheets() {
         nombre: r.nombre.trim(),
         descripcion: r.descripcion || '',
         precio: parseFloat(r.precio) || 0,
-        stock: parseInt(r.cantidad, 10) || 0,
         imagenes: (r.foto && r.foto.trim() !== "") ? r.foto.split(',').map(x => x.trim()) : [PLACEHOLDER_IMAGE],
         adicionales: r.adicionales ? r.adicionales.trim() : '',
         alto: parseFloat(r.alto) || null,
@@ -309,30 +275,23 @@ function filtrarProductos() {
   return productos.filter(p => {
     const { precioMin, precioMax, categoria, busqueda } = filtrosActuales;
     const b = busqueda?.toLowerCase() || "";
-    const enCarrito = carrito.find(i => i.id === p.id);
-    const disponibles = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
     return (
       (precioMin === null || p.precio >= precioMin) &&
       (precioMax === null || p.precio <= precioMax) &&
       (categoria === 'todos' || p.categoria === categoria) &&
-      (!b || p.nombre.toLowerCase().includes(b) || p.descripcion.toLowerCase().includes(b)) &&
-      (disponibles > 0)
+      (!b || p.nombre.toLowerCase().includes(b) || p.descripcion.toLowerCase().includes(b))
     );
   });
 }
 
 function crearCardProducto(p) {
-  const enCarrito = carrito.find(i => i.id === p.id);
-  const disp = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
-  const agot = disp <= 0;
+  const agot = p.vendido === true;
   return `
     <div class="producto-card" data-id="${p.id}">
       <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img" loading="lazy">
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
-      <p class="producto-stock">
-        ${agot ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${disp}`}
-      </p>
+      ${agot ? '<p class="producto-stock"><span class="texto-agotado">Agotado</span></p>' : ''}
       <div class="card-acciones">
         <button class="boton-agregar${agot ? ' agotado' : ''}" data-id="${p.id}" ${agot ? 'disabled' : ''}>
           ${agot ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
@@ -382,10 +341,7 @@ function mostrarModalProducto(producto) {
   const contenido = elementos.modalContenido;
   if (!modal || !contenido) return;
 
-  const enCarrito = carrito.find(item => item.id === producto.id) || { cantidad: 0 };
-  const disponibles = Math.max(0, producto.stock - enCarrito.cantidad);
-  const agotado = disponibles <= 0;
-
+  const agotado = producto.vendido === true;
   let currentIndex = 0;
 
   function renderCarrusel() {
@@ -421,7 +377,7 @@ function mostrarModalProducto(producto) {
           <h1 class="modal-nombre">${producto.nombre}</h1>
           <p class="modal-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
           <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">
-            ${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}
+            ${agotado ? 'AGOTADO' : 'DISPONIBLE'}
           </p>
           <div class="modal-descripcion">
             ${producto.descripcion || ''}
@@ -434,7 +390,7 @@ function mostrarModalProducto(producto) {
             }
           </div>
           <div class="modal-acciones">
-            <input type="number" value="1" min="1" max="${disponibles}" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
+            <input type="number" value="1" min="1" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
             <button class="boton-agregar-modal ${agotado ? 'agotado' : ''}" data-id="${producto.id}" ${agotado ? 'disabled' : ''}>
               ${agotado ? 'Agotado' : 'Agregar al carrito'}
             </button>
@@ -675,7 +631,7 @@ function configurarEnvioWhatsApp() {
   const formEnvio = document.getElementById('form-envio');
   if (!formEnvio) return;
 
-  formEnvio.addEventListener('submit', async function(e) {
+  formEnvio.addEventListener('submit', function(e) {
     e.preventDefault();
 
     // Validar campos
@@ -705,41 +661,6 @@ function configurarEnvioWhatsApp() {
     }
     
     const total = subtotal + costoEnvio;
-
-    // Verificar y reservar stock sin await dentro del bucle
-    let stockReservado = true;
-    const reservaPromises = [];
-    for (const item of carrito) {
-      if (!item.id || isNaN(item.cantidad) || item.cantidad <= 0) {
-        console.error('Datos inválidos en carrito:', item);
-        mostrarNotificacion('Error: Datos inválidos en el carrito', 'error');
-        stockReservado = false;
-        break;
-      }
-      console.log(`Intentando reservar stock para ID: ${item.id}, Cantidad: ${item.cantidad}`);
-      reservaPromises.push(reservarStock(item.id, item.cantidad));
-    }
-
-    if (stockReservado && reservaPromises.length > 0) {
-      try {
-        const resultados = await Promise.all(reservaPromises);
-        stockReservado = resultados.every(result => result === true);
-        if (!stockReservado) {
-          console.error('Alguna reserva de stock falló:', resultados);
-          mostrarNotificacion('No se pudo reservar el stock para todos los productos. Intenta de nuevo.', 'error');
-          return;
-        }
-      } catch (error) {
-        console.error('Error en el proceso de reserva de stock:', error);
-        mostrarNotificacion('Error al procesar la reserva de stock: ' + error.message, 'error');
-        stockReservado = false;
-      }
-    }
-
-    if (!stockReservado) {
-      mostrarNotificacion('No se pudo reservar el stock. Intenta de nuevo.', 'error');
-      return;
-    }
 
     // Crear mensaje detallado
     let productosMsg = '';
@@ -907,25 +828,3 @@ window.mostrarModalProducto = mostrarModalProducto;
 window.mostrarNotificacion = mostrarNotificacion;
 window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
 window.guardarCarrito = guardarCarrito;
-
-async function reservarStock(id, cantidad) {
-  try {
-    const response = await fetch(STOCK_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, cantidad, action: 'reserve' })
-    });
-    const data = await response.json();
-    if (data.success) {
-      // OK: continúa con el pago
-      return true;
-    } else {
-      mostrarNotificacion(`¡Lo sentimos! ${data.error || 'Stock insuficiente.'}`, 'error');
-      return false;
-    }
-  } catch (error) {
-    console.error('Error al reservar stock:', error);
-    mostrarNotificacion('Error de conexión con el servidor. Intenta de nuevo.', 'error');
-    return false;
-  }
-}
