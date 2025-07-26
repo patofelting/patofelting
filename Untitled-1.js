@@ -20,9 +20,8 @@ let filtrosActuales = {
   busqueda: ''
 };
 
-
 // ===============================
-// FUNCIONES AUXILIARES - Agrega esta función
+// FUNCIONES AUXILIARES
 // ===============================
 async function verificarStock(id, cantidad) {
   try {
@@ -38,6 +37,7 @@ async function verificarStock(id, cantidad) {
     return false;
   }
 }
+
 // ===============================
 // REFERENCIAS AL DOM
 // ===============================
@@ -720,6 +720,20 @@ function configurarEnvioWhatsApp() {
     
     const total = subtotal + costoEnvio;
 
+    // Verificar y reservar stock antes de enviar
+    let stockReservado = true;
+    for (const item of carrito) {
+      if (!(await reservarStock(item.id, item.cantidad))) {
+        stockReservado = false;
+        break;
+      }
+    }
+
+    if (!stockReservado) {
+      mostrarNotificacion('No se pudo reservar el stock. Intenta de nuevo.', 'error');
+      return;
+    }
+
     // Crear mensaje detallado
     let productosMsg = '';
     if (carrito.length === 0) {
@@ -887,27 +901,24 @@ window.mostrarNotificacion = mostrarNotificacion;
 window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
 window.guardarCarrito = guardarCarrito;
 
-
 async function reservarStock(id, cantidad) {
-  const url = 'https://script.google.com/macros/s/AKfycbwMFWe0EU_g3Xu9hpNnIww9SVtGxU7ZMJj2dcCL0gbNe6Sj46dlfT3w8D5Fvb2cebKwKw/exec'; // <-- URL COMPLETA
-  const body = JSON.stringify({ id, cantidad });
-
   try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body
+    const response = await fetch(STOCK_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, cantidad })
     });
-    const data = await res.json();
+    const data = await response.json();
     if (data.success) {
       // OK: continúa con el pago
       return true;
     } else {
-      alert("¡Lo sentimos! " + (data.error || "Stock insuficiente."));
+      mostrarNotificacion(`¡Lo sentimos! ${data.error || 'Stock insuficiente.'}`, 'error');
       return false;
     }
-  } catch (e) {
-    alert("Error de conexión con el servidor. Intenta de nuevo.");
+  } catch (error) {
+    console.error('Error al reservar stock:', error);
+    mostrarNotificacion('Error de conexión con el servidor. Intenta de nuevo.', 'error');
     return false;
   }
 }
