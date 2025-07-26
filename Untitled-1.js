@@ -5,7 +5,7 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
-const MP_ACCESS_TOKEN = window.MP_ACCESS_TOKEN || '';
+const STOCK_API_URL = 'https://script.google.com/macros/s/AKfycbwMFWe0EU_g3Xu9hpNnIww9SVtGxU7ZMJj2dcCL0gbNe6Sj46dlfT3w8D5Fvb2cebKwKw/exec';
 
 // ===============================
 // ESTADO GLOBAL
@@ -20,6 +20,24 @@ let filtrosActuales = {
   busqueda: ''
 };
 
+
+// ===============================
+// FUNCIONES AUXILIARES - Agrega esta función
+// ===============================
+async function verificarStock(id, cantidad) {
+  try {
+    const response = await fetch(STOCK_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, cantidad })
+    });
+    const data = await response.json();
+    return data.success ? data.stockRestante : false;
+  } catch (error) {
+    console.error('Error al verificar stock:', error);
+    return false;
+  }
+}
 // ===============================
 // REFERENCIAS AL DOM
 // ===============================
@@ -42,7 +60,6 @@ const elementos = {
   carritoOverlay: document.querySelector('.carrito-overlay'),
   btnVaciarCarrito: document.querySelector('.boton-vaciar-carrito'),
   btnFinalizarCompra: document.querySelector('.boton-finalizar-compra'),
-  btnMercadoPago: null,
   btnCerrarCarrito: document.querySelector('.cerrar-carrito'),
   avisoPreCompraModal: getElement('aviso-pre-compra-modal'),
   btnEntendidoAviso: getElement('btn-entendido-aviso'),
@@ -81,7 +98,6 @@ function cargarCarrito() {
   try {
     carrito = JSON.parse(localStorage.getItem(LS_CARRITO_KEY)) || [];
     actualizarContadorCarrito();
-    actualizarBotonMercadoPago();
   } catch {
     carrito = [];
   }
@@ -99,7 +115,6 @@ function vaciarCarrito() {
     actualizarUI();
     mostrarNotificacion('Carrito vaciado', 'info');
     toggleCarrito(false);
-    actualizarBotonMercadoPago();
   }
 }
 
@@ -111,21 +126,25 @@ function actualizarContadorCarrito() {
   }
 }
 
-function agregarAlCarrito(id, cantidad = 1) {
+async function agregarAlCarrito(id, cantidad = 1) {
   const prod = productos.find(p => p.id === id);
   if (!prod) return mostrarNotificacion('Producto no encontrado', 'error');
   
   cantidad = parseInt(cantidad, 10);
   if (isNaN(cantidad) || cantidad < 1) return mostrarNotificacion('Cantidad inválida', 'error');
   
-  const enCarrito = carrito.find(item => item.id === id);
-  const enCarritoCant = enCarrito ? enCarrito.cantidad : 0;
-  const disponibles = Math.max(0, prod.stock - enCarritoCant);
+  // Verificar stock con el servidor
+  const stockDisponible = await verificarStock(id, cantidad);
+  if (stockDisponible === false) {
+    return mostrarNotificacion('Error al verificar el stock', 'error');
+  }
   
-  if (cantidad > disponibles) {
-    mostrarNotificacion(`Solo hay ${disponibles} unidades disponibles de ${prod.nombre}`, 'error');
+  if (cantidad > stockDisponible) {
+    mostrarNotificacion(`Solo hay ${stockDisponible} unidades disponibles de ${prod.nombre}`, 'error');
     return;
   }
+  
+  const enCarrito = carrito.find(item => item.id === id);
   
   if (enCarrito) {
     enCarrito.cantidad += cantidad;
@@ -139,10 +158,12 @@ function agregarAlCarrito(id, cantidad = 1) {
     });
   }
   
+  // Actualizar el stock localmente para reflejar los cambios
+  prod.stock = stockDisponible;
+  
   guardarCarrito();
   actualizarUI();
   mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
-  actualizarBotonMercadoPago();
 }
 
 function renderizarCarrito() {
@@ -151,7 +172,6 @@ function renderizarCarrito() {
   if (carrito.length === 0) {
     elementos.listaCarrito.innerHTML = '<p class="carrito-vacio">Tu carrito está vacío</p>';
     elementos.totalCarrito.textContent = 'Total: $U 0';
-    actualizarBotonMercadoPago();
     return;
   }
   
@@ -162,7 +182,7 @@ function renderizarCarrito() {
     
     return `
     <li class="carrito-item" data-id="${item.id}">
-      <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'">
+      <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}" loading="lazy">
       <div class="carrito-item-info">
         <span class="carrito-item-nombre">${item.nombre}</span>
         <span class="carrito-item-precio">$U ${item.precio.toLocaleString('es-UY')} c/u</span>
@@ -223,8 +243,6 @@ function renderizarCarrito() {
       renderizarCarrito();
     });
   });
-
-  actualizarBotonMercadoPago();
 }
 
 // ===============================
@@ -266,26 +284,34 @@ async function cargarProductosDesdeSheets() {
         elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles en este momento.</p>';
       return;
     }
-    productos = data
+
+    // Cargar productos con verificación de stock en paralelo
+    productos = await Promise.all(data
       .filter(r => r.id && r.nombre && r.precio)
-      .map(r => ({
-        id: parseInt(r.id, 10),
-        nombre: r.nombre.trim(),
-        descripcion: r.descripcion || '',
-        precio: parseFloat(r.precio) || 0,
-        stock: parseInt(r.cantidad, 10) || 0,
-        imagenes: (r.foto && r.foto.trim() !== "") ? r.foto.split(',').map(x => x.trim()) : [PLACEHOLDER_IMAGE],
-        adicionales: r.adicionales ? r.adicionales.trim() : '',
-        alto: parseFloat(r.alto) || null,
-        ancho: parseFloat(r.ancho) || null,
-        profundidad: parseFloat(r.profundidad) || null,
-        categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
-        vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
-        estado: r.estado ? r.estado.trim() : ''
+      .map(async r => {
+        // Verificar stock actual desde la API
+        const stockResponse = await verificarStock(r.id, 0); // Consulta sin modificar
+        const stockActual = stockResponse !== false ? stockResponse : parseInt(r.cantidad, 10) || 0;
+        
+        return {
+          id: parseInt(r.id, 10),
+          nombre: r.nombre.trim(),
+          descripcion: r.descripcion || '',
+          precio: parseFloat(r.precio) || 0,
+          stock: stockActual,
+          imagenes: (r.foto && r.foto.trim() !== "") ? r.foto.split(',').map(x => x.trim()) : [PLACEHOLDER_IMAGE],
+          adicionales: r.adicionales ? r.adicionales.trim() : '',
+          alto: parseFloat(r.alto) || null,
+          ancho: parseFloat(r.ancho) || null,
+          profundidad: parseFloat(r.profundidad) || null,
+          categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
+          vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
+          estado: r.estado ? r.estado.trim() : ''
+        };
       }));
+
     actualizarCategorias();
     actualizarUI();
-    actualizarBotonMercadoPago();
   } catch (e) {
     if (elementos.galeriaProductos)
       elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos.</p>';
@@ -323,7 +349,7 @@ function crearCardProducto(p) {
   const agot = disp <= 0;
   return `
     <div class="producto-card" data-id="${p.id}">
-      <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'">
+      <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img" loading="lazy">
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
       <p class="producto-stock">
@@ -389,7 +415,7 @@ function mostrarModalProducto(producto) {
       <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
       <div class="modal-flex">
         <div class="modal-carrusel">
-          <img src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}" onerror="this.src='${PLACEHOLDER_IMAGE}'">
+          <img src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
           ${
             producto.imagenes.length > 1
               ? `
@@ -408,7 +434,7 @@ function mostrarModalProducto(producto) {
             ${producto.imagenes
               .map(
                 (img, i) =>
-                  `<img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}" onerror="this.src='${PLACEHOLDER_IMAGE}'">`
+                  `<img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}">`
               )
               .join('')}
           </div>
@@ -617,8 +643,7 @@ function setupContactForm() {
 // FUNCIONES PARA FINALIZAR COMPRA
 // ===============================
 function actualizarResumenPedido() {
-  const resumenProductos = document.getElementById('resumen-productos');
-  const resumenTotal = document.getElementById('resumen-total');
+  const { resumenProductos, resumenTotal } = elementos;
   
   if (!resumenProductos || !resumenTotal) return;
 
@@ -642,7 +667,6 @@ function actualizarResumenPedido() {
     `;
   });
 
-  // Agregar línea de subtotal
   html += `
     <div class="resumen-item resumen-subtotal">
       <span>Subtotal:</span>
@@ -652,7 +676,6 @@ function actualizarResumenPedido() {
 
   resumenProductos.innerHTML = html;
   
-  // Obtener método de envío seleccionado
   const envioSelect = document.getElementById('select-envio');
   const metodoEnvio = envioSelect ? envioSelect.value : 'retiro';
   let costoEnvio = 0;
@@ -665,6 +688,73 @@ function actualizarResumenPedido() {
 
   const total = subtotal + costoEnvio;
   resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
+}
+
+async function configurarEnvioWhatsApp() {
+  const formEnvio = elementos.formEnvio;
+  if (!formEnvio) return;
+
+  formEnvio.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    // Validar campos
+    const nombre = document.getElementById('input-nombre').value.trim();
+    const apellido = document.getElementById('input-apellido').value.trim();
+    const telefono = document.getElementById('input-telefono').value.trim();
+    const direccion = document.getElementById('input-direccion').value.trim();
+    const envio = document.getElementById('select-envio').value;
+    const notas = document.getElementById('input-notas').value.trim();
+    
+    if (!nombre || !apellido || !telefono || (!direccion && envio !== 'retiro') || !envio) {
+      mostrarNotificacion('Por favor completa todos los campos obligatorios', 'error');
+      return;
+    }
+
+    // Verificar stock antes de finalizar
+    for (const item of carrito) {
+      const stockResponse = await verificarStock(item.id, item.cantidad);
+      if (!stockResponse) {
+        mostrarNotificacion(`Lo sentimos, ${item.nombre} ya no tiene suficiente stock`, 'error');
+        return;
+      }
+    }
+
+    // Calcular total con envío
+    let subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+    let envioTxt = 'Retiro en local (Gratis)';
+    let costoEnvio = 0;
+    
+    if (envio === 'montevideo') {
+      costoEnvio = 150;
+      envioTxt = `Envío Montevideo ($U ${costoEnvio})`;
+    } else if (envio === 'interior') {
+      costoEnvio = 300;
+      envioTxt = `Envío Interior ($U ${costoEnvio})`;
+    }
+    
+    const total = subtotal + costoEnvio;
+
+    // Crear mensaje detallado
+    let productosMsg = carrito.map(item => 
+      `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`
+    ).join('\n');
+    
+    const mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*Productos:*\n${productosMsg}\n\n*Datos del cliente:*\n👤 ${nombre} ${apellido}\n📞 ${telefono}\n\n*Envío:*\n${envioTxt}\n${envio !== 'retiro' ? `📍 Dirección: ${direccion}\n` : ''}\n*Subtotal:* $U ${subtotal.toLocaleString('es-UY')}\n*Costo de envío:* $U ${costoEnvio.toLocaleString('es-UY')}\n*Total a pagar:* $U ${total.toLocaleString('es-UY')}\n\n${notas ? `*Notas:*\n${notas}` : ''}`;
+
+    // Abrir WhatsApp
+    window.open(`https://wa.me/59893566283?text=${encodeURIComponent(mensaje)}`, '_blank');
+    
+    // Cerrar modal y limpiar carrito
+    elementos.modalDatosEnvio.classList.remove('visible');
+    setTimeout(() => {
+      elementos.modalDatosEnvio.hidden = true;
+      carrito = [];
+      guardarCarrito();
+      actualizarUI();
+      mostrarNotificacion('Pedido enviado con éxito', 'exito');
+      formEnvio.reset();
+    }, 300);
+  });
 }
 
 function configurarEnvioWhatsApp() {
@@ -715,7 +805,7 @@ function configurarEnvioWhatsApp() {
     const mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*Productos:*\n${productosMsg}\n\n*Datos del cliente:*\n👤 ${nombre} ${apellido}\n📞 ${telefono}\n\n*Envío:*\n${envioTxt}\n${envio !== 'retiro' ? `📍 Dirección: ${direccion}\n` : ''}\n*Subtotal:* $U ${subtotal.toLocaleString('es-UY')}\n*Costo de envío:* $U ${costoEnvio.toLocaleString('es-UY')}\n*Total a pagar:* $U ${total.toLocaleString('es-UY')}\n\n${notas ? `*Notas:*\n${notas}` : ''}`;
 
     // Abrir WhatsApp
-    window.open(`https://wa.me/59893566283?text=${encodeURIComponent(mensaje)}`, '_blank');
+    window.open(`https://wa.me/59894955466?text=${encodeURIComponent(mensaje)}`, '_blank');
     
     // Cerrar modal y limpiar carrito
     document.getElementById('modal-datos-envio').classList.remove('visible');
@@ -728,83 +818,6 @@ function configurarEnvioWhatsApp() {
       document.getElementById('form-envio').reset();
     }, 300);
   });
-}
-
-// ===============================
-// MERCADO PAGO INTEGRATION
-// ===============================
-function insertarBotonMercadoPago() {
-  const cont = document.querySelector('.carrito-acciones');
-  if (!cont) return;
-  const btn = document.createElement('button');
-  btn.id = 'btn-mercado-pago';
-  btn.className = 'boton-mercado-pago';
-  btn.innerHTML = `<img src="https://www.mercadopago.com/org-img/MP3/home/logomp3.gif" alt="Mercado Pago" loading="lazy"> Pagar con Mercado Pago`;
-  cont.appendChild(btn);
-  elementos.btnMercadoPago = btn;
-  btn.dataset.text = btn.innerHTML;
-  btn.addEventListener('click', iniciarPagoMercadoPago);
-  actualizarBotonMercadoPago();
-}
-
-function actualizarBotonMercadoPago() {
-  const btn = elementos.btnMercadoPago;
-  if (!btn) return;
-  const vacio = carrito.length === 0;
-  btn.disabled = vacio;
-  btn.style.display = vacio ? 'none' : 'block';
-}
-
-function setMercadoPagoLoading(state) {
-  const btn = elementos.btnMercadoPago;
-  if (!btn) return;
-  if (state) {
-    btn.disabled = true;
-    btn.innerHTML = `<svg class="spinner" viewBox="0 0 50 50"><circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"/></svg>`;
-  } else {
-    btn.innerHTML = btn.dataset.text;
-    actualizarBotonMercadoPago();
-  }
-}
-
-async function iniciarPagoMercadoPago() {
-  if (carrito.length === 0) return;
-  if (!MP_ACCESS_TOKEN) {
-    mostrarNotificacion('Integración de pago no configurada', 'error');
-    return;
-  }
-  const total = carrito.reduce((sum, i) => sum + i.precio * i.cantidad, 0);
-  const body = {
-    items: [
-      {
-        title: 'Compra en Patofelting',
-        quantity: 1,
-        unit_price: total,
-        currency_id: 'UYU'
-      }
-    ]
-  };
-  try {
-    setMercadoPagoLoading(true);
-    const resp = await fetch('https://api.mercadopago.com/checkout/preferences', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${MP_ACCESS_TOKEN}`
-      },
-      body: JSON.stringify(body)
-    });
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(data.message || 'No se pudo generar la preferencia');
-    const url = data.init_point || data.sandbox_init_point;
-    if (!url) throw new Error('Enlace de pago no disponible');
-    window.location.href = url;
-  } catch (e) {
-    console.error('Mercado Pago', e);
-    mostrarNotificacion('Ocurrió un error al iniciar el pago', 'error');
-  } finally {
-    setMercadoPagoLoading(false);
-  }
 }
 
 // ===============================
@@ -915,7 +928,6 @@ function init() {
   inicializarMenuHamburguesa();
   inicializarFAQ();
   setupContactForm();
-  insertarBotonMercadoPago();
 
   // Ocultar modales y loader al inicio
   if (elementos.avisoPreCompraModal) elementos.avisoPreCompraModal.style.display = 'none';
@@ -946,3 +958,28 @@ window.mostrarModalProducto = mostrarModalProducto;
 window.mostrarNotificacion = mostrarNotificacion;
 window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
 window.guardarCarrito = guardarCarrito;
+
+
+async function reservarStock(id, cantidad) {
+  const url = 'https://script.google.com/macros/s/AKfycbwMFWe0EU_g3Xu9hpNnIww9SVtGxU7ZMJj2dcCL0gbNe6Sj46dlfT3w8D5Fvb2cebKwKw/exec'; // <-- URL COMPLETA
+  const body = JSON.stringify({ id, cantidad });
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body
+    });
+    const data = await res.json();
+    if (data.success) {
+      // OK: continúa con el pago
+      return true;
+    } else {
+      alert("¡Lo sentimos! " + (data.error || "Stock insuficiente."));
+      return false;
+    }
+  } catch (e) {
+    alert("Error de conexión con el servidor. Intenta de nuevo.");
+    return false;
+  }
+}
