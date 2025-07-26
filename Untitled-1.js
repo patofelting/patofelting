@@ -28,7 +28,7 @@ async function verificarStock(id, cantidad) {
     const response = await fetch(STOCK_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, cantidad })
+      body: JSON.stringify({ id, cantidad, action: 'verify' })
     });
     const data = await response.json();
     return data.success ? data.stockRestante : false;
@@ -689,7 +689,7 @@ function configurarEnvioWhatsApp() {
   const formEnvio = document.getElementById('form-envio');
   if (!formEnvio) return;
 
-  formEnvio.addEventListener('submit', function(e) {
+  formEnvio.addEventListener('submit', async function(e) {
     e.preventDefault();
 
     // Validar campos
@@ -720,12 +720,33 @@ function configurarEnvioWhatsApp() {
     
     const total = subtotal + costoEnvio;
 
-    // Verificar y reservar stock antes de enviar
+    // Verificar y reservar stock sin await dentro del bucle
     let stockReservado = true;
+    const reservaPromises = [];
     for (const item of carrito) {
-      if (!(await reservarStock(item.id, item.cantidad))) {
+      if (!item.id || isNaN(item.cantidad) || item.cantidad <= 0) {
+        console.error('Datos inválidos en carrito:', item);
+        mostrarNotificacion('Error: Datos inválidos en el carrito', 'error');
         stockReservado = false;
         break;
+      }
+      console.log(`Intentando reservar stock para ID: ${item.id}, Cantidad: ${item.cantidad}`);
+      reservaPromises.push(reservarStock(item.id, item.cantidad));
+    }
+
+    if (stockReservado && reservaPromises.length > 0) {
+      try {
+        const resultados = await Promise.all(reservaPromises);
+        stockReservado = resultados.every(result => result === true);
+        if (!stockReservado) {
+          console.error('Alguna reserva de stock falló:', resultados);
+          mostrarNotificacion('No se pudo reservar el stock para todos los productos. Intenta de nuevo.', 'error');
+          return;
+        }
+      } catch (error) {
+        console.error('Error en el proceso de reserva de stock:', error);
+        mostrarNotificacion('Error al procesar la reserva de stock: ' + error.message, 'error');
+        stockReservado = false;
       }
     }
 
@@ -906,7 +927,7 @@ async function reservarStock(id, cantidad) {
     const response = await fetch(STOCK_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, cantidad })
+      body: JSON.stringify({ id, cantidad, action: 'reserve' })
     });
     const data = await response.json();
     if (data.success) {
