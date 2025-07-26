@@ -706,7 +706,7 @@ function configurarEnvioWhatsApp() {
     const mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*Productos:*\n${productosMsg}\n\n*Datos del cliente:*\n👤 ${nombre} ${apellido}\n📞 ${telefono}\n\n*Envío:*\n${envioTxt}\n${envio !== 'retiro' ? `📍 Dirección: ${direccion}\n` : ''}\n*Subtotal:* $U ${subtotal.toLocaleString('es-UY')}\n*Costo de envío:* $U ${costoEnvio.toLocaleString('es-UY')}\n*Total a pagar:* $U ${total.toLocaleString('es-UY')}\n\n${notas ? `*Notas:*\n${notas}` : ''}`;
 
     // Abrir WhatsApp
-    window.open(`https://wa.me/59894955466?text=${encodeURIComponent(mensaje)}`, '_blank');
+    window.open(`https://wa.me/59893566283?text=${encodeURIComponent(mensaje)}`, '_blank');
     
     // Cerrar modal y limpiar carrito
     document.getElementById('modal-datos-envio').classList.remove('visible');
