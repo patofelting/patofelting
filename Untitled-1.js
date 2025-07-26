@@ -47,7 +47,9 @@ const elementos = {
   btnCancelarAviso: getElement('btn-cancelar-aviso'),
   productLoader: getElement('product-loader'),
   hamburguesa: document.querySelector('.hamburguesa'),
-  menu: getElement('menu')
+  menu: getElement('menu'),
+  modalDatosEnvio: getElement('modal-datos-envio'),
+  formEnvio: getElement('form-envio')
 };
 
 // ===============================
@@ -199,11 +201,6 @@ function renderizarCarrito() {
     });
   });
 }
-// =======================
-// REDIRECCIÓN DESDE AVISO DE COMPRA
-// =======================
-
-
 
 // ===============================
 // ABRIR Y CERRAR CARRITO
@@ -359,7 +356,6 @@ function mostrarModalProducto(producto) {
   const disponibles = Math.max(0, producto.stock - enCarrito.cantidad);
   const agotado = disponibles <= 0;
 
-  // Si hay más de una imagen arma carrusel, sino solo muestra la imagen principal
   let currentIndex = 0;
 
   function renderCarrusel() {
@@ -467,7 +463,6 @@ function mostrarModalProducto(producto) {
   }
 }
 
-
 // ===============================
 // CLICK EN DETALLE DEL PRODUCTO
 // ===============================
@@ -529,7 +524,6 @@ function inicializarFAQ() {
       const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
       toggle.setAttribute('aria-expanded', !isExpanded);
       
-      // (Continúa FAQ interactivo)
       const content = toggle.nextElementSibling;
       if (content) content.hidden = isExpanded;
     });
@@ -593,118 +587,9 @@ function setupContactForm() {
   }
 }
 
-// Inicializar EmailJS con tu clave pública
-emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
-
-// Llamar a la función para configurar el formulario de contacto
-setupContactForm();
-
 // ===============================
-// INICIALIZACIÓN GENERAL
+// FUNCIONES PARA FINALIZAR COMPRA
 // ===============================
-function inicializarEventos() {
-  // Carrito
-  elementos.carritoBtnMain?.addEventListener('click', () => toggleCarrito(true));
-  elementos.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
-  elementos.btnCerrarCarrito?.addEventListener('click', () => toggleCarrito(false));
-  elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
-  elementos.btnFinalizarCompra?.addEventListener('click', () => {
-    if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
-    elementos.avisoPreCompraModal.style.display = 'flex';
-  });
-  elementos.btnEntendidoAviso?.addEventListener('click', () => {
-    mostrarNotificacion('Compra finalizada con éxito', 'exito');
-    carrito = [];
-    guardarCarrito();
-    actualizarUI();
-    toggleCarrito(false);
-    elementos.avisoPreCompraModal.style.display = 'none';
-  });
-  elementos.btnCancelarAviso?.addEventListener('click', () => {
-    elementos.avisoPreCompraModal.style.display = 'none';
-  });
-
-  // Filtros
-  elementos.inputBusqueda?.addEventListener('input', (e) => {
-    filtrosActuales.busqueda = e.target.value.toLowerCase();
-    aplicarFiltros();
-  });
-  elementos.selectCategoria?.addEventListener('change', (e) => {
-    filtrosActuales.categoria = e.target.value.toLowerCase();
-    aplicarFiltros();
-  });
-  document.querySelectorAll('.aplicar-rango-btn').forEach(boton => {
-    boton.addEventListener('click', () => {
-      filtrosActuales.precioMin = elementos.precioMinInput.value ? parseFloat(elementos.precioMinInput.value) : null;
-      filtrosActuales.precioMax = elementos.precioMaxInput.value ? parseFloat(elementos.precioMaxInput.value) : null;
-      aplicarFiltros();
-    });
-  });
-  elementos.botonResetearFiltros?.addEventListener('click', resetearFiltros);
-
-  // Modal de producto y botones agregar
-  conectarEventoModal();
-}
-
-// ===============================
-// INICIALIZADOR ÚNICO
-// ===============================
-function init() {
-  inicializarMenuHamburguesa();
-  inicializarFAQ();
-  setupContactForm();
-
-  // Ocultar modales y loader al inicio
-  if (elementos.avisoPreCompraModal) elementos.avisoPreCompraModal.style.display = 'none';
-  if (elementos.productoModal) elementos.productoModal.style.display = 'none';
-  if (elementos.productLoader) {
-    elementos.productLoader.style.display = 'none';
-    elementos.productLoader.hidden = true;
-  }
-  cargarCarrito();
-  cargarProductosDesdeSheets();
-  inicializarEventos();
-}
-
-// Arranque seguro
-if (document.readyState !== 'loading') {
-  init();
-} else {
-  document.addEventListener('DOMContentLoaded', init);
-}
-
-// ==== FUNCIONES GLOBALES POR SI SE NECESITAN EN EL HTML ====
-window.resetearFiltros = resetearFiltros;
-window.toggleCarrito = toggleCarrito;
-window.agregarAlCarrito = agregarAlCarrito;
-window.mostrarModalProducto = mostrarModalProducto;
-window.mostrarNotificacion = mostrarNotificacion;
-window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
-window.guardarCarrito = guardarCarrito;
-
-
-
-
-// Reemplaza la sección del final del Untitled-1.js con esto:
-
-// Reemplaza completamente la sección final del archivo JS con esto:
-
-// Mostrar el modal de datos de envío luego del pre-compra
-document.getElementById('btn-entendido-aviso').addEventListener('click', function() {
-  document.getElementById('aviso-pre-compra-modal').hidden = true;
-  
-  // Mostrar el modal de envío con animación
-  const modalEnvio = document.getElementById('modal-datos-envio');
-  modalEnvio.hidden = false;
-  setTimeout(() => {
-    modalEnvio.classList.add('visible');
-  }, 10);
-  
-  // Llenar el resumen del pedido
-  actualizarResumenPedido();
-});
-
-// Función para actualizar el resumen del pedido
 function actualizarResumenPedido() {
   const resumenProductos = document.getElementById('resumen-productos');
   const resumenTotal = document.getElementById('resumen-total');
@@ -755,122 +640,205 @@ function actualizarResumenPedido() {
   const total = subtotal + costoEnvio;
   resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
 }
-// Cerrar modal de envío
-document.getElementById('btn-cerrar-modal-envio').addEventListener('click', function() {
-  const modalEnvio = document.getElementById('modal-datos-envio');
-  modalEnvio.classList.remove('visible');
-  setTimeout(() => {
-    modalEnvio.hidden = true;
-  }, 300);
-});
 
-// Actualizar total cuando cambia el método de envío
-document.getElementById('select-envio').addEventListener('change', function() {
-  const grupoDireccion = document.getElementById('grupo-direccion');
-  const resumenTotal = document.getElementById('resumen-total');
-  
-  // Mostrar/ocultar campo dirección
-  if (this.value === 'retiro') {
-    grupoDireccion.style.display = 'none';
-    document.getElementById('input-direccion').required = false;
-  } else {
-    grupoDireccion.style.display = 'flex';
-    document.getElementById('input-direccion').required = true;
-  }
-  
-  // Calcular nuevo total con envío
-  if (resumenTotal && carrito.length > 0) {
-    const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+function configurarEnvioWhatsApp() {
+  const formEnvio = document.getElementById('form-envio');
+  if (!formEnvio) return;
+
+  formEnvio.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    // Validar campos
+    const nombre = document.getElementById('input-nombre').value.trim();
+    const apellido = document.getElementById('input-apellido').value.trim();
+    const telefono = document.getElementById('input-telefono').value.trim();
+    const direccion = document.getElementById('input-direccion').value.trim();
+    const envio = document.getElementById('select-envio').value;
+    const notas = document.getElementById('input-notas').value.trim();
+    
+    if (!nombre || !apellido || !telefono || (!direccion && envio !== 'retiro') || !envio) {
+      mostrarNotificacion('Por favor completa todos los campos obligatorios', 'error');
+      return;
+    }
+
+    // Calcular total con envío
+    let subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+    let envioTxt = 'Retiro en local (Gratis)';
     let costoEnvio = 0;
     
-    if (this.value === 'montevideo') {
+    if (envio === 'montevideo') {
       costoEnvio = 150;
-    } else if (this.value === 'interior') {
+      envioTxt = `Envío Montevideo ($U ${costoEnvio})`;
+    } else if (envio === 'interior') {
       costoEnvio = 300;
+      envioTxt = `Envío Interior ($U ${costoEnvio})`;
     }
     
     const total = subtotal + costoEnvio;
-    resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
-  }
-});
 
-// Validar y enviar por WhatsApp
-document.getElementById('form-envio').addEventListener('submit', function(e) {
-  e.preventDefault();
+    // Crear mensaje detallado
+    let productosMsg = '';
+    if (carrito.length === 0) {
+      productosMsg = 'No hay productos en el carrito';
+    } else {
+      productosMsg = carrito.map(item => 
+        `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`
+      ).join('\n');
+    }
+    
+    const mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*Productos:*\n${productosMsg}\n\n*Datos del cliente:*\n👤 ${nombre} ${apellido}\n📞 ${telefono}\n\n*Envío:*\n${envioTxt}\n${envio !== 'retiro' ? `📍 Dirección: ${direccion}\n` : ''}\n*Subtotal:* $U ${subtotal.toLocaleString('es-UY')}\n*Costo de envío:* $U ${costoEnvio.toLocaleString('es-UY')}\n*Total a pagar:* $U ${total.toLocaleString('es-UY')}\n\n${notas ? `*Notas:*\n${notas}` : ''}`;
 
-  // Validar campos
-  const nombre = document.getElementById('input-nombre').value.trim();
-  const apellido = document.getElementById('input-apellido').value.trim();
-  const telefono = document.getElementById('input-telefono').value.trim();
-  const direccion = document.getElementById('input-direccion').value.trim();
-  const envio = document.getElementById('select-envio').value;
-  const notas = document.getElementById('input-notas').value.trim();
-  
-  if (!nombre || !apellido || !telefono || (!direccion && envio !== 'retiro') || !envio) {
-    mostrarNotificacion('Por favor completa todos los campos obligatorios', 'error');
-    return;
-  }
+    // Abrir WhatsApp
+    window.open(`https://wa.me/59894955466?text=${encodeURIComponent(mensaje)}`, '_blank');
+    
+    // Cerrar modal y limpiar carrito
+    document.getElementById('modal-datos-envio').classList.remove('visible');
+    setTimeout(() => {
+      document.getElementById('modal-datos-envio').hidden = true;
+      carrito = [];
+      guardarCarrito();
+      actualizarUI();
+      mostrarNotificacion('Pedido enviado con éxito', 'exito');
+      document.getElementById('form-envio').reset();
+    }, 300);
+  });
+}
 
-  // Calcular total con envío
-  let subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-  let envioTxt = 'Retiro en local (Gratis)';
-  let costoEnvio = 0;
+// ===============================
+// INICIALIZACIÓN GENERAL
+// ===============================
+function inicializarEventos() {
+  // Carrito
+  elementos.carritoBtnMain?.addEventListener('click', () => toggleCarrito(true));
+  elementos.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
+  elementos.btnCerrarCarrito?.addEventListener('click', () => toggleCarrito(false));
+  elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
   
-  if (envio === 'montevideo') {
-    costoEnvio = 150;
-    envioTxt = `Envío Montevideo ($U ${costoEnvio})`;
-  } else if (envio === 'interior') {
-    costoEnvio = 300;
-    envioTxt = `Envío Interior ($U ${costoEnvio})`;
-  }
-  
-  const total = subtotal + costoEnvio;
+  elementos.btnFinalizarCompra?.addEventListener('click', () => {
+    if (carrito.length === 0) {
+      mostrarNotificacion('El carrito está vacío', 'error');
+      return;
+    }
+    
+    // Mostrar aviso pre-compra
+    elementos.avisoPreCompraModal.style.display = 'flex';
+  });
 
-  // Crear mensaje detallado
-  let productosMsg = '';
-  if (carrito.length === 0) {
-    productosMsg = 'No hay productos en el carrito';
-  } else {
-    productosMsg = carrito.map(item => 
-      `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`
-    ).join('\n');
-  }
-  
-  const mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*Productos:*\n${productosMsg}\n\n*Datos del cliente:*\n👤 ${nombre} ${apellido}\n📞 ${telefono}\n\n*Envío:*\n${envioTxt}\n${envio !== 'retiro' ? `📍 Dirección: ${direccion}\n` : ''}\n*Subtotal:* $U ${subtotal.toLocaleString('es-UY')}\n*Costo de envío:* $U ${costoEnvio.toLocaleString('es-UY')}\n*Total a pagar:* $U ${total.toLocaleString('es-UY')}\n\n${notas ? `*Notas:*\n${notas}` : ''}`;
-
-  // Abrir WhatsApp
-  window.open(`https://wa.me/59894955466?text=${encodeURIComponent(mensaje)}`, '_blank');
-  
-  // Cerrar modal y limpiar carrito
-  document.getElementById('modal-datos-envio').classList.remove('visible');
-  setTimeout(() => {
-    document.getElementById('modal-datos-envio').hidden = true;
-    carrito = [];
-    guardarCarrito();
-    actualizarUI();
-    mostrarNotificacion('Pedido enviado con éxito', 'exito');
-    document.getElementById('form-envio').reset();
-  }, 300);
-});
-
-// En la función inicializarEventos(), verifica que tengas esto:
-elementos.btnFinalizarCompra?.addEventListener('click', () => {
-  if (carrito.length === 0) {
-    mostrarNotificacion('El carrito está vacío', 'error');
-    return;
-  }
-  
-  // Mostrar aviso pre-compra
-  elementos.avisoPreCompraModal.style.display = 'flex';
-  
-  // Actualizar resumen ANTES de mostrar el modal de envío
-  document.getElementById('btn-entendido-aviso').onclick = function() {
+  elementos.btnEntendidoAviso?.addEventListener('click', function() {
     elementos.avisoPreCompraModal.style.display = 'none';
     const modalEnvio = document.getElementById('modal-datos-envio');
     modalEnvio.hidden = false;
     setTimeout(() => {
       modalEnvio.classList.add('visible');
-      actualizarResumenPedido(); // Actualizar aquí también por si acaso
+      actualizarResumenPedido();
     }, 10);
-  };
-});
+  });
+
+  elementos.btnCancelarAviso?.addEventListener('click', () => {
+    elementos.avisoPreCompraModal.style.display = 'none';
+  });
+
+  // Cerrar modal de envío
+  document.getElementById('btn-cerrar-modal-envio')?.addEventListener('click', function() {
+    const modalEnvio = document.getElementById('modal-datos-envio');
+    modalEnvio.classList.remove('visible');
+    setTimeout(() => {
+      modalEnvio.hidden = true;
+    }, 300);
+  });
+
+  // Actualizar total cuando cambia el método de envío
+  document.getElementById('select-envio')?.addEventListener('change', function() {
+    const grupoDireccion = document.getElementById('grupo-direccion');
+    const resumenTotal = document.getElementById('resumen-total');
+    
+    // Mostrar/ocultar campo dirección
+    if (this.value === 'retiro') {
+      grupoDireccion.style.display = 'none';
+      document.getElementById('input-direccion').required = false;
+    } else {
+      grupoDireccion.style.display = 'flex';
+      document.getElementById('input-direccion').required = true;
+    }
+    
+    // Calcular nuevo total con envío
+    if (resumenTotal && carrito.length > 0) {
+      const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+      let costoEnvio = 0;
+      
+      if (this.value === 'montevideo') {
+        costoEnvio = 150;
+      } else if (this.value === 'interior') {
+        costoEnvio = 300;
+      }
+      
+      const total = subtotal + costoEnvio;
+      resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
+    }
+  });
+
+  // Filtros
+  elementos.inputBusqueda?.addEventListener('input', (e) => {
+    filtrosActuales.busqueda = e.target.value.toLowerCase();
+    aplicarFiltros();
+  });
+  elementos.selectCategoria?.addEventListener('change', (e) => {
+    filtrosActuales.categoria = e.target.value.toLowerCase();
+    aplicarFiltros();
+  });
+  document.querySelectorAll('.aplicar-rango-btn').forEach(boton => {
+    boton.addEventListener('click', () => {
+      filtrosActuales.precioMin = elementos.precioMinInput.value ? parseFloat(elementos.precioMinInput.value) : null;
+      filtrosActuales.precioMax = elementos.precioMaxInput.value ? parseFloat(elementos.precioMaxInput.value) : null;
+      aplicarFiltros();
+    });
+  });
+  elementos.botonResetearFiltros?.addEventListener('click', resetearFiltros);
+
+  // Modal de producto y botones agregar
+  conectarEventoModal();
+
+  // Configurar envío por WhatsApp
+  configurarEnvioWhatsApp();
+}
+
+// ===============================
+// INICIALIZADOR ÚNICO
+// ===============================
+function init() {
+  // Inicializar EmailJS con tu clave pública
+  emailjs.init('o4IxJz0Zz-LQ8jYKG');
+
+  inicializarMenuHamburguesa();
+  inicializarFAQ();
+  setupContactForm();
+
+  // Ocultar modales y loader al inicio
+  if (elementos.avisoPreCompraModal) elementos.avisoPreCompraModal.style.display = 'none';
+  if (elementos.productoModal) elementos.productoModal.style.display = 'none';
+  if (elementos.modalDatosEnvio) elementos.modalDatosEnvio.hidden = true;
+  if (elementos.productLoader) {
+    elementos.productLoader.style.display = 'none';
+    elementos.productLoader.hidden = true;
+  }
+  
+  cargarCarrito();
+  cargarProductosDesdeSheets();
+  inicializarEventos();
+}
+
+// Arranque seguro
+if (document.readyState !== 'loading') {
+  init();
+} else {
+  document.addEventListener('DOMContentLoaded', init);
+}
+
+// ==== FUNCIONES GLOBALES POR SI SE NECESITAN EN EL HTML ====
+window.resetearFiltros = resetearFiltros;
+window.toggleCarrito = toggleCarrito;
+window.agregarAlCarrito = agregarAlCarrito;
+window.mostrarModalProducto = mostrarModalProducto;
+window.mostrarNotificacion = mostrarNotificacion;
+window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
+window.guardarCarrito = guardarCarrito;
