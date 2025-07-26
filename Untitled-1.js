@@ -639,91 +639,48 @@ window.guardarCarrito = guardarCarrito;
 
 
 
+// Mostrar el modal de datos de envío luego del pre-compra
+document.getElementById('btn-entendido-aviso').addEventListener('click', function() {
+  document.getElementById('aviso-pre-compra-modal').hidden = true;
+  document.getElementById('modal-datos-envio').hidden = false;
+});
 
-// Al final de tu Untitled-1.js, después de DOMContentLoaded
-document.addEventListener('DOMContentLoaded', function() {
-  // Botón "Sí, he leído y deseo continuar"
-  document.getElementById('btn-entendido-aviso')?.addEventListener('click', function() {
-    document.getElementById('aviso-pre-compra-modal').hidden = true;
-    document.getElementById('modal-checkout').hidden = false;
-    document.body.classList.add('modal-open');
-    mostrarCheckoutTotal();
-  });
+// Cancelar envío (volver atrás)
+document.getElementById('btn-cerrar-modal-envio').addEventListener('click', function() {
+  document.getElementById('modal-datos-envio').hidden = true;
+  // Si querés, podés volver a mostrar el pre-compra:
+  // document.getElementById('aviso-pre-compra-modal').hidden = false;
+});
 
-  // Botón cancelar (en el modal de checkout)
-  document.getElementById('checkout-cancelar')?.addEventListener('click', function() {
-    document.getElementById('modal-checkout').hidden = true;
-    document.body.classList.remove('modal-open');
-  });
+// Validar y enviar por WhatsApp
+document.getElementById('form-envio').addEventListener('submit', function(e) {
+  e.preventDefault();
 
-  // Mostrar/ocultar dirección según método
-  document.getElementById('checkout-envio')?.addEventListener('change', function() {
-    const envio = this.value;
-    document.getElementById('checkout-direccion-group').style.display =
-      envio === 'montevideo' || envio === 'interior' ? 'block' : 'none';
-    document.getElementById('checkout-cpostal-group').style.display =
-      envio === 'montevideo' || envio === 'interior' ? 'block' : 'none';
-    mostrarCheckoutTotal();
-  });
-
-  // Calcular precio dinámico en el modal
-  function mostrarCheckoutTotal() {
-    let total = calcularTotalPedido();
-    let envio = document.getElementById('checkout-envio')?.value;
-    let envioTxt = '';
-    if (envio === 'montevideo') { total += 150; envioTxt = ' (incluye $150 envío)'; }
-    else if (envio === 'interior') { total += 300; envioTxt = ' (incluye $300 envío)'; }
-    document.getElementById('checkout-total').textContent = `Total a pagar: $${total}${envioTxt}`;
+  // Recopilar datos
+  const nombre = document.getElementById('input-nombre').value.trim();
+  const apellido = document.getElementById('input-apellido').value.trim();
+  const direccion = document.getElementById('input-direccion').value.trim();
+  const envio = document.getElementById('select-envio').value;
+  if (!nombre || !apellido || (!direccion && envio !== 'retiro')) {
+    alert('Por favor completa todos los campos.');
+    return;
   }
 
-  // Al enviar el form, armar WhatsApp y enviar
-  document.getElementById('form-checkout')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    // Valida los datos
-    const nombre = document.getElementById('checkout-nombre').value.trim();
-    const apellido = document.getElementById('checkout-apellido').value.trim();
-    const envio = document.getElementById('checkout-envio').value;
-    const direccion = document.getElementById('checkout-direccion').value.trim();
-    const cpostal = document.getElementById('checkout-cpostal').value.trim();
+  let envioTxt = '';
+  if (envio === 'retiro') envioTxt = 'Retiro en local (Gratis)';
+  if (envio === 'montevideo') envioTxt = 'Envío Montevideo ($150)';
+  if (envio === 'interior') envioTxt = 'Envío Interior ($300)';
 
-    if (!nombre || !apellido || !envio || (envio !== 'retiro' && (!direccion || !cpostal))) {
-      alert('Por favor, completá todos los campos obligatorios.');
-      return;
-    }
-
-    let mensaje = `¡Hola! Quiero comprar:%0A`;
-    let total = calcularTotalPedido();
-    let txtEnvio = '';
-    if (envio === 'retiro') txtEnvio = 'Retiro en local (Gratis)';
-    if (envio === 'montevideo') { total += 150; txtEnvio = 'Envío a Montevideo ($150)'; }
-    if (envio === 'interior') { total += 300; txtEnvio = 'Envío al interior ($300)'; }
-
-    mensaje += `*Datos del comprador:*%0A`;
-    mensaje += `Nombre: ${nombre} ${apellido}%0A`;
-    mensaje += `Método de entrega: ${txtEnvio}%0A`;
-    if (envio !== 'retiro') {
-      mensaje += `Dirección: ${direccion}%0A`;
-      mensaje += `Código Postal: ${cpostal}%0A`;
-    }
-    mensaje += `%0A*Pedido:*%0A`;
-
-    // Asumiendo que tu carrito es una variable global 'carrito' o en sessionStorage
-    let carrito = window.carrito || JSON.parse(sessionStorage.getItem('carritoActual')) || [];
-    carrito.forEach(item => {
-      mensaje += `- ${item.nombre} x${item.cantidad}: $${(item.precio * item.cantidad).toFixed(2)}%0A`;
-    });
-
-    mensaje += `%0ATotal a pagar: $${total}%0A`;
-    mensaje += `%0A¿Podemos coordinar el pago?`;
-
-    window.open(`https://wa.me/59894955466?text=${mensaje}`, '_blank');
-    // Cierra el modal
-    document.getElementById('modal-checkout').hidden = true;
-    document.body.classList.remove('modal-open');
+  // Armá el mensaje del pedido
+  let productosMsg = '';
+  (carrito || []).forEach(item => {
+    productosMsg += `- ${item.nombre} x ${item.cantidad}: $${(item.precio * item.cantidad).toFixed(2)}\n`;
   });
-
-  function calcularTotalPedido() {
-    let carrito = window.carrito || JSON.parse(sessionStorage.getItem('carritoActual')) || [];
-    return carrito.reduce((acum, item) => acum + (item.precio * item.cantidad), 0);
-  }
+  const mensaje = encodeURIComponent(
+    `¡Hola! Quiero hacer un pedido:\n\nProductos:\n${productosMsg}\nMétodo de envío: ${envioTxt}\nNombre: ${nombre} ${apellido}\n${envio !== 'retiro' ? 'Dirección: ' + direccion + '\n' : ''}`
+  );
+  // Número vendedor, con el 598... de Uruguay
+  window.open(`https://wa.me/59894955466?text=${mensaje}`, '_blank');
+  // Cerrar modal después de enviar
+  document.getElementById('modal-datos-envio').hidden = true;
 });
