@@ -64,7 +64,7 @@
   <video autoplay muted loop playsinline class="video-fondo" aria-hidden="true" 
          poster="img/placeholder-video.jpg" preload="metadata">
     <source src="https://i.imgur.com/nWNPya9.mp4" type="video/mp4">
-    <source src="" type="video/webm"> <!-- Versión alternativa -->
+    <source src="videos/patofelting-video.webm" type="video/webm"> <!-- Versión alternativa -->
     <!-- Fallback para navegadores que no soportan video -->
     <img src="img/hero-fallback.jpg" alt="Proceso artesanal de Patofelting" class="video-fallback">
   </video>
@@ -120,39 +120,59 @@
     </div>
   </section>
 
-  <section id="productos" class="productos">
-    <div class="container">
-      <h2>Nuestros Productos</h2>
-      <div class="filtros-container">
-        <div class="filtro-grupo">
-          <h3>Categorías:</h3>
-          <select id="filtro-categoria">
-            <option value="todos">Todos</option>
-            <option value="animales">Animales</option>
-            <option value="fantasia">Fantasía</option>
-          </select>
-        </div>
-        <div class="filtro-grupo filtro-rango">
-          <h3>Precio:</h3>
-          <label for="precio-min">Min:</label>
-          <input type="number" id="precio-min" class="input-rango-filtro" placeholder="Ej: 100" />
-          <label for="precio-max">Max:</label>
-          <input type="number" id="precio-max" class="input-rango-filtro" placeholder="Ej: 500" />
-          <button class="aplicar-rango-btn" data-range-type="precio">Aplicar</button>
-        </div>
-        <button id="boton-resetear-filtros" class="boton-resetear-filtros">Resetear Filtros</button>
-        <input type="text" id="input-busqueda" class="input-busqueda" placeholder="Buscar por nombre o descripción..." />
-      </div>
-      <div id="galeria-productos" class="galeria-productos"></div>
-      <div id="product-loader" class="loader" hidden aria-live="polite">
-        <svg class="spinner" viewBox="0 0 50 50">
-          <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"/>
-        </svg>
-        <p>Cargando productos...</p>
-      </div>
-      <div id="paginacion" class="paginacion"></div>
+<section id="productos" class="productos">
+  <div class="container">
+    <h2>Nuestros Productos</h2>
+
+<div class="filtros-container">
+  <div class="filtro-categoria">
+    <label for="filtro-categoria">Categorías:</label>
+    <select id="filtro-categoria">
+      <option value="todos">Todos</option>
+      <option value="animales">Animales</option>
+      <option value="fantasia">Fantasía</option>
+    </select>
+  </div>
+      <!-- Precio Min y Max -->
+       <div class="filtro-min">
+    <label for="precio-min">MIN:</label>
+    <input type="number" id="precio-min" class="input-rango-filtro" placeholder="Ej: 100">
+  </div>
+
+  <div class="filtro-max">
+    <label for="precio-max">MAX:</label>
+    <input type="number" id="precio-max" class="input-rango-filtro" placeholder="Ej: 500">
+  </div>
+
+  <div class="filtro-aplicar">
+    <button class="aplicar-rango-btn">Aplicar</button>
+  </div>
+
+  <div class="filtro-reset">
+    <button class="boton-resetear-filtros">Resetear Filtros</button>
+  </div>
+
+  <div class="filtro-busqueda">
+    <input type="text" class="input-busqueda" placeholder="Buscar por nombre o descripción...">
+  </div>
+</div>
+
+    <!-- Galería de productos -->
+    <div id="galeria-productos" class="galeria-productos"></div>
+
+    <!-- Loader -->
+    <div id="product-loader" class="loader" hidden aria-live="polite">
+      <svg class="spinner" viewBox="0 0 50 50">
+        <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"/>
+      </svg>
+      <p>Cargando productos...</p>
     </div>
-  </section>
+
+    <!-- Paginación -->
+    <div id="paginacion" class="paginacion"></div>
+  </div>
+</section>
+
 
 <div id="producto-modal" class="modal-overlay">
   <div id="modal-contenido" class="modal-contenido-producto">
@@ -340,7 +360,7 @@
   <div class="faq-item" data-category="devoluciones">
     <button class="faq-toggle" aria-expanded="false">¿Puedo devolver o cambiar mi figura?</button>
     <div class="faq-content" hidden>
-      Aceptamos devoluciones solo si la figura llegó dañada o con un error respecto a lo acordado. <a href="politicaempresa.html" class="faq-more">Consultar política</a>
+      Aceptamos devoluciones solo si la figura llegó dañada o con un error respecto a lo acordado. <a href="#contacto" class="faq-more">Consultar política</a>
     </div>
   </div>
   <div class="faq-item" data-category="devoluciones">
@@ -360,15 +380,13 @@
         </a>
       </p>
       <p>📧 <a href="mailto:patofelting@gmail.com">patofelting@gmail.com</a></p>
-      <p><a href="politicaempresa.html">Nuestra Politica como empresa</a></p>
-       <p><a href="comocomprar.html">Como comprar</a></p>
       <p>© 2025 <strong>Patofelting</strong> — Hecho con amor en Uruguay 🧶</p>
     </div>
   </footer>
 
 
 
-  <script src="main.min.js" defer></script>
+  <script src="Untitled-1.js" defer></script>
  
   
 </body>
