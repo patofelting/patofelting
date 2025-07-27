@@ -5,7 +5,7 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
-const API_STOCK_URL = 'https://script.google.com/macros/s/AKfycbxXMkQx2rLlodp7FYkYy8FYJfSZJpnRfTM6tc87xaMTHS-5qrfdj3bgawanNWQHjbxU/exec/dev';
+const API_STOCK_URL = 'https://script.google.com/macros/s/AKfycbxXMkQx2rLlodp7FYkYy8FYJfSZJpnRfTM6tc87xaMTHS-5qrfdj3bgawanNWQHjbxU/exec';
 // ===============================
 // ESTADO GLOBAL
 // ===============================
@@ -73,22 +73,45 @@ function mostrarNotificacion(mensaje, tipo = 'exito') {
 // Función para verificar stock en tiempo real
 async function verificarStock(id, cantidad) {
   try {
-    const response = await fetch(API_STOCK_URL, {
+    // Agrega un timestamp para evitar caché
+    const url = `${API_STOCK_URL}?timestamp=${Date.now()}`;
+    
+    const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      mode: 'no-cors', // Importante para evitar problemas CORS
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
       body: JSON.stringify({
         id: id,
         cantidad: cantidad,
         action: 'verify'
       })
     });
-    return await response.json();
+
+    // Si usas mode: 'no-cors', la respuesta será opaca
+    // Necesitamos manejar esto de manera diferente
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    // Intenta parsear la respuesta aunque sea opaca
+    try {
+      const data = await response.json();
+      return data;
+    } catch (e) {
+      console.error('Error parsing JSON:', e);
+      return { success: false, error: 'Error al procesar la respuesta' };
+    }
   } catch (error) {
     console.error('Error al verificar stock:', error);
-    return { success: false, error: 'Error de conexión' };
+    return { 
+      success: false, 
+      error: 'Error de conexión. Intente nuevamente.' 
+    };
   }
 }
-
 
 // Función para reservar stock
 async function reservarStock(id, cantidad) {
@@ -149,45 +172,73 @@ function actualizarContadorCarrito() {
 }
 
 async function agregarAlCarrito(id, cantidad = 1) {
-  const prod = productos.find(p => p.id === id);
-  if (!prod) return mostrarNotificacion('Producto no encontrado', 'error');
-  
-  cantidad = parseInt(cantidad, 10);
-  if (isNaN(cantidad) || cantidad < 1) return mostrarNotificacion('Cantidad inválida', 'error');
+  try {
+    const prod = productos.find(p => p.id === id);
+    if (!prod) {
+      mostrarNotificacion('Producto no encontrado', 'error');
+      return;
+    }
 
-  // Verificar stock en tiempo real
-  const verificacion = await verificarStock(id, cantidad);
-  if (!verificacion.success) {
-    mostrarNotificacion(verificacion.error || 'No hay suficiente stock disponible', 'error');
-    return;
+    cantidad = parseInt(cantidad, 10);
+    if (isNaN(cantidad) || cantidad < 1) {
+      mostrarNotificacion('Cantidad inválida', 'error');
+      return;
+    }
+
+    // Mostrar loader mientras se verifica el stock
+    mostrarLoader(true);
+
+    // Verificar stock con manejo de errores mejorado
+    const verificacion = await verificarStock(id, cantidad);
+    
+    if (!verificacion.success) {
+      mostrarNotificacion(
+        verificacion.error || 'No se pudo verificar el stock. Intente nuevamente.', 
+        'error'
+      );
+      return;
+    }
+
+    if (verificacion.stockRestante < 0) {
+      mostrarNotificacion(
+        `Solo quedan ${verificacion.stockRestante + cantidad} unidades disponibles`, 
+        'error'
+      );
+      return;
+    }
+
+    // Si todo está bien, proceder con la reserva
+    const enCarrito = carrito.find(item => item.id === id);
+    if (enCarrito) {
+      enCarrito.cantidad += cantidad;
+    } else {
+      carrito.push({
+        id,
+        nombre: prod.nombre,
+        precio: prod.precio,
+        cantidad,
+        imagen: prod.imagenes[0] || PLACEHOLDER_IMAGE
+      });
+    }
+
+    guardarCarrito();
+    actualizarUI();
+    mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
+    
+  } catch (error) {
+    console.error('Error en agregarAlCarrito:', error);
+    mostrarNotificacion('Error al agregar al carrito. Intente nuevamente.', 'error');
+  } finally {
+    mostrarLoader(false);
   }
+}
 
-  // Reservar el stock
-  const reserva = await reservarStock(id, cantidad);
-  if (!reserva.success) {
-    mostrarNotificacion(reserva.error || 'Error al reservar el producto', 'error');
-    return;
+// Función auxiliar para mostrar/ocultar loader
+function mostrarLoader(mostrar) {
+  const loader = document.getElementById('product-loader');
+  if (loader) {
+    loader.style.display = mostrar ? 'flex' : 'none';
   }
-
-  // Actualizar el stock localmente para reflejar los cambios
-  prod.stock = reserva.stockRestante;
-
-  const enCarrito = carrito.find(item => item.id === id);
-  if (enCarrito) {
-    enCarrito.cantidad += cantidad;
-  } else {
-    carrito.push({
-      id,
-      nombre: prod.nombre,
-      precio: prod.precio,
-      cantidad,
-      imagen: prod.imagenes[0] || PLACEHOLDER_IMAGE
-    });
-  }
-
-  guardarCarrito();
-  actualizarUI();
-  mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
 }
 
 function renderizarCarrito() {
