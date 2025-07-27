@@ -765,7 +765,7 @@ function actualizarResumenPedido() {
     envioTexto = 'Envío Montevideo ($150)';
   } else if (metodoEnvio === 'interior') {
     costoEnvio = 300;
-    envioTexto = 'Envío Interior ($300)';
+    envioTexto = 'Envío Interior ($250)';
   }
 
   // Agregar líneas de subtotal y envío
