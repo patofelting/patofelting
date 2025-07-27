@@ -665,7 +665,7 @@ blockquote {
     margin-left: 0;
     margin-top: 7px;
   }
-}
+
 
 .galeria-productos {
   display: grid;
@@ -883,7 +883,7 @@ blockquote {
 }
 
 .modal-stock.disponible {
-  color: var(--success-color);
+  color: #43c160;
 }
 
 .modal-stock.agotado {
