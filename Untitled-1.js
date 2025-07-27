@@ -166,11 +166,9 @@ function renderizarCarrito() {
     </li>
   `}).join('');
 
-  // Actualizar el total
   const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
   elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
   
-  // Agregar eventos a los botones
   document.querySelectorAll('.disminuir-cantidad').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const id = parseInt(e.target.dataset.id);
@@ -308,7 +306,6 @@ function filtrarProductos() {
       (precioMax === null || p.precio <= precioMax) &&
       (categoria === 'todos' || p.categoria === categoria) &&
       (!b || p.nombre.toLowerCase().includes(b) || p.descripcion.toLowerCase().includes(b))
-      // Eliminamos la condición que filtraba por disponibles > 0
     );
   });
 }
@@ -341,9 +338,6 @@ function crearCardProducto(p) {
     </div>
   `;
 }
-
-
-
 
 function renderizarPaginacion(total) {
   const pages = Math.ceil(total / PRODUCTOS_POR_PAGINA);
@@ -387,8 +381,6 @@ function mostrarModalProducto(producto) {
   const enCarrito = carrito.find(item => item.id === producto.id) || { cantidad: 0 };
   const disponibles = Math.max(0, producto.stock - enCarrito.cantidad);
   const agotado = disponibles <= 0;
-
-  // Si hay más de una imagen arma carrusel, sino solo muestra la imagen principal
   let currentIndex = 0;
 
   function renderCarrusel() {
@@ -445,7 +437,7 @@ function mostrarModalProducto(producto) {
         </div>
       </div>
     `;
-    // Listeners para cerrar modal, agregar al carrito, carrusel y miniaturas
+    
     contenido.querySelector('.cerrar-modal').onclick = () => cerrarModal();
     contenido.querySelector('.boton-agregar-modal')?.addEventListener('click', () => {
       const cantidad = +(contenido.querySelector('.cantidad-modal-input').value || 1);
@@ -453,20 +445,20 @@ function mostrarModalProducto(producto) {
       cerrarModal();
     });
 
-    // Miniaturas clickeables
     contenido.querySelectorAll('.thumbnail').forEach((thumb, i) => {
       thumb.onclick = () => {
         currentIndex = i;
         renderCarrusel();
       };
     });
-    // Flechas
+    
     contenido.querySelector('.modal-prev')?.addEventListener('click', () => {
       if (currentIndex > 0) {
         currentIndex--;
         renderCarrusel();
       }
     });
+    
     contenido.querySelector('.modal-next')?.addEventListener('click', () => {
       if (currentIndex < producto.imagenes.length - 1) {
         currentIndex++;
@@ -574,7 +566,7 @@ function inicializarMenuHamburguesa() {
     hamburguesa.setAttribute('aria-expanded', expanded);
     document.body.classList.toggle('no-scroll', expanded);
   });
-  // Cierra el menú al hacer click en un link
+  
   menu.querySelectorAll('a').forEach(link => {
     link.addEventListener('click', () => {
       menu.classList.remove('active');
@@ -623,52 +615,46 @@ function setupContactForm() {
 // INICIALIZACIÓN GENERAL
 // ===============================
 function inicializarEventos() {
-  // Carrito
   elementos.carritoBtnMain?.addEventListener('click', () => toggleCarrito(true));
   elementos.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
   elementos.btnCerrarCarrito?.addEventListener('click', () => toggleCarrito(false));
 
-document.getElementById('select-envio')?.addEventListener('change', actualizarResumenPedido);
+  document.getElementById('select-envio')?.addEventListener('change', actualizarResumenPedido);
   elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
   elementos.btnFinalizarCompra?.addEventListener('click', () => {
     if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
     elementos.avisoPreCompraModal.style.display = 'flex';
   });
-elementos.btnEntendidoAviso?.addEventListener('click', () => {
-  // Mostrar el modal de envío sin vaciar el carrito primero
-  const modalEnvio = document.getElementById('modal-datos-envio');
-  if (modalEnvio) {
-    // Ocultar el modal de aviso
-    elementos.avisoPreCompraModal.style.display = 'none';
-    
-    // Mostrar el modal de envío
-    modalEnvio.style.display = 'flex';
-    setTimeout(() => {
-      modalEnvio.classList.add('visible');
-    }, 10);
-    
-    // Actualizar el resumen del pedido con los productos actuales
-    actualizarResumenPedido();
-  }
-});
+  
+  elementos.btnEntendidoAviso?.addEventListener('click', () => {
+    const modalEnvio = document.getElementById('modal-datos-envio');
+    if (modalEnvio) {
+      elementos.avisoPreCompraModal.style.display = 'none';
+      modalEnvio.style.display = 'flex';
+      setTimeout(() => {
+        modalEnvio.classList.add('visible');
+      }, 10);
+      actualizarResumenPedido();
+    }
+  });
 
-  // Filtros
   elementos.inputBusqueda?.addEventListener('input', (e) => {
     filtrosActuales.busqueda = e.target.value.toLowerCase();
     aplicarFiltros();
   });
+  
   elementos.selectCategoria?.addEventListener('change', (e) => {
     filtrosActuales.categoria = e.target.value.toLowerCase();
     aplicarFiltros();
   });
+  
   elementos.aplicarRangoBtn?.addEventListener('click', () => {
     filtrosActuales.precioMin = elementos.precioMinInput.value ? parseFloat(elementos.precioMinInput.value) : null;
     filtrosActuales.precioMax = elementos.precioMaxInput.value ? parseFloat(elementos.precioMaxInput.value) : null;
     aplicarFiltros();
   });
+  
   elementos.botonResetearFiltros?.addEventListener('click', resetearFiltros);
-
-  // Modal de producto y botones agregar
   conectarEventoModal();
 }
 
@@ -680,26 +666,25 @@ function init() {
   inicializarFAQ();
   setupContactForm();
 
-  // Ocultar modales y loader al inicio
   if (elementos.avisoPreCompraModal) elementos.avisoPreCompraModal.style.display = 'none';
   if (elementos.productoModal) elementos.productoModal.style.display = 'none';
   if (elementos.productLoader) {
     elementos.productLoader.style.display = 'none';
     elementos.productLoader.hidden = true;
   }
+  
   cargarCarrito();
   cargarProductosDesdeSheets();
   inicializarEventos();
 }
 
-// Arranque seguro
 if (document.readyState !== 'loading') {
   init();
 } else {
   document.addEventListener('DOMContentLoaded', init);
 }
 
-// ==== FUNCIONES GLOBALES POR SI SE NECESITAN EN EL HTML ====
+// ==== FUNCIONES GLOBALES ====
 window.resetearFiltros = resetearFiltros;
 window.toggleCarrito = toggleCarrito;
 window.agregarAlCarrito = agregarAlCarrito;
@@ -707,8 +692,6 @@ window.mostrarModalProducto = mostrarModalProducto;
 window.mostrarNotificacion = mostrarNotificacion;
 window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
 window.guardarCarrito = guardarCarrito;
-
-
 
 // Función para actualizar el resumen del pedido
 function actualizarResumenPedido() {
@@ -729,7 +712,6 @@ function actualizarResumenPedido() {
   let html = '';
   let subtotal = 0;
   
-  // Calcular subtotal de productos
   carrito.forEach(item => {
     const itemTotal = item.precio * item.cantidad;
     subtotal += itemTotal;
@@ -741,7 +723,6 @@ function actualizarResumenPedido() {
     `;
   });
 
-  // Obtener método de envío seleccionado
   const envioSelect = document.getElementById('select-envio');
   const metodoEnvio = envioSelect ? envioSelect.value : 'retiro';
   let costoEnvio = 0;
@@ -755,7 +736,6 @@ function actualizarResumenPedido() {
     envioTexto = 'Envío Interior ($300)';
   }
 
-  // Agregar líneas de subtotal y envío
   html += `
     <div class="resumen-item resumen-subtotal">
       <span>Subtotal:</span>
@@ -770,12 +750,9 @@ function actualizarResumenPedido() {
   `;
 
   resumenProductos.innerHTML = html;
-  
-  // Calcular y mostrar el total
   const total = subtotal + costoEnvio;
   resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
 }
-
 
 // Cerrar modal de envío
 document.getElementById('btn-cerrar-modal-envio').addEventListener('click', function() {
@@ -791,7 +768,6 @@ document.getElementById('select-envio').addEventListener('change', function() {
   const grupoDireccion = document.getElementById('grupo-direccion');
   const resumenTotal = document.getElementById('resumen-total');
   
-  // Mostrar/ocultar campo dirección
   if (this.value === 'retiro') {
     grupoDireccion.style.display = 'none';
     document.getElementById('input-direccion').required = false;
@@ -800,7 +776,6 @@ document.getElementById('select-envio').addEventListener('change', function() {
     document.getElementById('input-direccion').required = true;
   }
   
-  // Calcular nuevo total con envío
   if (resumenTotal && carrito.length > 0) {
     const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
     let costoEnvio = 0;
@@ -817,11 +792,9 @@ document.getElementById('select-envio').addEventListener('change', function() {
 });
 
 // Validar y enviar por WhatsApp
-// Reemplaza tu función actual por esta versión mejorada
 document.getElementById('form-envio').addEventListener('submit', function(e) {
   e.preventDefault();
   
-  // 1. Obtener y validar datos del formulario
   const nombre = document.getElementById('input-nombre').value.trim();
   const apellido = document.getElementById('input-apellido').value.trim();
   const telefono = document.getElementById('input-telefono').value.trim();
@@ -829,22 +802,18 @@ document.getElementById('form-envio').addEventListener('submit', function(e) {
   const direccion = envio !== 'retiro' ? document.getElementById('input-direccion').value.trim() : '';
   const notas = document.getElementById('input-notas').value.trim();
 
-  // Validación de campos obligatorios
   if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
     mostrarNotificacion('Por favor complete todos los campos obligatorios', 'error');
     return;
   }
 
-  // 2. Construir el mensaje con formato
   let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n`;
   mensaje += `*📋 Detalles del pedido:*\n`;
   
-  // Productos del carrito
   carrito.forEach(item => {
     mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}\n`;
   });
   
-  // Totales
   const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
   const costoEnvio = envio === 'montevideo' ? 150 : envio === 'interior' ? 300 : 0;
   const total = subtotal + costoEnvio;
@@ -854,7 +823,6 @@ document.getElementById('form-envio').addEventListener('submit', function(e) {
   mensaje += `Envío: $U ${costoEnvio.toLocaleString('es-UY')}\n`;
   mensaje += `*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
   
-  // Datos del cliente
   mensaje += `*👤 Datos del cliente:*\n`;
   mensaje += `Nombre: ${nombre} ${apellido}\n`;
   mensaje += `Teléfono: ${telefono}\n`;
@@ -868,24 +836,18 @@ document.getElementById('form-envio').addEventListener('submit', function(e) {
     mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
   }
 
-  // 3. Solución para evitar que se borre el texto
   const numeroWhatsApp = '59893566283';
-  
-  // Método 1: Usar sessionStorage como puente
   sessionStorage.setItem('ultimoPedidoWhatsApp', mensaje);
   const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
   
-  // Abrir en nueva pestaña
   const nuevaPestaña = window.open(urlWhatsApp, '_blank');
   
-  // Método alternativo si falla (para móviles)
   setTimeout(() => {
     if (!nuevaPestaña || nuevaPestaña.closed) {
       window.location.href = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${encodeURIComponent(mensaje)}`;
     }
   }, 500);
 
-  // 4. Limpiar el formulario después de enviar
   setTimeout(() => {
     document.getElementById('modal-datos-envio').classList.remove('visible');
     setTimeout(() => {
@@ -899,48 +861,22 @@ document.getElementById('form-envio').addEventListener('submit', function(e) {
   }, 1000);
 });
 
-
 function preguntarStock(nombreProducto) {
   const asunto = encodeURIComponent(`Consulta por disponibilidad de "${nombreProducto}"`);
   const cuerpo = encodeURIComponent(`Hola! Quisiera saber cuándo estará disponible el producto "${nombreProducto}". Muchas gracias!`);
   window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
 }
 
-
+// Controladores para los sliders de precio
 const sliderMin = document.getElementById("slider-min");
 const sliderMax = document.getElementById("slider-max");
 const minValor = document.getElementById("min-valor");
 const maxValor = document.getElementById("max-valor");
 
-sliderMin.addEventListener("input", () => {
-  const min = parseInt(sliderMin.value);
-  const max = parseInt(sliderMax.value);
-  if (min > max) sliderMin.value = max;
-  minValor.textContent = sliderMin.value;
-});
-
-sliderMax.addEventListener("input", () => {
-  const min = parseInt(sliderMin.value);
-  const max = parseInt(sliderMax.value);
-  if (max < min) sliderMax.value = min;
-  maxValor.textContent = sliderMax.value;
-});
-
-// Esta función llama tu lógica de filtrado con los nuevos valores
-function aplicarFiltroSlider() {
-  const precioMin = parseInt(sliderMin.value);
-  const precioMax = parseInt(sliderMax.value);
-
-  document.getElementById('precio-min').value = precioMin;
-  document.getElementById('precio-max').value = precioMax;
-
-  aplicarFiltros(); // Asume que ya tenés esta función en tu código
-}
-
-
 function actualizarSlider() {
   const min = parseInt(sliderMin.value);
   const max = parseInt(sliderMax.value);
+  
   if (min > max) {
     sliderMin.value = max;
     filtrosActuales.precioMin = max;
@@ -964,10 +900,3 @@ function actualizarSlider() {
 
 sliderMin.addEventListener("input", actualizarSlider);
 sliderMax.addEventListener("input", actualizarSlider);
-
-function aplicarFiltroSlider() {
-  actualizarSlider(); // por si alguien presiona el botón igual
-}
-
-
-
