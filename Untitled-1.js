@@ -902,7 +902,7 @@ maxSlider.addEventListener('input', updateRange);
 
 document.getElementById('resetear-rango').addEventListener('click', function() {
   minSlider.value = 0;
-  maxSlider.value = 1000;
+  maxSlider.value = 3000;
   updateRange();
 });
 updateRange();
