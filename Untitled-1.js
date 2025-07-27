@@ -21,10 +21,16 @@ let filtrosActuales = {
 };
 
 
-btnCancelarAviso?.addEventListener('click', () => {
-  modalAviso.style.display = 'none';
-  modalAviso.setAttribute('aria-hidden', 'true');
+document.addEventListener('DOMContentLoaded', () => {
+  const modalAviso = document.getElementById('aviso-pre-compra-modal');
+  const btnCancelarAviso = document.getElementById('btn-cancelar-aviso');
+
+  btnCancelarAviso?.addEventListener('click', () => {
+    modalAviso.style.display = 'none';
+    modalAviso.setAttribute('aria-hidden', 'true');
+  });
 });
+
 // ===============================
 // REFERENCIAS AL DOM
 // ===============================
