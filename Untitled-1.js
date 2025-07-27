@@ -5,7 +5,8 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
-
+const STOCK_API_URL = 'https://script.google.com/macros/s/AKfycbwMFWe0EU_g3Xu9hpNnIww9SVtGxU7ZMJj2dcCL0gbNe6Sj46dlfT3w8D5Fvb2cebKwKw/exec';
+const normalize = str => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 // ===============================
 // ESTADO GLOBAL
 // ===============================
@@ -19,6 +20,24 @@ let filtrosActuales = {
   busqueda: ''
 };
 
+
+// ===============================
+// FUNCIONES AUXILIARES - Agrega esta función
+// ===============================
+async function verificarStock(id, cantidad) {
+  try {
+    const response = await fetch(STOCK_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, cantidad })
+    });
+    const data = await response.json();
+    return data.success ? data.stockRestante : false;
+  } catch (error) {
+    console.error('Error al verificar stock:', error);
+    return false;
+  }
+}
 // ===============================
 // REFERENCIAS AL DOM
 // ===============================
@@ -67,19 +86,6 @@ function mostrarNotificacion(mensaje, tipo = 'exito') {
   }, 2500);
 }
 
-function normalizarUrlImagen(url) {
-  if (!url) return PLACEHOLDER_IMAGE;
-  const driveMatch = url.match(/https?:\/\/drive\.google\.com\/file\/d\/([^/]+)/);
-  if (driveMatch) {
-    return `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
-  }
-  const openMatch = url.match(/https?:\/\/drive\.google\.com\/open\?id=([^&]+)/);
-  if (openMatch) {
-    return `https://drive.google.com/uc?export=download&id=${openMatch[1]}`;
-  }
-  return url;
-}
-
 // ===============================
 // CARRITO: GUARDAR, CARGAR Y RENDERIZAR
 // ===============================
@@ -120,14 +126,26 @@ function actualizarContadorCarrito() {
   }
 }
 
-function agregarAlCarrito(id, cantidad = 1) {
+async function agregarAlCarrito(id, cantidad = 1) {
   const prod = productos.find(p => p.id === id);
   if (!prod) return mostrarNotificacion('Producto no encontrado', 'error');
-
+  
   cantidad = parseInt(cantidad, 10);
   if (isNaN(cantidad) || cantidad < 1) return mostrarNotificacion('Cantidad inválida', 'error');
-
+  
+  // Verificar stock con el servidor
+  const stockDisponible = await verificarStock(id, cantidad);
+  if (stockDisponible === false) {
+    return mostrarNotificacion('Error al verificar el stock', 'error');
+  }
+  
+  if (cantidad > stockDisponible) {
+    mostrarNotificacion(`Solo hay ${stockDisponible} unidades disponibles de ${prod.nombre}`, 'error');
+    return;
+  }
+  
   const enCarrito = carrito.find(item => item.id === id);
+  
   if (enCarrito) {
     enCarrito.cantidad += cantidad;
   } else {
@@ -139,7 +157,10 @@ function agregarAlCarrito(id, cantidad = 1) {
       imagen: prod.imagenes[0] || PLACEHOLDER_IMAGE
     });
   }
-
+  
+  // Actualizar el stock localmente para reflejar los cambios
+  prod.stock = stockDisponible;
+  
   guardarCarrito();
   actualizarUI();
   mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
@@ -155,6 +176,10 @@ function renderizarCarrito() {
   }
   
   elementos.listaCarrito.innerHTML = carrito.map(item => {
+    const producto = productos.find(p => p.id === item.id);
+    const stockDisponible = producto ? producto.stock : 0;
+    const maxCantidad = Math.min(stockDisponible, item.cantidad + stockDisponible);
+    
     return `
     <li class="carrito-item" data-id="${item.id}">
       <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}" loading="lazy">
@@ -164,7 +189,7 @@ function renderizarCarrito() {
         <div class="carrito-item-controls">
           <button class="disminuir-cantidad" data-id="${item.id}" aria-label="Reducir cantidad">-</button>
           <span class="carrito-item-cantidad">${item.cantidad}</span>
-          <button class="aumentar-cantidad" data-id="${item.id}" aria-label="Aumentar cantidad">+</button>
+          <button class="aumentar-cantidad" data-id="${item.id}" aria-label="Aumentar cantidad" ${item.cantidad >= stockDisponible ? 'disabled' : ''}>+</button>
         </div>
         <span class="carrito-item-subtotal">Subtotal: $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
       </div>
@@ -175,9 +200,11 @@ function renderizarCarrito() {
     `;
   }).join('');
 
+  // Actualizar el total
   const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
   elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
   
+  // Agregar eventos a los botones
   document.querySelectorAll('.disminuir-cantidad').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const id = parseInt(e.target.dataset.id);
@@ -194,10 +221,16 @@ function renderizarCarrito() {
     btn.addEventListener('click', (e) => {
       const id = parseInt(e.target.dataset.id);
       const item = carrito.find(item => item.id === id);
-      if (item) {
-        item.cantidad++;
-        guardarCarrito();
-        renderizarCarrito();
+      const producto = productos.find(p => p.id === id);
+      
+      if (item && producto) {
+        if (item.cantidad < producto.stock) {
+          item.cantidad++;
+          guardarCarrito();
+          renderizarCarrito();
+        } else {
+          mostrarNotificacion(`No hay más stock disponible de ${producto.nombre}`, 'error');
+        }
       }
     });
   });
@@ -251,24 +284,32 @@ async function cargarProductosDesdeSheets() {
         elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles en este momento.</p>';
       return;
     }
-    productos = data
+
+    // Cargar productos con verificación de stock en paralelo
+    productos = await Promise.all(data
       .filter(r => r.id && r.nombre && r.precio)
-      .map(r => ({
-        id: parseInt(r.id, 10),
-        nombre: r.nombre.trim(),
-        descripcion: r.descripcion || '',
-        precio: parseFloat(r.precio) || 0,
-        imagenes: (r.foto && r.foto.trim() !== "")
-          ? r.foto.split(',').map(x => normalizarUrlImagen(x.trim()))
-          : [PLACEHOLDER_IMAGE],
-        adicionales: r.adicionales ? r.adicionales.trim() : '',
-        alto: parseFloat(r.alto) || null,
-        ancho: parseFloat(r.ancho) || null,
-        profundidad: parseFloat(r.profundidad) || null,
-        categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
-        vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
-        estado: r.estado ? r.estado.trim() : ''
+      .map(async r => {
+        // Verificar stock actual desde la API
+        const stockResponse = await verificarStock(r.id, 0); // Consulta sin modificar
+        const stockActual = stockResponse !== false ? stockResponse : parseInt(r.cantidad, 10) || 0;
+        
+        return {
+          id: parseInt(r.id, 10),
+          nombre: r.nombre.trim(),
+          descripcion: r.descripcion || '',
+          precio: parseFloat(r.precio) || 0,
+          stock: stockActual,
+          imagenes: (r.foto && r.foto.trim() !== "") ? r.foto.split(',').map(x => x.trim()) : [PLACEHOLDER_IMAGE],
+          adicionales: r.adicionales ? r.adicionales.trim() : '',
+          alto: parseFloat(r.alto) || null,
+          ancho: parseFloat(r.ancho) || null,
+          profundidad: parseFloat(r.profundidad) || null,
+          categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
+          vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
+          estado: r.estado ? r.estado.trim() : ''
+        };
       }));
+
     actualizarCategorias();
     actualizarUI();
   } catch (e) {
@@ -290,23 +331,30 @@ function filtrarProductos() {
   return productos.filter(p => {
     const { precioMin, precioMax, categoria, busqueda } = filtrosActuales;
     const b = busqueda?.toLowerCase() || "";
+    const enCarrito = carrito.find(i => i.id === p.id);
+    const disponibles = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
     return (
       (precioMin === null || p.precio >= precioMin) &&
       (precioMax === null || p.precio <= precioMax) &&
       (categoria === 'todos' || p.categoria === categoria) &&
-      (!b || p.nombre.toLowerCase().includes(b) || p.descripcion.toLowerCase().includes(b))
+      (!b || normalize(p.nombre).includes(normalize(b)) || normalize(p.descripcion).includes(normalize(b))) &&
+      (disponibles > 0)
     );
   });
 }
 
 function crearCardProducto(p) {
-  const agot = p.vendido === true;
+  const enCarrito = carrito.find(i => i.id === p.id);
+  const disp = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
+  const agot = disp <= 0;
   return `
     <div class="producto-card" data-id="${p.id}">
-      <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img" loading="lazy" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';">
+      <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img" loading="lazy">
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
-      ${agot ? '<p class="producto-stock"><span class="texto-agotado">Agotado</span></p>' : ''}
+      <p class="producto-stock">
+        ${agot ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${disp}`}
+      </p>
       <div class="card-acciones">
         <button class="boton-agregar${agot ? ' agotado' : ''}" data-id="${p.id}" ${agot ? 'disabled' : ''}>
           ${agot ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
@@ -356,7 +404,10 @@ function mostrarModalProducto(producto) {
   const contenido = elementos.modalContenido;
   if (!modal || !contenido) return;
 
-  const agotado = producto.vendido === true;
+  const enCarrito = carrito.find(item => item.id === producto.id) || { cantidad: 0 };
+  const disponibles = Math.max(0, producto.stock - enCarrito.cantidad);
+  const agotado = disponibles <= 0;
+
   let currentIndex = 0;
 
   function renderCarrusel() {
@@ -364,7 +415,7 @@ function mostrarModalProducto(producto) {
       <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
       <div class="modal-flex">
         <div class="modal-carrusel">
-          <img src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';">
+          <img src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
           ${
             producto.imagenes.length > 1
               ? `
@@ -383,7 +434,7 @@ function mostrarModalProducto(producto) {
             ${producto.imagenes
               .map(
                 (img, i) =>
-                  `<img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';">`
+                  `<img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}">`
               )
               .join('')}
           </div>
@@ -392,7 +443,7 @@ function mostrarModalProducto(producto) {
           <h1 class="modal-nombre">${producto.nombre}</h1>
           <p class="modal-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
           <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">
-            ${agotado ? 'AGOTADO' : 'DISPONIBLE'}
+            ${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}
           </p>
           <div class="modal-descripcion">
             ${producto.descripcion || ''}
@@ -405,7 +456,7 @@ function mostrarModalProducto(producto) {
             }
           </div>
           <div class="modal-acciones">
-            <input type="number" value="1" min="1" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
+            <input type="number" value="1" min="1" max="${disponibles}" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
             <button class="boton-agregar-modal ${agotado ? 'agotado' : ''}" data-id="${producto.id}" ${agotado ? 'disabled' : ''}>
               ${agotado ? 'Agotado' : 'Agregar al carrito'}
             </button>
@@ -592,8 +643,7 @@ function setupContactForm() {
 // FUNCIONES PARA FINALIZAR COMPRA
 // ===============================
 function actualizarResumenPedido() {
-  const resumenProductos = document.getElementById('resumen-productos');
-  const resumenTotal = document.getElementById('resumen-total');
+  const { resumenProductos, resumenTotal } = elementos;
   
   if (!resumenProductos || !resumenTotal) return;
 
@@ -617,7 +667,6 @@ function actualizarResumenPedido() {
     `;
   });
 
-  // Agregar línea de subtotal
   html += `
     <div class="resumen-item resumen-subtotal">
       <span>Subtotal:</span>
@@ -627,7 +676,6 @@ function actualizarResumenPedido() {
 
   resumenProductos.innerHTML = html;
   
-  // Obtener método de envío seleccionado
   const envioSelect = document.getElementById('select-envio');
   const metodoEnvio = envioSelect ? envioSelect.value : 'retiro';
   let costoEnvio = 0;
@@ -642,11 +690,11 @@ function actualizarResumenPedido() {
   resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
 }
 
-function configurarEnvioWhatsApp() {
-  const formEnvio = document.getElementById('form-envio');
+async function configurarEnvioWhatsApp() {
+  const formEnvio = elementos.formEnvio;
   if (!formEnvio) return;
 
-  formEnvio.addEventListener('submit', function(e) {
+  formEnvio.addEventListener('submit', async function(e) {
     e.preventDefault();
 
     // Validar campos
@@ -661,6 +709,55 @@ function configurarEnvioWhatsApp() {
       mostrarNotificacion('Por favor completa todos los campos obligatorios', 'error');
       return;
     }
+
+    // Verificar stock antes de finalizar
+    for (const item of carrito) {
+      const stockResponse = await verificarStock(item.id, item.cantidad);
+      if (!stockResponse) {
+        mostrarNotificacion(`Lo sentimos, ${item.nombre} ya no tiene suficiente stock`, 'error');
+        return;
+      }
+    }
+
+    // Calcular total con envío
+    let subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+    let envioTxt = 'Retiro en local (Gratis)';
+    let costoEnvio = 0;
+    
+    if (envio === 'montevideo') {
+      costoEnvio = 150;
+      envioTxt = `Envío Montevideo ($U ${costoEnvio})`;
+    } else if (envio === 'interior') {
+      costoEnvio = 300;
+      envioTxt = `Envío Interior ($U ${costoEnvio})`;
+    }
+    
+    const total = subtotal + costoEnvio;
+
+    // Crear mensaje detallado
+    let productosMsg = carrito.map(item => 
+      `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`
+    ).join('\n');
+    
+    const mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*Productos:*\n${productosMsg}\n\n*Datos del cliente:*\n👤 ${nombre} ${apellido}\n📞 ${telefono}\n\n*Envío:*\n${envioTxt}\n${envio !== 'retiro' ? `📍 Dirección: ${direccion}\n` : ''}\n*Subtotal:* $U ${subtotal.toLocaleString('es-UY')}\n*Costo de envío:* $U ${costoEnvio.toLocaleString('es-UY')}\n*Total a pagar:* $U ${total.toLocaleString('es-UY')}\n\n${notas ? `*Notas:*\n${notas}` : ''}`;
+
+    // Abrir WhatsApp
+    window.open(`https://wa.me/59893566283?text=${encodeURIComponent(mensaje)}`, '_blank');
+    
+    // Cerrar modal y limpiar carrito
+    elementos.modalDatosEnvio.classList.remove('visible');
+    setTimeout(() => {
+      elementos.modalDatosEnvio.hidden = true;
+      carrito = [];
+      guardarCarrito();
+      actualizarUI();
+      mostrarNotificacion('Pedido enviado con éxito', 'exito');
+      formEnvio.reset();
+    }, 300);
+  });
+}
+
+
 
     // Calcular total con envío
     let subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
@@ -690,7 +787,7 @@ function configurarEnvioWhatsApp() {
     const mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*Productos:*\n${productosMsg}\n\n*Datos del cliente:*\n👤 ${nombre} ${apellido}\n📞 ${telefono}\n\n*Envío:*\n${envioTxt}\n${envio !== 'retiro' ? `📍 Dirección: ${direccion}\n` : ''}\n*Subtotal:* $U ${subtotal.toLocaleString('es-UY')}\n*Costo de envío:* $U ${costoEnvio.toLocaleString('es-UY')}\n*Total a pagar:* $U ${total.toLocaleString('es-UY')}\n\n${notas ? `*Notas:*\n${notas}` : ''}`;
 
     // Abrir WhatsApp
-    window.open(`https://wa.me/59893566283?text=${encodeURIComponent(mensaje)}`, '_blank');
+    window.open(`https://wa.me/59894955466?text=${encodeURIComponent(mensaje)}`, '_blank');
     
     // Cerrar modal y limpiar carrito
     document.getElementById('modal-datos-envio').classList.remove('visible');
@@ -702,8 +799,8 @@ function configurarEnvioWhatsApp() {
       mostrarNotificacion('Pedido enviado con éxito', 'exito');
       document.getElementById('form-envio').reset();
     }, 300);
-  });
-}
+  
+
 
 // ===============================
 // INICIALIZACIÓN GENERAL
@@ -835,9 +932,6 @@ if (document.readyState !== 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 }
 
-
-
-
 // ==== FUNCIONES GLOBALES POR SI SE NECESITAN EN EL HTML ====
 window.resetearFiltros = resetearFiltros;
 window.toggleCarrito = toggleCarrito;
@@ -846,3 +940,28 @@ window.mostrarModalProducto = mostrarModalProducto;
 window.mostrarNotificacion = mostrarNotificacion;
 window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
 window.guardarCarrito = guardarCarrito;
+
+
+async function reservarStock(id, cantidad) {
+  const url = 'https://script.google.com/macros/s/AKfycbwMFWe0EU_g3Xu9hpNnIww9SVtGxU7ZMJj2dcCL0gbNe6Sj46dlfT3w8D5Fvb2cebKwKw/exec'; // <-- URL COMPLETA
+  const body = JSON.stringify({ id, cantidad });
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body
+    });
+    const data = await res.json();
+    if (data.success) {
+      // OK: continúa con el pago
+      return true;
+    } else {
+      alert("¡Lo sentimos! " + (data.error || "Stock insuficiente."));
+      return false;
+    }
+  } catch (e) {
+    alert("Error de conexión con el servidor. Intenta de nuevo.");
+    return false;
+  }
+}
