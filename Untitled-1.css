@@ -3371,3 +3371,55 @@ button {
   transform: scale(1.02);
   box-shadow: 0 8px 16px rgba(0,0,0,0.15);
 }
+
+
+/* ==== Estilo para el filtro de precio con slider ==== */
+.filtro-precio-slider {
+  margin-top: 20px;
+  background: var(--light-gray);
+  padding: 20px;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.slider-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.slider-container input[type="range"] {
+ 
+  -webkit-appearance: none;
+  appearance: none; 
+  width: 100%;
+  height: 6px;
+  background: var(--medium-gray);
+  border-radius: 4px;
+  outline: none;
+  transition: background 0.3s ease;
+}
+
+.slider-container input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--accent-color);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.slider-container span {
+  font-weight: bold;
+  font-size: 0.9rem;
+  color: var(--text-color);
+  display: flex;
+  justify-content: space-between;
+}
+ 
