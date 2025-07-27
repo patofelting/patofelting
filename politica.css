@@ -227,44 +227,46 @@ body.policy-page {
   margin-right: 5px;
 }
 
-/* Loader */
-#product-loader {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 30px;
-  display: none;
+/* Botones globales */
+button,
+input[type="submit"] {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  font-weight: bold;
+  text-transform: uppercase;
+  border-radius: var(--radius);
+  transition: var(--transition);
 }
 
-.spinner {
-  width: 50px;
-  height: 50px;
-  animation: rotate 2s linear infinite;
+button:hover,
+input[type="submit"]:hover {
+  background-color: #43c160;
+  transform: translateY(-2px);
 }
 
-.path {
-  stroke: var(--primary-color);
-  stroke-linecap: round;
-  animation: dash 1.5s ease-in-out infinite;
+/* Notificaciones */
+.notificacion {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--success-color);
+  padding: 15px 20px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  color: white;
+  z-index: 2100;
+  opacity: 0;
+  transform: translateY(100px);
+  transition: var(--transition);
 }
 
-@keyframes rotate {
-  100% {
-    transform: rotate(360deg);
-  }
+.notificacion.show {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-@keyframes dash {
-  0% {
-    stroke-dasharray: 1, 150;
-    stroke-dashoffset: 0;
-  }
-  50% {
-    stroke-dasharray: 90, 150;
-    stroke-dashoffset: -35;
-  }
-  100% {
-    stroke-dasharray: 90, 150;
-    stroke-dashoffset: -124;
-  }
+.notificacion.error {
+  background: var(--error-color);
 }
