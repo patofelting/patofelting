@@ -2801,7 +2801,7 @@ body > div.notificacion.info { background: #1976d2 !important; }
   }
 }
 
-/* Agrega esto al Untitled-1.css */
+
 .modal-datos-envio {
   position: fixed;
   top: 0;
@@ -3168,13 +3168,13 @@ select:focus,
 }
 
 .aplicar-rango-btn {
-  background: #76C043;
+  background: #43c160;
   color: white;
 }
 
 .boton-resetear-filtros {
   background: #eef9ec;
-  color: #2e7d32;
+  color: #43c160;
   border: 1.5px solid #cdeac5;
 }
 
