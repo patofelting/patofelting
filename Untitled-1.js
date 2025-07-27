@@ -72,37 +72,35 @@ function mostrarNotificacion(mensaje, tipo = 'exito') {
 
 // Función para verificar stock en tiempo real
 async function verificarStock(id, cantidad) {
-  try {
-    // Usamos el endpoint con redirección
-    const endpoint = `${API_STOCK_URL}?id=${id}&cantidad=${cantidad}&action=verify&cache=${Date.now()}`;
+  return new Promise((resolve) => {
+    // Crear un nombre único para la función de callback
+    const callbackName = `jsonpCallback_${Date.now()}`;
     
-    const response = await fetch(endpoint, {
-      method: 'GET', // Cambiamos a GET para evitar CORS con POST
-      redirect: 'follow', // Importante para seguir redirecciones
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8',
-      }
-    });
-
-    // Verificar si la respuesta fue redirigida
-    if (response.redirected) {
-      const redirectedResponse = await fetch(response.url);
-      const data = await redirectedResponse.json();
-      return data;
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error al verificar stock:', error);
-    return { 
-      success: false, 
-      error: 'Error de conexión. Intente nuevamente más tarde.',
-      stockRestante: 0
+    // Crear el script dinámicamente
+    const script = document.createElement('script');
+    const url = `https://script.google.com/macros/s/AKfycbxyAtmN9fmeuhdxTytO5Nb2_LtJSmD8Tj3jxR9iFsn8VezxxYLG35hk_-cFRwD8MKhfBA/exec?` +
+                `id=${id}&cantidad=${cantidad}&action=verify&callback=${callbackName}`;
+    
+    script.src = url;
+    
+    // Crear la función global temporal para el callback
+    window[callbackName] = (data) => {
+      // Limpiar después de recibir la respuesta
+      delete window[callbackName];
+      document.body.removeChild(script);
+      resolve(data);
     };
-  }
+    
+    // Manejar errores
+    script.onerror = () => {
+      delete window[callbackName];
+      document.body.removeChild(script);
+      resolve({ success: false, error: 'Error de conexión' });
+    };
+    
+    document.body.appendChild(script);
+  });
 }
-
 // Función para reservar stock
 async function reservarStock(id, cantidad) {
   try {
