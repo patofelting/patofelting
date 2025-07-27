@@ -872,14 +872,12 @@ const sliderMin = document.getElementById("slider-min");
 const sliderMax = document.getElementById("slider-max");
 const minValor = document.getElementById("min-valor");
 const maxValor = document.getElementById("max-valor");
-const track = document.querySelector('.slider-track'); // Elemento para el track coloreado
+const track = document.querySelector('.slider-track');
 
 function actualizarSlider() {
-  // Obtener valores numéricos
   const min = parseInt(sliderMin.value);
   const max = parseInt(sliderMax.value);
   
-  // Asegurar que min no supere a max
   if (min > max) {
     sliderMin.value = max;
     filtrosActuales.precioMin = max;
@@ -887,7 +885,6 @@ function actualizarSlider() {
     filtrosActuales.precioMin = min;
   }
 
-  // Asegurar que max no sea menor que min
   if (max < min) {
     sliderMax.value = min;
     filtrosActuales.precioMax = min;
@@ -895,60 +892,20 @@ function actualizarSlider() {
     filtrosActuales.precioMax = max;
   }
 
-  // Actualizar valores mostrados
-  minValor.textContent = `$U${sliderMin.value}`;
-  maxValor.textContent = `$U${sliderMax.value}`;
+  minValor.textContent = `$U${min}`;
+  maxValor.textContent = `$U${max}`;
 
-  // Actualizar el track coloreado (nueva mejora)
-  const minPercent = (min / parseInt(sliderMin.max)) * 100;
-  const maxPercent = (max / parseInt(sliderMax.max)) * 100;
+  const minPercent = (min / 3000) * 100;
+  const maxPercent = (max / 3000) * 100;
   track.style.left = minPercent + '%';
   track.style.width = (maxPercent - minPercent) + '%';
 
-  // Actualizar UI
   paginaActual = 1;
   renderizarProductos();
 }
 
-// Estilo visual del track (nueva mejora)
-function inicializarSliderStyles() {
-  const style = document.createElement('style');
-  style.textContent = `
-    .slider-track {
-      position: absolute;
-      height: 4px;
-      background: #4CAF50;
-      z-index: 1;
-      top: 50%;
-      transform: translateY(-50%);
-    }
-    input[type="range"] {
-      -webkit-appearance: none;
-      width: 100%;
-      background: transparent;
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 2;
-    }
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: #2E7D32;
-      cursor: pointer;
-      border: 2px solid white;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-  `;
-  document.head.appendChild(style);
-}
-
-// Event listeners
 sliderMin.addEventListener("input", actualizarSlider);
 sliderMax.addEventListener("input", actualizarSlider);
 
-// Inicialización
-inicializarSliderStyles();
-actualizarSlider(); // Para mostrar los valores iniciales
+// Inicializar
+actualizarSlider();
