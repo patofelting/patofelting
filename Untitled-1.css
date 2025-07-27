@@ -258,37 +258,93 @@ input[type="submit"]:hover,
   .menu.active {
     transform: translateY(0);
   }
-  .carrito-panel {
-    display: none;
-    position: fixed;
-    right: 0;
-    top: 0;
-    width: 360px;
-    max-width: 100vw;
-    height: 100vh;
+ .carrito-panel.mejorado {
     background: #fff;
-    z-index: 1100;
-    box-shadow: -2px 0 20px rgba(0,0,0,0.08);
-    transition: right 0.3s;
+    border-radius: 12px 0 0 12px;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
+    transition: transform 0.4s ease;
+    max-width: 400px;
+    overflow-y: auto;
   }
 
-  .carrito-panel.active {
-    display: block;
+  .carrito-header h2 {
+    font-size: 1.5rem;
+    color: #333;
+    margin: 16px;
   }
 
-  .carrito-overlay {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    inset: 0;
-    background: rgba(0,0,0,0.25);
+  .lista-carrito.mejorada li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 12px 16px;
+    gap: 10px;
   }
 
-  .carrito-overlay.active {
-    display: block;
+  .lista-carrito.mejorada li img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
   }
-}
 
+  .lista-carrito.mejorada li .info-producto {
+    flex: 1;
+    padding-left: 10px;
+  }
+
+  .lista-carrito.mejorada li .acciones-producto {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .acciones-producto button {
+    background: transparent;
+    border: none;
+    font-size: 1rem;
+    padding: 0 8px;
+    cursor: pointer;
+  }
+
+  .boton-vaciar-carrito,
+  .boton-finalizar-compra {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .boton-vaciar-carrito {
+    background: #e53935;
+    color: #fff;
+  }
+
+  .boton-vaciar-carrito:hover {
+    background: #c62828;
+  }
+
+  .boton-finalizar-compra {
+    background: #43a047;
+    color: #fff;
+  }
+
+  .boton-finalizar-compra:hover {
+    background: #2e7d32;
+  }
+
+  .carrito-footer {
+    border-top: 1px solid #ccc;
+    padding: 12px 16px;
+    font-size: 1.1rem;
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+  }
+  }
 @media (max-width: 576px) {
   .nav-container {
     padding: 10px 15px;
