@@ -302,16 +302,40 @@ function filtrarProductos() {
     const b = busqueda?.toLowerCase() || "";
     const enCarrito = carrito.find(i => i.id === p.id);
     const disponibles = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
+    
     return (
       (precioMin === null || p.precio >= precioMin) &&
       (precioMax === null || p.precio <= precioMax) &&
       (categoria === 'todos' || p.categoria === categoria) &&
-      (!b || p.nombre.toLowerCase().includes(b) || p.descripcion.toLowerCase().includes(b)) &&
-      (disponibles > 0)
+      (!b || p.nombre.toLowerCase().includes(b) || p.descripcion.toLowerCase().includes(b))
+      // Eliminamos la condición que filtraba por disponibles > 0
     );
   });
 }
 
+function crearCardProducto(p) {
+  const enCarrito = carrito.find(i => i.id === p.id);
+  const disp = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
+  const agot = disp <= 0;
+  
+  return `
+    <div class="producto-card" data-id="${p.id}">
+      <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img ${agot ? 'agotado' : ''}" loading="lazy">
+      <h3 class="producto-nombre">${p.nombre}</h3>
+      <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
+      <p class="producto-stock">
+        ${agot ? '<span class="texto-agotado">AGOTADO</span>' : `Stock: ${disp}`}
+      </p>
+      <div class="card-acciones">
+        <button class="boton-agregar${agot ? ' agotado' : ''}" data-id="${p.id}" ${agot ? 'disabled' : ''}>
+          ${agot ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
+        </button>
+      </div>
+      <button class="boton-detalles" data-id="${p.id}">🛈 Ver Detalle</button>
+      ${agot ? '<div class="overlay-agotado"></div>' : ''}
+    </div>
+  `;
+}
 function crearCardProducto(p) {
   const enCarrito = carrito.find(i => i.id === p.id);
   const disp = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
@@ -887,3 +911,5 @@ document.getElementById('form-envio').addEventListener('submit', function(e) {
     }, 300);
   }, 1000);
 });
+
+
