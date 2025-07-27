@@ -2114,3 +2114,116 @@ button:active {
 body.no-scroll {
   overflow: hidden;
 }
+
+
+
+
+
+/* ========== CONTENEDOR GENERAL DEL SLIDER ========== */
+.filtro-rango-slider {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  width: 260px;
+  margin: auto;
+  box-shadow: 0 5px 10px 3px rgba(67, 43, 165, 0.1);
+  color: #2E7D32; /* verde oscuro coherente con tu sitio */
+}
+
+/* ========== CONTENEDOR FLEX DEL SLIDER ========== */
+.slider {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  color: #2E7D32;
+  gap: 0.8em;
+}
+
+/* ========== INPUT RANGE ========== */
+.slider input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background-color: #E3E3E3;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 100%;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  border-radius: 4px;
+  outline: none;
+  transition: background-size 0.3s ease;
+}
+
+/* ========== TRACK (ESTILO CRUZADO BROWSERS) ========== */
+.slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: transparent;
+}
+.slider input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: transparent;
+}
+.slider input[type="range"]::-moz-focus-outer {
+  border: 0;
+}
+
+/* ========== THUMB (MANIJA) ========== */
+.slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #2E7D32;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.slider input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #2E7D32;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+/* ========== VALOR DINÁMICO VISUAL DE PRECIO ========== */
+.slider-value {
+  font-weight: bold;
+  text-align: center;
+  margin-top: 8px;
+  font-size: 1.1em;
+  color: #2E7D32;
+}
+
+/* ========== BOTÓN APLICAR DEBAJO ========== */
+.slider-boton-aplicar {
+  margin-top: 10px;
+  width: 100%;
+  background-color: #4CAF50;
+  border: none;
+  padding: 10px;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+.slider-boton-aplicar:hover {
+  background-color: #45a049;
+}
+
+/* ========== BOTÓN RESET ========== */
+#boton-resetear-filtros {
+  background-color: #ffffff;
+  border: 1px solid #C8E6C9;
+  color: #2E7D32;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: bold;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+#boton-resetear-filtros:hover {
+  background-color: #C8E6C9;
+  color: #1B5E20;
+}
