@@ -76,7 +76,7 @@ input[type="submit"],
 button:hover,
 input[type="submit"]:hover,
 .boton:hover {
-  background-color: #43c160 /* Verde oscuro */
+  background-color: #43c160; /* Verde oscuro */
   transform: translateY(-2px);
 }
 
