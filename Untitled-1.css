@@ -681,6 +681,12 @@ blockquote {
   margin-bottom: 5px;
   padding: 0 15px;
 }
+.producto-nombre,
+.producto-precio {
+  text-align: center;
+  display: block;
+  width: 100%;
+}
 
 .producto-precio {
   font-weight: var(--font-weight-bold);
