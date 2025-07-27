@@ -1,3 +1,4 @@
+
 // ===============================
 // CONFIGURACIÓN GLOBAL
 // ===============================
@@ -869,40 +870,38 @@ function preguntarStock(nombreProducto) {
 
 // Controladores para los sliders de precio
 
-
 const minSlider = document.getElementById('min-slider');
 const maxSlider = document.getElementById('max-slider');
 const minPrice = document.getElementById('min-price');
 const maxPrice = document.getElementById('max-price');
 const range = document.querySelector('.range');
-const rangeHighlight = document.querySelector('.range-highlight');
 
 function updateRange() {
-  const minVal = parseInt(minSlider.value);
-  const maxVal = parseInt(maxSlider.value);
+  let minVal = parseInt(minSlider.value);
+  let maxVal = parseInt(maxSlider.value);
 
-  minPrice.textContent = `$${minVal.toLocaleString('es-UY')}`;
-  maxPrice.textContent = `$${maxVal.toLocaleString('es-UY')}`;
+  if (minVal > maxVal) {
+    [minVal, maxVal] = [maxVal, minVal];
+    minSlider.value = minVal;
+    maxSlider.value = maxVal;
+  }
 
-  // Actualiza la posición de la barra de rango
-  range.style.left = (minVal / 1000 * 100) + '%';
-  range.style.width = ((maxVal - minVal) / 1000 * 100) + '%';
+  const porcentajeMin = (minVal / 3000) * 100;
+  const porcentajeMax = (maxVal / 3000) * 100;
 
-  // Actualiza el resaltado del rango
-  rangeHighlight.style.left = (minVal / 1000 * 100) + '%';
-  rangeHighlight.style.width = ((maxVal - minVal) / 1000 * 100) + '%';
-  
-  filtrosActuales.precioMin = minVal;
-  filtrosActuales.precioMax = maxVal;
+  range.style.left = porcentajeMin + '%';
+  range.style.width = (porcentajeMax - porcentajeMin) + '%';
+
+  minPrice.textContent = `$U${minVal}`;
+  maxPrice.textContent = `$U${maxVal}`;
+}
+
+function aplicarRango() {
+  filtrosActuales.precioMin = parseInt(minSlider.value);
+  filtrosActuales.precioMax = parseInt(maxSlider.value);
   aplicarFiltros();
 }
-// Escucha los cambios en los sliders
+
 minSlider.addEventListener('input', updateRange);
 maxSlider.addEventListener('input', updateRange);
-
-document.getElementById('resetear-rango').addEventListener('click', function() {
-  minSlider.value = 0;
-  maxSlider.value = 3000;
-  updateRange();
-});
 updateRange();
