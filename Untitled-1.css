@@ -124,23 +124,38 @@ input[type="submit"]:hover,
 }
 
 .hamburguesa {
+  font-size: 1.8rem;
+  display: none; /* Mostrar en responsive con media query */
   background: none;
   border: none;
-  width: 40px;
-  height: 40px;
-  font-size: 24px;
-  color: #333333; /* Gris oscuro */
+  color: #000;
+  padding: 0.5rem;
   cursor: pointer;
-  border-radius: 4px;
-  transition: color 0.3s ease, transform 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  transition: color 0.3s ease;
 }
 
 .hamburguesa:hover {
-  color: #6B705C; /* Verde oliva suave */
-  transform: scale(1.1); /* Efecto de escala al pasar el cursor */
+  color: var(--primary-color); /* Verde al pasar el cursor */
+}
+
+/* Estilo para las líneas de menú si usás un ícono SVG o span */
+.hamburguesa span,
+.hamburguesa i,
+.hamburguesa svg {
+  stroke: #000;
+  transition: stroke 0.3s ease;
+}
+
+.hamburguesa:hover span,
+.hamburguesa:hover i,
+.hamburguesa:hover svg {
+  stroke: var(--primary-color);
+}
+
+@media (max-width: 768px) {
+  .hamburguesa {
+    display: inline-block;
+  }
 }
 
 /* Carrito */
