@@ -898,29 +898,40 @@ function actualizarSlider() {
   renderizarProductos();
 }
 
-function actualizarSliderVisual() {
-  const minSlider = document.getElementById('precio-min');
-  const maxSlider = document.getElementById('precio-max');
-  const track = document.querySelector('.slider-track');
+// JavaScript
+const precioSlider = document.getElementById('precio-slider');
+const valorSlider = document.getElementById('valor-slider');
 
-  const minVal = parseInt(minSlider.value);
-  const maxVal = parseInt(maxSlider.value);
-  const rangeMin = parseInt(minSlider.min);
-  const rangeMax = parseInt(minSlider.max);
+// Actualizar el filtro en tiempo real mientras se mueve el slider
+precioSlider.addEventListener('input', function() {
+  const valor = parseInt(this.value);
+  valorSlider.textContent = `$U${valor}`;
+  
+  // Mover la etiqueta del valor junto al thumb
+  const percent = (valor / parseInt(this.max)) * 100;
+  valorSlider.style.left = `calc(${percent}% - ${percent * 0.3}px)`;
+  
+  // Actualizar filtros y productos
+  filtrosActuales.precioMax = valor;
+  filtrosActuales.precioMin = 0; // Mostrar todos los productos desde $0 hasta el valor seleccionado
+  aplicarFiltros();
+});
 
-  const percentMin = ((minVal - rangeMin) / (rangeMax - rangeMin)) * 100;
-  const percentMax = ((maxVal - rangeMin) / (rangeMax - rangeMin)) * 100;
-
-  track.style.left = percentMin + '%';
-  track.style.width = (percentMax - percentMin) + '%';
-
-  document.getElementById('valor-min').textContent = `$U${minVal}`;
-  document.getElementById('valor-max').textContent = `$U${maxVal}`;
+// Función de filtrado modificada para usar solo precio máximo
+function filtrarProductos() {
+  return productos.filter(p => {
+    const { precioMax, categoria, busqueda } = filtrosActuales;
+    const b = busqueda?.toLowerCase() || "";
+    const enCarrito = carrito.find(i => i.id === p.id);
+    const disponibles = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
+    
+    return (
+      (precioMax === null || p.precio <= precioMax) &&
+      (categoria === 'todos' || p.categoria === categoria) &&
+      (!b || p.nombre.toLowerCase().includes(b) || p.descripcion.toLowerCase().includes(b))
+    );
+  });
 }
 
-// Eventos para actualizar
-document.getElementById('precio-min').addEventListener('input', actualizarSliderVisual);
-document.getElementById('precio-max').addEventListener('input', actualizarSliderVisual);
-
-// Inicializar
-actualizarSliderVisual();
+// Inicializar posición del valor
+valorSlider.style.left = `calc(100% - 30px)`;
