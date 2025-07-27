@@ -867,71 +867,39 @@ function preguntarStock(nombreProducto) {
   window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
 }
 
-// Controladores para los sliders de precio
-const sliderMin = document.getElementById("slider-min");
-const sliderMax = document.getElementById("slider-max");
-const minValor = document.getElementById("min-valor");
-const maxValor = document.getElementById("max-valor");
-
-function actualizarSlider() {
-  const min = parseInt(sliderMin.value);
-  const max = parseInt(sliderMax.value);
-  
-  if (min > max) {
-    sliderMin.value = max;
-    filtrosActuales.precioMin = max;
-  } else {
-    filtrosActuales.precioMin = min;
-  }
-
-  if (max < min) {
-    sliderMax.value = min;
-    filtrosActuales.precioMax = min;
-  } else {
-    filtrosActuales.precioMax = max;
-  }
-
-  minValor.textContent = sliderMin.value;
-  maxValor.textContent = sliderMax.value;
-
-  paginaActual = 1;
-  renderizarProductos();
-}
-
 // JavaScript
-const precioSlider = document.getElementById('precio-slider');
-const valorSlider = document.getElementById('valor-slider');
+const sliderMin = document.getElementById('slider-min');
+const sliderMax = document.getElementById('slider-max');
+const minValue = document.getElementById('min-value');
+const maxValue = document.getElementById('max-value');
+const track = document.querySelector('.slider-track');
 
-// Actualizar el filtro en tiempo real mientras se mueve el slider
-precioSlider.addEventListener('input', function() {
-  const valor = parseInt(this.value);
-  valorSlider.textContent = `$U${valor}`;
+function updateSlider() {
+  // Asegurar que el mínimo no supere al máximo
+  if (parseInt(sliderMin.value) > parseInt(sliderMax.value)) {
+    sliderMin.value = sliderMax.value;
+  }
   
-  // Mover la etiqueta del valor junto al thumb
-  const percent = (valor / parseInt(this.max)) * 100;
-  valorSlider.style.left = `calc(${percent}% - ${percent * 0.3}px)`;
+  // Actualizar valores mostrados
+  minValue.textContent = `$U${sliderMin.value}`;
+  maxValue.textContent = `$U${sliderMax.value}`;
   
-  // Actualizar filtros y productos
-  filtrosActuales.precioMax = valor;
-  filtrosActuales.precioMin = 0; // Mostrar todos los productos desde $0 hasta el valor seleccionado
+  // Actualizar el track coloreado
+  const minPercent = (sliderMin.value / sliderMin.max) * 100;
+  const maxPercent = (sliderMax.value / sliderMax.max) * 100;
+  track.style.left = minPercent + '%';
+  track.style.width = (maxPercent - minPercent) + '%';
+  track.style.backgroundColor = '#2E7D32';
+  
+  // Actualizar filtros
+  filtrosActuales.precioMin = parseInt(sliderMin.value);
+  filtrosActuales.precioMax = parseInt(sliderMax.value);
   aplicarFiltros();
-});
-
-// Función de filtrado modificada para usar solo precio máximo
-function filtrarProductos() {
-  return productos.filter(p => {
-    const { precioMax, categoria, busqueda } = filtrosActuales;
-    const b = busqueda?.toLowerCase() || "";
-    const enCarrito = carrito.find(i => i.id === p.id);
-    const disponibles = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
-    
-    return (
-      (precioMax === null || p.precio <= precioMax) &&
-      (categoria === 'todos' || p.categoria === categoria) &&
-      (!b || p.nombre.toLowerCase().includes(b) || p.descripcion.toLowerCase().includes(b))
-    );
-  });
 }
 
-// Inicializar posición del valor
-valorSlider.style.left = `calc(100% - 30px)`;
+// Event listeners
+sliderMin.addEventListener('input', updateSlider);
+sliderMax.addEventListener('input', updateSlider);
+
+// Inicializar
+updateSlider();
