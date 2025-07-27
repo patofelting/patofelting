@@ -5,7 +5,7 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
-const API_STOCK_URL = 'https://script.google.com/macros/s/AKfycbxXMkQx2rLlodp7FYkYy8FYJfSZJpnRfTM6tc87xaMTHS-5qrfdj3bgawanNWQHjbxU/exec';
+const API_STOCK_URL = 'https://script.google.com/macros/s/AKfycbxyAtmN9fmeuhdxTytO5Nb2_LtJSmD8Tj3jxR9iFsn8VezxxYLG35hk_-cFRwD8MKhfBA/exec';
 // ===============================
 // ESTADO GLOBAL
 // ===============================
@@ -73,42 +73,32 @@ function mostrarNotificacion(mensaje, tipo = 'exito') {
 // Función para verificar stock en tiempo real
 async function verificarStock(id, cantidad) {
   try {
-    // Agrega un timestamp para evitar caché
-    const url = `${API_STOCK_URL}?timestamp=${Date.now()}`;
+    // Usamos el endpoint con redirección
+    const endpoint = `${API_STOCK_URL}?id=${id}&cantidad=${cantidad}&action=verify&cache=${Date.now()}`;
     
-    const response = await fetch(url, {
-      method: 'POST',
-      mode: 'no-cors', // Importante para evitar problemas CORS
-      headers: { 
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        id: id,
-        cantidad: cantidad,
-        action: 'verify'
-      })
+    const response = await fetch(endpoint, {
+      method: 'GET', // Cambiamos a GET para evitar CORS con POST
+      redirect: 'follow', // Importante para seguir redirecciones
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8',
+      }
     });
 
-    // Si usas mode: 'no-cors', la respuesta será opaca
-    // Necesitamos manejar esto de manera diferente
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    // Verificar si la respuesta fue redirigida
+    if (response.redirected) {
+      const redirectedResponse = await fetch(response.url);
+      const data = await redirectedResponse.json();
+      return data;
     }
 
-    // Intenta parsear la respuesta aunque sea opaca
-    try {
-      const data = await response.json();
-      return data;
-    } catch (e) {
-      console.error('Error parsing JSON:', e);
-      return { success: false, error: 'Error al procesar la respuesta' };
-    }
+    const data = await response.json();
+    return data;
   } catch (error) {
     console.error('Error al verificar stock:', error);
     return { 
       success: false, 
-      error: 'Error de conexión. Intente nuevamente.' 
+      error: 'Error de conexión. Intente nuevamente más tarde.',
+      stockRestante: 0
     };
   }
 }
@@ -185,32 +175,24 @@ async function agregarAlCarrito(id, cantidad = 1) {
       return;
     }
 
-    // Mostrar loader mientras se verifica el stock
-    mostrarLoader(true);
+    // Mostrar carga mientras se verifica
+    mostrarCarga(true);
 
-    // Verificar stock con manejo de errores mejorado
-    const verificacion = await verificarStock(id, cantidad);
+    // Verificar stock
+    const { success, error, stockRestante } = await verificarStock(id, cantidad);
     
-    if (!verificacion.success) {
-      mostrarNotificacion(
-        verificacion.error || 'No se pudo verificar el stock. Intente nuevamente.', 
-        'error'
-      );
+    if (!success) {
+      mostrarNotificacion(error || 'No hay suficiente stock disponible', 'error');
       return;
     }
 
-    if (verificacion.stockRestante < 0) {
-      mostrarNotificacion(
-        `Solo quedan ${verificacion.stockRestante + cantidad} unidades disponibles`, 
-        'error'
-      );
-      return;
-    }
+    // Actualizar stock local
+    prod.stock = stockRestante;
 
-    // Si todo está bien, proceder con la reserva
-    const enCarrito = carrito.find(item => item.id === id);
-    if (enCarrito) {
-      enCarrito.cantidad += cantidad;
+    // Manejar el carrito
+    const itemIndex = carrito.findIndex(item => item.id === id);
+    if (itemIndex >= 0) {
+      carrito[itemIndex].cantidad += cantidad;
     } else {
       carrito.push({
         id,
@@ -223,13 +205,21 @@ async function agregarAlCarrito(id, cantidad = 1) {
 
     guardarCarrito();
     actualizarUI();
-    mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
-    
+    mostrarNotificacion(`"${prod.nombre}" agregado al carrito`, 'éxito');
+
   } catch (error) {
     console.error('Error en agregarAlCarrito:', error);
-    mostrarNotificacion('Error al agregar al carrito. Intente nuevamente.', 'error');
+    mostrarNotificacion('Error al agregar al carrito', 'error');
   } finally {
-    mostrarLoader(false);
+    mostrarCarga(false);
+  }
+}
+
+// Función auxiliar para mostrar estado de carga
+function mostrarCarga(mostrar) {
+  const loader = document.getElementById('product-loader');
+  if (loader) {
+    loader.style.display = mostrar ? 'block' : 'none';
   }
 }
 
