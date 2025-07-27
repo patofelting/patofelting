@@ -3353,17 +3353,7 @@ select:focus,
 }
 
 
-#carrito-btn-main {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 999;
-  background-color: var(--accent-color);
-  color: white;
-  padding: 12px 18px;
-  border-radius: 50px;
-  box-shadow: var(--box-shadow);
-}
+
 @media (max-width: 768px) {
   .galeria-productos {
     grid-template-columns: 1fr 1fr;
