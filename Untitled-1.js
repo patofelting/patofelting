@@ -616,6 +616,8 @@ function inicializarEventos() {
   elementos.carritoBtnMain?.addEventListener('click', () => toggleCarrito(true));
   elementos.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
   elementos.btnCerrarCarrito?.addEventListener('click', () => toggleCarrito(false));
+
+document.getElementById('select-envio')?.addEventListener('change', actualizarResumenPedido);
   elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
   elementos.btnFinalizarCompra?.addEventListener('click', () => {
     if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
@@ -716,6 +718,7 @@ function actualizarResumenPedido() {
   let html = '';
   let subtotal = 0;
   
+  // Calcular subtotal de productos
   carrito.forEach(item => {
     const itemTotal = item.precio * item.cantidad;
     subtotal += itemTotal;
@@ -727,30 +730,42 @@ function actualizarResumenPedido() {
     `;
   });
 
-  // Agregar línea de subtotal
+  // Obtener método de envío seleccionado
+  const envioSelect = document.getElementById('select-envio');
+  const metodoEnvio = envioSelect ? envioSelect.value : 'retiro';
+  let costoEnvio = 0;
+  let envioTexto = '';
+
+  if (metodoEnvio === 'montevideo') {
+    costoEnvio = 150;
+    envioTexto = 'Envío Montevideo ($150)';
+  } else if (metodoEnvio === 'interior') {
+    costoEnvio = 300;
+    envioTexto = 'Envío Interior ($300)';
+  }
+
+  // Agregar líneas de subtotal y envío
   html += `
     <div class="resumen-item resumen-subtotal">
       <span>Subtotal:</span>
       <span>$U ${subtotal.toLocaleString('es-UY')}</span>
     </div>
+    ${metodoEnvio !== 'retiro' ? `
+    <div class="resumen-item resumen-envio">
+      <span>Envío:</span>
+      <span>$U ${costoEnvio.toLocaleString('es-UY')}</span>
+    </div>
+    ` : ''}
   `;
 
   resumenProductos.innerHTML = html;
   
-  // Obtener método de envío seleccionado
-  const envioSelect = document.getElementById('select-envio');
-  const metodoEnvio = envioSelect ? envioSelect.value : 'retiro';
-  let costoEnvio = 0;
-
-  if (metodoEnvio === 'montevideo') {
-    costoEnvio = 150;
-  } else if (metodoEnvio === 'interior') {
-    costoEnvio = 300;
-  }
-
+  // Calcular y mostrar el total
   const total = subtotal + costoEnvio;
   resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
 }
+
+
 // Cerrar modal de envío
 document.getElementById('btn-cerrar-modal-envio').addEventListener('click', function() {
   const modalEnvio = document.getElementById('modal-datos-envio');
