@@ -868,58 +868,25 @@ function preguntarStock(nombreProducto) {
 }
 
 // Controladores para los sliders de precio
-const sliderMin = document.getElementById("slider-min");
-const sliderMax = document.getElementById("slider-max");
-const minValue = document.getElementById("min-value");
-const maxValue = document.getElementById("max-value");
-const track = document.querySelector('.slider-track');
+const minSlider = document.getElementById('min-slider');
+const maxSlider = document.getElementById('max-slider');
+const minPrice = document.getElementById('min-price');
+const maxPrice = document.getElementById('max-price');
+const range = document.querySelector('.range');
 
-function actualizarSlider() {
-  // Obtener valores
-  const min = parseInt(sliderMin.value);
-  const max = parseInt(sliderMax.value);
+function updateRange() {
+  const minVal = parseInt(minSlider.value);
+  const maxVal = parseInt(maxSlider.value);
   
-  // Asegurar que min no supere a max
-  if (min > max) {
-    sliderMin.value = max;
-    filtrosActuales.precioMin = max;
-  } else {
-    filtrosActuales.precioMin = min;
-  }
-
-  if (max < min) {
-    sliderMax.value = min;
-    filtrosActuales.precioMax = min;
-  } else {
-    filtrosActuales.precioMax = max;
-  }
-
-  // Actualizar valores mostrados
-  minValue.textContent = `$U${min}`;
-  maxValue.textContent = `$U${max}`;
-
-  // Actualizar track coloreado
-  const minPercent = (min / 3000) * 100;
-  const maxPercent = (max / 3000) * 100;
-  track.style.setProperty('--min-percent', `${minPercent}%`);
-  track.style.setProperty('--max-percent', `${maxPercent}%`);
-
-  // Actualizar productos
-  paginaActual = 1;
-  renderizarProductos();
+  minPrice.textContent = minVal;
+  maxPrice.textContent = maxVal;
+  
+  range.style.left = (minVal / 1000 * 100) + '%';
+  range.style.width = ((maxVal - minVal) / 1000 * 100) + '%';
 }
 
-// Event listeners
-sliderMin.addEventListener("input", actualizarSlider);
-sliderMax.addEventListener("input", actualizarSlider);
-
-// Resetear filtros
-document.querySelector('.boton-resetear-filtros').addEventListener('click', function() {
-  sliderMin.value = 0;
-  sliderMax.value = 3000;
-  actualizarSlider();
-  mostrarNotificacion('Filtros de precio reseteados', 'info');
-});
+minSlider.addEventListener('input', updateRange);
+maxSlider.addEventListener('input', updateRange);
 
 // Inicializar
-actualizarSlider();
+updateRange();
