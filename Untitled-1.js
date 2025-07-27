@@ -968,3 +968,18 @@ sliderMax.addEventListener("input", actualizarSlider);
 function aplicarFiltroSlider() {
   actualizarSlider(); // por si alguien presiona el botón igual
 }
+
+
+
+const minSlider = document.getElementById("precio-min");
+const maxSlider = document.getElementById("precio-max");
+const minVal = document.getElementById("valor-min");
+const maxVal = document.getElementById("valor-max");
+
+minSlider.addEventListener("input", () => {
+  minVal.textContent = `$U${minSlider.value}`;
+});
+
+maxSlider.addEventListener("input", () => {
+  maxVal.textContent = `$U${maxSlider.value}`;
+});
