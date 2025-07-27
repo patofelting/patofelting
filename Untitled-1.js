@@ -146,9 +146,17 @@ async function agregarAlCarrito(id, cantidad = 1) {
   
   const enCarrito = carrito.find(item => item.id === id);
   
-  if (enCarrito) {
+ if (enCarrito) {
+    if (enCarrito.cantidad + cantidad > stockDisponible) {
+      mostrarNotificacion(`Solo quedan ${stockDisponible} unidades disponibles`, 'error');
+      return;
+    }
     enCarrito.cantidad += cantidad;
   } else {
+    if (cantidad > stockDisponible) {
+      mostrarNotificacion(`Solo quedan ${stockDisponible} unidades disponibles`, 'error');
+      return;
+    }
     carrito.push({
       id,
       nombre: prod.nombre,
@@ -157,13 +165,9 @@ async function agregarAlCarrito(id, cantidad = 1) {
       imagen: prod.imagenes[0] || PLACEHOLDER_IMAGE
     });
   }
-  
-  // Actualizar el stock localmente para reflejar los cambios
-  prod.stock = stockDisponible;
-  
-  guardarCarrito();
-  actualizarUI();
-  mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
+
+  actualizarCarritoUI();
+  mostrarNotificacion('Producto agregado al carrito', 'exito');
 }
 
 function renderizarCarrito() {
