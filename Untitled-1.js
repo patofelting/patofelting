@@ -809,45 +809,71 @@ document.getElementById('select-envio').addEventListener('change', function() {
 document.getElementById('form-envio').addEventListener('submit', function(e) {
   e.preventDefault();
 
-  // Validar campos
+  // Validar campos obligatorios
   const nombre = document.getElementById('input-nombre').value.trim();
   const apellido = document.getElementById('input-apellido').value.trim();
   const telefono = document.getElementById('input-telefono').value.trim();
-  const direccion = document.getElementById('input-direccion').value.trim();
   const envio = document.getElementById('select-envio').value;
-  const notas = document.getElementById('input-notas').value.trim();
+  const direccion = envio !== 'retiro' ? document.getElementById('input-direccion').value.trim() : '';
   
-  if (!nombre || !apellido || !telefono || (!direccion && envio !== 'retiro') || !envio) {
+  if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
     mostrarNotificacion('Por favor completa todos los campos obligatorios', 'error');
     return;
   }
 
-  // Calcular total con envío
-  let subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-  let envioTxt = 'Retiro en local (Gratis)';
+  // Calcular totales
+  const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
   let costoEnvio = 0;
+  let metodoEnvioTexto = '';
   
   if (envio === 'montevideo') {
     costoEnvio = 150;
-    envioTxt = `Envío Montevideo ($U ${costoEnvio})`;
+    metodoEnvioTexto = 'Envío Montevideo ($150)';
   } else if (envio === 'interior') {
     costoEnvio = 300;
-    envioTxt = `Envío Interior ($U ${costoEnvio})`;
+    metodoEnvioTexto = 'Envío Interior ($300)';
+  } else {
+    metodoEnvioTexto = 'Retiro en local (Gratis)';
+  }
+
+  const total = subtotal + costoEnvio;
+  const notas = document.getElementById('input-notas').value.trim();
+
+  // Construir mensaje para WhatsApp
+  let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n`;
+  mensaje += `*📋 Detalles del pedido:*\n`;
+  
+  // Productos
+  carrito.forEach(item => {
+    mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}\n`;
+  });
+  
+  mensaje += `\n*💰 Total:*\n`;
+  mensaje += `Subtotal: $U ${subtotal.toLocaleString('es-UY')}\n`;
+  mensaje += `Envío: $U ${costoEnvio.toLocaleString('es-UY')}\n`;
+  mensaje += `*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
+  
+  // Datos del cliente
+  mensaje += `*👤 Datos del cliente:*\n`;
+  mensaje += `Nombre: ${nombre} ${apellido}\n`;
+  mensaje += `Teléfono: ${telefono}\n`;
+  mensaje += `Método de envío: ${metodoEnvioTexto}\n`;
+  
+  if (envio !== 'retiro') {
+    mensaje += `Dirección: ${direccion}\n`;
   }
   
-  const total = subtotal + costoEnvio;
+  if (notas) {
+    mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
+  }
 
-  // Crear mensaje detallado
-  let productosMsg = carrito.map(item => 
-    `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`
-  ).join('\n');
+  // Codificar el mensaje para URL
+  const mensajeCodificado = encodeURIComponent(mensaje);
   
-  const mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*Productos:*\n${productosMsg}\n\n*Datos del cliente:*\n👤 ${nombre} ${apellido}\n📞 ${telefono}\n\n*Envío:*\n${envioTxt}\n${envio !== 'retiro' ? `📍 Dirección: ${direccion}\n` : ''}\n*Subtotal:* $U ${subtotal.toLocaleString('es-UY')}\n*Costo de envío:* $U ${costoEnvio.toLocaleString('es-UY')}\n*Total a pagar:* $U ${total.toLocaleString('es-UY')}\n\n${notas ? `*Notas:*\n${notas}` : ''}`;
-
-  // Abrir WhatsApp
-  window.open(`https://wa.me/59893566283?text=${encodeURIComponent(mensaje)}`, '_blank');
+  // Abrir WhatsApp con el mensaje
+  window.open(`https://wa.me/59893566283?text=${mensajeCodificado}`, '_blank');
   
-  // Cerrar modal y limpiar carrito SOLO DESPUÉS de enviar
+  // Cerrar modal y limpiar carrito después de enviar
   document.getElementById('modal-datos-envio').classList.remove('visible');
   setTimeout(() => {
     document.getElementById('modal-datos-envio').hidden = true;
