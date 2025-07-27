@@ -295,29 +295,20 @@ function actualizarCategorias() {
 }
 
 function filtrarProductos() {
-  let productosFiltrados = window.todosLosProductos || [];
-
-  const categoriaSeleccionada = document.getElementById("filtro-categoria").value.toLowerCase();
-  const textoBusqueda = document.querySelector(".input-busqueda").value.toLowerCase();
-  
-  const min = parseInt(document.getElementById("min-slider").value);
-  const max = parseInt(document.getElementById("max-slider").value);
-
-  productosFiltrados = productosFiltrados.filter(producto => {
-    const nombre = producto.nombre.toLowerCase();
-    const descripcion = producto.descripcion.toLowerCase();
-    const precio = parseFloat(producto.precio.replace("$", "").replace("U", "").replace("u", "").trim());
-
-    const cumpleCategoria = categoriaSeleccionada === "todos" || producto.categoria.toLowerCase() === categoriaSeleccionada;
-    const cumpleBusqueda = nombre.includes(textoBusqueda) || descripcion.includes(textoBusqueda);
-    const cumplePrecio = !isNaN(precio) && precio >= min && precio <= max;
-
-    return cumpleCategoria && cumpleBusqueda && cumplePrecio;
+  return productos.filter(p => {
+    const { precioMin, precioMax, categoria, busqueda } = filtrosActuales;
+    const b = busqueda?.toLowerCase() || "";
+    const enCarrito = carrito.find(i => i.id === p.id);
+    const disponibles = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
+    
+    return (
+      (precioMin === null || p.precio >= precioMin) &&
+      (precioMax === null || p.precio <= precioMax) &&
+      (categoria === 'todos' || p.categoria === categoria) &&
+      (!b || p.nombre.toLowerCase().includes(b) || p.descripcion.toLowerCase().includes(b))
+    );
   });
-
-  return productosFiltrados;
 }
-
 
 function crearCardProducto(p) {
   const enCarrito = carrito.find(i => i.id === p.id);
@@ -886,25 +877,12 @@ const range = document.querySelector('.range');
 function updateRange() {
   const minVal = parseInt(minSlider.value);
   const maxVal = parseInt(maxSlider.value);
-
-  // Validación para evitar que el mínimo supere al máximo
-  if (minVal > maxVal - 50) {
-    minSlider.value = maxVal - 50;
-  }
-  if (maxVal < minVal + 50) {
-    maxSlider.value = minVal + 50;
-  }
-
-  // Actualizar textos
-  minPrice.textContent = `$${minSlider.value}`;
-  maxPrice.textContent = `$${maxSlider.value}`;
-
-  // Calcular posición para tramo verde
-  const percentMin = (minSlider.value / 3000) * 100;
-  const percentMax = (maxSlider.value / 3000) * 100;
-
-  range.style.left = percentMin + '%';
-  range.style.width = (percentMax - percentMin) + '%';
+  
+  minPrice.textContent = minVal;
+  maxPrice.textContent = maxVal;
+  
+  range.style.left = (minVal / 1000 * 100) + '%';
+  range.style.width = ((maxVal - minVal) / 1000 * 100) + '%';
 }
 
 minSlider.addEventListener('input', updateRange);
