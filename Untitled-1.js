@@ -135,89 +135,50 @@ function agregarAlCarrito(id, cantidad = 1) {
 }
 
 function renderizarCarrito() {
-  if (!elementos.listaCarrito || !elementos.totalCarrito) return;
-  
-  if (carrito.length === 0) {
-    elementos.listaCarrito.innerHTML = '<p class="carrito-vacio">Tu carrito está vacío</p>';
-    elementos.totalCarrito.textContent = 'Total: $U 0';
-    return;
-  }
-  
-  elementos.listaCarrito.innerHTML = carrito.map(item => {
-    const producto = productos.find(p => p.id === item.id);
-    const disponibles = producto ? Math.max(0, producto.stock - item.cantidad) : 0;
-    
-    return `
-    <li class="carrito-item" data-id="${item.id}">
-      <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}" loading="lazy">
-      <div class="carrito-item-info">
-        <span class="carrito-item-nombre">${item.nombre}</span>
-        <span class="carrito-item-precio">$U ${item.precio.toLocaleString('es-UY')} c/u</span>
-        <div class="carrito-item-controls">
-          <button class="disminuir-cantidad" data-id="${item.id}" aria-label="Reducir cantidad" ${item.cantidad <= 1 ? 'disabled' : ''}>-</button>
-          <span class="carrito-item-cantidad">${item.cantidad}</span>
-          <button class="aumentar-cantidad" data-id="${item.id}" aria-label="Aumentar cantidad" ${disponibles <= 0 ? 'disabled' : ''}>+</button>
-        </div>
-        <span class="carrito-item-subtotal">Subtotal: $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
+  const lista = document.getElementById("lista-carrito");
+  const total = document.getElementById("total");
+  lista.innerHTML = "";
+  let sumaTotal = 0;
+
+  carrito.forEach((producto, index) => {
+    const subtotal = producto.precio * producto.cantidad;
+    sumaTotal += subtotal;
+
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <img src="${producto.imagen}" alt="${producto.nombre}" />
+      <div class="info-producto">
+        <strong>${producto.nombre}</strong><br>
+        $U ${producto.precio} x ${producto.cantidad} = <strong>$U ${subtotal}</strong>
       </div>
-      <button class="eliminar-item" data-id="${item.id}" aria-label="Eliminar producto">
-        <i class="fas fa-trash"></i>
-      </button>
-    </li>
-  `}).join('');
-
-  // Actualizar el total
-  const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-  elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
-  
-  // Agregar eventos a los botones
-  document.querySelectorAll('.disminuir-cantidad').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const id = parseInt(e.target.dataset.id);
-      const item = carrito.find(item => item.id === id);
-      if (item && item.cantidad > 1) {
-        item.cantidad--;
-        guardarCarrito();
-        renderizarCarrito();
-        mostrarNotificacion(`Reducida cantidad de "${item.nombre}"`, 'info');
-      }
-    });
+      <div class="acciones-producto">
+        <button onclick="cambiarCantidad(${index}, -1)">−</button>
+        <span>${producto.cantidad}</span>
+        <button onclick="cambiarCantidad(${index}, 1)">+</button>
+        <button onclick="eliminarDelCarrito(${index})">🗑️</button>
+      </div>
+    `;
+    lista.appendChild(li);
   });
 
-  document.querySelectorAll('.aumentar-cantidad').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const id = parseInt(e.target.dataset.id);
-      const item = carrito.find(item => item.id === id);
-      const producto = productos.find(p => p.id === id);
-      
-      if (item && producto) {
-        const disponibles = Math.max(0, producto.stock - item.cantidad);
-        if (disponibles > 0) {
-          item.cantidad++;
-          guardarCarrito();
-          renderizarCarrito();
-          mostrarNotificacion(`Aumentada cantidad de "${item.nombre}"`, 'info');
-        } else {
-          mostrarNotificacion(`No hay más stock disponible de "${item.nombre}"`, 'error');
-        }
-      }
-    });
-  });
-
-  document.querySelectorAll('.eliminar-item').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const id = parseInt(e.target.dataset.id);
-      const item = carrito.find(item => item.id === id);
-      if (item) {
-        carrito = carrito.filter(item => item.id !== id);
-        guardarCarrito();
-        renderizarCarrito();
-        mostrarNotificacion(`"${item.nombre}" eliminado del carrito`, 'info');
-      }
-    });
-  });
+  total.innerHTML = `<strong>Total:</strong> $U ${sumaTotal}`;
+  document.getElementById("contador-carrito").textContent = carrito.length;
 }
 
+function cambiarCantidad(index, delta) {
+  carrito[index].cantidad += delta;
+  if (carrito[index].cantidad <= 0) {
+    carrito.splice(index, 1);
+  }
+  sessionStorage.setItem("carritoActual", JSON.stringify(carrito));
+  renderizarCarrito();
+}
+
+function eliminarDelCarrito(index) {
+  carrito.splice(index, 1);
+  sessionStorage.setItem("carritoActual", JSON.stringify(carrito));
+  renderizarCarrito();
+}
 // ===============================
 // ABRIR Y CERRAR CARRITO
 // ===============================
@@ -765,7 +726,7 @@ function actualizarResumenPedido() {
     envioTexto = 'Envío Montevideo ($150)';
   } else if (metodoEnvio === 'interior') {
     costoEnvio = 300;
-    envioTexto = 'Envío Interior ($250)';
+    envioTexto = 'Envío Interior ($300)';
   }
 
   // Agregar líneas de subtotal y envío
