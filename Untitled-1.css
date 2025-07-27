@@ -2122,122 +2122,48 @@ body.no-scroll {
 
 
 /* ========== CONTENEDOR GENERAL DEL SLIDER ========== */
-.filtro-rango-slider {
-  background: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  width: 260px;
-  margin: auto;
-  box-shadow: 0 5px 10px 3px rgba(67, 43, 165, 0.1);
-  color: #2E7D32; /* verde oscuro coherente con tu sitio */
+.slider-container {
+  position: relative;
+  width: 100%;
+  height: 30px;
 }
 
-/* ========== CONTENEDOR FLEX DEL SLIDER ========== */
-.slider {
-  display: flex;
-  align-items: center;
-  font-size: 16px;
-  color: #2E7D32;
-  gap: 0.8em;
-}
-
-/* ========== INPUT RANGE ========== */
-.slider input[type=range] {
-  -webkit-appearance: none;
-  appearance: none;
+.slider-container input[type=range] {
+  position: absolute;
   width: 100%;
   height: 4px;
-  background-color: #E3E3E3;
-  background-image: linear-gradient(currentColor, currentColor);
-  background-size: 0% 100%;
-  background-repeat: no-repeat;
-  cursor: pointer;
-  border-radius: 4px;
-  outline: none;
-  transition: background-size 0.3s ease;
-}
-
-/* ========== TRACK (ESTILO CRUZADO BROWSERS) ========== */
-.slider-precio {
-  background-color: #fff;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 240px;
-  font-family: 'Segoe UI', sans-serif;
-}
-
-.slider-precio label {
-  font-weight: bold;
-  color: #2E7D32;
-  margin-bottom: 10px;
-}
-
-.precio-valor {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #2E7D32;
-  margin-bottom: 10px;
-}
-
-.slider-precio input[type="range"] {
+  margin: 0;
   -webkit-appearance: none;
-  width: 100%;
-  height: 6px;
-  background: linear-gradient(to right, #4CAF50 0%, #4CAF50 0%, #E3E3E3 0%, #E3E3E3 100%);
-  border-radius: 5px;
-  outline: none;
-  transition: background 0.3s ease;
-  margin-bottom: 10px;
-  cursor: pointer;
+  background: none;
+  pointer-events: none; /* para evitar conflicto al solaparse */
 }
 
-.slider-precio input[type="range"]::-webkit-slider-thumb {
+.slider-container input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  height: 18px;
-  width: 18px;
+  height: 16px;
+  width: 16px;
   border-radius: 50%;
   background: #2E7D32;
   cursor: pointer;
-  border: 2px solid white;
-  box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
-  margin-top: -6px;
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
 }
 
-.slider-precio input[type="range"]::-moz-range-thumb {
-  height: 18px;
-  width: 18px;
-  border-radius: 50%;
-  background: #2E7D32;
-  cursor: pointer;
-  border: 2px solid white;
-  box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
+.slider-track {
+  position: absolute;
+  height: 4px;
+  background: #ddd;
+  border-radius: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
 }
 
-.rango-minmax {
-  width: 100%;
+.slider-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 0.9rem;
-  color: #555;
-  margin-bottom: 10px;
-}
-
-.btn-aplicar {
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
+  margin-top: 8px;
   font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
+  color: #2E7D32;
 }
-
-.btn-aplicar:hover {
-  background-color: #388E3C;
-}
-
