@@ -295,20 +295,29 @@ function actualizarCategorias() {
 }
 
 function filtrarProductos() {
-  return productos.filter(p => {
-    const { precioMin, precioMax, categoria, busqueda } = filtrosActuales;
-    const b = busqueda?.toLowerCase() || "";
-    const enCarrito = carrito.find(i => i.id === p.id);
-    const disponibles = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
-    
-    return (
-      (precioMin === null || p.precio >= precioMin) &&
-      (precioMax === null || p.precio <= precioMax) &&
-      (categoria === 'todos' || p.categoria === categoria) &&
-      (!b || p.nombre.toLowerCase().includes(b) || p.descripcion.toLowerCase().includes(b))
-    );
+  let productosFiltrados = window.todosLosProductos || [];
+
+  const categoriaSeleccionada = document.getElementById("filtro-categoria").value.toLowerCase();
+  const textoBusqueda = document.querySelector(".input-busqueda").value.toLowerCase();
+  
+  const min = parseInt(document.getElementById("min-slider").value);
+  const max = parseInt(document.getElementById("max-slider").value);
+
+  productosFiltrados = productosFiltrados.filter(producto => {
+    const nombre = producto.nombre.toLowerCase();
+    const descripcion = producto.descripcion.toLowerCase();
+    const precio = parseFloat(producto.precio.replace("$", "").replace("U", "").replace("u", "").trim());
+
+    const cumpleCategoria = categoriaSeleccionada === "todos" || producto.categoria.toLowerCase() === categoriaSeleccionada;
+    const cumpleBusqueda = nombre.includes(textoBusqueda) || descripcion.includes(textoBusqueda);
+    const cumplePrecio = !isNaN(precio) && precio >= min && precio <= max;
+
+    return cumpleCategoria && cumpleBusqueda && cumplePrecio;
   });
+
+  return productosFiltrados;
 }
+
 
 function crearCardProducto(p) {
   const enCarrito = carrito.find(i => i.id === p.id);
