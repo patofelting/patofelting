@@ -905,3 +905,34 @@ function preguntarStock(nombreProducto) {
   const cuerpo = encodeURIComponent(`Hola! Quisiera saber cuándo estará disponible el producto "${nombreProducto}". Muchas gracias!`);
   window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
 }
+
+
+const sliderMin = document.getElementById("slider-min");
+const sliderMax = document.getElementById("slider-max");
+const minValor = document.getElementById("min-valor");
+const maxValor = document.getElementById("max-valor");
+
+sliderMin.addEventListener("input", () => {
+  const min = parseInt(sliderMin.value);
+  const max = parseInt(sliderMax.value);
+  if (min > max) sliderMin.value = max;
+  minValor.textContent = sliderMin.value;
+});
+
+sliderMax.addEventListener("input", () => {
+  const min = parseInt(sliderMin.value);
+  const max = parseInt(sliderMax.value);
+  if (max < min) sliderMax.value = min;
+  maxValor.textContent = sliderMax.value;
+});
+
+// Esta función llama tu lógica de filtrado con los nuevos valores
+function aplicarFiltroSlider() {
+  const precioMin = parseInt(sliderMin.value);
+  const precioMax = parseInt(sliderMax.value);
+
+  document.getElementById('precio-min').value = precioMin;
+  document.getElementById('precio-max').value = precioMax;
+
+  aplicarFiltros(); // Asume que ya tenés esta función en tu código
+}
