@@ -123,25 +123,38 @@ input[type="submit"]:hover,
   color: var(--primary-color);
 }
 
+/* Menú Hamburguesa - Líneas Verdes */
 .hamburguesa {
-  font-size: 1.5rem;
-  display: none; /* Mantenemos esto para responsividad */
-  background: none;
+  display: none; /* Solo visible en móviles */
+  background: transparent;
   border: none;
-  color: rgba(126, 217, 87, 0.8); /* Verde claro con 80% de opacidad */
-  cursor: pointer;
-  transition: color 0.3s ease;
   padding: 8px;
-  z-index: 1000; /* Para que siempre esté sobre otros elementos */
+  cursor: pointer;
+  z-index: 1000; /* Asegura que esté sobre otros elementos */
 }
 
-.hamburguesa:hover {
-  color: #7ed957; /* Verde sólido al pasar el mouse */
+/* Estilo de las 3 líneas verdes */
+.hamburguesa::before,
+.hamburguesa::after,
+.hamburguesa span {
+  content: '';
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: #7ed957; /* Verde de Patofelting */
+  margin: 5px 0;
+  transition: all 0.3s ease;
 }
 
-/* Estilo cuando el menú está abierto */
-.hamburguesa[aria-expanded="true"] {
-  color: #2e7d32; /* Verde más oscuro para indicar estado activo */
+/* Opcional: Animación al abrir/cerrar */
+.hamburguesa[aria-expanded="true"]::before {
+  transform: translateY(7px) rotate(45deg);
+}
+.hamburguesa[aria-expanded="true"]::after {
+  transform: translateY(-7px) rotate(-45deg);
+}
+.hamburguesa[aria-expanded="true"] span {
+  opacity: 0;
 }
 /* Carrito */
 .carrito-item-controls {
