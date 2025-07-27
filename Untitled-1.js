@@ -621,17 +621,24 @@ function inicializarEventos() {
     if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
     elementos.avisoPreCompraModal.style.display = 'flex';
   });
-  elementos.btnEntendidoAviso?.addEventListener('click', () => {
-    mostrarNotificacion('Compra finalizada con éxito', 'exito');
-    carrito = [];
-    guardarCarrito();
-    actualizarUI();
-    toggleCarrito(false);
-    elementos.avisoPreCompraModal.style.display = 'none';
-  });
-  elementos.btnCancelarAviso?.addEventListener('click', () => {
-    elementos.avisoPreCompraModal.style.display = 'none';
-  });
+elementos.btnEntendidoAviso?.addEventListener('click', () => {
+  mostrarNotificacion('Compra finalizada con éxito', 'exito');
+  carrito = [];
+  guardarCarrito();
+  actualizarUI();
+  toggleCarrito(false);
+  elementos.avisoPreCompraModal.style.display = 'none';
+  
+  // Mostrar el modal de envío
+  const modalEnvio = document.getElementById('modal-datos-envio');
+  if (modalEnvio) {
+    modalEnvio.style.display = 'flex';
+    setTimeout(() => {
+      modalEnvio.classList.add('visible');
+    }, 10);
+    actualizarResumenPedido();
+  }
+});
 
   // Filtros
   elementos.inputBusqueda?.addEventListener('input', (e) => {
@@ -689,27 +696,17 @@ window.mostrarNotificacion = mostrarNotificacion;
 window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
 window.guardarCarrito = guardarCarrito;
 
-// Mostrar el modal de datos de envío luego del pre-compra
-document.getElementById('btn-entendido-aviso').addEventListener('click', function() {
-  document.getElementById('aviso-pre-compra-modal').hidden = true;
-  
-  // Mostrar el modal de envío con animación
-  const modalEnvio = document.getElementById('modal-datos-envio');
-  modalEnvio.hidden = false;
-  setTimeout(() => {
-    modalEnvio.classList.add('visible');
-  }, 10);
-  
-  // Llenar el resumen del pedido
-  actualizarResumenPedido();
-});
+
 
 // Función para actualizar el resumen del pedido
 function actualizarResumenPedido() {
   const resumenProductos = document.getElementById('resumen-productos');
   const resumenTotal = document.getElementById('resumen-total');
   
-  if (!resumenProductos || !resumenTotal) return;
+  if (!resumenProductos || !resumenTotal) {
+    console.error('Elementos del resumen no encontrados');
+    return;
+  }
 
   if (carrito.length === 0) {
     resumenProductos.innerHTML = '<p class="carrito-vacio">No hay productos en el carrito</p>';
@@ -755,7 +752,6 @@ function actualizarResumenPedido() {
   const total = subtotal + costoEnvio;
   resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
 }
-
 // Cerrar modal de envío
 document.getElementById('btn-cerrar-modal-envio').addEventListener('click', function() {
   const modalEnvio = document.getElementById('modal-datos-envio');
