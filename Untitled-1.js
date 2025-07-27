@@ -867,39 +867,88 @@ function preguntarStock(nombreProducto) {
   window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
 }
 
-// JavaScript
-const sliderMin = document.getElementById('slider-min');
-const sliderMax = document.getElementById('slider-max');
-const minValue = document.getElementById('min-value');
-const maxValue = document.getElementById('max-value');
-const track = document.querySelector('.slider-track');
+// Controladores para los sliders de precio
+const sliderMin = document.getElementById("slider-min");
+const sliderMax = document.getElementById("slider-max");
+const minValor = document.getElementById("min-valor");
+const maxValor = document.getElementById("max-valor");
+const track = document.querySelector('.slider-track'); // Elemento para el track coloreado
 
-function updateSlider() {
-  // Asegurar que el mínimo no supere al máximo
-  if (parseInt(sliderMin.value) > parseInt(sliderMax.value)) {
-    sliderMin.value = sliderMax.value;
+function actualizarSlider() {
+  // Obtener valores numéricos
+  const min = parseInt(sliderMin.value);
+  const max = parseInt(sliderMax.value);
+  
+  // Asegurar que min no supere a max
+  if (min > max) {
+    sliderMin.value = max;
+    filtrosActuales.precioMin = max;
+  } else {
+    filtrosActuales.precioMin = min;
   }
-  
+
+  // Asegurar que max no sea menor que min
+  if (max < min) {
+    sliderMax.value = min;
+    filtrosActuales.precioMax = min;
+  } else {
+    filtrosActuales.precioMax = max;
+  }
+
   // Actualizar valores mostrados
-  minValue.textContent = `$U${sliderMin.value}`;
-  maxValue.textContent = `$U${sliderMax.value}`;
-  
-  // Actualizar el track coloreado
-  const minPercent = (sliderMin.value / sliderMin.max) * 100;
-  const maxPercent = (sliderMax.value / sliderMax.max) * 100;
+  minValor.textContent = `$U${sliderMin.value}`;
+  maxValor.textContent = `$U${sliderMax.value}`;
+
+  // Actualizar el track coloreado (nueva mejora)
+  const minPercent = (min / parseInt(sliderMin.max)) * 100;
+  const maxPercent = (max / parseInt(sliderMax.max)) * 100;
   track.style.left = minPercent + '%';
   track.style.width = (maxPercent - minPercent) + '%';
-  track.style.backgroundColor = '#2E7D32';
-  
-  // Actualizar filtros
-  filtrosActuales.precioMin = parseInt(sliderMin.value);
-  filtrosActuales.precioMax = parseInt(sliderMax.value);
-  aplicarFiltros();
+
+  // Actualizar UI
+  paginaActual = 1;
+  renderizarProductos();
+}
+
+// Estilo visual del track (nueva mejora)
+function inicializarSliderStyles() {
+  const style = document.createElement('style');
+  style.textContent = `
+    .slider-track {
+      position: absolute;
+      height: 4px;
+      background: #4CAF50;
+      z-index: 1;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 2;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #2E7D32;
+      cursor: pointer;
+      border: 2px solid white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+  `;
+  document.head.appendChild(style);
 }
 
 // Event listeners
-sliderMin.addEventListener('input', updateSlider);
-sliderMax.addEventListener('input', updateSlider);
+sliderMin.addEventListener("input", actualizarSlider);
+sliderMax.addEventListener("input", actualizarSlider);
 
-// Inicializar
-updateSlider();
+// Inicialización
+inicializarSliderStyles();
+actualizarSlider(); // Para mostrar los valores iniciales
