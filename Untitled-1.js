@@ -898,19 +898,29 @@ function actualizarSlider() {
   renderizarProductos();
 }
 
-sliderMin.addEventListener("input", actualizarSlider);
-sliderMax.addEventListener("input", actualizarSlider);
+function actualizarSliderVisual() {
+  const minSlider = document.getElementById('precio-min');
+  const maxSlider = document.getElementById('precio-max');
+  const track = document.querySelector('.slider-track');
 
-// Controlador para el slider de precio
-const inputRango = document.getElementById('rango-precio');
-  const valorTexto = document.getElementById('valorPrecio');
+  const minVal = parseInt(minSlider.value);
+  const maxVal = parseInt(maxSlider.value);
+  const rangeMin = parseInt(minSlider.min);
+  const rangeMax = parseInt(minSlider.max);
 
-  function actualizarSlider() {
-    const valor = inputRango.value;
-    const porcentaje = (valor / inputRango.max) * 100;
-    inputRango.style.background = `linear-gradient(to right, #4CAF50 0%, #4CAF50 ${porcentaje}%, #E3E3E3 ${porcentaje}%, #E3E3E3 100%)`;
-    valorTexto.textContent = valor;
-  }
+  const percentMin = ((minVal - rangeMin) / (rangeMax - rangeMin)) * 100;
+  const percentMax = ((maxVal - rangeMin) / (rangeMax - rangeMin)) * 100;
 
-  inputRango.addEventListener('input', actualizarSlider);
-  actualizarSlider(); // Para inicializarlo al cargar
+  track.style.left = percentMin + '%';
+  track.style.width = (percentMax - percentMin) + '%';
+
+  document.getElementById('valor-min').textContent = `$U${minVal}`;
+  document.getElementById('valor-max').textContent = `$U${maxVal}`;
+}
+
+// Eventos para actualizar
+document.getElementById('precio-min').addEventListener('input', actualizarSliderVisual);
+document.getElementById('precio-max').addEventListener('input', actualizarSliderVisual);
+
+// Inicializar
+actualizarSliderVisual();
