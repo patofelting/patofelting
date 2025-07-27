@@ -118,32 +118,36 @@
 <section id="productos" class="productos">
   <div class="container">
     <h2>Nuestros Productos</h2>
+   
     <div class="filtros-container">
-      <div class="filtro-categoria">
-        <label for="filtro-categoria"><strong>CATEGORÍAS:</strong></label>
-        <select id="filtro-categoria">
-          <option value="todos">Todos</option>
-          <option value="animales">Animales</option>
-          <option value="fantasia">Fantasía</option>
-        </select>
-      </div>
-      <div class="price-filter">
-        <div class="price-header">
-          <label><strong>PRECIO:</strong></label>
-          <div class="price-values">
-            <span id="min-price">$0</span> - <span id="max-price">$3.000</span>
-          </div>
-        </div>
-        <div class="range-slider">
-          <input type="range" min="0" max="1000" value="0" class="slider" id="min-slider">
-          <input type="range" min="0" max="1000" value="3000" class="slider" id="max-slider">
-          <div class="track"></div>
-          <div class="range"></div>
-          <div class="range-highlight"></div>
-        </div>
-        <button id="resetear-rango" class="reset-btn">RESETEAR</button>
-      </div>
+  <div class="filtro-categoria">
+    <label for="filtro-categoria">Categorías:</label>
+    <select id="filtro-categoria">
+      <option value="todos"></option>
+      <option value="animales"></option>
+      <option value="fantasia"></option>
+    </select>
+  </div>
+
+
+     <div class="price-filter">
+    <div class="price-header">
+      <span id="min-price">$U0</span>
+      <span id="max-price">$U3000</span>
     </div>
+    <div class="range-slider">
+      <input type="range" id="min-slider" min="0" max="3000" value="0" class="slider">
+      <input type="range" id="max-slider" min="0" max="3000" value="3000" class="slider">
+      <div class="track"></div>
+      <div class="range"></div>
+    </div>
+    <button class="aplicar-rango-btn" onclick="aplicarRango()">Aplicar</button>
+  </div>
+
+  <div class="filtro-busqueda">
+    <input type="text" class="input-busqueda" placeholder="Buscar por nombre o descripción...">
+  </div>
+</div>
     <div id="galeria-productos" class="galeria-productos"></div>
   </div>
 </section>    
