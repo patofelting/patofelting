@@ -936,3 +936,35 @@ function aplicarFiltroSlider() {
 
   aplicarFiltros(); // Asume que ya tenés esta función en tu código
 }
+
+
+function actualizarSlider() {
+  const min = parseInt(sliderMin.value);
+  const max = parseInt(sliderMax.value);
+  if (min > max) {
+    sliderMin.value = max;
+    filtrosActuales.precioMin = max;
+  } else {
+    filtrosActuales.precioMin = min;
+  }
+
+  if (max < min) {
+    sliderMax.value = min;
+    filtrosActuales.precioMax = min;
+  } else {
+    filtrosActuales.precioMax = max;
+  }
+
+  minValor.textContent = sliderMin.value;
+  maxValor.textContent = sliderMax.value;
+
+  paginaActual = 1;
+  renderizarProductos();
+}
+
+sliderMin.addEventListener("input", actualizarSlider);
+sliderMax.addEventListener("input", actualizarSlider);
+
+function aplicarFiltroSlider() {
+  actualizarSlider(); // por si alguien presiona el botón igual
+}
