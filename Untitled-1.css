@@ -3268,3 +3268,36 @@ select:focus,
     justify-content: stretch;
   }
 }
+
+
+/* === Fondo con patrón de flor de lis violeta === */
+.productos {
+  background-image: url('img/fondo-flor-lis.png');
+  background-repeat: repeat;
+  background-size: 80px;
+  background-position: center;
+  background-attachment: fixed;
+  background-color: #ffffff;
+  padding-top: 60px;
+}
+
+/* Título centrado y destacado */
+.productos h2 {
+  text-align: center;
+  font-size: 2.5rem;
+  color: var(--primary-color);
+  font-weight: 800;
+  margin-bottom: 40px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+  position: relative;
+}
+
+.productos h2::after {
+  content: "";
+  display: block;
+  width: 60px;
+  height: 4px;
+  background-color: var(--accent-color);
+  margin: 10px auto 0;
+  border-radius: 2px;
+}
