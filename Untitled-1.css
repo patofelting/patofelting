@@ -710,13 +710,6 @@ blockquote {
     text-align: center;
   }
 
-  .aplicar-rango-btn,
-  .boton-resetear-filtros {
-    width: 100%;
-    min-width: 0;
-    margin-left: 0;
-    margin-top: 7px;
-  }
 
 
 .galeria-productos {
@@ -3422,4 +3415,27 @@ button {
   display: flex;
   justify-content: space-between;
 }
- 
+ .filtro-precio-slider {
+  margin: 20px auto;
+  padding: 20px;
+  background: var(--light-gray);
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 400px;
+  text-align: center;
+}
+.slider-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.slider-container span {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
