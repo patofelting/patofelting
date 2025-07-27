@@ -1394,6 +1394,7 @@ button:active {
   text-align: left;
   font-weight: var(--font-weight-bold);
   background-color: white;
+  color: var(--text-color); /* 🔧 color negro por defecto */
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1402,10 +1403,9 @@ button:active {
   border: none;
 }
 
-.faq-toggle::after {
-  content: '+';
-  font-size: 1.5rem;
-  transition: var(--transition);
+.faq-toggle:hover {
+  background-color: white; /* ✅ el fondo sigue blanco */
+  color: var(--primary-color); /* ✅ el texto cambia a verde */
 }
 
 .faq-toggle[aria-expanded="true"]::after {
