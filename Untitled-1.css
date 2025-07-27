@@ -2120,13 +2120,22 @@ body.no-scroll {
 
 /* Variables para fácil mantenimiento */
 .price-filter {
-  width: 300px;
-  font-family: Arial, sans-serif;
+  width: 100%;
+  max-width: 360px;
+  font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+  padding: 1rem;
+  border-radius: 12px;
+  background-color: #fff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  margin: 0 auto;
 }
 
 .price-header {
   display: flex;
   justify-content: space-between;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a1a1a;
   margin-bottom: 10px;
 }
 
@@ -2141,7 +2150,7 @@ body.no-scroll {
   width: 100%;
   pointer-events: none;
   -webkit-appearance: none;
-  height: 4px;
+  height: 6px;
   background: transparent;
   z-index: 3;
 }
@@ -2149,38 +2158,55 @@ body.no-scroll {
 .slider::-webkit-slider-thumb {
   pointer-events: all;
   -webkit-appearance: none;
-  width: 20px;
-  height: 20px;
+  appearance: none;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: white;
   border: 2px solid #007AFF;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
 }
 
 .track {
   position: absolute;
   width: 100%;
-  height: 4px;
+  height: 6px;
   background: #e0e0e0;
   top: 50%;
   transform: translateY(-50%);
-  border-radius: 2px;
+  border-radius: 3px;
 }
 
 .range {
   position: absolute;
-  height: 4px;
-  background: #34C759; /* Verde estilo Apple */
+  height: 6px;
+  background: #34C759; /* Verde Apple */
   top: 50%;
   transform: translateY(-50%);
-  border-radius: 2px;
+  border-radius: 3px;
   z-index: 2;
+  transition: left 0.3s ease, width 0.3s ease;
 }
 
 .reset-btn {
   margin-top: 15px;
+  display: inline-block;
+  font-size: 0.95rem;
+  font-weight: 500;
   background: none;
   border: none;
   color: #007AFF;
   cursor: pointer;
+  text-transform: uppercase;
+  transition: color 0.2s ease;
+}
+
+.reset-btn:hover {
+  color: #0051cc;
 }
