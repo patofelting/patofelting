@@ -3148,6 +3148,7 @@ body > div.notificacion.info { background: #1976d2 !important; }
 }
 
 /*---------------Filtos----------------*/
+/* --------------- Filtros Mejorados --------------- */
 .filtros-container {
   display: grid;
   grid-template-areas:
@@ -3156,53 +3157,171 @@ body > div.notificacion.info { background: #1976d2 !important; }
     "min      max"
     "aplicar  reset";
   grid-template-columns: 1fr 1fr;
-  gap: 20px 32px;
-  padding: 48px 36px;
-  max-width: 760px;
+  gap: 20px;
+  padding: 30px;
+  max-width: 800px;
   margin: 40px auto;
-  background: #f8fbf8;
-  border-radius: 18px;
-  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.04);
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(118, 192, 67, 0.15);
 }
-/* Asignar áreas */
-.filtro-categoria    { grid-area: categoria; }
-.filtro-min          { grid-area: min; }
-.filtro-max          { grid-area: max; }
-.filtro-aplicar      { grid-area: aplicar; display: flex; justify-content: center; }
-.filtro-reset        { grid-area: reset; display: flex; justify-content: center; }
-.filtro-busqueda     { grid-area: buscar; text-align: center; }
 
-/* Etiquetas */
+/* Estilos para grupos de filtros */
+.filtro-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Etiquetas mejoradas */
 .filtros-container label {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  color: #1e4021;
-  margin-bottom: 6px;
+  color: var(--text-color);
+  margin-bottom: 4px;
   display: block;
-}
-
-/* Select e Inputs */
-select,
-.input-rango-filtro,
-.input-busqueda {
-  width: 100%;
-  padding: 13px 16px;
-  border: 1.5px solid #dce9d8;
-  border-radius: 10px;
-  background: #ffffff;
-  font-size: 1rem;
-  box-shadow: inset 1px 1px 5px rgba(0,0,0,0.03),
-              inset -1px -1px 5px rgba(255,255,255,0.8);
-  transition: 0.25s ease;
   text-align: center;
 }
 
-select:focus,
-.input-rango-filtro:focus,
-.input-busqueda:focus {
-  border-color: #76C043;
-  box-shadow: 0 0 0 2px #dbfdd0;
+/* Inputs y selects mejorados */
+.filtros-container select,
+.filtros-container .input-rango-filtro,
+.filtros-container .input-busqueda {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--medium-gray);
+  border-radius: 10px;
+  background: white;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.filtros-container select:focus,
+.filtros-container .input-rango-filtro:focus,
+.filtros-container .input-busqueda:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(118, 192, 67, 0.2);
   outline: none;
+}
+
+/* Botones mejorados */
+.aplicar-rango-btn,
+.boton-resetear-filtros {
+  padding: 12px 20px;
+  width: 100%;
+  font-weight: 600;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.aplicar-rango-btn {
+  background: var(--primary-color);
+  color: white;
+  box-shadow: 0 4px 12px rgba(118, 192, 67, 0.3);
+}
+
+.boton-resetear-filtros {
+  background: white;
+  color: var(--text-color);
+  border: 1px solid var(--medium-gray);
+}
+
+.aplicar-rango-btn:hover {
+  background: var(--accent-color);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(118, 192, 67, 0.4);
+}
+
+.boton-resetear-filtros:hover {
+  background: var(--light-gray);
+  transform: translateY(-2px);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+/* Buscador centrado */
+.filtro-busqueda {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.input-busqueda {
+  width: 100%;
+  max-width: 500px;
+}
+
+/* Indicador de rango de precios */
+.rango-precio-indicador {
+  font-size: 0.9rem;
+  color: var(--dark-gray);
+  text-align: center;
+  margin-top: 8px;
+}
+
+/* Efecto de carga para filtros */
+.filtro-cargando::after {
+  content: "";
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+  margin-left: 8px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* --------------- Responsive --------------- */
+@media (max-width: 700px) {
+  .filtros-container {
+    grid-template-areas:
+      "buscar"
+      "categoria"
+      "min"
+      "max"
+      "aplicar"
+      "reset";
+    grid-template-columns: 1fr;
+    padding: 25px 20px;
+    gap: 16px;
+  }
+  
+  .filtros-container label {
+    text-align: left;
+  }
+  
+  .aplicar-rango-btn,
+  .boton-resetear-filtros {
+    padding: 14px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .filtros-container {
+    padding: 20px 15px;
+    border-radius: 12px;
+  }
+  
+  .filtros-container select,
+  .filtros-container .input-rango-filtro,
+  .filtros-container .input-busqueda {
+    padding: 10px 14px;
+    font-size: 0.95rem;
+  }
 }
 
 /* Botones */
