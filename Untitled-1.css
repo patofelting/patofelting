@@ -3333,3 +3333,21 @@ select:focus,
   transform: translateY(-5px);
   box-shadow: 0 8px 20px rgba(94, 180, 56, 0.12);
 }
+
+
+/* Botón de aviso de stock */
+.boton-aviso-stock {
+  background-color: var(--warning-color);
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  margin-top: 10px;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 0.9rem;
+}
+
+.boton-aviso-stock:hover {
+  background-color: #e59400;
+}
