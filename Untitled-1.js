@@ -878,18 +878,16 @@ function updateRange() {
   const minVal = parseInt(minSlider.value);
   const maxVal = parseInt(maxSlider.value);
   
-  minPrice.textContent = minVal;
-  maxPrice.textContent = maxVal;
+  minPrice.textContent = `$${minVal.toLocaleString('es-UY')}`; // Formato con símbolo
+  maxPrice.textContent = `$${maxVal.toLocaleString('es-UY')}`;
   
   range.style.left = (minVal / 1000 * 100) + '%';
   range.style.width = ((maxVal - minVal) / 1000 * 100) + '%';
   
-  // Actualizar filtrosActuales con los nuevos valores
   filtrosActuales.precioMin = minVal;
   filtrosActuales.precioMax = maxVal;
-  aplicarFiltros(); // Aplicar el filtro automáticamente al cambiar el rango
+  aplicarFiltros();
 }
-
 minSlider.addEventListener('input', updateRange);
 maxSlider.addEventListener('input', updateRange);
 
