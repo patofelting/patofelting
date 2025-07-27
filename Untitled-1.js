@@ -852,8 +852,3 @@ document.getElementById('form-envio').addEventListener('submit', function(e) {
 });
 
 
-document.onkeydown = function(e) {
-  if (e.ctrlKey && (e.key === "u" || e.key === "s" || e.key === "c" || e.key === "i")) {
-    return false;
-  }
-};
