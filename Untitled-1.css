@@ -1362,7 +1362,8 @@ button:active {
 
 /* FAQ Section */
 .faq-section {
-  color: black;
+  padding: 80px 0;
+  background-color: var(--light-gray);
   text-align: center;
 }
 
