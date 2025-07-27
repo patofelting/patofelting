@@ -5,7 +5,7 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
-const API_STOCK_URL = 'https://script.google.com/macros/s/AKfycbxyAtmN9fmeuhdxTytO5Nb2_LtJSmD8Tj3jxR9iFsn8VezxxYLG35hk_-cFRwD8MKhfBA/exec';
+
 // ===============================
 // ESTADO GLOBAL
 // ===============================
@@ -66,59 +66,6 @@ function mostrarNotificacion(mensaje, tipo = 'exito') {
   }, 2500);
 }
 
-
-
-
-
-// Función para verificar stock en tiempo real
-async function verificarStock(id, cantidad) {
-  return new Promise((resolve) => {
-    // Crear un nombre único para la función de callback
-    const callbackName = `jsonpCallback_${Date.now()}`;
-    
-    // Crear el script dinámicamente
-    const script = document.createElement('script');
-    const url = `https://script.google.com/macros/s/AKfycbxyAtmN9fmeuhdxTytO5Nb2_LtJSmD8Tj3jxR9iFsn8VezxxYLG35hk_-cFRwD8MKhfBA/exec?` +
-                `id=${id}&cantidad=${cantidad}&action=verify&callback=${callbackName}`;
-    
-    script.src = url;
-    
-    // Crear la función global temporal para el callback
-    window[callbackName] = (data) => {
-      // Limpiar después de recibir la respuesta
-      delete window[callbackName];
-      document.body.removeChild(script);
-      resolve(data);
-    };
-    
-    // Manejar errores
-    script.onerror = () => {
-      delete window[callbackName];
-      document.body.removeChild(script);
-      resolve({ success: false, error: 'Error de conexión' });
-    };
-    
-    document.body.appendChild(script);
-  });
-}
-// Función para reservar stock
-async function reservarStock(id, cantidad) {
-  try {
-    const response = await fetch(API_STOCK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: id,
-        cantidad: cantidad,
-        action: 'reserve'
-      })
-    });
-    return await response.json();
-  } catch (error) {
-    console.error('Error al reservar stock:', error);
-    return { success: false, error: 'Error de conexión' };
-  }
-}
 // ===============================
 // CARRITO: GUARDAR, CARGAR Y RENDERIZAR
 // ===============================
@@ -159,74 +106,32 @@ function actualizarContadorCarrito() {
   }
 }
 
-async function agregarAlCarrito(id, cantidad = 1) {
-  try {
-    const prod = productos.find(p => p.id === id);
-    if (!prod) {
-      mostrarNotificacion('Producto no encontrado', 'error');
-      return;
-    }
-
-    cantidad = parseInt(cantidad, 10);
-    if (isNaN(cantidad) || cantidad < 1) {
-      mostrarNotificacion('Cantidad inválida', 'error');
-      return;
-    }
-
-    // Mostrar carga mientras se verifica
-    mostrarCarga(true);
-
-    // Verificar stock
-    const { success, error, stockRestante } = await verificarStock(id, cantidad);
-    
-    if (!success) {
-      mostrarNotificacion(error || 'No hay suficiente stock disponible', 'error');
-      return;
-    }
-
-    // Actualizar stock local
-    prod.stock = stockRestante;
-
-    // Manejar el carrito
-    const itemIndex = carrito.findIndex(item => item.id === id);
-    if (itemIndex >= 0) {
-      carrito[itemIndex].cantidad += cantidad;
-    } else {
-      carrito.push({
-        id,
-        nombre: prod.nombre,
-        precio: prod.precio,
-        cantidad,
-        imagen: prod.imagenes[0] || PLACEHOLDER_IMAGE
-      });
-    }
-
-    guardarCarrito();
-    actualizarUI();
-    mostrarNotificacion(`"${prod.nombre}" agregado al carrito`, 'éxito');
-
-  } catch (error) {
-    console.error('Error en agregarAlCarrito:', error);
-    mostrarNotificacion('Error al agregar al carrito', 'error');
-  } finally {
-    mostrarCarga(false);
+function agregarAlCarrito(id, cantidad = 1) {
+  const prod = productos.find(p => p.id === id);
+  if (!prod) return mostrarNotificacion('Producto no encontrado', 'error');
+  cantidad = parseInt(cantidad, 10);
+  if (isNaN(cantidad) || cantidad < 1) return mostrarNotificacion('Cantidad inválida', 'error');
+  const enCarrito = carrito.find(item => item.id === id);
+  const enCarritoCant = enCarrito ? enCarrito.cantidad : 0;
+  const disponibles = Math.max(0, prod.stock - enCarritoCant);
+  if (cantidad > disponibles) {
+    mostrarNotificacion(`Solo hay ${disponibles} unidades disponibles`, 'error');
+    return;
   }
-}
-
-// Función auxiliar para mostrar estado de carga
-function mostrarCarga(mostrar) {
-  const loader = document.getElementById('product-loader');
-  if (loader) {
-    loader.style.display = mostrar ? 'block' : 'none';
+  if (enCarrito) {
+    enCarrito.cantidad += cantidad;
+  } else {
+    carrito.push({
+      id,
+      nombre: prod.nombre,
+      precio: prod.precio,
+      cantidad,
+      imagen: prod.imagenes[0] || PLACEHOLDER_IMAGE
+    });
   }
-}
-
-// Función auxiliar para mostrar/ocultar loader
-function mostrarLoader(mostrar) {
-  const loader = document.getElementById('product-loader');
-  if (loader) {
-    loader.style.display = mostrar ? 'flex' : 'none';
-  }
+  guardarCarrito();
+  actualizarUI();
+  mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
 }
 
 function renderizarCarrito() {
@@ -902,10 +807,10 @@ document.getElementById('select-envio').addEventListener('change', function() {
 
 // Validar y enviar por WhatsApp
 // Reemplaza tu función actual por esta versión mejorada
-document.getElementById('form-envio').addEventListener('submit', async function(e) {
+document.getElementById('form-envio').addEventListener('submit', function(e) {
   e.preventDefault();
   
-  // Validar datos del formulario
+  // 1. Obtener y validar datos del formulario
   const nombre = document.getElementById('input-nombre').value.trim();
   const apellido = document.getElementById('input-apellido').value.trim();
   const telefono = document.getElementById('input-telefono').value.trim();
@@ -913,42 +818,63 @@ document.getElementById('form-envio').addEventListener('submit', async function(
   const direccion = envio !== 'retiro' ? document.getElementById('input-direccion').value.trim() : '';
   const notas = document.getElementById('input-notas').value.trim();
 
+  // Validación de campos obligatorios
   if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
     mostrarNotificacion('Por favor complete todos los campos obligatorios', 'error');
     return;
   }
 
-  // Verificar stock nuevamente antes de finalizar
-  for (const item of carrito) {
-    const verificacion = await verificarStock(item.id, item.cantidad);
-    if (!verificacion.success) {
-      mostrarNotificacion(`Lo sentimos, el producto "${item.nombre}" ya no tiene stock suficiente`, 'error');
-      // Actualizar UI
-      const prod = productos.find(p => p.id === item.id);
-      if (prod) prod.stock = verificacion.stockRestante;
-      actualizarUI();
-      return;
-    }
+  // 2. Construir el mensaje con formato
+  let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n`;
+  mensaje += `*📋 Detalles del pedido:*\n`;
+  
+  // Productos del carrito
+  carrito.forEach(item => {
+    mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}\n`;
+  });
+  
+  // Totales
+  const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+  const costoEnvio = envio === 'montevideo' ? 150 : envio === 'interior' ? 300 : 0;
+  const total = subtotal + costoEnvio;
+  
+  mensaje += `\n*💰 Total:*\n`;
+  mensaje += `Subtotal: $U ${subtotal.toLocaleString('es-UY')}\n`;
+  mensaje += `Envío: $U ${costoEnvio.toLocaleString('es-UY')}\n`;
+  mensaje += `*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
+  
+  // Datos del cliente
+  mensaje += `*👤 Datos del cliente:*\n`;
+  mensaje += `Nombre: ${nombre} ${apellido}\n`;
+  mensaje += `Teléfono: ${telefono}\n`;
+  mensaje += `Método de envío: ${envio === 'montevideo' ? 'Envío Montevideo ($150)' : envio === 'interior' ? 'Envío Interior ($300)' : 'Retiro en local (Gratis)'}\n`;
+  
+  if (envio !== 'retiro') {
+    mensaje += `Dirección: ${direccion}\n`;
+  }
+  
+  if (notas) {
+    mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
   }
 
-  // Construir mensaje para WhatsApp (igual que antes)
-  let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*📋 Detalles del pedido:*\n`;
-  // ... (resto del código del mensaje)
-
-  // Enviar por WhatsApp
+  // 3. Solución para evitar que se borre el texto
   const numeroWhatsApp = '59893566283';
+  
+  // Método 1: Usar sessionStorage como puente
   sessionStorage.setItem('ultimoPedidoWhatsApp', mensaje);
   const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
   
+  // Abrir en nueva pestaña
   const nuevaPestaña = window.open(urlWhatsApp, '_blank');
   
+  // Método alternativo si falla (para móviles)
   setTimeout(() => {
     if (!nuevaPestaña || nuevaPestaña.closed) {
       window.location.href = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${encodeURIComponent(mensaje)}`;
     }
   }, 500);
 
-  // Limpiar carrito solo si todo salió bien
+  // 4. Limpiar el formulario después de enviar
   setTimeout(() => {
     document.getElementById('modal-datos-envio').classList.remove('visible');
     setTimeout(() => {
