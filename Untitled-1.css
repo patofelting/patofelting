@@ -125,11 +125,24 @@ input[type="submit"]:hover,
 
 .hamburguesa {
   font-size: 1.5rem;
-  display: none;
+  display: none; /* Mantenemos esto para responsividad */
   background: none;
-  color: var(--text-color);
+  border: none;
+  color: rgba(126, 217, 87, 0.8); /* Verde claro con 80% de opacidad */
+  cursor: pointer;
+  transition: color 0.3s ease;
+  padding: 8px;
+  z-index: 1000; /* Para que siempre esté sobre otros elementos */
 }
 
+.hamburguesa:hover {
+  color: #7ed957; /* Verde sólido al pasar el mouse */
+}
+
+/* Estilo cuando el menú está abierto */
+.hamburguesa[aria-expanded="true"] {
+  color: #2e7d32; /* Verde más oscuro para indicar estado activo */
+}
 /* Carrito */
 .carrito-item-controls {
   display: flex;
