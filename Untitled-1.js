@@ -870,14 +870,16 @@ function preguntarStock(nombreProducto) {
 // Controladores para los sliders de precio
 const sliderMin = document.getElementById("slider-min");
 const sliderMax = document.getElementById("slider-max");
-const minValor = document.getElementById("min-valor");
-const maxValor = document.getElementById("max-valor");
+const minValue = document.getElementById("min-value");
+const maxValue = document.getElementById("max-value");
 const track = document.querySelector('.slider-track');
 
 function actualizarSlider() {
+  // Obtener valores
   const min = parseInt(sliderMin.value);
   const max = parseInt(sliderMax.value);
   
+  // Asegurar que min no supere a max
   if (min > max) {
     sliderMin.value = max;
     filtrosActuales.precioMin = max;
@@ -892,20 +894,32 @@ function actualizarSlider() {
     filtrosActuales.precioMax = max;
   }
 
-  minValor.textContent = `$U${min}`;
-  maxValor.textContent = `$U${max}`;
+  // Actualizar valores mostrados
+  minValue.textContent = `$U${min}`;
+  maxValue.textContent = `$U${max}`;
 
+  // Actualizar track coloreado
   const minPercent = (min / 3000) * 100;
   const maxPercent = (max / 3000) * 100;
-  track.style.left = minPercent + '%';
-  track.style.width = (maxPercent - minPercent) + '%';
+  track.style.setProperty('--min-percent', `${minPercent}%`);
+  track.style.setProperty('--max-percent', `${maxPercent}%`);
 
+  // Actualizar productos
   paginaActual = 1;
   renderizarProductos();
 }
 
+// Event listeners
 sliderMin.addEventListener("input", actualizarSlider);
 sliderMax.addEventListener("input", actualizarSlider);
+
+// Resetear filtros
+document.querySelector('.boton-resetear-filtros').addEventListener('click', function() {
+  sliderMin.value = 0;
+  sliderMax.value = 3000;
+  actualizarSlider();
+  mostrarNotificacion('Filtros de precio reseteados', 'info');
+});
 
 // Inicializar
 actualizarSlider();
