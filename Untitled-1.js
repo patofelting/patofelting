@@ -874,3 +874,15 @@ document.getElementById('form-envio').addEventListener('submit', function(e) {
 });
 
 
+function abrirCarrito() {
+  document.getElementById("carrito-panel").classList.add("abierto");
+  document.querySelector(".carrito-overlay").classList.add("visible");
+}
+
+function cerrarCarrito() {
+  document.getElementById("carrito-panel").classList.remove("abierto");
+  document.querySelector(".carrito-overlay").classList.remove("visible");
+}
+
+document.querySelector(".cerrar-carrito").addEventListener("click", cerrarCarrito);
+document.querySelector(".carrito-overlay").addEventListener("click", cerrarCarrito);
