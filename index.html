@@ -6,7 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Patofelting - Creaciones en Fieltro</title>
   <link rel="stylesheet" href="Untitled-1.css" />
-
+<svg width="0" height="0" style="position:absolute;">
+  <pattern id="lana-pattern" patternUnits="userSpaceOnUse" width="100" height="100">
+    <path d="M20,50 Q35,30 50,50 Q65,70 80,50" stroke="#7ed957" stroke-width="1.5" fill="none" opacity="0.1"/>
+    <path d="M10,70 Q25,50 40,70 Q55,90 70,70" stroke="#5a8f40" stroke-width="1" fill="none" opacity="0.05"/>
+  </pattern>
+</svg>
   <!-- Librerías -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
@@ -134,15 +139,16 @@
     </select>
   </div>
       <!-- Precio Min y Max -->
-       <div class="filtro-min">
-    <label for="precio-min">Precio MIN:</label>
-    <input type="number" id="precio-min" class="input-rango-filtro" placeholder="Ejemplo: 100">
+    <div class="filtro-precio-slider">
+  <label for="slider-precio">Precio:</label>
+  <div class="slider-container">
+    <span id="precio-min-mostrado">$U <span id="min-valor">0</span></span>
+    <input type="range" id="slider-min" min="0" max="3000" step="50" value="0">
+    <input type="range" id="slider-max" min="0" max="3000" step="50" value="3000">
+    <span id="precio-max-mostrado">$U <span id="max-valor">3000</span></span>
   </div>
-
-  <div class="filtro-max">
-    <label for="precio-max">Precio MÁX:</label>
-    <input type="number" id="precio-max" class="input-rango-filtro" placeholder="Ej: 500">
-  </div>
+  <button class="aplicar-rango-btn" onclick="aplicarFiltroSlider()">Aplicar</button>
+</div>
 <div class="filtro-busqueda">
     <input type="text" class="input-busqueda" placeholder="Buscar por nombre o descripción...">
   </div>
