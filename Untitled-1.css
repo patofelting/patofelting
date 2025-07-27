@@ -124,37 +124,41 @@ input[type="submit"]:hover,
 }
 
 .hamburguesa {
-  font-size: 1.8rem;
-  display: none; /* Mostrar en responsive con media query */
+  font-size: 1.5rem;
+  display: none;
   background: none;
-  border: none;
-  color: #000;
-  padding: 0.5rem;
-  cursor: pointer;
-  transition: color 0.3s ease;
+  color: var(--text-color);
 }
-
-.hamburguesa:hover {
-  color: var(--primary-color); /* Verde al pasar el cursor */
-}
-
-/* Estilo para las líneas de menú si usás un ícono SVG o span */
-.hamburguesa span,
-.hamburguesa i,
-.hamburguesa svg {
-  stroke: #000;
-  transition: stroke 0.3s ease;
-}
-
-.hamburguesa:hover span,
-.hamburguesa:hover i,
-.hamburguesa:hover svg {
-  stroke: var(--primary-color);
-}
-
+/* RESPONSIVE */
 @media (max-width: 768px) {
   .hamburguesa {
-    display: inline-block;
+    display: block;
+  }
+  .menu {
+    position: fixed;
+    top: 80px;
+    left: 0;
+    width: 100%;
+    background-color: white;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0;
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+    transform: translateY(-150%);
+    transition: transform 0.3s ease;
+    z-index: 999;
+  }
+  .menu.active {
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 576px) {
+  .nav-container {
+    padding: 10px 15px;
+  }
+  .logo-text {
+    font-size: 1.2rem;
   }
 }
 
