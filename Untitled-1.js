@@ -31,11 +31,11 @@ const elementos = {
   listaCarrito: getElement('lista-carrito'),
   totalCarrito: getElement('total'),
   contadorCarrito: getElement('contador-carrito'),
-  inputBusqueda: getElement('input-busqueda'),
+  inputBusqueda: document.querySelector('.input-busqueda'),
   selectCategoria: getElement('filtro-categoria'),
   precioMinInput: getElement('precio-min'),
   precioMaxInput: getElement('precio-max'),
-  botonResetearFiltros: getElement('boton-resetear-filtros'),
+  botonResetearFiltros: document.querySelector('.boton-resetear-filtros'),
   carritoBtnMain: getElement('carrito-btn-main'),
   carritoPanel: getElement('carrito-panel'),
   carritoOverlay: document.querySelector('.carrito-overlay'),
@@ -47,7 +47,8 @@ const elementos = {
   btnCancelarAviso: getElement('btn-cancelar-aviso'),
   productLoader: getElement('product-loader'),
   hamburguesa: document.querySelector('.hamburguesa'),
-  menu: getElement('menu')
+  menu: getElement('menu'),
+  aplicarRangoBtn: document.querySelector('.aplicar-rango-btn')
 };
 
 // ===============================
@@ -142,16 +143,20 @@ function renderizarCarrito() {
     return;
   }
   
-  elementos.listaCarrito.innerHTML = carrito.map(item => `
+  elementos.listaCarrito.innerHTML = carrito.map(item => {
+    const producto = productos.find(p => p.id === item.id);
+    const disponibles = producto ? Math.max(0, producto.stock - item.cantidad) : 0;
+    
+    return `
     <li class="carrito-item" data-id="${item.id}">
       <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}" loading="lazy">
       <div class="carrito-item-info">
         <span class="carrito-item-nombre">${item.nombre}</span>
         <span class="carrito-item-precio">$U ${item.precio.toLocaleString('es-UY')} c/u</span>
         <div class="carrito-item-controls">
-          <button class="disminuir-cantidad" data-id="${item.id}" aria-label="Reducir cantidad">-</button>
+          <button class="disminuir-cantidad" data-id="${item.id}" aria-label="Reducir cantidad" ${item.cantidad <= 1 ? 'disabled' : ''}>-</button>
           <span class="carrito-item-cantidad">${item.cantidad}</span>
-          <button class="aumentar-cantidad" data-id="${item.id}" aria-label="Aumentar cantidad">+</button>
+          <button class="aumentar-cantidad" data-id="${item.id}" aria-label="Aumentar cantidad" ${disponibles <= 0 ? 'disabled' : ''}>+</button>
         </div>
         <span class="carrito-item-subtotal">Subtotal: $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
       </div>
@@ -159,7 +164,7 @@ function renderizarCarrito() {
         <i class="fas fa-trash"></i>
       </button>
     </li>
-  `).join('');
+  `}).join('');
 
   // Actualizar el total
   const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
@@ -174,6 +179,7 @@ function renderizarCarrito() {
         item.cantidad--;
         guardarCarrito();
         renderizarCarrito();
+        mostrarNotificacion(`Reducida cantidad de "${item.nombre}"`, 'info');
       }
     });
   });
@@ -182,10 +188,18 @@ function renderizarCarrito() {
     btn.addEventListener('click', (e) => {
       const id = parseInt(e.target.dataset.id);
       const item = carrito.find(item => item.id === id);
-      if (item) {
-        item.cantidad++;
-        guardarCarrito();
-        renderizarCarrito();
+      const producto = productos.find(p => p.id === id);
+      
+      if (item && producto) {
+        const disponibles = Math.max(0, producto.stock - item.cantidad);
+        if (disponibles > 0) {
+          item.cantidad++;
+          guardarCarrito();
+          renderizarCarrito();
+          mostrarNotificacion(`Aumentada cantidad de "${item.nombre}"`, 'info');
+        } else {
+          mostrarNotificacion(`No hay más stock disponible de "${item.nombre}"`, 'error');
+        }
       }
     });
   });
@@ -193,17 +207,16 @@ function renderizarCarrito() {
   document.querySelectorAll('.eliminar-item').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const id = parseInt(e.target.dataset.id);
-      carrito = carrito.filter(item => item.id !== id);
-      guardarCarrito();
-      renderizarCarrito();
+      const item = carrito.find(item => item.id === id);
+      if (item) {
+        carrito = carrito.filter(item => item.id !== id);
+        guardarCarrito();
+        renderizarCarrito();
+        mostrarNotificacion(`"${item.nombre}" eliminado del carrito`, 'info');
+      }
     });
   });
 }
-// =======================
-// REDIRECCIÓN DESDE AVISO DE COMPRA
-// =======================
-
-
 
 // ===============================
 // ABRIR Y CERRAR CARRITO
@@ -230,8 +243,8 @@ function toggleCarrito(forceState) {
 async function cargarProductosDesdeSheets() {
   try {
     if (elementos.productLoader) {
-      elementos.productLoader.style.display = 'none';
-      elementos.productLoader.hidden = true;
+      elementos.productLoader.style.display = 'flex';
+      elementos.productLoader.hidden = false;
     }
     if (elementos.galeriaProductos) elementos.galeriaProductos.innerHTML = '';
     const resp = await fetch(CSV_URL, { headers: { 'Cache-Control': 'no-store' } });
@@ -267,6 +280,11 @@ async function cargarProductosDesdeSheets() {
     if (elementos.galeriaProductos)
       elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos.</p>';
     mostrarNotificacion('Error al cargar productos: ' + (e.message || e), 'error');
+  } finally {
+    if (elementos.productLoader) {
+      elementos.productLoader.style.display = 'none';
+      elementos.productLoader.hidden = true;
+    }
   }
 }
 
@@ -274,7 +292,7 @@ function actualizarCategorias() {
   if (!elementos.selectCategoria) return;
   const cats = ['todos', ...new Set(productos.map(p => p.categoria).filter(Boolean))];
   elementos.selectCategoria.innerHTML = cats
-    .map(cat => `<option value="${cat.charAt(0).toUpperCase() + cat.slice(1)}">${cat.charAt(0).toUpperCase() + cat.slice(1)}</option>`)
+    .map(cat => `<option value="${cat}">${cat.charAt(0).toUpperCase() + cat.slice(1)}</option>`)
     .join('');
 }
 
@@ -467,7 +485,6 @@ function mostrarModalProducto(producto) {
   }
 }
 
-
 // ===============================
 // CLICK EN DETALLE DEL PRODUCTO
 // ===============================
@@ -528,8 +545,6 @@ function inicializarFAQ() {
     toggle.addEventListener('click', () => {
       const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
       toggle.setAttribute('aria-expanded', !isExpanded);
-      
-      // (Continúa FAQ interactivo)
       const content = toggle.nextElementSibling;
       if (content) content.hidden = isExpanded;
     });
@@ -593,12 +608,6 @@ function setupContactForm() {
   }
 }
 
-// Inicializar EmailJS con tu clave pública
-emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
-
-// Llamar a la función para configurar el formulario de contacto
-setupContactForm();
-
 // ===============================
 // INICIALIZACIÓN GENERAL
 // ===============================
@@ -633,12 +642,10 @@ function inicializarEventos() {
     filtrosActuales.categoria = e.target.value.toLowerCase();
     aplicarFiltros();
   });
-  document.querySelectorAll('.aplicar-rango-btn').forEach(boton => {
-    boton.addEventListener('click', () => {
-      filtrosActuales.precioMin = elementos.precioMinInput.value ? parseFloat(elementos.precioMinInput.value) : null;
-      filtrosActuales.precioMax = elementos.precioMaxInput.value ? parseFloat(elementos.precioMaxInput.value) : null;
-      aplicarFiltros();
-    });
+  elementos.aplicarRangoBtn?.addEventListener('click', () => {
+    filtrosActuales.precioMin = elementos.precioMinInput.value ? parseFloat(elementos.precioMinInput.value) : null;
+    filtrosActuales.precioMax = elementos.precioMaxInput.value ? parseFloat(elementos.precioMaxInput.value) : null;
+    aplicarFiltros();
   });
   elementos.botonResetearFiltros?.addEventListener('click', resetearFiltros);
 
@@ -681,11 +688,6 @@ window.mostrarModalProducto = mostrarModalProducto;
 window.mostrarNotificacion = mostrarNotificacion;
 window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
 window.guardarCarrito = guardarCarrito;
-
-
-
-
-
 
 // Mostrar el modal de datos de envío luego del pre-compra
 document.getElementById('btn-entendido-aviso').addEventListener('click', function() {
@@ -753,6 +755,7 @@ function actualizarResumenPedido() {
   const total = subtotal + costoEnvio;
   resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
 }
+
 // Cerrar modal de envío
 document.getElementById('btn-cerrar-modal-envio').addEventListener('click', function() {
   const modalEnvio = document.getElementById('modal-datos-envio');
