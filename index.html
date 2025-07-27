@@ -139,25 +139,13 @@
     </select>
   </div>
       <!-- Precio Min y Max -->
-  <div class="filtro-rango-slider">
-  <label for="precio-min">PRECIO:</label>
-  <div class="slider">
-    <input type="range" id="precio-min" min="0" max="3000" value="0">
+ <div class="filtro-rango-slider">
+  <label for="precio-slider">PRECIO:</label>
+  <div class="slider-container">
+    <input type="range" id="precio-slider" min="0" max="3000" value="3000">
+    <div class="slider-value" id="valor-slider">$U3000</div>
   </div>
-  <div class="slider-value" id="valor-min">$U0</div>
-
-  <div class="slider">
-    <input type="range" id="precio-max" min="0" max="3000" value="3000">
-  </div>
-  <div class="slider-value" id="valor-max">$U3000</div>
-
-  <button class="slider-boton-aplicar" onclick="aplicarRango()">APLICAR</button>
 </div>
-<div class="filtro-busqueda">
-    <input type="text" class="input-busqueda" placeholder="Buscar por nombre o descripción...">
-  </div>
-
-
   <div class="filtro-reset">
     <button class="boton-resetear-filtros">Resetear Filtros</button>
   </div>
