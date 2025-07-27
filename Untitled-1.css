@@ -3272,7 +3272,7 @@ select:focus,
 
 /* === Fondo con patrón de flor de lis violeta === */
 .productos {
-  background-image: url('img/fondo-flor-lis.png');
+  background-image: url('img/flordeliz.jpg');
   background-repeat: repeat;
   background-size: 80px;
   background-position: center;
