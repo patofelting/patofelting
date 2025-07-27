@@ -123,38 +123,47 @@ input[type="submit"]:hover,
   color: var(--primary-color);
 }
 
-/* Menú Hamburguesa - Líneas Verdes */
+/* ---- Menú Hamburguesa (Negro -> Verde al hover) ---- */
 .hamburguesa {
-  display: none; /* Solo visible en móviles */
+  display: none; /* Solo visible en móviles/responsive */
   background: transparent;
   border: none;
-  padding: 8px;
   cursor: pointer;
-  z-index: 1000; /* Asegura que esté sobre otros elementos */
+  padding: 8px;
+  z-index: 1000; /* Siempre sobre otros elementos */
 }
 
-/* Estilo de las 3 líneas verdes */
+/* Líneas del menú (inicialmente negras) */
+.hamburguesa span,
 .hamburguesa::before,
-.hamburguesa::after,
-.hamburguesa span {
+.hamburguesa::after {
   content: '';
   display: block;
   width: 24px;
   height: 2px;
-  background: #7ed957; /* Verde de Patofelting */
+  background: #000; /* Color negro inicial */
   margin: 5px 0;
   transition: all 0.3s ease;
 }
 
-/* Opcional: Animación al abrir/cerrar */
+/* Efecto hover: líneas verdes */
+.hamburguesa:hover span,
+.hamburguesa:hover::before,
+.hamburguesa:hover::after {
+  background: #7ed957; /* Verde de Patofelting */
+}
+
+/* Opcional: Animación al abrir (las líneas se convierten en "X") */
+.hamburguesa[aria-expanded="true"] span {
+  opacity: 0;
+}
 .hamburguesa[aria-expanded="true"]::before {
   transform: translateY(7px) rotate(45deg);
+  background: #7ed957; /* Verde también al estar activo */
 }
 .hamburguesa[aria-expanded="true"]::after {
   transform: translateY(-7px) rotate(-45deg);
-}
-.hamburguesa[aria-expanded="true"] span {
-  opacity: 0;
+  background: #7ed957;
 }
 /* Carrito */
 .carrito-item-controls {
