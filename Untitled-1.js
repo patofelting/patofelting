@@ -883,6 +883,11 @@ function updateRange() {
   
   range.style.left = (minVal / 1000 * 100) + '%';
   range.style.width = ((maxVal - minVal) / 1000 * 100) + '%';
+  
+  // Actualizar filtrosActuales con los nuevos valores
+  filtrosActuales.precioMin = minVal;
+  filtrosActuales.precioMax = maxVal;
+  aplicarFiltros(); // Aplicar el filtro automáticamente al cambiar el rango
 }
 
 minSlider.addEventListener('input', updateRange);
