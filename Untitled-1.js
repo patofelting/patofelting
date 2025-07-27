@@ -877,12 +877,25 @@ const range = document.querySelector('.range');
 function updateRange() {
   const minVal = parseInt(minSlider.value);
   const maxVal = parseInt(maxSlider.value);
-  
-  minPrice.textContent = minVal;
-  maxPrice.textContent = maxVal;
-  
-  range.style.left = (minVal / 1000 * 100) + '%';
-  range.style.width = ((maxVal - minVal) / 1000 * 100) + '%';
+
+  // Validación para evitar que el mínimo supere al máximo
+  if (minVal > maxVal - 50) {
+    minSlider.value = maxVal - 50;
+  }
+  if (maxVal < minVal + 50) {
+    maxSlider.value = minVal + 50;
+  }
+
+  // Actualizar textos
+  minPrice.textContent = `$${minSlider.value}`;
+  maxPrice.textContent = `$${maxSlider.value}`;
+
+  // Calcular posición para tramo verde
+  const percentMin = (minSlider.value / 3000) * 100;
+  const percentMax = (maxSlider.value / 3000) * 100;
+
+  range.style.left = percentMin + '%';
+  range.style.width = (percentMax - percentMin) + '%';
 }
 
 minSlider.addEventListener('input', updateRange);
