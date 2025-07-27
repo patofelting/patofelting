@@ -868,25 +868,43 @@ function preguntarStock(nombreProducto) {
 }
 
 // Controladores para los sliders de precio
-const minSlider = document.getElementById('min-slider');
-const maxSlider = document.getElementById('max-slider');
-const minPrice = document.getElementById('min-price');
-const maxPrice = document.getElementById('max-price');
-const range = document.querySelector('.range');
+const minThumb = document.querySelector('.min-thumb');
+const maxThumb = document.querySelector('.max-thumb');
+const range = document.querySelector('.slider-range');
+const minValue = document.getElementById('min-value');
+const maxValue = document.getElementById('max-value');
 
-function updateRange() {
-  const minVal = parseInt(minSlider.value);
-  const maxVal = parseInt(maxSlider.value);
+function updateSlider() {
+  const min = parseInt(minThumb.value);
+  const max = parseInt(maxThumb.value);
   
-  minPrice.textContent = minVal;
-  maxPrice.textContent = maxVal;
+  // Asegurar que el mínimo no supere al máximo
+  if (min > max) {
+    minThumb.value = max;
+    return;
+  }
   
-  range.style.left = (minVal / 1000 * 100) + '%';
-  range.style.width = ((maxVal - minVal) / 1000 * 100) + '%';
+  // Actualizar visualización
+  minValue.textContent = min;
+  maxValue.textContent = max;
+  
+  // Calcular posiciones porcentuales
+  const left = (min / 1000) * 100;
+  const width = ((max - min) / 1000) * 100;
+  
+  range.style.left = `${left}%`;
+  range.style.width = `${width}%`;
 }
 
-minSlider.addEventListener('input', updateRange);
-maxSlider.addEventListener('input', updateRange);
+minThumb.addEventListener('input', updateSlider);
+maxThumb.addEventListener('input', updateSlider);
+
+// Resetear valores
+document.querySelector('.reset-button').addEventListener('click', () => {
+  minThumb.value = 150;
+  maxThumb.value = 350;
+  updateSlider();
+});
 
 // Inicializar
-updateRange();
+updateSlider();
