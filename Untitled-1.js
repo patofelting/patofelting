@@ -317,31 +317,14 @@ function crearCardProducto(p) {
   const enCarrito = carrito.find(i => i.id === p.id);
   const disp = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
   const agot = disp <= 0;
-  
+
+  const botonAgotado = agot ? `
+    <button class="boton-aviso-stock" onclick="preguntarStock('${p.nombre}')">
+      📩 Avisame cuando haya stock
+    </button>` : '';
+
   return `
-    <div class="producto-card" data-id="${p.id}">
-      <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img ${agot ? 'agotado' : ''}" loading="lazy">
-      <h3 class="producto-nombre">${p.nombre}</h3>
-      <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
-      <p class="producto-stock">
-        ${agot ? '<span class="texto-agotado">AGOTADO</span>' : `Stock: ${disp}`}
-      </p>
-      <div class="card-acciones">
-        <button class="boton-agregar${agot ? ' agotado' : ''}" data-id="${p.id}" ${agot ? 'disabled' : ''}>
-          ${agot ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
-        </button>
-      </div>
-      <button class="boton-detalles" data-id="${p.id}">🛈 Ver Detalle</button>
-      ${agot ? '<div class="overlay-agotado"></div>' : ''}
-    </div>
-  `;
-}
-function crearCardProducto(p) {
-  const enCarrito = carrito.find(i => i.id === p.id);
-  const disp = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
-  const agot = disp <= 0;
-  return `
-    <div class="producto-card" data-id="${p.id}">
+    <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}">
       <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img" loading="lazy">
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
@@ -352,11 +335,15 @@ function crearCardProducto(p) {
         <button class="boton-agregar${agot ? ' agotado' : ''}" data-id="${p.id}" ${agot ? 'disabled' : ''}>
           ${agot ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
         </button>
+        ${botonAgotado}
       </div>
       <button class="boton-detalles" data-id="${p.id}">🛈 Ver Detalle</button>
     </div>
   `;
 }
+
+
+
 
 function renderizarPaginacion(total) {
   const pages = Math.ceil(total / PRODUCTOS_POR_PAGINA);
@@ -913,3 +900,8 @@ document.getElementById('form-envio').addEventListener('submit', function(e) {
 });
 
 
+function preguntarStock(nombreProducto) {
+  const asunto = encodeURIComponent(`Consulta por disponibilidad de "${nombreProducto}"`);
+  const cuerpo = encodeURIComponent(`Hola! Quisiera saber cuándo estará disponible el producto "${nombreProducto}". Muchas gracias!`);
+  window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
+}
