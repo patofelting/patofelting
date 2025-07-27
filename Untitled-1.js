@@ -330,14 +330,21 @@ function actualizarCategorias() {
 function filtrarProductos() {
   return productos.filter(p => {
     const { precioMin, precioMax, categoria, busqueda } = filtrosActuales;
-    const b = busqueda?.toLowerCase() || "";
+    const busquedaLower = busqueda?.toLowerCase() || "";
+    
+    // Verifica si hay texto de búsqueda y si coincide con nombre o descripción
+    const coincideBusqueda = !busquedaLower || 
+      p.nombre.toLowerCase().includes(busquedaLower) || 
+      (p.descripcion && p.descripcion.toLowerCase().includes(busquedaLower));
+    
     const enCarrito = carrito.find(i => i.id === p.id);
     const disponibles = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
+    
     return (
       (precioMin === null || p.precio >= precioMin) &&
       (precioMax === null || p.precio <= precioMax) &&
-      (categoria === 'todos' || p.categoria === categoria) &&
-      (!b || normalize(p.nombre).includes(normalize(b)) || normalize(p.descripcion).includes(normalize(b))) &&
+      (categoria === 'todos' || p.categoria.toLowerCase() === categoria.toLowerCase()) &&
+      coincideBusqueda &&
       (disponibles > 0)
     );
   });
