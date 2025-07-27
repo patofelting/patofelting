@@ -130,7 +130,7 @@
           </div>
           
           <div class="range-slider">
-            <input type="range" min="0" max="1000" value="0" class="slider" id="min-slider">
+            <input type="range" min="0" max="1000" value="150" class="slider" id="min-slider">
             <input type="range" min="0" max="1000" value="350" class="slider" id="max-slider">
             <div class="track"></div>
             <div class="range"></div>
@@ -191,7 +191,85 @@
     </div>
   </div>
 
-  <!-- Resto de tus modales y secciones... -->
+<section id="contacto" class="contact">
+  <div class="container">
+    <h2>Contáctame</h2>
+    <p>¿Tienes alguna pregunta, una idea para una figura personalizada o simplemente quieres saludar? ¡No dudes en contactarme!</p>
+    <form id="formContacto">
+      <label for="nombre">Nombre:</label>
+      <input type="text" id="nombre" name="nombre" required>
+
+      <label for="email">Email:</label>
+      <input type="email" id="email" name="email" required>
+
+      <label for="mensaje">Mensaje:</label>
+      <textarea id="mensaje" name="mensaje" required></textarea>
+
+      <button type="submit">Enviar</button>
+    </form>
+
+    <div id="successMessage" class="hidden">¡Mensaje enviado con éxito!</div>
+    <div id="errorMessage" class="hidden">Error al enviar el mensaje. Intenta de nuevo.</div>
+  </div>
+</section>
+
+<section class="faq-section" id="preguntas">
+  <h2>Preguntas Frecuentes</h2>
+  <div class="faq-item" data-category="envios">
+    <button class="faq-toggle" aria-expanded="false">¿A qué lugares realizan envíos?</button>
+    <div class="faq-content" hidden>
+      Realizamos envíos a todo el país. Si tienes dudas sobre tu zona, <a href="#contacto" class="faq-more">contáctanos</a>.
+    </div>
+  </div>
+  <div class="faq-item" data-category="envios">
+    <button class="faq-toggle" aria-expanded="false">¿Cuánto cuesta el envío?</button>
+    <div class="faq-content" hidden>
+      El costo depende de tu localidad y del tamaño del paquete. Te lo informamos antes de finalizar tu compra.
+    </div>
+  </div>
+  <div class="faq-item" data-category="envios">
+    <button class="faq-toggle" aria-expanded="false">¿Puedo retirar mi pedido en persona?</button>
+    <div class="faq-content" hidden>
+      Sí, si estás en nuestra ciudad podemos coordinar un punto de retiro.
+    </div>
+  </div>
+  <div class="faq-item" data-category="personalizacion">
+    <button class="faq-toggle" aria-expanded="false">¿Puedo personalizar mi figura?</button>
+    <div class="faq-content" hidden>
+      ¡Sí! Puedes elegir colores, tamaño, detalles y enviarnos tus ideas o imágenes de referencia.
+    </div>
+  </div>
+  <div class="faq-item" data-category="personalizacion">
+    <button class="faq-toggle" aria-expanded="false">¿Cuánto demora una figura personalizada?</button>
+    <div class="faq-content" hidden>
+      El tiempo de producción suele ser entre 10 y 20 días hábiles, dependiendo del diseño.
+    </div>
+  </div>
+  <div class="faq-item" data-category="personalizacion">
+    <button class="faq-toggle" aria-expanded="false">¿Puedo pedir una figura que no está en el catálogo?</button>
+    <div class="faq-content" hidden>
+      Sí, puedes pedir figuras de personajes, mascotas u objetos personalizados. Escríbenos tu idea.
+    </div>
+  </div>
+  <div class="faq-item" data-category="personalizacion">
+    <button class="faq-toggle" aria-expanded="false">¿Tienen stock para entrega inmediata?</button>
+    <div class="faq-content" hidden>
+      Algunas figuras sí, revisa las que dicen "Disponible". Las personalizadas se hacen a pedido.
+    </div>
+  </div>
+  <div class="faq-item" data-category="devoluciones">
+    <button class="faq-toggle" aria-expanded="false">¿Puedo devolver o cambiar mi figura?</button>
+    <div class="faq-content" hidden>
+      Aceptamos devoluciones solo si la figura llegó dañada o con un error respecto a lo acordado. <a href="politicaempresa.html" class="faq-more">Consultar política</a>
+    </div>
+  </div>
+  <div class="faq-item" data-category="devoluciones">
+    <button class="faq-toggle" aria-expanded="false">¿Qué hago si mi pedido llega dañado?</button>
+    <div class="faq-content" hidden>
+      Contáctanos dentro de las 48 horas y adjunta fotos del daño. ¡Te ayudamos a solucionarlo!
+    </div>
+  </div>
+</section>
 
   <footer class="footer">
     <div class="footer-content">
