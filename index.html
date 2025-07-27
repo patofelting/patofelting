@@ -130,43 +130,39 @@
     <h2>Nuestros Productos</h2>
 
 <div class="filtros-container">
-
-  <!-- Filtro por Categoría -->
   <div class="filtro-categoria">
-    <label for="filtro-categoria"><strong>CATEGORÍAS:</strong></label>
+    <label for="filtro-categoria">Categorías:</label>
     <select id="filtro-categoria">
       <option value="todos">Todos</option>
       <option value="animales">Animales</option>
       <option value="fantasia">Fantasía</option>
     </select>
   </div>
-
-  <!-- Filtro por Precio con Sliders -->
+      <!-- Precio Min y Max -->
   <div class="filtro-rango-slider">
-    <label for="precio-min" class="label-slider"><strong>PRECIO:</strong></label>
+  <label for="precio-min">PRECIO:</label>
+  <div class="slider">
+    <input type="range" id="precio-min" min="0" max="3000" value="0">
+  </div>
+  <div class="slider-value" id="valor-min">$U0</div>
 
-    <!-- Slider Mínimo -->
-    <div class="slider">
-      <input type="range" id="precio-min" min="0" max="3000" value="0">
-    </div>
-    <div class="slider-value" id="valor-min">$U0</div>
+  <div class="slider">
+    <input type="range" id="precio-max" min="0" max="3000" value="3000">
+  </div>
+  <div class="slider-value" id="valor-max">$U3000</div>
 
-    <!-- Slider Máximo -->
-    <div class="slider">
-      <input type="range" id="precio-max" min="0" max="3000" value="3000">
-    </div>
-    <div class="slider-value" id="valor-max">$U3000</div>
-
-    <!-- Botón Aplicar -->
-    <button class="slider-boton-aplicar" onclick="aplicarRango()">APLICAR</button>
+  <button class="slider-boton-aplicar" onclick="aplicarRango()">APLICAR</button>
+</div>
+<div class="filtro-busqueda">
+    <input type="text" class="input-busqueda" placeholder="Buscar por nombre o descripción...">
   </div>
 
-  <!-- Filtro por búsqueda de texto -->
-  <div class="filtro-busqueda">
-    <input type="text" class="input-busqueda" placeholder="Buscar por nombre o descripción..." aria-label="Buscar producto">
+
+  <div class="filtro-reset">
+    <button class="boton-resetear-filtros">Resetear Filtros</button>
   </div>
 
-</div> 
+  
 </div>
 
     <!-- Galería de productos -->
