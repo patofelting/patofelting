@@ -126,14 +126,21 @@ input[type="submit"]:hover,
 .hamburguesa {
   background: none;
   border: none;
-  font-size: 24px; /* Ajusta el tamaño según necesites */
-  color: #000000; /* Negro inicial */
+  width: 40px;
+  height: 40px;
+  font-size: 24px;
+  color: #333333; /* Gris oscuro */
   cursor: pointer;
-  transition: color 0.3s ease; /* Transición suave para el cambio de color */
+  border-radius: 4px;
+  transition: color 0.3s ease, transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .hamburguesa:hover {
-  color: #A9D6A9; /* Verde claro al pasar el cursor */
+  color: #6B705C; /* Verde oliva suave */
+  transform: scale(1.1); /* Efecto de escala al pasar el cursor */
 }
 
 /* Carrito */
