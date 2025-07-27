@@ -900,3 +900,17 @@ function actualizarSlider() {
 
 sliderMin.addEventListener("input", actualizarSlider);
 sliderMax.addEventListener("input", actualizarSlider);
+
+// Controlador para el slider de precio
+const inputRango = document.getElementById('rango-precio');
+  const valorTexto = document.getElementById('valorPrecio');
+
+  function actualizarSlider() {
+    const valor = inputRango.value;
+    const porcentaje = (valor / inputRango.max) * 100;
+    inputRango.style.background = `linear-gradient(to right, #4CAF50 0%, #4CAF50 ${porcentaje}%, #E3E3E3 ${porcentaje}%, #E3E3E3 100%)`;
+    valorTexto.textContent = valor;
+  }
+
+  inputRango.addEventListener('input', actualizarSlider);
+  actualizarSlider(); // Para inicializarlo al cargar
