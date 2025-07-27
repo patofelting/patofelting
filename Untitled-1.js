@@ -622,20 +622,19 @@ function inicializarEventos() {
     elementos.avisoPreCompraModal.style.display = 'flex';
   });
 elementos.btnEntendidoAviso?.addEventListener('click', () => {
-  mostrarNotificacion('Compra finalizada con éxito', 'exito');
-  carrito = [];
-  guardarCarrito();
-  actualizarUI();
-  toggleCarrito(false);
-  elementos.avisoPreCompraModal.style.display = 'none';
-  
-  // Mostrar el modal de envío
+  // Mostrar el modal de envío sin vaciar el carrito primero
   const modalEnvio = document.getElementById('modal-datos-envio');
   if (modalEnvio) {
+    // Ocultar el modal de aviso
+    elementos.avisoPreCompraModal.style.display = 'none';
+    
+    // Mostrar el modal de envío
     modalEnvio.style.display = 'flex';
     setTimeout(() => {
       modalEnvio.classList.add('visible');
     }, 10);
+    
+    // Actualizar el resumen del pedido con los productos actuales
     actualizarResumenPedido();
   }
 });
@@ -824,21 +823,16 @@ document.getElementById('form-envio').addEventListener('submit', function(e) {
   const total = subtotal + costoEnvio;
 
   // Crear mensaje detallado
-  let productosMsg = '';
-  if (carrito.length === 0) {
-    productosMsg = 'No hay productos en el carrito';
-  } else {
-    productosMsg = carrito.map(item => 
-      `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`
-    ).join('\n');
-  }
+  let productosMsg = carrito.map(item => 
+    `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`
+  ).join('\n');
   
   const mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*Productos:*\n${productosMsg}\n\n*Datos del cliente:*\n👤 ${nombre} ${apellido}\n📞 ${telefono}\n\n*Envío:*\n${envioTxt}\n${envio !== 'retiro' ? `📍 Dirección: ${direccion}\n` : ''}\n*Subtotal:* $U ${subtotal.toLocaleString('es-UY')}\n*Costo de envío:* $U ${costoEnvio.toLocaleString('es-UY')}\n*Total a pagar:* $U ${total.toLocaleString('es-UY')}\n\n${notas ? `*Notas:*\n${notas}` : ''}`;
 
   // Abrir WhatsApp
   window.open(`https://wa.me/59893566283?text=${encodeURIComponent(mensaje)}`, '_blank');
   
-  // Cerrar modal y limpiar carrito
+  // Cerrar modal y limpiar carrito SOLO DESPUÉS de enviar
   document.getElementById('modal-datos-envio').classList.remove('visible');
   setTimeout(() => {
     document.getElementById('modal-datos-envio').hidden = true;
