@@ -258,13 +258,41 @@ input[type="submit"]:hover,
   .menu.active {
     transform: translateY(0);
   }
- .carrito-panel.mejorado {
+.carrito-panel.mejorado {
     background: #fff;
     border-radius: 12px 0 0 12px;
     box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
     transition: transform 0.4s ease;
     max-width: 400px;
     overflow-y: auto;
+    transform: translateX(100%);
+    position: fixed;
+    right: 0;
+    top: 0;
+    height: 100vh;
+    z-index: 9999;
+  }
+
+  .carrito-panel.abierto {
+    transform: translateX(0);
+  }
+
+  .carrito-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 9998;
+  }
+
+  .carrito-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .carrito-header h2 {
@@ -292,6 +320,63 @@ input[type="submit"]:hover,
   .lista-carrito.mejorada li .info-producto {
     flex: 1;
     padding-left: 10px;
+  }
+
+  .lista-carrito.mejorada li .acciones-producto {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .acciones-producto button {
+    background: #f1f1f1;
+    border: none;
+    font-size: 1rem;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  .acciones-producto button:hover {
+    background: #e0e0e0;
+  }
+
+  .boton-vaciar-carrito,
+  .boton-finalizar-compra {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .boton-vaciar-carrito {
+    background: #e53935;
+    color: #fff;
+  }
+
+  .boton-vaciar-carrito:hover {
+    background: #c62828;
+  }
+
+  .boton-finalizar-compra {
+    background: #43a047;
+    color: #fff;
+  }
+
+  .boton-finalizar-compra:hover {
+    background: #2e7d32;
+  }
+
+  .carrito-footer {
+    border-top: 1px solid #ccc;
+    padding: 12px 16px;
+    font-size: 1.1rem;
+    position: sticky;
+    bottom: 0;
+    background: #fff;
   }
 
   .lista-carrito.mejorada li .acciones-producto {
