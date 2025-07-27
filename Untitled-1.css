@@ -2119,14 +2119,10 @@ body.no-scroll {
 
 
 /* Variables para fácil mantenimiento */
-.price-filter {
-  width: 300px;
-  font-family: Arial, sans-serif;
-}
-
 .price-header {
   display: flex;
   justify-content: space-between;
+  align-items: center; /* Añade esto para alinear verticalmente */
   font-weight: bold;
   margin-bottom: 8px;
 }
@@ -2140,78 +2136,24 @@ body.no-scroll {
   background: #f9f9f9;
   display: flex;
   align-items: center;
-  padding: 0 8px;
+  padding: 0 10px; /* Aumenta el padding para mejor espacio */
   box-sizing: border-box;
-}
-
-.slider {
-  position: absolute;
-  width: 100%;
-  height: 36px;
-  background: none;
-  pointer-events: none;
-  -webkit-appearance: none;
-  appearance: none;
-  z-index: 3;
-}
-
-.slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  pointer-events: all;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #4CAF50;
-  border: 2px solid white;
-  box-shadow: 0 0 0 2px #4CAF50;
-  cursor: pointer;
-}
-
-.slider::-moz-range-thumb {
-  pointer-events: all;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #4CAF50;
-  border: 2px solid white;
-  box-shadow: 0 0 0 2px #4CAF50;
-  cursor: pointer;
-}
-
-.slider-track {
-  position: absolute;
-  height: 4px;
-  width: 100%;
-  background: #e0e0e0;
-  top: 50%;
-  transform: translateY(-50%);
-  border-radius: 2px;
-  z-index: 1;
 }
 
 .range-highlight {
   position: absolute;
   height: 4px;
-  background: #4CAF50;
+  background: #2E7D32; /* Un verde más oscuro para mejor contraste */
   top: 50%;
   transform: translateY(-50%);
   border-radius: 2px;
   z-index: 2;
+  border: 1px solid #ffffff; /* Borde blanco para destacar */
 }
 
-.reset-btn {
-  margin-top: 12px;
-  background-color: #2E7D32;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background 0.3s ease;
+.price-filter {
+  width: 100%; /* Cambia a 100% en lugar de 300px */
+  max-width: 400px; /* Límite máximo para pantallas grandes */
+  font-family: Arial, sans-serif;
+  margin: 0 auto; /* Centra el contenedor */
 }
-
-.reset-btn:hover {
-  background-color: #1b5e20;
-}
-
