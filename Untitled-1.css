@@ -2119,59 +2119,61 @@ body.no-scroll {
 
 
 /* CSS */
-.filtro-rango-slider {
-  margin-bottom: 20px;
+.filtro-rango {
+  margin: 20px 0;
 }
 
-.slider-container {
+.range-slider {
   position: relative;
+  height: 40px;
   width: 100%;
-  margin-top: 10px;
+  margin-top: 15px;
 }
 
-#precio-slider {
-  width: 100%;
-  height: 6px;
+.slider-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background-color: #e0e0e0;
+  border-radius: 2px;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.range-slider input[type="range"] {
   -webkit-appearance: none;
-  background: #ddd;
-  border-radius: 3px;
-  outline: none;
+  width: 100%;
+  position: absolute;
+  top: 50%;
+  margin: 0;
+  padding: 0;
+  height: 4px;
+  transform: translateY(-50%);
+  background: transparent;
+  pointer-events: none;
+  z-index: 2;
 }
 
-#precio-slider::-webkit-slider-thumb {
+.range-slider input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 20px;
   height: 20px;
   border-radius: 50%;
   background: #2E7D32;
   cursor: pointer;
-  position: relative;
-  z-index: 2;
+  pointer-events: auto;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  border: 2px solid white;
 }
 
-.slider-value {
-  position: absolute;
-  top: -25px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #2E7D32;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 12px;
+.slider-values {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 14px;
+  color: #2E7D32;
   font-weight: bold;
-  white-space: nowrap;
 }
-
-.slider-value::after {
-  content: '';
-  position: absolute;
-  bottom: -5px;
-  left: 50%;
-  transform: translateX(-50%);
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 5px solid #2E7D32;
-}
-
 
