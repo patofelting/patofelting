@@ -619,12 +619,21 @@ blockquote {
 /* Responsive */
 @media (max-width: 700px) {
   .filtros-container {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 11px;
-    padding: 12px 6px;
-    margin-bottom: 20px;
+    grid-template-areas:
+      "buscar"
+      "categoria"
+      "min"
+      "max"
+      "aplicar"
+      "reset";
+    grid-template-columns: 1fr;
   }
+
+  .filtro-aplicar,
+  .filtro-reset {
+    justify-content: stretch;
+  }
+}
 
   .filtro-grupo {
     width: 100%;
@@ -3097,10 +3106,10 @@ body > div.notificacion.info { background: #1976d2 !important; }
 .filtros-container {
   display: grid;
   grid-template-areas:
+    "buscar   buscar"
     "categoria categoria"
     "min      max"
-    "aplicar  reset"
-    "buscar   buscar";
+    "aplicar  reset";
   grid-template-columns: 1fr 1fr;
   gap: 20px 32px;
   padding: 48px 36px;
@@ -3110,7 +3119,6 @@ body > div.notificacion.info { background: #1976d2 !important; }
   border-radius: 18px;
   box-shadow: 0 14px 44px rgba(0, 0, 0, 0.04);
 }
-
 /* Asignar áreas */
 .filtro-categoria    { grid-area: categoria; }
 .filtro-min          { grid-area: min; }
