@@ -810,22 +810,7 @@ document.getElementById('select-envio').addEventListener('change', function() {
 document.getElementById('form-envio').addEventListener('submit', function(e) {
   e.preventDefault();
   
-  // 1. Validación de campos
-  const requiredFields = [
-    {id: 'input-nombre', name: 'Nombre'},
-    {id: 'input-apellido', name: 'Apellido'},
-    {id: 'input-telefono', name: 'Teléfono'}
-  ];
-  
-  for (const field of requiredFields) {
-    const value = document.getElementById(field.id).value.trim();
-    if (!value) {
-      mostrarNotificacion(`El campo ${field.name} es obligatorio`, 'error');
-      return;
-    }
-  }
-
-  // 2. Preparar datos del pedido
+  // 1. Obtener y validar datos del formulario
   const nombre = document.getElementById('input-nombre').value.trim();
   const apellido = document.getElementById('input-apellido').value.trim();
   const telefono = document.getElementById('input-telefono').value.trim();
@@ -833,68 +818,63 @@ document.getElementById('form-envio').addEventListener('submit', function(e) {
   const direccion = envio !== 'retiro' ? document.getElementById('input-direccion').value.trim() : '';
   const notas = document.getElementById('input-notas').value.trim();
 
-  // Validar dirección si es envío
-  if (envio !== 'retiro' && !direccion) {
-    mostrarNotificacion('La dirección es obligatoria para envíos', 'error');
+  // Validación de campos obligatorios
+  if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
+    mostrarNotificacion('Por favor complete todos los campos obligatorios', 'error');
     return;
   }
 
-  // 3. Calcular totales
-  const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-  let costoEnvio = 0;
-  let metodoEnvioTexto = '';
+  // 2. Construir el mensaje con formato
+  let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n`;
+  mensaje += `*📋 Detalles del pedido:*\n`;
   
-  if (envio === 'montevideo') {
-    costoEnvio = 150;
-    metodoEnvioTexto = 'Envío Montevideo ($150)';
-  } else if (envio === 'interior') {
-    costoEnvio = 300;
-    metodoEnvioTexto = 'Envío Interior ($300)';
-  } else {
-    metodoEnvioTexto = 'Retiro en local (Gratis)';
-  }
-
-  const total = subtotal + costoEnvio;
-
-  // 4. Construir mensaje ESCAPANDO caracteres especiales
-  let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:%0A%0A`; // %0A es nueva línea
-  
-  // Productos
-  mensaje += `*📋 Detalles del pedido:*%0A`;
+  // Productos del carrito
   carrito.forEach(item => {
-    mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}%0A`;
+    mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}\n`;
   });
   
   // Totales
-  mensaje += `%0A*💰 Total:*%0A`;
-  mensaje += `Subtotal: $U ${subtotal.toLocaleString('es-UY')}%0A`;
-  mensaje += `Envío: $U ${costoEnvio.toLocaleString('es-UY')}%0A`;
-  mensaje += `*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*%0A%0A`;
+  const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+  const costoEnvio = envio === 'montevideo' ? 150 : envio === 'interior' ? 300 : 0;
+  const total = subtotal + costoEnvio;
   
-  // Datos cliente
-  mensaje += `*👤 Datos del cliente:*%0A`;
-  mensaje += `Nombre: ${nombre} ${apellido}%0A`;
-  mensaje += `Teléfono: ${telefono}%0A`;
-  mensaje += `Método de envío: ${metodoEnvioTexto}%0A`;
+  mensaje += `\n*💰 Total:*\n`;
+  mensaje += `Subtotal: $U ${subtotal.toLocaleString('es-UY')}\n`;
+  mensaje += `Envío: $U ${costoEnvio.toLocaleString('es-UY')}\n`;
+  mensaje += `*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
+  
+  // Datos del cliente
+  mensaje += `*👤 Datos del cliente:*\n`;
+  mensaje += `Nombre: ${nombre} ${apellido}\n`;
+  mensaje += `Teléfono: ${telefono}\n`;
+  mensaje += `Método de envío: ${envio === 'montevideo' ? 'Envío Montevideo ($150)' : envio === 'interior' ? 'Envío Interior ($300)' : 'Retiro en local (Gratis)'}\n`;
   
   if (envio !== 'retiro') {
-    mensaje += `Dirección: ${direccion}%0A`;
+    mensaje += `Dirección: ${direccion}\n`;
   }
   
   if (notas) {
-    mensaje += `%0A*📝 Notas adicionales:*%0A${notas}`;
+    mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
   }
 
-  // 5. Abrir WhatsApp (2 métodos alternativos)
+  // 3. Solución para evitar que se borre el texto
+  const numeroWhatsApp = '59893566283';
   
-  // Método 1: Abrir en nueva pestaña
-  const urlWhatsApp = `https://wa.me/59893566283?text=${mensaje}`;
-  window.open(urlWhatsApp, '_blank');
+  // Método 1: Usar sessionStorage como puente
+  sessionStorage.setItem('ultimoPedidoWhatsApp', mensaje);
+  const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
   
-  // Método alternativo para dispositivos móviles
-  // window.location.href = `https://api.whatsapp.com/send?phone=59893566283&text=${mensaje}`;
+  // Abrir en nueva pestaña
+  const nuevaPestaña = window.open(urlWhatsApp, '_blank');
   
-  // 6. Limpiar después de enviar
+  // Método alternativo si falla (para móviles)
+  setTimeout(() => {
+    if (!nuevaPestaña || nuevaPestaña.closed) {
+      window.location.href = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${encodeURIComponent(mensaje)}`;
+    }
+  }, 500);
+
+  // 4. Limpiar el formulario después de enviar
   setTimeout(() => {
     document.getElementById('modal-datos-envio').classList.remove('visible');
     setTimeout(() => {
@@ -902,8 +882,8 @@ document.getElementById('form-envio').addEventListener('submit', function(e) {
       carrito = [];
       guardarCarrito();
       actualizarUI();
-      mostrarNotificacion('Pedido enviado con éxito', 'exito');
+      mostrarNotificacion('Pedido listo para enviar por WhatsApp', 'exito');
       document.getElementById('form-envio').reset();
     }, 300);
-  }, 500);
+  }, 1000);
 });
