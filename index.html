@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -5,15 +6,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Patofelting - Creaciones en Fieltro</title>
   <link rel="stylesheet" href="Untitled-1.css" />
-  <svg width="0" height="0" style="position:absolute;">
-    <pattern id="lana-pattern" patternUnits="userSpaceOnUse" width="100" height="100">
-      <path d="M20,50 Q35,30 50,50 Q65,70 80,50" stroke="#7ed957" stroke-width="1.5" fill="none" opacity="0.1"/>
-      <path d="M10,70 Q25,50 40,70 Q55,90 70,70" stroke="#5a8f40" stroke-width="1" fill="none" opacity="0.05"/>
-    </pattern>
-  </svg>
+<svg width="0" height="0" style="position:absolute;">
+  <pattern id="lana-pattern" patternUnits="userSpaceOnUse" width="100" height="100">
+    <path d="M20,50 Q35,30 50,50 Q65,70 80,50" stroke="#7ed957" stroke-width="1.5" fill="none" opacity="0.1"/>
+    <path d="M10,70 Q25,50 40,70 Q55,90 70,70" stroke="#5a8f40" stroke-width="1" fill="none" opacity="0.05"/>
+  </pattern>
+</svg>
   <!-- Librerías -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
+  <!-- Font Awesome para íconos -->
+ 
   <!-- Configuración global de la aplicación -->
   <script>
     window.SHEET_CSV_URL =
@@ -43,45 +46,53 @@
   </nav>
 
   <div id="carrito-panel" class="carrito-panel">
-    <div class="carrito-header">
-      <h2>Tu Carrito</h2>
-      <button class="cerrar-carrito" aria-label="Cerrar carrito">×</button>
+  <div class="carrito-header">
+    <h2>Tu Carrito</h2>
+    <button class="cerrar-carrito" aria-label="Cerrar carrito">×</button>
+  </div>
+  <ul id="lista-carrito" class="lista-carrito"></ul>
+  <div class="carrito-footer">
+    <p id="total">Total: $U 0</p>
+    <div class="carrito-acciones">
+      <button class="boton-vaciar-carrito">Vaciar Carrito</button>
+      <button class="boton-finalizar-compra">Finalizar Compra</button>
     </div>
-    <ul id="lista-carrito" class="lista-carrito"></ul>
-    <div class="carrito-footer">
-      <p id="total">Total: $U 0</p>
-      <div class="carrito-acciones">
-        <button class="boton-vaciar-carrito">Vaciar Carrito</button>
-        <button class="boton-finalizar-compra">Finalizar Compra</button>
+  </div>
+</div>
+<div class="carrito-overlay"></div>
+
+
+
+
+<section id="inicio" class="hero">
+  <!-- Video optimizado con poster de carga -->
+  <video autoplay muted loop playsinline class="video-fondo" aria-hidden="true" 
+         poster="img/placeholder-video.jpg" preload="metadata">
+    <source src="https://i.imgur.com/nWNPya9.mp4" type="video/mp4">
+   
+    <!-- Fallback para navegadores que no soportan video -->
+ 
+  </video>
+  
+  <!-- Contenido sobrepuesto con mejor semántica -->
+  <div class="hero-content">
+    <div class="content-wrapper">
+      <h1 class="hero-title">Patofelting</h1>
+      <h2 class="hero-subtitle">Creaciones con alma en fieltro</h2>
+      <p class="hero-description">Figuras únicas, hechas a mano con amor y dedicación</p>
+      <div class="cta-container">
+        <a href="#productos" class="cta-button">Ver Productos</a>
+        <a href="#contacto" class="cta-button secondary">Contactar</a>
       </div>
     </div>
   </div>
-  <div class="carrito-overlay"></div>
-
-  <section id="inicio" class="hero">
-    <video autoplay muted loop playsinline class="video-fondo" aria-hidden="true" 
-          poster="img/placeholder-video.jpg" preload="metadata">
-      <source src="https://i.imgur.com/nWNPya9.mp4" type="video/mp4">
-    </video>
-    
-    <div class="hero-content">
-      <div class="content-wrapper">
-        <h1 class="hero-title">Patofelting</h1>
-        <h2 class="hero-subtitle">Creaciones con alma en fieltro</h2>
-        <p class="hero-description">Figuras únicas, hechas a mano con amor y dedicación</p>
-        <div class="cta-container">
-          <a href="#productos" class="cta-button">Ver Productos</a>
-          <a href="#contacto" class="cta-button secondary">Contactar</a>
-        </div>
-      </div>
-    </div>
-    
-    <div class="scroll-indicator">
-      <span class="scroll-text">Desplázate</span>
-      <div class="arrow-down"></div>
-    </div>
-  </section>
-
+  
+  <!-- Flecha indicadora de scroll -->
+  <div class="scroll-indicator">
+    <span class="scroll-text">Desplázate</span>
+    <div class="arrow-down"></div>
+  </div>
+</section>
   <section id="sobre" class="about-me seccion">
     <div class="container">
       <div class="about-content">
@@ -99,6 +110,13 @@
             ¿Listo/a para dar vida a esa idea tan especial?<br>
             <strong>¡Conversemos! Juntos, crearemos la pieza de tus sueños.</strong> 🐑✨
           </p>
+          <p class="cta-demanda">
+            ¿Buscás un regalo que realmente deje huella?<br>
+            🎁 Una figura de fieltro de Patofelting no es solo un objeto bello: 
+            <strong>es un recuerdo que perdura, una emoción, una historia que se cuenta sin palabras.</strong><br>
+            Desde el primer "pinchazo" de inspiración hasta el último detalle, cada creación está diseñada para decir: 
+            <em>"Esto es especialmente para vos".</em>
+          </p>
         </div>
         <div class="about-image">
           <img src="img/patofeltinglogo.jpg" alt="Logo de Patofelting" class="logo-patofelting" />
@@ -107,89 +125,171 @@
     </div>
   </section>
 
-  <section id="productos" class="productos">
-    <div class="container">
-      <h2>Nuestros Productos</h2>
+<section id="productos" class="productos">
+  <div class="container">
+    <h2>Nuestros Productos</h2>
 
-      <div class="filtros-container">
-        <div class="filtro-categoria">
-          <label for="filtro-categoria">Categorías:</label>
-          <select id="filtro-categoria">
-            <option value="todos">Todos</option>
-            <option value="animales">Animales</option>
-            <option value="fantasia">Fantasía</option>
-          </select>
-        </div>
-        
-        <div class="price-filter">
-          <div class="price-header">
-            <h3>PRECIO:</h3>
-            <div class="price-values">
-              <span id="min-price">150</span> - <span id="max-price">350</span>
-            </div>
-          </div>
-          
-          <div class="range-slider">
-            <input type="range" min="0" max="1000" value="150" class="slider" id="min-slider">
-            <input type="range" min="0" max="1000" value="350" class="slider" id="max-slider">
-            <div class="track"></div>
-            <div class="range"></div>
-          </div>
-          
-          <button class="reset-btn">RESETEAR</button>
-        </div>
-      </div>
-
-      <div id="galeria-productos" class="galeria-productos"></div>
-
-      <div id="product-loader" class="loader" hidden aria-live="polite">
-        <svg class="spinner" viewBox="0 0 50 50">
-          <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"/>
-        </svg>
-        <p>Cargando productos...</p>
-      </div>
-
-      <div id="paginacion" class="paginacion"></div>
-    </div>
-  </section>
-
-  <div id="producto-modal" class="modal-overlay">
-    <div id="modal-contenido" class="modal-contenido-producto">
-      <button class="cerrar-modal" aria-label="Cerrar modal">&times;</button>
-      <div class="modal-flex">
-        <div class="modal-carrusel">
-          <img src="..." class="modal-img" alt="Imagen del producto">
-          <div class="modal-controls">
-            <button class="modal-prev" aria-label="Anterior">
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                <path d="M14 4l-6 7 6 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-            <button class="modal-next" aria-label="Siguiente">
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                <path d="M8 18l6-7-6-7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-        <div class="modal-info">
-          <h1 class="modal-nombre">Nombre del Producto</h1>
-          <p class="modal-precio">$U 0</p>
-          <p class="modal-stock">Disponible: 0</p>
-          <div class="modal-descripcion">
-            Descripción del producto
-          </div>
-          <div class="modal-acciones">
-            <input type="number" class="cantidad-modal-input" value="1" min="1">
-            <button class="boton-agregar-modal">Agregar al carrito</button>
-          </div>
-        </div>
-      </div>
-      <div class="modal-thumbnails">
-        <!-- Miniaturas de imágenes -->
-      </div>
+<div class="filtros-container">
+  <div class="filtro-categoria">
+    <label for="filtro-categoria">Categorías:</label>
+    <select id="filtro-categoria">
+      <option value="todos">Todos</option>
+      <option value="animales">Animales</option>
+      <option value="fantasia">Fantasía</option>
+    </select>
+  </div>
+      <!-- Precio Min y Max -->
+<div class="price-filter">
+  <div class="price-header">
+    <h3>PRECIO:</h3>
+    <div class="price-values">
+      <span id="min-price">150</span> - <span id="max-price">350</span>
     </div>
   </div>
+  
+  <div class="range-slider">
+    <input type="range" min="0" max="1000" value="0" class="slider" id="min-slider">
+    <input type="range" min="0" max="1000" value="350" class="slider" id="max-slider">
+    <div class="track"></div>
+    <div class="range"></div>
+  </div>
+  
+  <button class="reset-btn">RESETEAR</button>
+</div>
+
+    <!-- Galería de productos -->
+    <div id="galeria-productos" class="galeria-productos"></div>
+
+    <!-- Loader -->
+    <div id="product-loader" class="loader" hidden aria-live="polite">
+      <svg class="spinner" viewBox="0 0 50 50">
+        <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"/>
+      </svg>
+      <p>Cargando productos...</p>
+    </div>
+
+    <!-- Paginación -->
+    <div id="paginacion" class="paginacion"></div>
+  </div>
+</section>
+
+
+<div id="producto-modal" class="modal-overlay">
+  <div id="modal-contenido" class="modal-contenido-producto">
+    <button class="cerrar-modal" aria-label="Cerrar modal">&times;</button>
+    <div class="modal-flex">
+      <div class="modal-carrusel">
+  <img src="..." class="modal-img" alt="Imagen del producto">
+  <div class="modal-controls">
+    <button class="modal-prev" aria-label="Anterior">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <path d="M14 4l-6 7 6 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <button class="modal-next" aria-label="Siguiente">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <path d="M8 18l6-7-6-7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+</div>
+          <!-- Aquí puedes poner las medidas u otros detalles -->
+        </div>
+        <div class="modal-acciones">
+          <input type="number" class="cantidad-modal-input" value="1" min="1">
+          <button class="boton-agregar-modal">Agregar al carrito</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-thumbnails">
+      <!-- Aquí se mostrarán las miniaturas de las imágenes -->
+    </div>
+  </div>
+</div>
+
+
+<div id="aviso-pre-compra-modal" class="modal-aviso" role="dialog" aria-modal="true" hidden>
+  <div class="modal-aviso-contenido">
+    <h3>🧙‍♀️ Antes de confirmar tu pedido</h3>
+    <p>
+      <strong>Te pedimos que leas cuidadosamente las <em>especificaciones de compra</em></strong>:
+      esto incluye las <strong>características del producto</strong>, 
+      <strong>los tiempos de envío</strong>, y nuestra <strong>política de devoluciones</strong>.
+    </p>
+    <p>💫 Cada pieza es creada artesanalmente con paciencia, emoción y muchos pinchazos de amor dependiendo de la complejidad y el volumen de pedidos.</p>
+    <p>🌟 Nuestra intención es que vivas una experiencia mágica y transparente, y que tu figura llegue tal como la soñaste. Te agradecemos por valorar el trabajo hecho a mano.</p>
+    <div class="modal-aviso-botones">
+      <button id="btn-entendido-aviso" class="boton-aviso-entendido">
+        Sí, he leído y deseo continuar 🐑
+      </button>
+      <button id="btn-cancelar-aviso" class="boton-aviso-cancelar">
+        Cancelar compra
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para completar datos de envío -->
+<div id="modal-datos-envio" class="modal-datos-envio" role="dialog" aria-modal="true" hidden>
+  <div class="modal-envio-contenido">
+    <button id="btn-cerrar-modal-envio" class="cerrar-modal-envio" aria-label="Cerrar modal">×</button>
+    <div class="modal-envio-header">
+      <h3>Completa tus datos</h3>
+      <p>Finalizá tu compra ingresando la información de envío</p>
+    </div>
+    
+    <form id="form-envio" class="form-envio">
+      <div class="form-grupo">
+        <label for="input-nombre">Nombre*</label>
+        <input type="text" id="input-nombre" placeholder="Ej: María" required>
+      </div>
+      
+      <div class="form-grupo">
+        <label for="input-apellido">Apellido*</label>
+        <input type="text" id="input-apellido" placeholder="Ej: González" required>
+      </div>
+      
+      <div class="form-grupo">
+        <label for="input-telefono">Teléfono*</label>
+        <input type="tel" id="input-telefono" placeholder="Ej: 099123456" required>
+      </div>
+      
+      <div class="form-grupo" id="grupo-direccion">
+        <label for="input-direccion">Dirección*</label>
+        <input type="text" id="input-direccion" placeholder="Ej: Av. 18 de Julio 1234" required>
+        <small class="ayuda-texto">Solo si seleccionás envío</small>
+      </div>
+      
+      <div class="form-grupo">
+        <label for="select-envio">Método de envío*</label>
+        <select id="select-envio" required>
+          <option value="">Seleccionar método</option>
+          <option value="retiro">Retiro en local (Gratis)</option>
+          <option value="montevideo">Envío Montevideo ($150)</option>
+          <option value="interior">Envío Interior ($300)</option>
+        </select>
+      </div>
+      
+      <div class="form-notas">
+        <label for="input-notas">Notas adicionales</label>
+        <textarea id="input-notas" placeholder="Detalles especiales, horarios preferidos, etc." rows="3"></textarea>
+      </div>
+      
+      <div class="resumen-pedido">
+        <h4>Resumen de tu pedido</h4>
+        <div id="resumen-productos"></div>
+        <div class="resumen-total">
+          <span>Total:</span>
+          <span id="resumen-total">$U 0</span>
+        </div>
+      </div>
+      
+      <button type="submit" class="boton-confirmar-envio">
+        <i class="fab fa-whatsapp"></i> Enviar pedido por WhatsApp
+      </button>
+    </form>
+  </div>
+</div>
 
 <section id="contacto" class="contact">
   <div class="container">
@@ -280,12 +380,18 @@
         </a>
       </p>
       <p>📧 <a href="mailto:patofelting@gmail.com">patofelting@gmail.com</a></p>
+
       <p><a href="politicaempresa.html">Política de la empresa</a></p>
+
       <p><a href="comocomprar.html">Cómo comprar</a></p>
       <p>© 2025 <strong>Patofelting</strong> — Hecho con amor en Uruguay 🧶</p>
     </div>
   </footer>
 
+
+
   <script src="Untitled-1.js" defer></script>
+ 
+  
 </body>
 </html>
