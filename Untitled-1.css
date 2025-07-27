@@ -122,14 +122,34 @@ input[type="submit"]:hover,
   font-weight: var(--font-weight-bold);
   color: var(--primary-color);
 }
-
 .hamburguesa {
-  font-size: 1.5rem;
-  display: none;
+  font-size: 1.8rem;
+  display: none; /* Mostrar en responsive con media query */
   background: none;
-  color: var(--text-color);
+  border: none;
+  color: #000;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: color 0.3s ease;
 }
-/* RESPONSIVE */
+
+.hamburguesa:hover {
+  color: var(--primary-color); /* Verde al pasar el cursor */
+}
+
+/* Estilo para las líneas de menú si usás un ícono SVG o span */
+.hamburguesa span,
+.hamburguesa i,
+.hamburguesa svg {
+  stroke: #000;
+  transition: stroke 0.3s ease;
+}
+
+.hamburguesa:hover span,
+.hamburguesa:hover i,
+.hamburguesa:hover svg {
+  stroke: var(--primary-color);
+}/* RESPONSIVE */
 @media (max-width: 768px) {
   .hamburguesa {
     display: block;
