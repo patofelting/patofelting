@@ -141,10 +141,15 @@
       <!-- Precio Min y Max -->
 <div class="filtro-precio-container">
   <div class="filtro-rango-slider">
-    <label for="precio-slider" class="filtro-label">PRECIO:</label>
+    <label class="filtro-label">PRECIO:</label>
     <div class="slider-container">
-      <input type="range" id="precio-slider" min="0" max="3000" value="3000" aria-label="Rango de precios">
-      <div class="slider-value" id="valor-slider">$U3000</div>
+      <div class="slider-track"></div>
+      <input type="range" id="slider-min" min="0" max="3000" value="0">
+      <input type="range" id="slider-max" min="0" max="3000" value="3000">
+      <div class="slider-values">
+        <span id="min-valor">$U0</span>
+        <span id="max-valor">$U3000</span>
+      </div>
     </div>
   </div>
   
