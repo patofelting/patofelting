@@ -3558,3 +3558,124 @@ button {
   justify-content: space-between;
   font-size: 0.9rem;
 }
+
+
+/* 🧩 Contenedor principal centrado */
+.filtro-contenedor {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 30px;
+  background: #f9fefb;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+/* 🔄 Línea de filtros alineados */
+.filtro-linea {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+}
+
+/* 🧱 Cada bloque individual */
+.filtro-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 220px;
+}
+
+/* 🔍 Buscador */
+.input-busqueda {
+  padding: 10px 16px;
+  width: 100%;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--medium-gray);
+  font-size: 1rem;
+}
+
+/* 📂 Categorías */
+.input-categorias {
+  padding: 10px;
+  width: 100%;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--medium-gray);
+}
+
+/* 💸 Bloque precio */
+.filtro-precio-slider {
+  padding: 20px;
+  background: var(--light-gray);
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.slider-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 🎚️ Sliders */
+.slider-container input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--medium-gray);
+  border-radius: 4px;
+  outline: none;
+  transition: background 0.3s ease;
+}
+
+.slider-container input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--accent-color);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* 📊 Valores min y max */
+.slider-container span {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--text-color);
+}
+
+/* ✅ Botones */
+.aplicar-rango-btn,
+.boton-resetear-filtros {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-weight: bold;
+  box-shadow: var(--box-shadow);
+  transition: background 0.3s;
+}
+
+.aplicar-rango-btn:hover,
+.boton-resetear-filtros:hover {
+  background-color: var(--accent-color);
+}
