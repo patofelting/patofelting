@@ -961,7 +961,7 @@ const db = getFirestore(app);
 
 
 async function cargarProductosDesdeFirebase() {
-  const url = "https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json";
+  const url = "https://patofelting-b188f-default-rtdb.firebaseio.com";
 
   try {
     const res = await fetch(url);
