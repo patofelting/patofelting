@@ -1,12 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <link rel="icon" href="data:,"> <!-- Favicon vacío para evitar errores de carga -->
-  <meta charset="UTF-8" />
+  <link rel="icon" href="data:,"> <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Patofelting - Creaciones en Fieltro</title>
   <link rel="stylesheet" href="Untitled-1.css" />
-  <!-- Patrón SVG como fondo (se aplicará vía CSS) -->
   <svg width="0" height="0" style="position:absolute;">
     <defs>
       <pattern id="lana-pattern" patternUnits="userSpaceOnUse" width="100" height="100">
@@ -15,15 +13,34 @@
       </pattern>
     </defs>
   </svg>
-  <!-- Librerías -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
-  <!-- Font Awesome para íconos -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTnHg4CGR2D7kSs0v4LLanw2qksYuRlEzO+tcaEPQogQ0KaoGN26/zrn20ImR1DfuLWnOo7aBA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <!-- Configuración global de la aplicación -->
+  
   <script>
     window.SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
     window.PLACEHOLDER_IMAGE = 'img/placeholder.png';
+    window.FIREBASE_URL = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json'; 
+  </script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
+      authDomain: "patofelting-b188f.firebaseapp.com",
+      databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
+      projectId: "patofelting-b188f",
+      storageBucket: "patofelting-b188f.appspot.com",
+      messagingSenderId: "858377467588",
+      appId: "1:858377467588:web:cade9de05ebccc17f87b91"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+    // You might want to export 'database' or make it globally accessible if Untitled-1.js needs direct access
+    // For now, Untitled-1.js is using 'fetch' which doesn't directly use this 'database' object.
   </script>
 </head>
 <body oncontextmenu="return true;">
@@ -119,7 +136,7 @@
 <section id="productos" class="productos">
   <div class="container">
     <h2>Nuestros Productos</h2>
-   
+    
     <div class="filtros-container">
   <div class="filtro-categoria">
     <label for="filtro-categoria">Categorías:</label>
@@ -131,7 +148,7 @@
   </div>
 
 
-     <div class="price-filter">
+       <div class="price-filter">
     <div class="price-header">
       <span id="min-price">$U0</span>
       <span id="max-price">$U3000</span>
@@ -148,8 +165,7 @@
   <div class="filtro-busqueda">
     <input type="text" class="input-busqueda" placeholder="Buscar por nombre o descripción...">
   </div>
-</section>    
-      </div>
+</section>        </div>
       <div id="galeria-productos" class="galeria-productos"></div>
       <div id="product-loader" class="loader" hidden aria-live="polite">
         <svg class="spinner" viewBox="0 0 50 50">
@@ -180,12 +196,10 @@
           </div>
         </div>
         <div class="modal-info">
-          <!-- Aquí se cargarán dinámicamente los detalles del producto -->
-        </div>
+          </div>
       </div>
       <div class="modal-thumbnails">
-        <!-- Aquí se mostrarán las miniaturas de las imágenes -->
-      </div>
+        </div>
       <div class="modal-acciones">
         <input type="number" class="cantidad-modal-input" value="1" min="1">
         <button class="boton-agregar-modal">Agregar al carrito</button>
@@ -350,31 +364,6 @@
     </div>
   </footer>
 
-
-<!-- Firebase SDK -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
-    authDomain: "patofelting-b188f.firebaseapp.com",
-    databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
-    projectId: "patofelting-b188f",
-    storageBucket: "patofelting-b188f.appspot.com",
-    messagingSenderId: "858377467588",
-    appId: "1:858377467588:web:cade9de05ebccc17f87b91"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const database = getDatabase(app);
-</script>
-
-<script>
-  window.SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
-  window.PLACEHOLDER_IMAGE = 'img/placeholder.png';
-  window.FIREBASE_URL = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json'; // Añade esta línea
-</script>
-  <script src="Untitled-1.js" defer></script>
+  <script src="Untitled-1.js" defer type="module"></script>
 </body>
 </html>
