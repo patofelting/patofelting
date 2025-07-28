@@ -349,6 +349,27 @@
     </div>
   </footer>
 
+  <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, doc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD261TL6XuBp12rUnCCMkYP7_nMaCVYc7Y",
+    authDomain: "patofelting-b188f.firebaseapp.com",
+    projectId: "patofelting-b188f",
+    storageBucket: "patofelting-b188f.appspot.com",
+    messagingSenderId: "858377467588",
+    appId: "1:858377467588:web:cade9de05ebccc17f87b91"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // Exportamos la base para usarla en otras funciones
+  window.db = db;
+</script>
+
+
   <script src="Untitled-1.js" defer></script>
 </body>
 </html>
