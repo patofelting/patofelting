@@ -497,8 +497,39 @@ blockquote {
   cursor: pointer;
   transition: var(--transition);
   font-size: 0.9rem;
+  width: 100%; /* Asegura que ocupe todo el ancho disponible */
+  white-space: nowrap; /* Evita que el texto se divida en varias líneas */
+  overflow: hidden; /* Oculta cualquier contenido que desborde */
+  text-overflow: ellipsis; /* Añade puntos suspensivos si el texto es muy largo */
+  display: flex; /* Para alinear el icono y el texto */
+  align-items: center; /* Centra verticalmente el contenido */
+  justify-content: center; /* Centra horizontalmente el contenido */
+  gap: 5px; /* Espacio entre el icono y el texto */
 }
 
+@media (max-width: 768px) {
+  .boton-aviso-stock {
+    font-size: 0.8rem; /* Tamaño de fuente más pequeño */
+    padding: 6px 8px; /* Padding reducido */
+  }
+
+    .boton-aviso-stock::before {
+    content: "📩";
+    font-size: 0.9rem;
+  }
+
+   .boton-aviso-stock span {
+    display: none; /* Oculta el texto largo en móviles */
+  }
+}
+
+
+@media (max-width: 480px) {
+  .boton-aviso-stock {
+    font-size: 0.75rem;
+    padding: 5px;
+  }
+}
 .boton-aviso-stock:hover {
   background-color: #e59400;
 }
