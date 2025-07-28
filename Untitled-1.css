@@ -93,9 +93,19 @@ input[type="submit"]:hover,
   display: grid;
   gap: 15px;
   margin-top: 30px;
-  grid-template-columns: repeat(4, 1fr); /* 4 columnas por defecto */
+  grid-template-columns: repeat(6, 1fr); /* 6 productos en escritorio */
+}
+@media (max-width: 1024px) {
+  .galeria-productos {
+    grid-template-columns: repeat(4, 1fr); /* 4 en tablets */
+  }
 }
 
+@media (max-width: 768px) {
+  .galeria-productos {
+    grid-template-columns: repeat(2, 1fr); /* 2 en móviles */
+  }
+}
 .producto-card {
   background-color: white;
   border-radius: var(--border-radius);
@@ -2595,5 +2605,18 @@ body.no-scroll {
 
   .boton-agregar-modal {
     width: 100%;
+  }
+}
+
+
+@media (max-width: 768px) {
+  .producto-nombre {
+    font-size: 0.85rem;
+  }
+  .producto-precio {
+    font-size: 0.85rem;
+  }
+  .card-acciones {
+    gap: 6px;
   }
 }
