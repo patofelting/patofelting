@@ -2563,3 +2563,37 @@ body.no-scroll {
 body.no-scroll {
   overflow: hidden;
 }
+
+
+@media (max-width: 480px) {
+  .modal-flex {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .modal-img {
+    max-height: 250px;
+  }
+
+  .modal-acciones {
+    flex-direction: column;
+  }
+
+  .carrito-panel {
+    max-width: 100%;
+  }
+
+  .carrito-item-controls button {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 2rem !important;
+  }
+
+  .cantidad-modal-input {
+    width: 100%;
+  }
+
+  .boton-agregar-modal {
+    width: 100%;
+  }
+}
