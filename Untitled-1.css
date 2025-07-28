@@ -357,10 +357,63 @@ blockquote {
 /* Product Gallery */
 .galeria-productos {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 25px;
+  gap: 20px;
   margin-top: 30px;
 }
+
+@media (min-width: 1200px) {
+  .galeria-productos {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .galeria-productos {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+/* Para móviles (2 columnas - ajustado de 4 a 2 porque 4 es demasiado pequeño) */
+@media (max-width: 767px) {
+  .galeria-productos {
+    grid-template-columns: repeat(2, 1fr); /* Cambiado a 2 columnas */
+    gap: 10px;
+  }
+}
+
+.producto-card {
+    min-width: 0;
+    margin: 0;
+  }
+
+  .producto-nombre {
+    font-size: 0.9rem;
+    padding: 0 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .producto-precio {
+    font-size: 0.9rem;
+    padding: 0 8px;
+  }
+
+  .card-acciones {
+    flex-direction: column;
+    padding: 0 8px 8px;
+    gap: 5px;
+  }
+
+  .boton-agregar, .boton-detalles {
+    font-size: 0.8rem;
+    padding: 6px;
+    width: 100%;
+  }
+
+  .boton-aviso-stock {
+    font-size: 0.7rem;
+    padding: 4px;
+  }
 
 .producto-card {
   background-color: white;
