@@ -348,25 +348,26 @@
       <p>© 2025 <strong>Patofelting</strong> — Hecho con amor en Uruguay 🧶</p>
     </div>
   </footer>
+  
 
-  <script type="module">
+<script type="module">
+  // Import the functions you need from the SDKs you need
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-  import { getFirestore, collection, getDocs, doc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
 
+  // Your web app's Firebase configuration
   const firebaseConfig = {
-    apiKey: "AIzaSyD261TL6XuBp12rUnCCMkYP7_nMaCVYc7Y",
+    apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
     authDomain: "patofelting-b188f.firebaseapp.com",
     projectId: "patofelting-b188f",
-    storageBucket: "patofelting-b188f.appspot.com",
+    storageBucket: "patofelting-b188f.firebasestorage.app",
     messagingSenderId: "858377467588",
     appId: "1:858377467588:web:cade9de05ebccc17f87b91"
   };
 
+  // Initialize Firebase
   const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  // Exportamos la base para usarla en otras funciones
-  window.db = db;
 </script>
 
 
