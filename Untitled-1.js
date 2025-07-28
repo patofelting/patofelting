@@ -1038,3 +1038,25 @@ function enviarDatosAFirebase() {
   const respuesta = UrlFetchApp.fetch(FIREBASE_URL, opciones);
   Logger.log(respuesta.getContentText());
 }
+
+productosArray.forEach(producto => {
+  let productoHTML = `
+    <div class="producto-card">
+      <img src="${producto.imagen}" class="producto-img" />
+      <h3 class="producto-nombre">${producto.nombre}</h3>
+      <p class="producto-precio">$U ${producto.precio}</p>
+  `;
+
+  if (producto.cantidad <= 0) {
+    productoHTML += `<span class="agotado">Agotado</span>`;
+  }
+
+  productoHTML += `
+      <div class="card-acciones">
+        <button class="boton-agregar" ${producto.cantidad <= 0 ? 'disabled' : ''}>Agregar al carrito</button>
+      </div>
+    </div>
+  `;
+
+  galeria.innerHTML += productoHTML;
+});
