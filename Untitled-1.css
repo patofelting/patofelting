@@ -357,11 +357,17 @@ blockquote {
 /* Product Gallery */
 .galeria-productos {
   display: grid;
-  grid-template-columns: repeat(3, minmax(200px, 1fr));
-  gap: 15px;
-  margin-top: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  padding: 0.5rem;
 }
 
+@media (max-width: 600px) {
+  .galeria-productos {
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 0.5rem;
+  }
+}
 .producto-card {
   background-color: white;
   border-radius: var(--border-radius);
@@ -528,6 +534,17 @@ blockquote {
     padding: 6px 10px; /* Reduce padding for mobile */
     font-size: 0.8rem; /* Smaller font size */
     margin-top: 5px; /* Reduce margin */
+  }
+}
+
+
+@media (max-width: 767px) {
+  .producto-card .boton-agregar.agotado {
+    display: none !important;
+  }
+
+  .producto-card .boton-aviso-stock {
+    width: 100%;
   }
 }
 /* Product Modal */
