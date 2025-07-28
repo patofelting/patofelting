@@ -357,9 +357,9 @@ blockquote {
 /* Product Gallery */
 .galeria-productos {
   display: grid;
-  grid-template-columns: repeat(3, minmax(280px, 1fr)); /* 3 columns for PC */
-  gap: 25px;
-  margin-top: 10px;
+  grid-template-columns: repeat(3, minmax(200px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
 }
 
 .producto-card {
@@ -503,12 +503,33 @@ blockquote {
   cursor: pointer;
   transition: var(--transition);
   font-size: 0.9rem;
+  width: 100%; /* Ensure it takes full width on mobile */
 }
 
 .boton-aviso-stock:hover {
   background-color: #e59400;
 }
 
+@media (max-width: 768px) {
+  .galeria-productos {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+
+  .card-acciones {
+    padding: 0 5px 5px; /* Further reduce padding on mobile */
+  }
+
+  .boton-agregar {
+    padding: 5px 8px; /* Reduce padding for mobile */
+    font-size: 0.85rem; /* Smaller font size */
+  }
+
+  .boton-aviso-stock {
+    padding: 6px 10px; /* Reduce padding for mobile */
+    font-size: 0.8rem; /* Smaller font size */
+    margin-top: 5px; /* Reduce margin */
+  }
+}
 /* Product Modal */
 #producto-modal {
   position: fixed;
