@@ -7,7 +7,16 @@ const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 const btnCancelarAviso = document.getElementById('btn-cancelar-aviso');
-const FIREBASE_URL = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json';
+const firebaseConfig = {
+  apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
+  authDomain: "patofelting-b188f.firebaseapp.com",
+  databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
+  projectId: "patofelting-b188f",
+  storageBucket: "patofelting-b188f.appspot.com",
+  messagingSenderId: "858377467588",
+  appId: "1:858377467588:web:cade9de05ebccc17f87b91"
+};
+
 
 // ===============================
 // ESTADO GLOBAL
@@ -946,117 +955,83 @@ updateRange();
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "XXX",
-  authDomain: "patofelting-xxxx.firebaseapp.com",
-  projectId: "patofelting-xxxx",
-  storageBucket: "patofelting-xxxx.appspot.com",
-  messagingSenderId: "XXXX",
-  appId: "XXX"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-
 async function cargarProductosDesdeFirebase() {
-  const url = "https://patofelting-b188f-default-rtdb.firebaseio.com";
-
   try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Error al obtener datos");
-    const data = await res.json();
-
-    const galeria = document.getElementById("galeria-productos");
-    galeria.innerHTML = ""; // limpiar
-
-    Object.values(data).forEach(producto => {
-      const disponible = parseInt(producto.cantidad) > 0;
-
-      const card = document.createElement("div");
-      card.classList.add("producto-card");
-
-      card.innerHTML = `
-        <h3>${producto.nombre}</h3>
-        <p>${producto.descripcion}</p>
-        <p><strong>Precio:</strong> $U${producto.precio}</p>
-        <p><strong>Estado:</strong> 
-          ${disponible ? "Disponible" : "<span style='color:red;'>Agotado</span>"}
-        </p>
-      `;
-
-      galeria.appendChild(card);
-    });
-
+    if (elementos.productLoader) {
+      elementos.productLoader.style.display = 'flex';
+      elementos.productLoader.hidden = false;
+    }
+    
+    const response = await fetch('https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json');
+    
+    if (!response.ok) {
+      throw new Error('Error al cargar productos desde Firebase');
+    }
+    
+    const data = await response.json();
+    
+    if (!data || data.length === 0) {
+      if (elementos.galeriaProductos) {
+        elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles en este momento.</p>';
+      }
+      return;
+    }
+    
+    productos = data.map(item => ({
+      id: item.id,
+      nombre: item.nombre || '',
+      descripcion: item.descripcion || '',
+      precio: parseFloat(item.precio) || 0,
+      stock: parseInt(item.stock, 10) || 0,
+      imagenes: item.imagenes && item.imagenes.length > 0 ? item.imagenes : [PLACEHOLDER_IMAGE],
+      adicionales: item.adicionales || '',
+      alto: parseFloat(item.alto) || null,
+      ancho: parseFloat(item.ancho) || null,
+      profundidad: parseFloat(item.profundidad) || null,
+      categoria: item.categoria ? item.categoria.trim().toLowerCase() : 'otros',
+      vendido: item.vendido ? item.vendido.toString().toLowerCase() === 'true' : false,
+      estado: item.estado || ''
+    }));
+    
+    actualizarCategorias();
+    actualizarUI();
+    
   } catch (error) {
-    console.error("Error al cargar productos:", error);
+    console.error('Error al cargar productos desde Firebase:', error);
+    mostrarNotificacion('Error al cargar productos. Intente nuevamente más tarde.', 'error');
+    
+    if (elementos.galeriaProductos) {
+      elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos.</p>';
+    }
+    
+  } finally {
+    if (elementos.productLoader) {
+      elementos.productLoader.style.display = 'none';
+      elementos.productLoader.hidden = true;
+    }
   }
 }
 
-// llamalo al cargar la página
-document.addEventListener("DOMContentLoaded", cargarProductosDesdeFirebase);
+function init() {
+  inicializarMenuHamburguesa();
+  inicializarFAQ();
+  setupContactForm();
 
-
-// Llamada inicial
-cargarProductosDesdeFirebase();
-function consultarDisponibilidad(nombreProducto) {
-  const mensaje = `Hola! Estoy interesado en el producto "${nombreProducto}" que aparece como agotado. ¿Tendrán más disponible pronto?`;
-  const numero = '59894955466'; // Cambialo por el tuyo
-  const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
-  window.open(url, '_blank');
-}
-
-
-function enviarDatosAFirebase() {
-  const hoja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Hoja 1");
-  const datos = hoja.getRange(2, 1, hoja.getLastRow() - 1, 11).getValues();
-
-  const productos = {};
-  datos.forEach(fila => {
-    const id = fila[0]; // Asegurate que la columna A tenga IDs únicos como "gato", "conejo", etc.
-    productos[id] = {
-      nombre: fila[1],
-      descripcion: fila[2],
-      alto: fila[3],
-      ancho: fila[4],
-      profundidad: fila[5],
-      cantidad: fila[6],
-      adicionales: fila[7],
-      categoria: fila[8],
-      precio: fila[9],
-      vendido: fila[10]
-    };
-  });
-
-  const opciones = {
-    method: 'put',
-    contentType: 'application/json',
-    payload: JSON.stringify(productos)
-  };
-
-  const respuesta = UrlFetchApp.fetch(FIREBASE_URL, opciones);
-  Logger.log(respuesta.getContentText());
-}
-
-productosArray.forEach(producto => {
-  let productoHTML = `
-    <div class="producto-card">
-      <img src="${producto.imagen}" class="producto-img" />
-      <h3 class="producto-nombre">${producto.nombre}</h3>
-      <p class="producto-precio">$U ${producto.precio}</p>
-  `;
-
-  if (producto.cantidad <= 0) {
-    productoHTML += `<span class="agotado">Agotado</span>`;
+  if (elementos.avisoPreCompraModal) elementos.avisoPreCompraModal.style.display = 'none';
+  if (elementos.productoModal) elementos.productoModal.style.display = 'none';
+  if (elementos.productLoader) {
+    elementos.productLoader.style.display = 'none';
+    elementos.productLoader.hidden = true;
   }
-
-  productoHTML += `
-      <div class="card-acciones">
-        <button class="boton-agregar" ${producto.cantidad <= 0 ? 'disabled' : ''}>Agregar al carrito</button>
-      </div>
-    </div>
-  `;
-
-  galeria.innerHTML += productoHTML;
-});
+  
+  cargarCarrito();
+  
+  // Decide qué fuente de datos usar (Firebase o Google Sheets)
+  if (FIREBASE_URL) {
+    cargarProductosDesdeFirebase();
+  } else if (CSV_URL) {
+    cargarProductosDesdeSheets();
+  }
+  
+  inicializarEventos();
+}
