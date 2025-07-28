@@ -130,13 +130,11 @@ function agregarAlCarrito(id, cantidad = 1) {
   const enCarritoCant = enCarrito ? enCarrito.cantidad : 0;
   const disponibles = Math.max(0, prod.stock - enCarritoCant);
   
-  // Verificar si hay stock disponible antes de agregar
   if (prod.stock <= 0 || disponibles <= 0) {
     mostrarNotificacion('Producto agotado', 'error');
     return;
   }
   
-  // Verificar que la cantidad solicitada no supere el stock disponible
   if (cantidad > disponibles) {
     mostrarNotificacion(`Solo hay ${disponibles} unidades disponibles`, 'error');
     return;
@@ -156,6 +154,23 @@ function agregarAlCarrito(id, cantidad = 1) {
   
   guardarCarrito();
   actualizarUI();
+  
+  // Actualizar específicamente el stock mostrado en la tarjeta del producto
+  const productoCard = document.querySelector(`.producto-card[data-id="${id}"]`);
+  if (productoCard) {
+    const nuevosDisponibles = Math.max(0, prod.stock - (enCarrito ? enCarrito.cantidad + cantidad : cantidad));
+    productoCard.querySelector('.producto-stock').innerHTML = 
+      nuevosDisponibles <= 0 ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${nuevosDisponibles}`;
+    
+    // Actualizar estado del botón
+    const botonAgregar = productoCard.querySelector('.boton-agregar');
+    if (nuevosDisponibles <= 0) {
+      botonAgregar.disabled = true;
+      botonAgregar.innerHTML = '<i class="fas fa-times-circle"></i> Agotado';
+      botonAgregar.classList.add('agotado');
+    }
+  }
+  
   mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
 }
 
@@ -335,12 +350,7 @@ function filtrarProductos() {
 function crearCardProducto(p) {
   const enCarrito = carrito.find(i => i.id === p.id);
   const disp = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
-  const agot = p.stock <= 0 || disp <= 0;
-
-  const botonAgotado = agot ? `
-    <button class="boton-aviso-stock" onclick="preguntarStock('${p.nombre}')">
-      📩 Avisame cuando haya stock
-    </button>` : '';
+  const agot = disp <= 0;
 
   return `
     <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}">
@@ -348,13 +358,16 @@ function crearCardProducto(p) {
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
       <p class="producto-stock">
-        ${agot ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${p.stock}`}
+        ${agot ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${disp}`}
       </p>
       <div class="card-acciones">
         <button class="boton-agregar${agot ? ' agotado' : ''}" data-id="${p.id}" ${agot ? 'disabled' : ''}>
           ${agot ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
         </button>
-        ${botonAgotado}
+        ${agot ? `
+        <button class="boton-aviso-stock" onclick="preguntarStock('${p.nombre}')">
+          📩 Avisame cuando haya stock
+        </button>` : ''}
       </div>
       <button class="boton-detalles" data-id="${p.id}">🛈 Ver Detalle</button>
     </div>
@@ -534,6 +547,7 @@ function conectarEventoModal() {
 // ACTUALIZAR UI
 // ===============================
 function actualizarUI() {
+  // Forzar rerenderizado de productos para actualizar stocks
   renderizarProductos();
   renderizarCarrito();
   actualizarContadorCarrito();
