@@ -2016,9 +2016,85 @@ button:active {
     cursor: pointer;
   }
 
+.galeria-productos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 25px;
+  margin-top: 30px;
+}
+
+@media (max-width: 992px) {
   .galeria-productos {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   }
+}
+
+@media (max-width: 768px) {
+  .galeria-productos {
+    grid-template-columns: repeat(4, 1fr); /* 4 columnas de igual tamaño */
+    gap: 10px; /* Reducimos el espacio entre productos */
+  }
+}
+
+ .producto-card {
+    min-width: 0; /* Permite que se reduzcan más allá de su tamaño mínimo */
+    margin: 0; /* Eliminamos márgenes adicionales */
+  }
+  
+  /* Ajustamos el contenido interno para pantallas pequeñas */
+  .producto-nombre {
+    font-size: 0.9rem;
+    padding: 0 8px;
+  }
+  
+  .producto-precio {
+    font-size: 0.9rem;
+    padding: 0 8px;
+  }
+  
+  .card-acciones {
+    padding: 0 8px 8px;
+  }
+  
+  .boton-agregar, .boton-detalles {
+    font-size: 0.8rem;
+    padding: 6px 8px;
+  }
+}
+
+/* Ajustes adicionales para pantallas muy pequeñas */
+@media (max-width: 480px) {
+  .galeria-productos {
+    grid-template-columns: repeat(4, 1fr); /* Mantenemos 4 columnas */
+    gap: 8px; /* Espacio aún más reducido */
+  }
+  
+  .producto-img {
+    aspect-ratio: 1 / 1; /* Mantenemos relación cuadrada */
+  }
+  
+  .producto-nombre {
+    font-size: 0.8rem; /* Texto más pequeño */
+    white-space: nowrap; /* Evita saltos de línea */
+    overflow: hidden; /* Oculta texto que desborde */
+    text-overflow: ellipsis; /* Añade ... al final */
+  }
+  
+  .producto-precio {
+    font-size: 0.8rem;
+  }
+  
+  .boton-detalles {
+    font-size: 0.7rem;
+    padding: 4px 6px;
+  }
+
+
+.producto-card {
+    min-width: 0; /* Permite que se reduzcan más allá de su tamaño mínimo */
+    margin: 0; /* Eliminamos márgenes adicionales */
+  }
+  
 
   #modal-contenido {
     padding: 20px;
