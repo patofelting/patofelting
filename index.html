@@ -350,13 +350,10 @@
   </footer>
 
 
-<!-- Firebase App (core) -->
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+  import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
-<!-- Firebase Realtime Database -->
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js"></script>
-
-<script>
   const firebaseConfig = {
     apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_mNaCVYc7Y",
     authDomain: "patofelting-b188f.firebaseapp.com",
@@ -367,15 +364,24 @@
     appId: "1:41796301765:web:8ef6c77c65cfc6eacb9f3f"
   };
 
-  // Inicializar Firebase
-  firebase.initializeApp(firebaseConfig);
+  // Inicializar Firebase App
+  const app = initializeApp(firebaseConfig);
 
-  const db = firebase.database();
+  // Obtener referencia a la base de datos
+  const db = getDatabase(app);
 
   // Leer datos
-  db.ref('/productos').once('value').then(snapshot => {
-    const productos = snapshot.val();
-    console.log(productos); // Acá podés procesarlos en tu página
+  const dbRef = ref(db);
+  get(child(dbRef, 'productos')).then((snapshot) => {
+    if (snapshot.exists()) {
+      const productos = snapshot.val();
+      console.log(productos); // Acá podés usar los productos
+      // Aquí podés llamar a tu función para renderizar productos
+    } else {
+      console.log("No hay productos");
+    }
+  }).catch((error) => {
+    console.error("Error al leer datos:", error);
   });
 </script>
 
