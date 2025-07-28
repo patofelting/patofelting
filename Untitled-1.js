@@ -957,61 +957,20 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebas
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 async function cargarProductosDesdeFirebase() {
   try {
-    if (elementos.productLoader) {
-      elementos.productLoader.style.display = 'flex';
-      elementos.productLoader.hidden = false;
-    }
-    
     const response = await fetch('https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json');
     
     if (!response.ok) {
-      throw new Error('Error al cargar productos desde Firebase');
+      throw new Error('Error al cargar: ' + response.status);
     }
     
     const data = await response.json();
-    
-    if (!data || data.length === 0) {
-      if (elementos.galeriaProductos) {
-        elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles en este momento.</p>';
-      }
-      return;
-    }
-    
-    productos = data.map(item => ({
-      id: item.id,
-      nombre: item.nombre || '',
-      descripcion: item.descripcion || '',
-      precio: parseFloat(item.precio) || 0,
-      stock: parseInt(item.stock, 10) || 0,
-      imagenes: item.imagenes && item.imagenes.length > 0 ? item.imagenes : [PLACEHOLDER_IMAGE],
-      adicionales: item.adicionales || '',
-      alto: parseFloat(item.alto) || null,
-      ancho: parseFloat(item.ancho) || null,
-      profundidad: parseFloat(item.profundidad) || null,
-      categoria: item.categoria ? item.categoria.trim().toLowerCase() : 'otros',
-      vendido: item.vendido ? item.vendido.toString().toLowerCase() === 'true' : false,
-      estado: item.estado || ''
-    }));
-    
-    actualizarCategorias();
-    actualizarUI();
+    console.log('Productos cargados:', data);
     
   } catch (error) {
-    console.error('Error al cargar productos desde Firebase:', error);
-    mostrarNotificacion('Error al cargar productos. Intente nuevamente más tarde.', 'error');
-    
-    if (elementos.galeriaProductos) {
-      elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos.</p>';
-    }
-    
-  } finally {
-    if (elementos.productLoader) {
-      elementos.productLoader.style.display = 'none';
-      elementos.productLoader.hidden = true;
-    }
+    console.error('Error grave:', error);
+    mostrarNotificacion('No se pudo cargar el catálogo', 'error');
   }
 }
-
 function init() {
   inicializarMenuHamburguesa();
   inicializarFAQ();
