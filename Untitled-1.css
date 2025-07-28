@@ -357,7 +357,7 @@ blockquote {
 /* Product Gallery */
 .galeria-productos {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(3, minmax(280px, 1fr)); /* 3 columns for PC */
   gap: 25px;
   margin-top: 30px;
 }
@@ -371,6 +371,12 @@ blockquote {
   display: flex;
   flex-direction: column;
   position: relative;
+}
+
+@media (max-width: 768px) {
+  .galeria-productos {
+    grid-template-columns: repeat(2, minmax(280px, 1fr)); /* 2 columns for mobile */
+  }
 }
 
 .producto-card:hover {
