@@ -121,15 +121,27 @@ function actualizarContadorCarrito() {
 function agregarAlCarrito(id, cantidad = 1) {
   const prod = productos.find(p => p.id === id);
   if (!prod) return mostrarNotificacion('Producto no encontrado', 'error');
+  
   cantidad = parseInt(cantidad, 10);
-  if (isNaN(cantidad) || cantidad < 1) return mostrarNotificacion('Cantidad inválida', 'error');
+  if (isNaN(cantidad)) cantidad = 1;
+  if (cantidad < 1) return mostrarNotificacion('Cantidad inválida', 'error');
+  
   const enCarrito = carrito.find(item => item.id === id);
   const enCarritoCant = enCarrito ? enCarrito.cantidad : 0;
   const disponibles = Math.max(0, prod.stock - enCarritoCant);
+  
+  // Verificar si hay stock disponible antes de agregar
+  if (prod.stock <= 0 || disponibles <= 0) {
+    mostrarNotificacion('Producto agotado', 'error');
+    return;
+  }
+  
+  // Verificar que la cantidad solicitada no supere el stock disponible
   if (cantidad > disponibles) {
     mostrarNotificacion(`Solo hay ${disponibles} unidades disponibles`, 'error');
     return;
   }
+  
   if (enCarrito) {
     enCarrito.cantidad += cantidad;
   } else {
@@ -141,6 +153,7 @@ function agregarAlCarrito(id, cantidad = 1) {
       imagen: prod.imagenes[0] || PLACEHOLDER_IMAGE
     });
   }
+  
   guardarCarrito();
   actualizarUI();
   mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
@@ -172,9 +185,6 @@ function renderizarCarrito() {
         </div>
         <span class="carrito-item-subtotal">Subtotal: $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
       </div>
-      <button class="eliminar-item" data-id="${item.id}" aria-label="Eliminar producto">
-        <i class="fas fa-trash"></i>
-      </button>
     </li>
   `}).join('');
 
@@ -325,7 +335,7 @@ function filtrarProductos() {
 function crearCardProducto(p) {
   const enCarrito = carrito.find(i => i.id === p.id);
   const disp = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
-  const agot = disp <= 0;
+  const agot = p.stock <= 0 || disp <= 0;
 
   const botonAgotado = agot ? `
     <button class="boton-aviso-stock" onclick="preguntarStock('${p.nombre}')">
@@ -338,7 +348,7 @@ function crearCardProducto(p) {
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
       <p class="producto-stock">
-        ${agot ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${disp}`}
+        ${agot ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${p.stock}`}
       </p>
       <div class="card-acciones">
         <button class="boton-agregar${agot ? ' agotado' : ''}" data-id="${p.id}" ${agot ? 'disabled' : ''}>
