@@ -359,7 +359,7 @@ blockquote {
   display: grid;
   grid-template-columns: repeat(3, minmax(280px, 1fr)); /* 3 columns for PC */
   gap: 25px;
-  margin-top: 30px;
+  margin-top: 10px;
 }
 
 .producto-card {
