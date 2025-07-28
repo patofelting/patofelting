@@ -940,3 +940,55 @@ function aplicarRango() {
 minSlider.addEventListener('input', updateRange);
 maxSlider.addEventListener('input', updateRange);
 updateRange();
+
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "XXX",
+  authDomain: "patofelting-xxxx.firebaseapp.com",
+  projectId: "patofelting-xxxx",
+  storageBucket: "patofelting-xxxx.appspot.com",
+  messagingSenderId: "XXXX",
+  appId: "XXX"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+
+async function cargarProductosDesdeFirebase() {
+  const respuesta = await fetch('https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json');
+  const productos = await respuesta.json();
+
+  // Aseguramos que es un array
+  if (!Array.isArray(productos)) return;
+
+  const galeria = document.getElementById('galeria-productos');
+  galeria.innerHTML = '';
+
+  productos.forEach(producto => {
+    const agotado = parseInt(producto.cantidad) <= 0;
+
+    const div = document.createElement('div');
+    div.className = 'producto';
+    div.innerHTML = `
+      <h3>${producto.nombre}</h3>
+      <p>${producto.descripcion}</p>
+      <p><strong>Precio:</strong> $U${producto.precio}</p>
+      <p><strong>Stock:</strong> ${agotado ? '<span class="agotado">Agotado</span>' : producto.cantidad}</p>
+      ${agotado ? '<button class="btn-consulta" onclick="consultarDisponibilidad(\'' + producto.nombre + '\')">Consultar disponibilidad</button>' : ''}
+    `;
+    galeria.appendChild(div);
+  });
+}
+
+// Llamada inicial
+cargarProductosDesdeFirebase();
+function consultarDisponibilidad(nombreProducto) {
+  const mensaje = `Hola! Estoy interesado en el producto "${nombreProducto}" que aparece como agotado. ¿Tendrán más disponible pronto?`;
+  const numero = '59894955466'; // Cambialo por el tuyo
+  const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
+  window.open(url, '_blank');
+}
