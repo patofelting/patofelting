@@ -495,6 +495,29 @@ blockquote {
   }
 }
 
+@media (max-width: 1024px) {
+  .producto-card {
+    flex: 1 1 calc(33.33% - 24px);
+    max-width: calc(33.33% - 24px);
+  }
+}
+
+
+/* Móviles */
+@media (max-width: 768px) {
+  .producto-card {
+    flex: 1 1 calc(50% - 20px); /* 2 por fila */
+    max-width: calc(50% - 20px);
+  }
+}
+
+/* Móviles pequeños */
+@media (max-width: 480px) {
+  .producto-card {
+    flex: 1 1 calc(50% - 16px); /* sigue 2 por fila */
+    max-width: calc(50% - 16px);
+  }
+}
 .producto-card {
     min-width: 0;
     margin: 0;
@@ -2185,10 +2208,13 @@ button:active {
   }
 
 .galeria-productos {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 25px;
-  margin-top: 30px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px;
+  max-width: 1100px;
+  margin: 30px auto;
+  padding: 0 16px;
 }
 
 @media (max-width: 992px) {
@@ -2204,10 +2230,12 @@ button:active {
   }
 }
 
- .producto-card {
-    min-width: 0; /* Permite que se reduzcan más allá de su tamaño mínimo */
-    margin: 0; /* Eliminamos márgenes adicionales */
-  }
+.producto-card {
+  flex: 1 1 calc(33.33% - 24px); /* 3 por fila en escritorio */
+  max-width: calc(33.33% - 24px);
+  box-sizing: border-box;
+  margin: 0;
+}
   
   /* Ajustamos el contenido interno para pantallas pequeñas */
   .producto-nombre {
