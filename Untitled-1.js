@@ -7,6 +7,8 @@ const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 const btnCancelarAviso = document.getElementById('btn-cancelar-aviso');
+const FIREBASE_URL = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json';
+
 // ===============================
 // ESTADO GLOBAL
 // ===============================
@@ -959,30 +961,42 @@ const db = getFirestore(app);
 
 
 async function cargarProductosDesdeFirebase() {
-  const respuesta = await fetch('https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json');
-  const productos = await respuesta.json();
+  const url = "https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json";
 
-  // Aseguramos que es un array
-  if (!Array.isArray(productos)) return;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Error al obtener datos");
+    const data = await res.json();
 
-  const galeria = document.getElementById('galeria-productos');
-  galeria.innerHTML = '';
+    const galeria = document.getElementById("galeria-productos");
+    galeria.innerHTML = ""; // limpiar
 
-  productos.forEach(producto => {
-    const agotado = parseInt(producto.cantidad) <= 0;
+    Object.values(data).forEach(producto => {
+      const disponible = parseInt(producto.cantidad) > 0;
 
-    const div = document.createElement('div');
-    div.className = 'producto';
-    div.innerHTML = `
-      <h3>${producto.nombre}</h3>
-      <p>${producto.descripcion}</p>
-      <p><strong>Precio:</strong> $U${producto.precio}</p>
-      <p><strong>Stock:</strong> ${agotado ? '<span class="agotado">Agotado</span>' : producto.cantidad}</p>
-      ${agotado ? '<button class="btn-consulta" onclick="consultarDisponibilidad(\'' + producto.nombre + '\')">Consultar disponibilidad</button>' : ''}
-    `;
-    galeria.appendChild(div);
-  });
+      const card = document.createElement("div");
+      card.classList.add("producto-card");
+
+      card.innerHTML = `
+        <h3>${producto.nombre}</h3>
+        <p>${producto.descripcion}</p>
+        <p><strong>Precio:</strong> $U${producto.precio}</p>
+        <p><strong>Estado:</strong> 
+          ${disponible ? "Disponible" : "<span style='color:red;'>Agotado</span>"}
+        </p>
+      `;
+
+      galeria.appendChild(card);
+    });
+
+  } catch (error) {
+    console.error("Error al cargar productos:", error);
+  }
 }
+
+// llamalo al cargar la página
+document.addEventListener("DOMContentLoaded", cargarProductosDesdeFirebase);
+
 
 // Llamada inicial
 cargarProductosDesdeFirebase();
@@ -991,4 +1005,36 @@ function consultarDisponibilidad(nombreProducto) {
   const numero = '59894955466'; // Cambialo por el tuyo
   const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
   window.open(url, '_blank');
+}
+
+
+function enviarDatosAFirebase() {
+  const hoja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Hoja 1");
+  const datos = hoja.getRange(2, 1, hoja.getLastRow() - 1, 11).getValues();
+
+  const productos = {};
+  datos.forEach(fila => {
+    const id = fila[0]; // Asegurate que la columna A tenga IDs únicos como "gato", "conejo", etc.
+    productos[id] = {
+      nombre: fila[1],
+      descripcion: fila[2],
+      alto: fila[3],
+      ancho: fila[4],
+      profundidad: fila[5],
+      cantidad: fila[6],
+      adicionales: fila[7],
+      categoria: fila[8],
+      precio: fila[9],
+      vendido: fila[10]
+    };
+  });
+
+  const opciones = {
+    method: 'put',
+    contentType: 'application/json',
+    payload: JSON.stringify(productos)
+  };
+
+  const respuesta = UrlFetchApp.fetch(FIREBASE_URL, opciones);
+  Logger.log(respuesta.getContentText());
 }
