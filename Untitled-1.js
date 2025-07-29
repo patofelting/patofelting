@@ -43,10 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-document.addEventListener('DOMContentLoaded', () => {
-  cargarProductosDesdeFirebase(); // antes era desde Google Sheets
-  inicializarEventos();
-});
 
 
 // ===============================
@@ -975,21 +971,44 @@ import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10
 
 const database = getDatabase();
 
-function cargarProductosDesdeFirebase() {
-  const productosRef = ref(database, 'productos');
-
-  onValue(productosRef, (snapshot) => {
-    const data = snapshot.val();
-
-    if (data) {
-      const productos = Object.values(data);
-      renderizarProductos(productos);
-    } else {
-      console.error("No se encontraron productos en Firebase.");
+async function cargarProductosDesdeFirebase() {
+  try {
+    if (elementos.productLoader) {
+      elementos.productLoader.style.display = 'flex';
+      elementos.productLoader.hidden = false;
     }
-  }, {
-    onlyOnce: true
-  });
+
+    const response = await fetch('https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json');
+    if (!response.ok) throw new Error('Error al obtener productos desde Firebase');
+
+    const data = await response.json();
+    if (!data || Object.keys(data).length === 0) {
+      elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles.</p>';
+      return;
+    }
+
+    productos = Object.values(data).map(p => ({
+      ...p,
+      imagenes: Array.isArray(p.imagenes) ? p.imagenes : [p.imagenes || PLACEHOLDER_IMAGE],
+      precio: parseFloat(p.precio) || 0,
+      stock: parseInt(p.stock) || 0,
+      categoria: (p.categoria || 'otros').toLowerCase(),
+      vendido: !!p.vendido
+    }));
+
+    actualizarCategorias();
+    actualizarUI();
+
+  } catch (e) {
+    console.error(e);
+    mostrarNotificacion('Error al cargar productos: ' + e.message, 'error');
+    elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos.</p>';
+  } finally {
+    if (elementos.productLoader) {
+      elementos.productLoader.style.display = 'none';
+      elementos.productLoader.hidden = true;
+    }
+  }
 }
 
   cargarCarrito();
