@@ -954,77 +954,7 @@ import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10
 
 const database = getDatabase();
 
-async function cargarProductosDesdeFirebase() {
-  try {
-    if (elementos.productLoader) {
-      elementos.productLoader.style.display = 'flex';
-      elementos.productLoader.hidden = false;
-    }
 
-    const response = await fetch(FIREBASE_URL);
-    if (!response.ok) throw new Error('Error al obtener productos desde Firebase');
-
-    const data = await response.json();
-    if (!data || typeof data !== 'object') {
-      console.warn("Respuesta vacía o no válida:", data);
-      elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles.</p>';
-      return;
-    }
-
-    const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/400x400/cccccc/000?text=Sin+Imagen';
-
-    productos = Object.keys(data).map(key => {
-      const p = data[key];
-      if (!p || typeof p !== 'object') return null;
-
-      return {
-        id: p.id || parseInt(key),
-        nombre: p.nombre || '',
-        descripcion: p.descripcion || '',
-        precio: parseFloat(p.precio) || 0,
-        stock: parseInt(p.stock, 10) || 0,
-        imagenes: typeof p.imagenes === 'string' && p.imagenes.includes('http')
-          ? p.imagenes.split(',').map(url => url.trim())
-          : Array.isArray(p.imagenes) ? p.imagenes : [PLACEHOLDER_IMAGE],
-        adicionales: p.adicionales || '',
-        alto: parseFloat(p.alto) || null,
-        ancho: parseFloat(p.ancho) || null,
-        profundidad: parseFloat(p.profundidad) || null,
-        categoria: p.categoria ? p.categoria.toLowerCase() : 'otros',
-        vendido: p.vendido || '',
-        estado: p.estado || ''
-      };
-    }).filter(Boolean); // Elimina productos nulos
-
-    console.log("✅ Productos cargados:", productos);
-
-    actualizarCategorias?.(); // solo si existe la función
-    actualizarUI?.();         // renderiza productos
-
-    // Hacemos verDetalle accesible globalmente (si es que no está en otro archivo)
-    window.verDetalle = function(id) {
-      const producto = productos.find(p => p.id === id);
-      if (!producto) {
-        mostrarNotificacion('Producto no encontrado', 'error');
-        return;
-      }
-      // Aquí podrías abrir un modal, o mostrar más detalles
-      console.log('Detalle producto:', producto);
-    };
-
-  } catch (e) {
-    console.error(e);
-    mostrarNotificacion?.('Error al cargar productos: ' + e.message, 'error');
-    if (elementos.galeriaProductos) {
-      elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos.</p>';
-    }
-  } finally {
-    if (elementos.productLoader) {
-      elementos.productLoader.style.display = 'none';
-      elementos.productLoader.hidden = true;
-    }
-  }
-}
 
 
 // Invocación segura
