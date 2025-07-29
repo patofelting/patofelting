@@ -132,28 +132,59 @@ function actualizarContadorCarrito() {
   }
 }
 
-function agregarAlCarrito(id, cantidad = 1) {
+async function agregarAlCarrito(id, cantidad = 1) {
   const prod = productos.find(p => p.id === id);
   if (!prod) return mostrarNotificacion('Producto no encontrado', 'error');
-  
+
   cantidad = parseInt(cantidad, 10);
-  if (isNaN(cantidad)) cantidad = 1;
-  if (cantidad < 1) return mostrarNotificacion('Cantidad inválida', 'error');
-  
+  if (isNaN(cantidad) || cantidad < 1) {
+    return mostrarNotificacion('Cantidad inválida', 'error');
+  }
+
   const enCarrito = carrito.find(item => item.id === id);
   const enCarritoCant = enCarrito ? enCarrito.cantidad : 0;
   const disponibles = Math.max(0, prod.stock - enCarritoCant);
-  
+
   if (prod.stock <= 0 || disponibles <= 0) {
-    mostrarNotificacion('Producto agotado', 'error');
-    return;
+    return mostrarNotificacion('Producto agotado', 'error');
   }
-  
+
   if (cantidad > disponibles) {
-    mostrarNotificacion(`Solo hay ${disponibles} unidades disponibles`, 'error');
-    return;
+    return mostrarNotificacion(`Solo hay ${disponibles} unidades disponibles`, 'error');
   }
-  
+
+  // === Descontar stock en Firebase ===
+  const firebaseURL = `https://patofelting-b188f-default-rtdb.firebaseio.com/productos/${id}/stock.json`;
+
+  try {
+    const response = await fetch(firebaseURL);
+    const stockEnFirebase = await response.json();
+
+    if (stockEnFirebase === null || stockEnFirebase < cantidad) {
+      return mostrarNotificacion('Stock insuficiente en Firebase', 'error');
+    }
+
+    const nuevoStock = stockEnFirebase - cantidad;
+
+    const actualizar = await fetch(firebaseURL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(nuevoStock)
+    });
+
+    if (!actualizar.ok) {
+      return mostrarNotificacion('Error al actualizar stock en Firebase', 'error');
+    }
+
+    // Actualizar el stock local en memoria
+    prod.stock = nuevoStock;
+
+  } catch (err) {
+    console.error('Error con Firebase:', err);
+    return mostrarNotificacion('Error de conexión al actualizar stock', 'error');
+  }
+
+  // === Agregar al carrito ===
   if (enCarrito) {
     enCarrito.cantidad += cantidad;
   } else {
@@ -162,31 +193,36 @@ function agregarAlCarrito(id, cantidad = 1) {
       nombre: prod.nombre,
       precio: prod.precio,
       cantidad,
-      imagen: prod.imagenes[0] || PLACEHOLDER_IMAGE
+      imagen: prod.imagenes?.[0] || PLACEHOLDER_IMAGE
     });
   }
-  
+
   guardarCarrito();
   actualizarUI();
-  
-  // Actualizar específicamente el stock mostrado en la tarjeta del producto
+
+  // === Actualizar tarjeta visual del producto ===
   const productoCard = document.querySelector(`.producto-card[data-id="${id}"]`);
   if (productoCard) {
-    const nuevosDisponibles = Math.max(0, prod.stock - (enCarrito ? enCarrito.cantidad + cantidad : cantidad));
-    productoCard.querySelector('.producto-stock').innerHTML = 
-      nuevosDisponibles <= 0 ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${nuevosDisponibles}`;
-    
-    // Actualizar estado del botón
+    const nuevosDisponibles = Math.max(0, prod.stock - (enCarrito ? enCarrito.cantidad : cantidad));
+    const stockElement = productoCard.querySelector('.producto-stock');
+
+    if (stockElement) {
+      stockElement.innerHTML = nuevosDisponibles <= 0
+        ? '<span class="texto-agotado">Agotado</span>'
+        : `Stock: ${nuevosDisponibles}`;
+    }
+
     const botonAgregar = productoCard.querySelector('.boton-agregar');
-    if (nuevosDisponibles <= 0) {
+    if (nuevosDisponibles <= 0 && botonAgregar) {
       botonAgregar.disabled = true;
       botonAgregar.innerHTML = '<i class="fas fa-times-circle"></i> Agotado';
       botonAgregar.classList.add('agotado');
     }
   }
-  
+
   mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
 }
+
 
 function renderizarCarrito() {
   if (!elementos.listaCarrito || !elementos.totalCarrito) return;
