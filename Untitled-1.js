@@ -1003,7 +1003,8 @@ function cargarProductosDesdeFirebase() {
   
   inicializarEventos();
 
-import { getDatabase, ref, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
 
 function descontarStockSeguro(productoId, cantidadADescontar = 1) {
   const db = getDatabase();
