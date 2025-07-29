@@ -1003,35 +1003,38 @@ function cargarProductosDesdeFirebase() {
   
   inicializarEventos();
 
+import { getDatabase, ref, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-import { getDatabase, ref, runTransaction } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
-
-function descontarStock(productoId, cantidad = 1) {
+function descontarStockSeguro(productoId, cantidadADescontar = 1) {
   const db = getDatabase();
-  const stockRef = ref(db, `productos/${productoId}/stock`);
+  const stockRef = ref(db, `productos/${productoId - 1}/stock`);
 
-  runTransaction(stockRef, (stockActual) => {
-    if (stockActual === null) {
-      // Si el stock no existe, no hacemos nada
-      return;
+  return runTransaction(stockRef, (stockActual) => {
+    if (stockActual === null || stockActual < cantidadADescontar) {
+      return; // Abortamos si no hay suficiente
     }
-
-    if (stockActual < cantidad) {
-      // No hay suficiente stock
-      alert('No hay suficiente stock disponible.');
-      return; // Esto cancela la transacción
-    }
-
-    // Resta el stock y continúa
-    return stockActual - cantidad;
-  }).then((result) => {
-    if (result.committed) {
-      console.log('Stock actualizado correctamente:', result.snapshot.val());
+    return stockActual - cantidadADescontar;
+  }).then((resultado) => {
+    if (resultado.committed) {
+      console.log("✅ Stock actualizado con éxito");
     } else {
-      console.log('Transacción cancelada.');
+      alert("❌ No hay stock suficiente. ¡Alguien más ya lo compró!");
     }
   }).catch((error) => {
-    console.error('Error al actualizar el stock:', error);
+    console.error("⚠️ Error de transacción:", error);
   });
 }
 
+
+
+document.querySelector('.boton-confirmar-envio').addEventListener('click', async () => {
+  for (const producto of carrito) {
+    await descontarStockSeguro(producto.id, producto.cantidad);
+  }
+});
+
+async function procesarCompraSegura(carrito) {
+  for (const producto of carrito) {
+    await descontarStockSeguro(producto.id, producto.cantidad); // función con `runTransaction`
+  }
+}
