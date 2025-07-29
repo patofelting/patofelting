@@ -982,20 +982,35 @@ async function cargarProductosDesdeFirebase() {
     if (!response.ok) throw new Error('Error al obtener productos desde Firebase');
 
     const data = await response.json();
-    if (!data || Object.keys(data).length === 0) {
+    if (!data || typeof data !== 'object') {
       elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles.</p>';
       return;
     }
 
-    productos = Object.values(data).map(p => ({
-      ...p,
-      imagenes: Array.isArray(p.imagenes) ? p.imagenes : [p.imagenes || PLACEHOLDER_IMAGE],
-      precio: parseFloat(p.precio) || 0,
-      stock: parseInt(p.stock) || 0,
-      categoria: (p.categoria || 'otros').toLowerCase(),
-      vendido: !!p.vendido
-    }));
+    const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/400x400/cccccc/000?text=Sin+Imagen';
 
+    productos = Object.keys(data).map(key => {
+      const p = data[key];
+      if (!p || typeof p !== 'object') return null;
+
+      return {
+        id: parseInt(key),
+        nombre: p.nombre || '',
+        descripcion: p.descripcion || '',
+        precio: parseFloat(p.precio) || 0,
+        stock: parseInt(p.stock, 10) || 0,
+        imagenes: Array.isArray(p.imagenes) ? p.imagenes : (p.imagenes ? [p.imagenes] : [PLACEHOLDER_IMAGE]),
+        adicionales: p.adicionales || '',
+        alto: parseFloat(p.alto) || null,
+        ancho: parseFloat(p.ancho) || null,
+        profundidad: parseFloat(p.profundidad) || null,
+        categoria: p.categoria ? p.categoria.toLowerCase() : 'otros',
+        vendido: p.vendido || '',
+        estado: p.estado || ''
+      };
+    }).filter(Boolean); // Elimina cualquier null
+
+    console.log("Productos cargados:", productos);
     actualizarCategorias();
     actualizarUI();
 
@@ -1010,6 +1025,16 @@ async function cargarProductosDesdeFirebase() {
     }
   }
 }
+
+// Invocación segura
+cargarCarrito();
+if (FIREBASE_URL) {
+  cargarProductosDesdeFirebase();
+} else if (CSV_URL) {
+  cargarProductosDesdeSheets();
+}
+inicializarEventos();
+
 
   cargarCarrito();
   
@@ -1026,53 +1051,16 @@ async function cargarProductosDesdeFirebase() {
  
 
 
+import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
+
 function descontarStock(productoId, cantidad) {
   const db = getDatabase();
   const productoRef = ref(db, `productos/${productoId}/stock`);
 
-onValue(productosRef, (snapshot) => {
-  const data = snapshot.val();
-  if (!data || typeof data !== 'object') {
-    console.error("No se recibieron productos válidos desde Firebase.");
-    productos = [];
-    renderizarProductos();  // Podés mostrar un mensaje de "No hay productos"
-    return;
-  }
-
-  const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/400x400/cccccc/000?text=Sin+Imagen';
-
-productos = Object.keys(data)
-  .map(key => {
-    const r = data[key];
-    if (!r || typeof r !== 'object') return null;
-
-    return {
-      id: parseInt(key),
-      nombre: r.nombre || '',
-      descripcion: r.descripcion || '',
-      precio: parseFloat(r.precio) || 0,
-      stock: parseInt(r.stock, 10) || 0,
-      imagenes: r.imagenes ? (Array.isArray(r.imagenes) ? r.imagenes : [r.imagenes]) : [PLACEHOLDER_IMAGE],
-      adicionales: r.adicionales || '',
-      alto: parseFloat(r.alto) || null,
-      ancho: parseFloat(r.ancho) || null,
-      profundidad: parseFloat(r.profundidad) || null,
-      categoria: r.categoria ? r.categoria.toLowerCase() : 'otros',
-      vendido: r.vendido || '',
-      estado: r.estado || ''
-    };
-  })
-  .filter(Boolean); // elimina los null
-
-
-  console.log("Productos cargados:", productos);
-  renderizarProductos();
-}, (error) => {
-  console.error("Error al leer Firebase:", error);
-});
   onValue(productoRef, (snapshot) => {
     const stockActual = snapshot.val() || 0;
     const nuevoStock = Math.max(0, stockActual - cantidad);
-    productoRef.set(nuevoStock);
-  });
+    set(productoRef, nuevoStock);
+  }, { onlyOnce: true });
 }
+
