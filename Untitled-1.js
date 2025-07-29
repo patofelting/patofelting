@@ -317,6 +317,7 @@ function renderizarProductos(productosData) {
 }
 
 
+
 function actualizarCategorias() {
   if (!elementos.selectCategoria) return;
   const cats = ['todos', ...new Set(productos.map(p => p.categoria).filter(Boolean))];
@@ -386,40 +387,7 @@ function renderizarPaginacion(total) {
   }
 }
 
-function renderizarProductos(productosData) {
-  const galeria = document.getElementById('galeria-productos');
-  galeria.innerHTML = '';
 
-  // Validación extra por seguridad
-  if (!Array.isArray(productosData)) {
-    console.error("No se recibió una lista válida de productos", productosData);
-    galeria.innerHTML = '<p class="error-carga">No hay productos disponibles.</p>';
-    return;
-  }
-
-  const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/400x400/cccccc/000?text=Sin+Imagen';
-
-  productosData.forEach((producto, index) => {
-    const agotado = producto.stock <= 0;
-    const imagen = (producto.imagenes && producto.imagenes.length > 0)
-      ? producto.imagenes[0]
-      : PLACEHOLDER_IMAGE;
-
-    const productoHTML = `
-      <div class="card">
-        <img src="${imagen}" alt="${producto.nombre}">
-        <h3>${producto.nombre}</h3>
-        <p class="precio">$U ${producto.precio}</p>
-        <p class="stock">Stock: ${producto.stock}</p>
-        ${agotado
-          ? `<span class="agotado">Agotado</span>`
-          : `<button onclick="agregarAlCarrito(${index})">🛒 Agregar</button>`}
-        <button onclick="verDetalle(${index})">🔍 Ver detalle</button>
-      </div>
-    `;
-    galeria.innerHTML += productoHTML;
-  });
-}
 
 
 
