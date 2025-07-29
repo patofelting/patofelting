@@ -1017,28 +1017,6 @@ async function cargarProductosDesdeFirebase() {
 }
 
 // ==================== AGREGAR AL CARRITO CON TRANSACCIÓN ====================
-async function agregarAlCarrito(idProducto) {
-  const productoRef = ref(db, `productos/${idProducto - 1}`); // Ajuste de índice si es array
-
-  try {
-    await runTransaction(productoRef, (producto) => {
-      if (producto && producto.stock > 0) {
-        producto.stock--;
-        return producto;
-      } else {
-        mostrarNotificacion("Producto agotado", "error");
-        return;
-      }
-    });
-
-    mostrarNotificacion("Producto agregado", "success");
-    cargarProductosDesdeFirebase(); // Actualizar vista
-
-  } catch (error) {
-    console.error("Error al agregar producto:", error.message);
-    mostrarNotificacion("Error al agregar", "error");
-  }
-}
 
 // ==================== NOTIFICACIÓN ====================
 function mostrarNotificacion(mensaje, tipo = "info") {
