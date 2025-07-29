@@ -1126,7 +1126,6 @@ async function verificarStockAntesDeFinalizar(productoId, cantidadDeseada) {
     return false; // Bloquear compra
   }
 }
-
 async function validarStockAntesDeComprar(carrito) {
   try {
     const respuesta = await fetch(FIREBASE_URL); // URL que contiene el stock en tiempo real
