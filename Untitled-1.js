@@ -1082,3 +1082,79 @@ async function validarStockAntesDeComprar(carrito) {
     return false;
   }
 }
+
+
+
+window.agregarAlCarrito = async function(id, cantidad = 1) {
+  const prod = productos.find(p => p.id === id);
+  if (!prod) return mostrarNotificacion('Producto no encontrado', 'error');
+
+  cantidad = parseInt(cantidad, 10);
+  if (isNaN(cantidad) || cantidad < 1) {
+    return mostrarNotificacion('Cantidad inválida', 'error');
+  }
+
+  const firebaseURL = `https://patofelting-b188f-default-rtdb.firebaseio.com/productos/${id}/stock.json`;
+
+  try {
+    const response = await fetch(firebaseURL);
+    const stockEnFirebase = await response.json();
+
+    if (stockEnFirebase === null || stockEnFirebase <= 0) {
+      return mostrarNotificacion('Otro usuario compró este producto. Ya no hay stock.', 'error');
+    }
+
+    if (stockEnFirebase < cantidad) {
+      return mostrarNotificacion(`Solo hay ${stockEnFirebase} disponibles`, 'error');
+    }
+
+    const nuevoStock = stockEnFirebase - cantidad;
+    await fetch(firebaseURL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(nuevoStock)
+    });
+
+    prod.stock = nuevoStock;
+
+    const enCarrito = carrito.find(item => item.id === id);
+    if (enCarrito) {
+      enCarrito.cantidad += cantidad;
+    } else {
+      carrito.push({
+        id,
+        nombre: prod.nombre,
+        precio: prod.precio,
+        cantidad,
+        imagen: prod.imagenes?.[0] || PLACEHOLDER_IMAGE
+      });
+    }
+
+    guardarCarrito();
+    actualizarUI();
+
+    // Actualizar visual en tarjeta
+    const productoCard = document.querySelector(`.producto-card[data-id="${id}"]`);
+    if (productoCard) {
+      const stockEl = productoCard.querySelector('.producto-stock');
+      const btnAgregar = productoCard.querySelector('.boton-agregar');
+
+      if (stockEl) stockEl.textContent = nuevoStock <= 0
+        ? 'Agotado'
+        : `Stock: ${nuevoStock}`;
+
+      if (btnAgregar) {
+        if (nuevoStock <= 0) {
+          btnAgregar.disabled = true;
+          btnAgregar.innerHTML = '<i class="fas fa-times-circle"></i> Agotado';
+          btnAgregar.classList.add('agotado');
+        }
+      }
+    }
+
+    mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
+  } catch (err) {
+    console.error(err);
+    mostrarNotificacion('Error al verificar stock en tiempo real', 'error');
+  }
+};
