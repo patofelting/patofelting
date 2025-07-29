@@ -1035,7 +1035,6 @@ if (FIREBASE_URL) {
 }
 inicializarEventos();
 
-
   cargarCarrito();
   
   // Decide qué fuente de datos usar (Firebase o Google Sheets)
