@@ -694,11 +694,12 @@ function init() {
     elementos.productLoader.style.display = 'none';
     elementos.productLoader.hidden = true;
   }
-  
+
   cargarCarrito();
-  cargarProductosDesdeSheets();
+  cargarProductosDesdeFirebase(); 
   inicializarEventos();
 }
+
 
 if (document.readyState !== 'loading') {
   init();
@@ -1018,3 +1019,4 @@ function descontarStock(productoId, cantidad) {
 
 
 
+document.addEventListener('DOMContentLoaded', init);
