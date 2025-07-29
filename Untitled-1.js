@@ -1027,7 +1027,6 @@ function descontarStockSeguro(productoId, cantidadADescontar = 1) {
 }
 
 
-
 document.querySelector('.boton-confirmar-envio').addEventListener('click', async () => {
   for (const producto of carrito) {
     await descontarStockSeguro(producto.id, producto.cantidad);
