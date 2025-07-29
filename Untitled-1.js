@@ -983,18 +983,6 @@ function cargarProductosDesdeFirebase() {
   });
 }
 
-function init() {
-  inicializarMenuHamburguesa();
-  inicializarFAQ();
-  setupContactForm();
-
-  if (elementos.avisoPreCompraModal) elementos.avisoPreCompraModal.style.display = 'none';
-  if (elementos.productoModal) elementos.productoModal.style.display = 'none';
-  if (elementos.productLoader) {
-    elementos.productLoader.style.display = 'none';
-    elementos.productLoader.hidden = true;
-  }
-  
   cargarCarrito();
   
   // Decide qué fuente de datos usar (Firebase o Google Sheets)
@@ -1005,4 +993,3 @@ function init() {
   }
   
   inicializarEventos();
-}
