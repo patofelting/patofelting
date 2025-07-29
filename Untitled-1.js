@@ -42,6 +42,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+
+document.addEventListener('DOMContentLoaded', () => {
+  cargarProductosDesdeFirebase(); // antes era desde Google Sheets
+  inicializarEventos();
+});
+
+
 // ===============================
 // REFERENCIAS AL DOM
 // ===============================
@@ -953,24 +960,29 @@ maxSlider.addEventListener('input', updateRange);
 updateRange();
 
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
-async function cargarProductosDesdeFirebase() {
-  try {
-    const response = await fetch('https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json');
-    
-    if (!response.ok) {
-      throw new Error('Error al cargar: ' + response.status);
+
+
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const database = getDatabase();
+
+function cargarProductosDesdeFirebase() {
+  const productosRef = ref(database, 'productos');
+
+  onValue(productosRef, (snapshot) => {
+    const data = snapshot.val();
+
+    if (data) {
+      const productos = Object.values(data);
+      renderizarProductos(productos);
+    } else {
+      console.error("No se encontraron productos en Firebase.");
     }
-    
-    const data = await response.json();
-    console.log('Productos cargados:', data);
-    
-  } catch (error) {
-    console.error('Error grave:', error);
-    mostrarNotificacion('No se pudo cargar el catálogo', 'error');
-  }
+  }, {
+    onlyOnce: true
+  });
 }
+
 function init() {
   inicializarMenuHamburguesa();
   inicializarFAQ();
