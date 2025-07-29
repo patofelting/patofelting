@@ -971,7 +971,7 @@ updateRange();
 
 
 
-
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const database = getDatabase();
 
@@ -1005,36 +1005,25 @@ function cargarProductosDesdeFirebase() {
 
 import { getDatabase, ref, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-function descontarStockSeguro(productoId, cantidadADescontar = 1) {
-  const db = getDatabase();
-  const stockRef = ref(db, `productos/${productoId - 1}/stock`);
 
-  return runTransaction(stockRef, (stockActual) => {
+function descontarStock(productoId, cantidadADescontar = 1) {
+  const db = getDatabase();
+  const productoRef = ref(db, `productos/${productoId - 1}/stock`); // -1 si tu array empieza en 0
+
+  return runTransaction(productoRef, (stockActual) => {
     if (stockActual === null || stockActual < cantidadADescontar) {
-      return; // Abortamos si no hay suficiente
+      return; // Abortamos si no hay stock suficiente
     }
     return stockActual - cantidadADescontar;
   }).then((resultado) => {
     if (resultado.committed) {
-      console.log("✅ Stock actualizado con éxito");
+      console.log("Stock actualizado con éxito");
     } else {
-      alert("❌ No hay stock suficiente. ¡Alguien más ya lo compró!");
+      console.warn("No se pudo actualizar el stock (agotado o error)");
     }
   }).catch((error) => {
-    console.error("⚠️ Error de transacción:", error);
+    console.error("Error al ejecutar la transacción:", error);
   });
 }
 
 
-
-document.querySelector('.boton-confirmar-envio').addEventListener('click', async () => {
-  for (const producto of carrito) {
-    await descontarStockSeguro(producto.id, producto.cantidad);
-  }
-});
-
-async function procesarCompraSegura(carrito) {
-  for (const producto of carrito) {
-    await descontarStockSeguro(producto.id, producto.cantidad); // función con `runTransaction`
-  }
-}
