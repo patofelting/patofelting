@@ -999,7 +999,9 @@ async function cargarProductosDesdeFirebase() {
         descripcion: p.descripcion || '',
         precio: parseFloat(p.precio) || 0,
         stock: parseInt(p.stock, 10) || 0,
-        imagenes: Array.isArray(p.imagenes) ? p.imagenes : (p.imagenes ? [p.imagenes] : [PLACEHOLDER_IMAGE]),
+        imagenes: Array.isArray(p.imagenes) && p.imagenes.length > 0
+  ? p.imagenes
+  : [PLACEHOLDER_IMAGE],
         adicionales: p.adicionales || '',
         alto: parseFloat(p.alto) || null,
         ancho: parseFloat(p.ancho) || null,
@@ -1035,6 +1037,7 @@ if (FIREBASE_URL) {
 }
 inicializarEventos();
 
+
   cargarCarrito();
   
   // Decide qué fuente de datos usar (Firebase o Google Sheets)
@@ -1057,3 +1060,6 @@ function descontarStock(productoId, cantidad) {
     set(productoRef, nuevoStock);
   }, { onlyOnce: true });
 }
+
+
+
