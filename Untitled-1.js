@@ -24,6 +24,7 @@ const firebaseConfig = {
 let productos = [];
 let carrito = [];
 let paginaActual = 1;
+
 let filtrosActuales = {
   precioMin: null,
   precioMax: null,
@@ -308,19 +309,18 @@ function toggleCarrito(forceState) {
 // ===============================
 // PRODUCTOS, FILTROS Y PAGINACIÓN
 // ===============================
-function renderizarProductos() {
+function renderizarProductos(data = productos) {
   const galeria = document.getElementById('galeria-productos');
   galeria.innerHTML = '';
 
-  if (!Array.isArray(productos)) {
-    console.warn('No se recibió una lista válida de productos', productos);
+  if (!Array.isArray(data)) {
+    console.warn('No se recibió una lista válida de productos', data);
     galeria.innerHTML = '<p class="sin-productos">No hay productos para mostrar.</p>';
     return;
   }
 
-  productos.forEach((producto, index) => {
+  data.forEach((producto, index) => {
     const agotado = producto.stock <= 0;
-
     const productoHTML = `
       <div class="card producto-card" data-id="${producto.id}">
         <img src="${producto.imagenes?.[0]}" alt="${producto.nombre}">
@@ -733,20 +733,15 @@ function init() {
   inicializarFAQ();
   setupContactForm();
 
-  if (elementos.avisoPreCompraModal) elementos.avisoPreCompraModal.style.display = 'none';
-  if (elementos.productoModal) elementos.productoModal.style.display = 'none';
-  if (elementos.productLoader) {
-    elementos.productLoader.style.display = 'none';
-    elementos.productLoader.hidden = true;
-  }
-
   cargarCarrito();
 
-  // 🔁 Volver a cargar desde Google Sheets
-  cargarProductosDesdeSheets();
+  if (FIREBASE_URL) {
+    cargarProductosDesdeFirebase(); // carga y renderiza automáticamente
+  }
 
   inicializarEventos();
 }
+
 
 
 if (document.readyState !== 'loading') {
@@ -990,17 +985,15 @@ async function cargarProductosDesdeFirebase() {
       elementos.productLoader.hidden = false;
     }
 
-    const response = await fetch('https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json');
+    const response = await fetch(FIREBASE_URL); // asegúrate que FIREBASE_URL esté definido correctamente
     if (!response.ok) throw new Error('Error al obtener productos desde Firebase');
 
     const data = await response.json();
     if (!data || typeof data !== 'object') {
-      console.warn("Respuesta de Firebase vacía o no válida:", data);
+      console.warn("Respuesta vacía o no válida:", data);
       elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles.</p>';
       return;
     }
-
-    const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/400x400/cccccc/000?text=Sin+Imagen';
 
     productos = Object.keys(data).map(key => {
       const p = data[key];
@@ -1013,8 +1006,8 @@ async function cargarProductosDesdeFirebase() {
         precio: parseFloat(p.precio) || 0,
         stock: parseInt(p.stock, 10) || 0,
         imagenes: Array.isArray(p.imagenes) && p.imagenes.length > 0
-  ? p.imagenes
-  : [PLACEHOLDER_IMAGE],
+          ? p.imagenes
+          : [PLACEHOLDER_IMAGE],
         adicionales: p.adicionales || '',
         alto: parseFloat(p.alto) || null,
         ancho: parseFloat(p.ancho) || null,
@@ -1023,11 +1016,11 @@ async function cargarProductosDesdeFirebase() {
         vendido: p.vendido || '',
         estado: p.estado || ''
       };
-    }).filter(Boolean); // Elimina cualquier null
+    }).filter(Boolean); // quita nulls
 
     console.log("Productos cargados:", productos);
     actualizarCategorias();
-    actualizarUI();
+    actualizarUI(); // Esto llama internamente a renderizarProductos(productos)
 
   } catch (e) {
     console.error(e);
