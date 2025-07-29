@@ -1083,3 +1083,16 @@ async function cargarProductosDesdeSheets() {
     }
   }
 }
+
+
+async function verificarStockAntesDeFinalizar(productoId, cantidadDeseada) {
+  const response = await fetch(`https://patofelting-b188f-default-rtdb.firebaseio.com/productos/${productoId}.json`);
+  const producto = await response.json();
+  
+  if (producto.stock >= cantidadDeseada) {
+    return true; // OK
+  } else {
+    alert('Lo sentimos, el producto ya no tiene stock suficiente.');
+    return false; // Bloquear compra
+  }
+}
