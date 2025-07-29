@@ -1024,3 +1024,62 @@ function descontarStock(productoId, cantidad) {
 
 
 document.addEventListener('DOMContentLoaded', init);
+
+
+async function cargarProductosDesdeSheets() {
+  try {
+    if (elementos.productLoader) {
+      elementos.productLoader.style.display = 'flex';
+      elementos.productLoader.hidden = false;
+    }
+
+    if (elementos.galeriaProductos) elementos.galeriaProductos.innerHTML = '';
+
+    const resp = await fetch(CSV_URL, { headers: { 'Cache-Control': 'no-store' } });
+    if (!resp.ok) throw new Error('Error al cargar productos');
+
+    const csvText = await resp.text();
+    if (typeof Papa === 'undefined') throw new Error('Papa Parse no disponible');
+
+    const { data } = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+
+    if (!data || data.length === 0) {
+      elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles en este momento.</p>';
+      return;
+    }
+
+    productos = data
+      .filter(r => r.id && r.nombre && r.precio)
+      .map(r => ({
+        id: parseInt(r.id, 10),
+        nombre: r.nombre.trim(),
+        descripcion: r.descripcion || '',
+        precio: parseFloat(r.precio) || 0,
+        stock: parseInt(r.stock || r.cantidad || 0, 10),
+        imagenes: r.foto ? r.foto.split(',').map(f => f.trim()) : [PLACEHOLDER_IMAGE],
+        adicionales: r.adicionales || '',
+        alto: parseFloat(r.alto) || null,
+        ancho: parseFloat(r.ancho) || null,
+        profundidad: parseFloat(r.profundidad) || null,
+        categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
+        vendido: r.vendido?.trim().toLowerCase() === 'true',
+        estado: r.estado || ''
+      }));
+
+    console.log("Productos desde Sheets:", productos);
+    actualizarCategorias();
+    actualizarUI();
+
+  } catch (e) {
+    console.error(e);
+    mostrarNotificacion('Error al cargar productos: ' + e.message, 'error');
+    if (elementos.galeriaProductos) {
+      elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos.</p>';
+    }
+  } finally {
+    if (elementos.productLoader) {
+      elementos.productLoader.style.display = 'none';
+      elementos.productLoader.hidden = true;
+    }
+  }
+}
