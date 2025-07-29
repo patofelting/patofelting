@@ -1011,16 +1011,35 @@ function descontarStock(productoId, cantidad) {
   const db = getDatabase();
   const productoRef = ref(db, `productos/${productoId}/stock`);
 
-  onValue(productoRef, (snapshot) => {
-    const stockActual = snapshot.val();
-    if (stockActual > 0 && stockActual >= cantidad) {
-      update(ref(db, `productos/${productoId}`), {
-        stock: stockActual - cantidad
-      });
-    } else {
-      console.warn('No hay stock suficiente o el producto no existe');
-    }
-  }, {
-    onlyOnce: true
+onValue(ref(database, 'productos'), (snapshot) => {
+  const data = snapshot.val(); // data puede ser null
+
+  if (!data) {
+    console.error('No se encontraron productos.');
+    return;
+  }
+
+  productos = Object.keys(data).map(key => {
+    const r = data[key];
+    return {
+      id: parseInt(key) + 1,
+      nombre: r.nombre || '',
+      descripcion: r.descripcion || '',
+      precio: parseFloat(r.precio) || 0,
+      stock: parseInt(r.stock, 10) || 0,
+      imagenes: r.imagenes
+        ? (Array.isArray(r.imagenes) ? r.imagenes : [r.imagenes])
+        : [PLACEHOLDER_IMAGE],
+      adicionales: r.adicionales || '',
+      alto: parseFloat(r.alto) || null,
+      ancho: parseFloat(r.ancho) || null,
+      profundidad: parseFloat(r.profundidad) || null,
+      categoria: r.categoria ? r.categoria.toLowerCase() : 'otros',
+      vendido: r.vendido || false,
+      estado: r.estado || ''
+    };
   });
+
+  actualizarUI();
+}, { onlyOnce: true });
 }
