@@ -970,98 +970,85 @@ updateRange();
 
 
 
+// ==================== FIREBASE CONFIGURACIÓN ====================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+import { getDatabase, ref, get, set, update, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
 
 
 
-const database = getDatabase();
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
+// ==================== CARGAR PRODUCTOS DESDE FIREBASE ====================
 async function cargarProductosDesdeFirebase() {
- const dbUrl = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json';
-fetch(dbUrl)
-  .then(res => {
-    if (!res.ok) throw new Error('Error al conectar con Firebase');
-    return res.json();
-  })
-  .then(data => {
-    console.log(data); // Verificá que obtengas un objeto o array válido
-  })
-  .catch(err => {
-    console.error('Error al cargar productos:', err);
-  });
-
-
   try {
-    const respuesta = await fetch(dbUrl);
-    const data = await respuesta.json();
+    const productosRef = ref(db, "productos");
+    const snapshot = await get(productosRef);
 
-    if (!data) {
-      console.warn('No hay datos disponibles en Firebase.');
-      return;
-    }
+    if (!snapshot.exists()) throw new Error("No hay productos");
 
-    const productos = Array.isArray(data)
-      ? data.filter(Boolean) // Si es array, quitamos posibles nulos
-      : Object.values(data); // Si es objeto, convertimos a array
+    const productos = snapshot.val();
+    const contenedor = document.getElementById("galeria-productos");
+    contenedor.innerHTML = "";
 
-    if (!Array.isArray(productos)) {
-      console.error('Los datos obtenidos no son un array.');
-      return;
-    }
+    Object.values(productos).forEach((prod) => {
+      const stock = prod.stock || 0;
+      const agotado = stock <= 0;
+      const imagen = prod.imagenes?.[0] || "https://via.placeholder.com/400x400?text=Sin+Imagen";
+      const claseAgotado = agotado ? "agotado" : "";
 
-    productos.forEach(prod => {
-      // Lógica para renderizar el producto en tu galería
-      console.log(prod.nombre); // O tu lógica de renderizado real
+      const card = document.createElement("div");
+      card.className = `producto-card ${claseAgotado}`;
+      card.innerHTML = `
+        <img src="${imagen}" alt="${prod.nombre}">
+        <h3>${prod.nombre}</h3>
+        <p>${prod.descripcion}</p>
+        <p class="precio">$U${prod.precio}</p>
+        ${agotado
+          ? `<span class="sin-stock-movil">Avisame cuando haya</span><span class="agotado-tag">AGOTADO</span>`
+          : `<button onclick="agregarAlCarrito(${prod.id})">Agregar</button>`
+        }
+      `;
+      contenedor.appendChild(card);
     });
   } catch (error) {
-    console.error('Error al cargar productos:', error);
+    console.error("Error al cargar productos:", error.message);
   }
 }
 
+// ==================== AGREGAR AL CARRITO CON TRANSACCIÓN ====================
+async function agregarAlCarrito(idProducto) {
+  const productoRef = ref(db, `productos/${idProducto - 1}`); // Ajuste de índice si es array
 
-  cargarCarrito();
-  
-  // Decide qué fuente de datos usar (Firebase o Google Sheets)
-  if (FIREBASE_URL) {
-    cargarProductosDesdeFirebase();
-  } else if (CSV_URL) {
-    cargarProductosDesdeSheets();
+  try {
+    await runTransaction(productoRef, (producto) => {
+      if (producto && producto.stock > 0) {
+        producto.stock--;
+        return producto;
+      } else {
+        mostrarNotificacion("Producto agotado", "error");
+        return;
+      }
+    });
+
+    mostrarNotificacion("Producto agregado", "success");
+    cargarProductosDesdeFirebase(); // Actualizar vista
+
+  } catch (error) {
+    console.error("Error al agregar producto:", error.message);
+    mostrarNotificacion("Error al agregar", "error");
   }
-  
-  inicializarEventos();
-
-import { getDatabase, ref, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-
-function descontarStockSeguro(productoId, cantidadADescontar = 1) {
-  const db = getDatabase();
-  const stockRef = ref(db, `productos/${productoId - 1}/stock`);
-
-  return runTransaction(stockRef, (stockActual) => {
-    if (stockActual === null || stockActual < cantidadADescontar) {
-      return; // Abortamos si no hay suficiente
-    }
-    return stockActual - cantidadADescontar;
-  }).then((resultado) => {
-    if (resultado.committed) {
-      console.log("✅ Stock actualizado con éxito");
-    } else {
-      alert("❌ No hay stock suficiente. ¡Alguien más ya lo compró!");
-    }
-  }).catch((error) => {
-    console.error("⚠️ Error de transacción:", error);
-  });
 }
 
+// ==================== NOTIFICACIÓN ====================
+function mostrarNotificacion(mensaje, tipo = "info") {
+  alert(`${tipo.toUpperCase()}: ${mensaje}`);
+}
 
-
-document.querySelector('.boton-confirmar-envio').addEventListener('click', async () => {
-  for (const producto of carrito) {
-    await descontarStockSeguro(producto.id, producto.cantidad);
-  }
+// ==================== INICIALIZACIÓN ====================
+document.addEventListener("DOMContentLoaded", () => {
+  cargarProductosDesdeFirebase();
 });
 
-async function procesarCompraSegura(carrito) {
-  for (const producto of carrito) {
-    await descontarStockSeguro(producto.id, producto.cantidad); // función con `runTransaction`
-  }
-}
+
+
