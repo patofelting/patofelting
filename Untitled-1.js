@@ -976,7 +976,19 @@ updateRange();
 const database = getDatabase();
 
 async function cargarProductosDesdeFirebase() {
-  const dbUrl = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json';
+ const dbUrl = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json';
+fetch(dbUrl)
+  .then(res => {
+    if (!res.ok) throw new Error('Error al conectar con Firebase');
+    return res.json();
+  })
+  .then(data => {
+    console.log(data); // Verificá que obtengas un objeto o array válido
+  })
+  .catch(err => {
+    console.error('Error al cargar productos:', err);
+  });
+
 
   try {
     const respuesta = await fetch(dbUrl);
