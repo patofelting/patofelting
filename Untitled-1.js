@@ -289,53 +289,33 @@ function toggleCarrito(forceState) {
 // ===============================
 // PRODUCTOS, FILTROS Y PAGINACIÓN
 // ===============================
-async function cargarProductosDesdeSheets() {
-  try {
-    if (elementos.productLoader) {
-      elementos.productLoader.style.display = 'flex';
-      elementos.productLoader.hidden = false;
-    }
-    if (elementos.galeriaProductos) elementos.galeriaProductos.innerHTML = '';
-    const resp = await fetch(CSV_URL, { headers: { 'Cache-Control': 'no-store' } });
-    if (!resp.ok) throw new Error('Error al cargar productos');
-    const csvText = await resp.text();
-    if (typeof Papa === 'undefined') throw new Error('Papa Parse no disponible');
-    const { data } = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-    if (!data || data.length === 0) {
-      if (elementos.galeriaProductos)
-        elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles en este momento.</p>';
-      return;
-    }
-    productos = data
-      .filter(r => r.id && r.nombre && r.precio)
-      .map(r => ({
-        id: parseInt(r.id, 10),
-        nombre: r.nombre.trim(),
-        descripcion: r.descripcion || '',
-        precio: parseFloat(r.precio) || 0,
-        stock: parseInt(r.cantidad, 10) || 0,
-        imagenes: (r.foto && r.foto.trim() !== "") ? r.foto.split(',').map(x => x.trim()) : [PLACEHOLDER_IMAGE],
-        adicionales: r.adicionales ? r.adicionales.trim() : '',
-        alto: parseFloat(r.alto) || null,
-        ancho: parseFloat(r.ancho) || null,
-        profundidad: parseFloat(r.profundidad) || null,
-        categoria: r.categoria ? r.categoria.trim().toLowerCase() : 'otros',
-        vendido: r.vendido ? r.vendido.trim().toLowerCase() === 'true' : false,
-        estado: r.estado ? r.estado.trim() : ''
-      }));
-    actualizarCategorias();
-    actualizarUI();
-  } catch (e) {
-    if (elementos.galeriaProductos)
-      elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos.</p>';
-    mostrarNotificacion('Error al cargar productos: ' + (e.message || e), 'error');
-  } finally {
-    if (elementos.productLoader) {
-      elementos.productLoader.style.display = 'none';
-      elementos.productLoader.hidden = true;
-    }
+function renderizarProductos(productosData) {
+  const galeria = document.getElementById('galeria-productos');
+  galeria.innerHTML = '';
+
+  if (!Array.isArray(productosData)) {
+    console.warn('No se recibió una lista válida de productos', productosData);
+    galeria.innerHTML = '<p class="sin-productos">No hay productos para mostrar.</p>';
+    return;
   }
+
+  productosData.forEach((producto, index) => {
+    const agotado = producto.stock <= 0;
+
+    const productoHTML = `
+      <div class="card">
+        <img src="${producto.imagenes?.[0]}" alt="${producto.nombre}">
+        <h3>${producto.nombre}</h3>
+        <p class="precio">$U ${producto.precio}</p>
+        <p class="stock">Stock: ${producto.stock}</p>
+        ${agotado ? `<span class="agotado">Agotado</span>` : `<button onclick="agregarAlCarrito(${index})">🛒 Agregar</button>`}
+        <button onclick="verDetalle(${index})">🔍 Ver detalle</button>
+      </div>
+    `;
+    galeria.innerHTML += productoHTML;
+  });
 }
+
 
 function actualizarCategorias() {
   if (!elementos.selectCategoria) return;
