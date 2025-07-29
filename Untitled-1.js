@@ -537,6 +537,7 @@ function actualizarUI() {
   renderizarProductos();
   renderizarCarrito();
   actualizarContadorCarrito();
+   renderizarProductos(productos);
 }
 
 // ===============================
