@@ -38,11 +38,11 @@ let filtrosActuales = {
 document.addEventListener('DOMContentLoaded', () => {
   fetch(FIREBASE_URL)
     .then(res => res.json())
-    .then(data => {
-      productos = Object.values(data);
-      console.log("✅ Productos cargados:", productos);
-      renderizarProductos(productos); // ✅ Ahora sí
-    })
+   .then(data => {
+  productos = Object.values(data).filter(p => p !== null); // ✅ Filtra nulos
+  console.log("✅ Productos cargados:", productos);
+  renderizarProductos(productos);
+})
     .catch(err => {
       console.error("Error cargando productos:", err);
     });
@@ -337,6 +337,7 @@ function renderizarProductos(data = productos) {
     const productoHTML = `
       <div class="card producto-card" data-id="${producto.id}">
         <img src="${producto.imagenes?.[0] || PLACEHOLDER_IMAGE}" alt="${producto.nombre}">
+
         <h3>${producto.nombre}</h3>
         <p class="precio">$U ${producto.precio}</p>
         <p class="stock producto-stock">${agotado ? 'Agotado' : `Stock: ${producto.stock}`}</p>
