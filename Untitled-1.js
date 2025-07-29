@@ -1004,19 +1004,21 @@ function cargarProductosDesdeFirebase() {
   inicializarEventos();
 
 
-  import { getDatabase, ref, update } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
+ 
+
 
 function descontarStock(productoId, cantidad) {
   const db = getDatabase();
   const productoRef = ref(db, `productos/${productoId}/stock`);
 
-  // Leés el valor actual y lo restás
   onValue(productoRef, (snapshot) => {
     const stockActual = snapshot.val();
-    if (stockActual > 0) {
+    if (stockActual > 0 && stockActual >= cantidad) {
       update(ref(db, `productos/${productoId}`), {
         stock: stockActual - cantidad
       });
+    } else {
+      console.warn('No hay stock suficiente o el producto no existe');
     }
   }, {
     onlyOnce: true
