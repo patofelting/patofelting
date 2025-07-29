@@ -1003,27 +1003,35 @@ function cargarProductosDesdeFirebase() {
   
   inicializarEventos();
 
-import { getDatabase, ref, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+import { getDatabase, ref, runTransaction } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
 
-function descontarStock(productoId, cantidadADescontar = 1) {
+function descontarStock(productoId, cantidad = 1) {
   const db = getDatabase();
-  const productoRef = ref(db, `productos/${productoId - 1}/stock`); // -1 si tu array empieza en 0
+  const stockRef = ref(db, `productos/${productoId}/stock`);
 
-  return runTransaction(productoRef, (stockActual) => {
-    if (stockActual === null || stockActual < cantidadADescontar) {
-      return; // Abortamos si no hay stock suficiente
+  runTransaction(stockRef, (stockActual) => {
+    if (stockActual === null) {
+      // Si el stock no existe, no hacemos nada
+      return;
     }
-    return stockActual - cantidadADescontar;
-  }).then((resultado) => {
-    if (resultado.committed) {
-      console.log("Stock actualizado con éxito");
+
+    if (stockActual < cantidad) {
+      // No hay suficiente stock
+      alert('No hay suficiente stock disponible.');
+      return; // Esto cancela la transacción
+    }
+
+    // Resta el stock y continúa
+    return stockActual - cantidad;
+  }).then((result) => {
+    if (result.committed) {
+      console.log('Stock actualizado correctamente:', result.snapshot.val());
     } else {
-      console.warn("No se pudo actualizar el stock (agotado o error)");
+      console.log('Transacción cancelada.');
     }
   }).catch((error) => {
-    console.error("Error al ejecutar la transacción:", error);
+    console.error('Error al actualizar el stock:', error);
   });
 }
-
 
