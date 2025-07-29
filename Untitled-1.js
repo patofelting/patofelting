@@ -318,19 +318,18 @@ function renderizarProductos(data = productos) {
     return;
   }
 
-  data.forEach((producto, index) => {
+  data.forEach((producto) => {
     const agotado = producto.stock <= 0;
     const productoHTML = `
       <div class="card producto-card" data-id="${producto.id}">
         <img src="${producto.imagenes?.[0] || PLACEHOLDER_IMAGE}" alt="${producto.nombre}">
-
         <h3>${producto.nombre}</h3>
         <p class="precio">$U ${producto.precio}</p>
         <p class="stock producto-stock">${agotado ? 'Agotado' : `Stock: ${producto.stock}`}</p>
         <button class="boton-agregar" onclick="agregarAlCarrito(${producto.id})" ${agotado ? 'disabled' : ''}>
           ${agotado ? '<i class="fas fa-times-circle"></i> Agotado' : '🛒 Agregar'}
         </button>
-        <button onclick="verDetalle(${producto.id})">
+        <button class="boton-detalle" onclick="verDetalle(${producto.id})">
           🔍 Ver detalle
         </button>
       </div>
@@ -338,7 +337,40 @@ function renderizarProductos(data = productos) {
     galeria.innerHTML += productoHTML;
   });
 }
+
+// Función para abrir el modal de detalle
+function verDetalle(id) {
+  const producto = productos.find(p => p.id === id);
+  if (!producto) return;
+
+  const modal = document.getElementById('producto-modal');
+  const contenido = modal.querySelector('.modal-contenido');
+
+  contenido.innerHTML = `
+    <h2>${producto.nombre}</h2>
+    <img src="${producto.imagenes?.[0] || PLACEHOLDER_IMAGE}" alt="${producto.nombre}">
+    <p><strong>Precio:</strong> $U ${producto.precio}</p>
+    <p><strong>Descripción:</strong> ${producto.descripcion}</p>
+    <p><strong>Adicionales:</strong> ${producto.adicionales || '-'}</p>
+    <p><strong>Dimensiones:</strong> ${producto.alto || '-'} x ${producto.ancho || '-'} x ${producto.profundidad || '-'}</p>
+    <button onclick="cerrarModal()">Cerrar</button>
+  `;
+
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+// Cerrar modal
+function cerrarModal() {
+  const modal = document.getElementById('producto-modal');
+  modal.style.display = 'none';
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+// Exponer funciones globalmente
 window.verDetalle = verDetalle;
+window.cerrarModal = cerrarModal;
+
 
 function actualizarCategorias() {
   if (!elementos.selectCategoria) return;
