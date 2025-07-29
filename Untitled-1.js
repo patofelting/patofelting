@@ -697,7 +697,10 @@ function init() {
   }
 
   cargarCarrito();
-  cargarProductosDesdeFirebase();
+
+  // 🔁 Volver a cargar desde Google Sheets
+  cargarProductosDesdeSheets();
+
   inicializarEventos();
 }
 
