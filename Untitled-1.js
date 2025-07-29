@@ -410,18 +410,27 @@ function renderizarPaginacion(total) {
   }
 }
 
-function renderizarProductos() {
-  if (!elementos.galeriaProductos) return;
-  const productosFiltrados = filtrarProductos();
-  const inicio = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
-  const productosPagina = productosFiltrados.slice(inicio, inicio + PRODUCTOS_POR_PAGINA);
-  if (productosPagina.length === 0) {
-    elementos.galeriaProductos.innerHTML = `<p class="sin-resultados">No se encontraron productos con los filtros aplicados.<button onclick="resetearFiltros()">Mostrar todos</button></p>`;
-  } else {
-    elementos.galeriaProductos.innerHTML = productosPagina.map(crearCardProducto).join('');
-  }
-  renderizarPaginacion(productosFiltrados.length);
+function renderizarProductos(productosData) {
+  const galeria = document.getElementById('galeria-productos');
+  galeria.innerHTML = '';
+
+  productosData.forEach((producto, index) => {
+    const agotado = producto.stock <= 0;
+
+    const productoHTML = `
+      <div class="card">
+        <img src="${producto.imagenes?.[0]}" alt="${producto.nombre}">
+        <h3>${producto.nombre}</h3>
+        <p class="precio">$U ${producto.precio}</p>
+        <p class="stock">Stock: ${producto.stock}</p>
+        ${agotado ? `<span class="agotado">Agotado</span>` : `<button onclick="agregarAlCarrito(${index})">🛒 Agregar</button>`}
+        <button onclick="verDetalle(${index})">🔍 Ver detalle</button>
+      </div>
+    `;
+    galeria.innerHTML += productoHTML;
+  });
 }
+
 
 // ===============================
 // MODAL DE PRODUCTO
@@ -993,3 +1002,36 @@ function cargarProductosDesdeFirebase() {
   }
   
   inicializarEventos();
+
+
+import { getDatabase, ref, runTransaction } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
+
+function descontarStock(productoId, cantidad = 1) {
+  const db = getDatabase();
+  const stockRef = ref(db, `productos/${productoId}/stock`);
+
+  runTransaction(stockRef, (stockActual) => {
+    if (stockActual === null) {
+      // Si el stock no existe, no hacemos nada
+      return;
+    }
+
+    if (stockActual < cantidad) {
+      // No hay suficiente stock
+      alert('No hay suficiente stock disponible.');
+      return; // Esto cancela la transacción
+    }
+
+    // Resta el stock y continúa
+    return stockActual - cantidad;
+  }).then((result) => {
+    if (result.committed) {
+      console.log('Stock actualizado correctamente:', result.snapshot.val());
+    } else {
+      console.log('Transacción cancelada.');
+    }
+  }).catch((error) => {
+    console.error('Error al actualizar el stock:', error);
+  });
+}
+
