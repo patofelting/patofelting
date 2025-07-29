@@ -7,7 +7,7 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
-const btnCancelarAviso = document.getElementById('btn-cancelar-aviso');
+
 const firebaseConfig = {
   apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
   authDomain: "patofelting-b188f.firebaseapp.com",
@@ -34,19 +34,20 @@ let filtrosActuales = {
   busqueda: ''
 };
 
-// 🔁 Cargar productos desde Firebase
+const FIREBASE_URL = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json';
+
 document.addEventListener('DOMContentLoaded', () => {
   fetch(FIREBASE_URL)
     .then(res => res.json())
-   .then(data => {
-  productos = Object.values(data).filter(p => p !== null); // ✅ Filtra nulos
-  console.log("✅ Productos cargados:", productos);
-  renderizarProductos(productos);
-})
+    .then(data => {
+      productos = Object.values(data).filter(p => p !== null);
+      console.log("✅ Productos cargados:", productos);
+      renderizarProductos(productos);
+    })
     .catch(err => {
       console.error("Error cargando productos:", err);
     });
-
+});
   // Evento para cerrar el modal de aviso (si lo usás)
   const modalAviso = document.getElementById('aviso-pre-compra-modal');
   const btnCancelarAviso = document.getElementById('btn-cancelar-aviso');
@@ -55,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     modalAviso.style.display = 'none';
     modalAviso.setAttribute('aria-hidden', 'true');
   });
-});
+
 
 
 
@@ -1084,7 +1085,6 @@ async function validarStockAntesDeComprar(carrito) {
 }
 
 
-
 window.agregarAlCarrito = async function(id, cantidad = 1) {
   const prod = productos.find(p => p.id === id);
   if (!prod) return mostrarNotificacion('Producto no encontrado', 'error');
@@ -1126,14 +1126,13 @@ window.agregarAlCarrito = async function(id, cantidad = 1) {
         nombre: prod.nombre,
         precio: prod.precio,
         cantidad,
-        imagen: prod.imagenes?.[0] || PLACEHOLDER_IMAGE
+        imagen: prod.imagenes?.[0] || 'https://via.placeholder.com/400x400/cccccc/000?text=Sin+Imagen'
       });
     }
 
     guardarCarrito();
     actualizarUI();
 
-    // Actualizar visual en tarjeta
     const productoCard = document.querySelector(`.producto-card[data-id="${id}"]`);
     if (productoCard) {
       const stockEl = productoCard.querySelector('.producto-stock');
