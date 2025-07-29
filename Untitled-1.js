@@ -323,7 +323,6 @@ function renderizarProductos(data = productos) {
     const productoHTML = `
       <div class="card producto-card" data-id="${producto.id}">
         <img src="${producto.imagenes?.[0] || PLACEHOLDER_IMAGE}" alt="${producto.nombre}">
-
         <h3>${producto.nombre}</h3>
         <p class="precio">$U ${producto.precio}</p>
         <p class="stock producto-stock">${agotado ? 'Agotado' : `Stock: ${producto.stock}`}</p>
@@ -338,7 +337,11 @@ function renderizarProductos(data = productos) {
     galeria.innerHTML += productoHTML;
   });
 }
+
+// ✅ Hacés públicas las funciones al final del archivo o después de definirlas
 window.verDetalle = verDetalle;
+window.agregarAlCarrito = agregarAlCarrito;
+
 
 function actualizarCategorias() {
   if (!elementos.selectCategoria) return;
@@ -1159,4 +1162,3 @@ window.agregarAlCarrito = async function(id, cantidad = 1) {
   }
 };
 
-window.agregarAlCarrito = agregarAlCarrito;
