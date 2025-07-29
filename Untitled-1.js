@@ -32,6 +32,7 @@ let filtrosActuales = {
   busqueda: ''
 };
 
+renderizarProductos(productos);
 
 document.addEventListener('DOMContentLoaded', () => {
   const modalAviso = document.getElementById('aviso-pre-compra-modal');
@@ -581,7 +582,7 @@ function actualizarUI() {
   
   renderizarCarrito();
   actualizarContadorCarrito();
-   renderizarProductos(productos);
+  
 }
 
 // ===============================
@@ -1000,7 +1001,7 @@ async function cargarProductosDesdeFirebase() {
       if (!p || typeof p !== 'object') return null;
 
       return {
-        id: parseInt(key),
+        id: p.id || parseInt(key),
         nombre: p.nombre || '',
         descripcion: p.descripcion || '',
         precio: parseFloat(p.precio) || 0,
