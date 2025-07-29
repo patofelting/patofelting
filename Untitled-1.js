@@ -324,32 +324,12 @@ function renderizarProductos(data = productos) {
     const agotado = producto.stock <= 0;
     const productoHTML = `
       <div class="card producto-card" data-id="${producto.id}">
-        <img src="${producto.imagenes?.[0]}" alt="${producto.nombre}">
-        <h3>${producto.nombre}</h3>
-        <p class="precio">$U ${producto.precio}</p>
-        <p class="stock producto-stock">${agotado ? 'Agotado' : `Stock: ${producto.stock}`}</p>
-        ${agotado
-          ? `<button class="boton-agregar agotado" disabled><i class="fas fa-times-circle"></i> Agotado</button>`
-          : `<button class="boton-agregar" onclick="agregarAlCarrito(${producto.id})">🛒 Agregar</button>`}
-        <button onclick="verDetalle(${producto.id})">🔍 Ver detalle</button>
-      </div>
-    `;
-    galeria.innerHTML += productoHTML;
-  });
-}
-
-
-  productosData.forEach(producto => {
-    const agotado = producto.stock <= 0;
-
-    const productoHTML = `
-      <div class="card producto-card" data-id="${producto.id}">
         <img src="${producto.imagenes?.[0] || PLACEHOLDER_IMAGE}" alt="${producto.nombre}">
         <h3>${producto.nombre}</h3>
         <p class="precio">$U ${producto.precio}</p>
-        <p class="producto-stock">Stock: ${producto.stock}</p>
+        <p class="stock producto-stock">${agotado ? 'Agotado' : `Stock: ${producto.stock}`}</p>
         <button class="boton-agregar" onclick="agregarAlCarrito(${producto.id})" ${agotado ? 'disabled' : ''}>
-          ${agotado ? 'Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
+          ${agotado ? '<i class="fas fa-times-circle"></i> Agotado' : '🛒 Agregar'}
         </button>
         <button onclick="verDetalle(${producto.id})">
           🔍 Ver detalle
@@ -358,10 +338,7 @@ function renderizarProductos(data = productos) {
     `;
     galeria.innerHTML += productoHTML;
   });
-
-
-
-
+}
 
 function actualizarCategorias() {
   if (!elementos.selectCategoria) return;
@@ -1021,7 +998,7 @@ async function cargarProductosDesdeFirebase() {
 
     console.log("Productos cargados:", productos);
     actualizarCategorias();
-    actualizarUI(); // Esto llama internamente a renderizarProductos(productos)
+    actualizarUI(); 
 
   } catch (e) {
     console.error(e);
