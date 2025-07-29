@@ -1041,26 +1041,28 @@ onValue(productosRef, (snapshot) => {
 
   const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/400x400/cccccc/000?text=Sin+Imagen';
 
-productos = Object.keys(data).map(key => {
-  const r = data[key];
-  if (!r) return null;
+productos = Object.keys(data)
+  .map(key => {
+    const r = data[key];
+    if (!r || typeof r !== 'object') return null;
 
-  return {
-    id: parseInt(key),
-    nombre: r.nombre || '',
-    descripcion: r.descripcion || '',
-    precio: parseFloat(r.precio) || 0,
-    stock: parseInt(r.stock, 10) || 0,
-    imagenes: [PLACEHOLDER_IMAGE], // siempre pone una imagen por defecto
-    adicionales: r.adicionales || '',
-    alto: parseFloat(r.alto) || null,
-    ancho: parseFloat(r.ancho) || null,
-    profundidad: parseFloat(r.profundidad) || null,
-    categoria: r.categoria ? r.categoria.toLowerCase() : 'otros',
-    vendido: r.vendido || '',
-    estado: r.estado || ''
-  };
-}).filter(Boolean);
+    return {
+      id: parseInt(key),
+      nombre: r.nombre || '',
+      descripcion: r.descripcion || '',
+      precio: parseFloat(r.precio) || 0,
+      stock: parseInt(r.stock, 10) || 0,
+      imagenes: r.imagenes ? (Array.isArray(r.imagenes) ? r.imagenes : [r.imagenes]) : [PLACEHOLDER_IMAGE],
+      adicionales: r.adicionales || '',
+      alto: parseFloat(r.alto) || null,
+      ancho: parseFloat(r.ancho) || null,
+      profundidad: parseFloat(r.profundidad) || null,
+      categoria: r.categoria ? r.categoria.toLowerCase() : 'otros',
+      vendido: r.vendido || '',
+      estado: r.estado || ''
+    };
+  })
+  .filter(Boolean); // elimina los null
 
 
   console.log("Productos cargados:", productos);
