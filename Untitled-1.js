@@ -992,13 +992,6 @@ async function cargarProductosDesdeFirebase() {
 }
 
 // Invocación segura
-cargarCarrito();
-if (FIREBASE_URL) {
-  cargarProductosDesdeFirebase();
-} else if (CSV_URL) {
-  cargarProductosDesdeSheets();
-}
-inicializarEventos();
 
 
   cargarCarrito();
@@ -1006,9 +999,8 @@ inicializarEventos();
   // Decide qué fuente de datos usar (Firebase o Google Sheets)
   if (FIREBASE_URL) {
     cargarProductosDesdeFirebase();
-  } else if (CSV_URL) {
-    cargarProductosDesdeSheets();
   }
+  
   
   inicializarEventos();
 
