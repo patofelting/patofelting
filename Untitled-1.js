@@ -1048,11 +1048,6 @@ inicializarEventos();
   inicializarEventos();
 
 
- 
-
-
-import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
-
 function descontarStock(productoId, cantidad) {
   const db = getDatabase();
   const productoRef = ref(db, `productos/${productoId}/stock`);
@@ -1063,4 +1058,3 @@ function descontarStock(productoId, cantidad) {
     set(productoRef, nuevoStock);
   }, { onlyOnce: true });
 }
-
