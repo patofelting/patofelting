@@ -308,30 +308,29 @@ function toggleCarrito(forceState) {
 // ===============================
 // PRODUCTOS, FILTROS Y PAGINACIÓN
 // ===============================
-function renderizarProductos(productosData) {
+function renderizarProductos() {
   const galeria = document.getElementById('galeria-productos');
   galeria.innerHTML = '';
 
-  if (!Array.isArray(productosData)) {
+  if (!Array.isArray(productos)) {
+    console.warn('No se recibió una lista válida de productos', productos);
     galeria.innerHTML = '<p class="sin-productos">No hay productos para mostrar.</p>';
     return;
   }
 
-  productosData.forEach(producto => {
+  productos.forEach((producto, index) => {
     const agotado = producto.stock <= 0;
 
     const productoHTML = `
       <div class="card producto-card" data-id="${producto.id}">
-        <img src="${producto.imagenes?.[0] || PLACEHOLDER_IMAGE}" alt="${producto.nombre}">
+        <img src="${producto.imagenes?.[0]}" alt="${producto.nombre}">
         <h3>${producto.nombre}</h3>
         <p class="precio">$U ${producto.precio}</p>
-        <p class="producto-stock">Stock: ${producto.stock}</p>
-        <button class="boton-agregar" onclick="agregarAlCarrito(${producto.id})" ${agotado ? 'disabled' : ''}>
-          ${agotado ? 'Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
-        </button>
-        <button onclick="verDetalle(${producto.id})">
-          🔍 Ver detalle
-        </button>
+        <p class="stock producto-stock">${agotado ? 'Agotado' : `Stock: ${producto.stock}`}</p>
+        ${agotado
+          ? `<button class="boton-agregar agotado" disabled><i class="fas fa-times-circle"></i> Agotado</button>`
+          : `<button class="boton-agregar" onclick="agregarAlCarrito(${producto.id})">🛒 Agregar</button>`}
+        <button onclick="verDetalle(${producto.id})">🔍 Ver detalle</button>
       </div>
     `;
     galeria.innerHTML += productoHTML;
@@ -579,7 +578,7 @@ function conectarEventoModal() {
 // ===============================
 function actualizarUI() {
   // Forzar rerenderizado de productos para actualizar stocks
-  renderizarProductos();
+  
   renderizarCarrito();
   actualizarContadorCarrito();
    renderizarProductos(productos);
@@ -996,6 +995,7 @@ async function cargarProductosDesdeFirebase() {
 
     const data = await response.json();
     if (!data || typeof data !== 'object') {
+      console.warn("Respuesta de Firebase vacía o no válida:", data);
       elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles.</p>';
       return;
     }
