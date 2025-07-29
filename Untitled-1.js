@@ -1011,25 +1011,24 @@ function descontarStock(productoId, cantidad) {
   const db = getDatabase();
   const productoRef = ref(db, `productos/${productoId}/stock`);
 
-onValue(ref(database, 'productos'), (snapshot) => {
-  const data = snapshot.val(); // data puede ser null
-
-  if (!data) {
-    console.error('No se encontraron productos.');
+onValue(productosRef, (snapshot) => {
+  const data = snapshot.val();
+  if (!data || typeof data !== 'object') {
+    console.error("No se recibieron productos válidos desde Firebase.");
+    productos = [];
+    renderizarProductos();  // Podés mostrar un mensaje de "No hay productos"
     return;
   }
 
-  productos = Object.keys(data).map(key => {
-    const r = data[key];
+  productos = Object.keys(data).map((key, index) => {
+    const r = data[key] || {};
     return {
-      id: parseInt(key) + 1,
+      id: index + 1,
       nombre: r.nombre || '',
       descripcion: r.descripcion || '',
       precio: parseFloat(r.precio) || 0,
       stock: parseInt(r.stock, 10) || 0,
-      imagenes: r.imagenes
-        ? (Array.isArray(r.imagenes) ? r.imagenes : [r.imagenes])
-        : [PLACEHOLDER_IMAGE],
+      imagenes: r.imagenes ? (Array.isArray(r.imagenes) ? r.imagenes : [r.imagenes]) : [PLACEHOLDER_IMAGE],
       adicionales: r.adicionales || '',
       alto: parseFloat(r.alto) || null,
       ancho: parseFloat(r.ancho) || null,
@@ -1040,6 +1039,14 @@ onValue(ref(database, 'productos'), (snapshot) => {
     };
   });
 
-  actualizarUI();
-}, { onlyOnce: true });
+  console.log("Productos cargados:", productos);
+  renderizarProductos();
+}, (error) => {
+  console.error("Error al leer Firebase:", error);
+});
+  onValue(productoRef, (snapshot) => {
+    const stockActual = snapshot.val() || 0;
+    const nuevoStock = Math.max(0, stockActual - cantidad);
+    productoRef.set(nuevoStock);
+  });
 }
