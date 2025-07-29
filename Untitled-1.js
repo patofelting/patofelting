@@ -338,6 +338,7 @@ function renderizarProductos(data = productos) {
     galeria.innerHTML += productoHTML;
   });
 }
+window.verDetalle = verDetalle;
 
 function actualizarCategorias() {
   if (!elementos.selectCategoria) return;
@@ -1157,3 +1158,5 @@ window.agregarAlCarrito = async function(id, cantidad = 1) {
     mostrarNotificacion('Error al verificar stock en tiempo real', 'error');
   }
 };
+
+window.agregarAlCarrito = agregarAlCarrito;
