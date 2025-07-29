@@ -990,23 +990,24 @@ async function cargarProductosDesdeFirebase() {
       const p = data[key];
       if (!p || typeof p !== 'object') return null;
 
-      return {
-        id: p.id || parseInt(key),
-        nombre: p.nombre || '',
-        descripcion: p.descripcion || '',
-        precio: parseFloat(p.precio) || 0,
-        stock: parseInt(p.stock, 10) || 0,
-        imagenes: Array.isArray(p.imagenes) && p.imagenes.length > 0
-          ? p.imagenes
-          : [PLACEHOLDER_IMAGE],
-        adicionales: p.adicionales || '',
-        alto: parseFloat(p.alto) || null,
-        ancho: parseFloat(p.ancho) || null,
-        profundidad: parseFloat(p.profundidad) || null,
-        categoria: p.categoria ? p.categoria.toLowerCase() : 'otros',
-        vendido: p.vendido || '',
-        estado: p.estado || ''
-      };
+    return {
+  id: p.id || parseInt(key),
+  nombre: p.nombre || '',
+  descripcion: p.descripcion || '',
+  precio: parseFloat(p.precio) || 0,
+  stock: parseInt(p.stock, 10) || 0,
+  imagenes: typeof p.imagenes === 'string' && p.imagenes.includes('http')
+    ? p.imagenes.split(',').map(url => url.trim())
+    : [PLACEHOLDER_IMAGE],
+  adicionales: p.adicionales || '',
+  alto: parseFloat(p.alto) || null,
+  ancho: parseFloat(p.ancho) || null,
+  profundidad: parseFloat(p.profundidad) || null,
+  categoria: p.categoria ? p.categoria.toLowerCase() : 'otros',
+  vendido: p.vendido || '',
+  estado: p.estado || ''
+};
+
     }).filter(Boolean); // quita nulls
 
     console.log("Productos cargados:", productos);
