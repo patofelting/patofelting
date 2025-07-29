@@ -1,4 +1,5 @@
 
+
 // ===============================
 // CONFIGURACIÓN GLOBAL
 // ===============================
@@ -21,6 +22,7 @@ const firebaseConfig = {
 // ===============================
 // ESTADO GLOBAL
 // ===============================
+
 let productos = [];
 let carrito = [];
 let paginaActual = 1;
@@ -32,9 +34,20 @@ let filtrosActuales = {
   busqueda: ''
 };
 
-renderizarProductos(productos);
-
+// 🔁 Cargar productos desde Firebase
 document.addEventListener('DOMContentLoaded', () => {
+  fetch(FIREBASE_URL)
+    .then(res => res.json())
+    .then(data => {
+      productos = Object.values(data);
+      console.log("✅ Productos cargados:", productos);
+      renderizarProductos(productos); // ✅ Ahora sí
+    })
+    .catch(err => {
+      console.error("Error cargando productos:", err);
+    });
+
+  // Evento para cerrar el modal de aviso (si lo usás)
   const modalAviso = document.getElementById('aviso-pre-compra-modal');
   const btnCancelarAviso = document.getElementById('btn-cancelar-aviso');
 
@@ -43,7 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
     modalAviso.setAttribute('aria-hidden', 'true');
   });
 });
-
 
 
 
