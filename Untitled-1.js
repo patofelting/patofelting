@@ -1296,6 +1296,3 @@ function verDetalle(id) {
   modal.setAttribute('aria-hidden', 'false');
 }
 
-// Hacer accesibles globalmente
-window.agregarAlCarrito = agregarAlCarrito;
-window.verDetalle = verDetalle;
