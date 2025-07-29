@@ -696,9 +696,10 @@ function init() {
   }
 
   cargarCarrito();
-  cargarProductosDesdeFirebase(); 
+  cargarProductosDesdeFirebase();  // solo esta fuente
   inicializarEventos();
 }
+
 
 
 if (document.readyState !== 'loading') {
