@@ -975,22 +975,36 @@ updateRange();
 
 const database = getDatabase();
 
-function cargarProductosDesdeFirebase() {
-  const productosRef = ref(database, 'productos');
+async function cargarProductosDesdeFirebase() {
+  const dbUrl = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json';
 
-  onValue(productosRef, (snapshot) => {
-    const data = snapshot.val();
+  try {
+    const respuesta = await fetch(dbUrl);
+    const data = await respuesta.json();
 
-    if (data) {
-      const productos = Object.values(data);
-      renderizarProductos(productos);
-    } else {
-      console.error("No se encontraron productos en Firebase.");
+    if (!data) {
+      console.warn('No hay datos disponibles en Firebase.');
+      return;
     }
-  }, {
-    onlyOnce: true
-  });
+
+    const productos = Array.isArray(data)
+      ? data.filter(Boolean) // Si es array, quitamos posibles nulos
+      : Object.values(data); // Si es objeto, convertimos a array
+
+    if (!Array.isArray(productos)) {
+      console.error('Los datos obtenidos no son un array.');
+      return;
+    }
+
+    productos.forEach(prod => {
+      // Lógica para renderizar el producto en tu galería
+      console.log(prod.nombre); // O tu lógica de renderizado real
+    });
+  } catch (error) {
+    console.error('Error al cargar productos:', error);
+  }
 }
+
 
   cargarCarrito();
   
@@ -1025,6 +1039,7 @@ function descontarStockSeguro(productoId, cantidadADescontar = 1) {
     console.error("⚠️ Error de transacción:", error);
   });
 }
+
 
 
 document.querySelector('.boton-confirmar-envio').addEventListener('click', async () => {
