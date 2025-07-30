@@ -620,33 +620,88 @@ function actualizarResumenPedido() {
 }
 
 // ===============================
+// FUNCIONES GLOBALES
+// ===============================
+function verDetalle(id) {
+  const producto = productos.find(p => p.id === id);
+  if (producto) mostrarModalProducto(producto);
+}
+
+function inicializarMenuHamburguesa() {
+  const hamburguesa = document.querySelector('.hamburguesa');
+  const menu = document.getElementById('menu');
+  if (!hamburguesa || !menu) return;
+  hamburguesa.addEventListener('click', function () {
+    const expanded = menu.classList.toggle('active');
+    hamburguesa.setAttribute('aria-expanded', expanded);
+    document.body.classList.toggle('no-scroll', expanded);
+  });
+  
+  menu.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      menu.classList.remove('active');
+      hamburguesa.setAttribute('aria-expanded', false);
+      document.body.classList.remove('no-scroll');
+    });
+  });
+}
+
+// ===============================
 // INICIALIZADOR ÚNICO
 // ===============================
 function init() {
   inicializarMenuHamburguesa();
-  inicializarFAQ();
-  setupContactForm();
-
-  cargarCarrito();
-
-  if (FIREBASE_URL) {
-    cargarProductosDesdeFirebase(); 
-  }
-
-  inicializarEventos();
+  // ... resto del código de init
 }
 
 document.addEventListener('DOMContentLoaded', init);
 
 // ===============================
-// FUNCIONES GLOBALES
+// FUNCIONES DE CONTACTO Y FAQ
 // ===============================
-window.verDetalle = verDetalle;
-window.agregarAlCarrito = agregarAlCarrito;
-window.guardarCarrito = guardarCarrito;
-window.mostrarModalProducto = mostrarModalProducto;
-window.mostrarNotificacion = mostrarNotificacion;
-window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
+function setupContactForm() {
+  const formContacto = document.getElementById('formContacto');
+  const successMessage = document.getElementById('successMessage');
+  const errorMessage = document.getElementById('errorMessage');
+
+  if (formContacto) {
+    formContacto.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const nombre = document.getElementById('nombre').value;
+      const email = document.getElementById('email').value;
+      const mensaje = document.getElementById('mensaje').value;
+
+      emailjs.send('service_89by24g', 'template_8mn7hdp', {
+        from_name: nombre,
+        from_email: email,
+        message: mensaje
+      })
+      .then(() => {
+        successMessage.classList.remove('hidden');
+        errorMessage.classList.add('hidden');
+        formContacto.reset();
+        setTimeout(() => successMessage.classList.add('hidden'), 3000);
+      }, (error) => {
+        console.error('Error al enviar el mensaje:', error);
+        errorMessage.classList.remove('hidden');
+        successMessage.classList.add('hidden');
+        setTimeout(() => errorMessage.classList.add('hidden'), 3000);
+      });
+    });
+  }
+}
+
+function inicializarFAQ() {
+  const faqToggles = document.querySelectorAll('.faq-toggle');
+  faqToggles.forEach(toggle => {
+    toggle.addEventListener('click', () => {
+      const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', !isExpanded);
+      const content = toggle.nextElementSibling;
+      if (content) content.hidden = isExpanded;
+    });
+  });
+}
 
 // Controladores para los sliders de precio
 const minSlider = document.getElementById('min-slider');
