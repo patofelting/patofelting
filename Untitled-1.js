@@ -6,11 +6,12 @@ const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
-// ======== Primero declaramos firebaseConfig ========
+// ======== Importación de Firebase (SOLO en <script type="module">) ========
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+// ======== Configuración de Firebase ========
 const firebaseConfig = {
   apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
   authDomain: "patofelting-b188f.firebaseapp.com",
@@ -23,19 +24,15 @@ const firebaseConfig = {
 
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
-
-// ✅ DEFINIR db ANTES DE USARLO
-const db = getDatabase(app);
-
+const db = getDatabase(app);       // ✅ OK
+const auth = getAuth(app);         // ✅ DEFINILO ANTES DE USARLO
 
 // ==================== AUTENTICACIÓN ANÓNIMA ====================
 signInAnonymously(auth)
   .then(() => console.log("✅ Signed in anonymously"))
   .catch(error => console.error("❌ Error signing in:", error));
 
-
-// ESTADO GLOBAL//
-// ===============================
+// ==================== ESTADO GLOBAL ====================
 let productos = [];
 let carrito = [];
 let paginaActual = 1;
@@ -46,7 +43,6 @@ let filtrosActuales = {
   categoria: 'todos',
   busqueda: ''
 };
-
 // ===============================
 // LOAD PRODUCTS ON PAGE LOAD
 // ===============================
