@@ -7,14 +7,13 @@ const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
 // ======== Primero declaramos firebaseConfig y luego inicializamos Firebase ========
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
   getDatabase,
   ref,
   runTransaction,
-  onValue  // 👈 AÑADILO ACÁ
+  onValue,
+  get // 👈 Add this import
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 
 const firebaseConfig = {
