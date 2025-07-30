@@ -973,58 +973,7 @@ document.addEventListener('DOMContentLoaded', init);
 
 
 
-function agregarAlCarrito(id) {
-  const producto = productos.find(p => p.id === id);
-  if (!producto) {
-    mostrarNotificacion("Producto no encontrado", "error");
-    return;
-  }
 
-  const enCarrito = carrito.find(item => item.id === id);
-
-  if (producto.stock <= 0) {
-    mostrarNotificacion("Producto sin stock", "error");
-    return;
-  }
-
-  const cantidadAgregar = 1;
-
-  // Actualizar en Firebase
-  const productRef = ref(db, `productos/${id}/stock`);
-  runTransaction(productRef, (currentStock) => {
-    if (currentStock === null) return currentStock;
-    if (currentStock < cantidadAgregar) return; // no alcanza
-
-    return currentStock - cantidadAgregar;
-  }).then(() => {
-    if (enCarrito) {
-      enCarrito.cantidad += cantidadAgregar;
-    } else {
-      carrito.push({
-        id: producto.id,
-        nombre: producto.nombre,
-        precio: producto.precio,
-        cantidad: cantidadAgregar,
-        imagen: producto.imagenes?.[0] || PLACEHOLDER_IMAGE
-      });
-    }
-
-    guardarCarrito();
-    actualizarCarritoUI();
-    mostrarNotificacion("Producto agregado al carrito", "exito");
-  }).catch((error) => {
-    console.error("Error al agregar al carrito:", error);
-    mostrarNotificacion("No se pudo agregar al carrito", "error");
-  });
-}
-function verDetalle(id) {
-  const producto = productos.find(p => p.id === id);
-  if (producto) {
-    mostrarModalProducto(producto);
-  } else {
-    console.warn("Producto no encontrado:", id);
-  }
-}
 
 function agregarAlCarrito(id) {
   const producto = productos.find(p => p.id === id);
