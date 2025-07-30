@@ -54,7 +54,13 @@ document.addEventListener('DOMContentLoaded', () => {
     })
     .catch((error) => {
       console.error('Error signing in:', error);
-      mostrarNotificacion('Error de autenticación', 'error');
+      let errorMessage = 'Error de autenticación';
+      if (error.code === 'auth/configuration-not-found') {
+        errorMessage = 'Autenticación anónima no está habilitada en Firebase. Por favor, contacta al administrador.';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Error de red. Por favor, verifica tu conexión a internet.';
+      }
+      mostrarNotificacion(errorMessage, 'error');
     });
 });
 
