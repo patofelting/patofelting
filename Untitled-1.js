@@ -427,86 +427,7 @@ function toggleCarrito(forceState) {
 // ===============================
 // PRODUCTOS, FILTROS Y PAGINACIÓN
 // ===============================
-function mostrarModalProducto(producto) {
-  const modal = elementos.productoModal;
-  const contenido = elementos.modalContenido;
-  if (!modal || !contenido) return;
 
-  const enCarrito = carrito.find(item => item.id === producto.id) || { cantidad: 0 }; //
-  const disponibles = Math.max(0, producto.stock - enCarrito.cantidad); //
-  const agotado = disponibles <= 0; //
-  let currentIndex = 0; //
-
-  function renderCarrusel() {
-    // Clear the existing content to remove old elements and their associated listeners
-    contenido.innerHTML = `
-      <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
-      <div class="modal-flex">
-        <div class="modal-carrusel">
-          <img src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}" loading="lazy">
-          ${
-            producto.imagenes.length > 1
-              ? `
-            <div class="modal-controls">
-              <button class="modal-prev" aria-label="Imagen anterior" ${currentIndex === 0 ? 'disabled' : ''}>
-                <svg width="26" height="26" viewBox="0 0 26 26"><polyline points="17 22 9 13 17 4" fill="none" stroke="#2e7d32" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
-              <button class="modal-next" aria-label="Siguiente imagen" ${currentIndex === producto.imagenes.length - 1 ? 'disabled' : ''}>
-                <svg width="26" height="26" viewBox="0 0 26 26"><polyline points="9 4 17 13 9 22" fill="none" stroke="#2e7d32" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
-            </div>
-            `
-              : ''
-          }
-          <div class="modal-thumbnails">
-            ${producto.imagenes
-              .map(
-                (img, i) =>
-                  `<img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}" loading="lazy">`
-              )
-              .join('')}
-          </div>
-        </div>
-        <div class="modal-info">
-          <h1 class="modal-nombre">${producto.nombre}</h1>
-          <p class="modal-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
-          <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">
-            ${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}
-          </p>
-          <div class="modal-descripcion">
-            ${producto.descripcion || ''}
-            <br>
-            ${producto.adicionales ? `<small><b>Adicionales:</b> ${producto.adicionales}</small><br>` : ''}
-            ${
-              producto.alto || producto.ancho || producto.profundidad
-                ? `<small><b>Medidas:</b> ${producto.alto ? producto.alto + ' cm (alto)' : ''}${producto.ancho ? ' x ' + producto.ancho + ' cm (ancho)' : ''}${producto.profundidad ? ' x ' + producto.profundidad + ' cm (prof.)' : ''}</small>`
-                : ''
-            }
-          </div>
-          <div class="modal-acciones">
-            <input type="number" value="1" min="1" max="${disponibles}" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
-            <button class="boton-agregar-modal ${agotado ? 'agotado' : ''}" data-id="${producto.id}" ${agotado ? 'disabled' : ''}>
-              ${agotado ? 'Agotado' : 'Agregar al carrito'}
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-
-    // Attach event listeners *after* the HTML has been rendered and replaces the old content
-    contenido.querySelector('.cerrar-modal').onclick = () => cerrarModal(); //
-
-    const botonAgregar = contenido.querySelector('.boton-agregar-modal'); //
-    if (botonAgregar) { //
-      // No need to clone the button here because `contenido.innerHTML = ...` effectively recreates the elements
-      // and removes any old listeners on those recreated elements.
-      botonAgregar.addEventListener('click', () => { //
-        const input = contenido.querySelector('.cantidad-modal-input'); //
-        const cantidad = +(input?.value || 1); //
-        agregarAlCarrito(producto.id, cantidad); //
-        cerrarModal(); //
-      });
-    }
 
     const btnPrev = contenido.querySelector('.modal-prev'); //
     const btnNext = contenido.querySelector('.modal-next'); //
@@ -532,7 +453,7 @@ function mostrarModalProducto(producto) {
         renderCarrusel(); //
       });
     });
-  }
+  
 
   renderCarrusel(); // Initial call to render and attach listeners for the modal content
 
@@ -553,7 +474,7 @@ function mostrarModalProducto(producto) {
       document.body.classList.remove('no-scroll'); //
     }, 300); //
   }
-}
+
 // Función para manejar eventos delegados
 function manejarEventosGaleria(e) {
   const target = e.target.closest('[data-id]');
