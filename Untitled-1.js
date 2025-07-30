@@ -1321,7 +1321,8 @@ async function agregarAlCarrito(id, cantidad = 1) {
 
 
 // Exportar funciones globalmente
-window.verDetalle = verDetalle;
+
+
 window.agregarAlCarrito = agregarAlCarrito;
 
 
