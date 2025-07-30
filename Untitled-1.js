@@ -315,19 +315,30 @@ function toggleCarrito(forceState) {
 // ===============================
 // PRODUCTOS, FILTROS Y PAGINACIÓN
 // ===============================
-function renderizarProductos(data = productos) {
+function renderizarProductos() {
   const galeria = elementos.galeriaProductos;
   if (!galeria) return;
 
+  // Get filtered products
   const productosFiltrados = filtrarProductos();
+  const startIndex = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
+  const endIndex = startIndex + PRODUCTOS_POR_PAGINA;
+  const paginatedProductos = productosFiltrados.slice(startIndex, endIndex);
+
+  // Clear gallery
   galeria.innerHTML = '';
 
+  // Show message if no products found
   if (productosFiltrados.length === 0) {
-    galeria.innerHTML = '<p class="sin-productos">No hay productos que coincidan con los filtros</p>';
+    const noProductsMessage = document.createElement('div');
+    noProductsMessage.className = 'sin-productos';
+    noProductsMessage.textContent = 'No hay productos que coincidan con los filtros';
+    galeria.appendChild(noProductsMessage);
     return;
   }
 
-  productosFiltrados.forEach(producto => {
+  // Create product cards
+  paginatedProductos.forEach(producto => {
     const enCarrito = carrito.find(item => item.id === producto.id);
     const disponibles = Math.max(0, producto.stock - (enCarrito?.cantidad || 0));
     const agotado = disponibles <= 0;
@@ -335,24 +346,72 @@ function renderizarProductos(data = productos) {
     const card = document.createElement('div');
     card.className = `producto-card ${agotado ? 'agotado' : ''}`;
     card.dataset.id = producto.id;
+    card.setAttribute('role', 'article');
+    card.setAttribute('aria-labelledby', `producto-${producto.id}`);
+
     card.innerHTML = `
-      <img src="${producto.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${producto.nombre}" class="producto-img">
-      <h3 class="producto-nombre">${producto.nombre}</h3>
-      <p class="producto-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
-      <p class="producto-stock">${agotado ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${disponibles}`}</p>
+      <img src="${producto.imagenes[0] || PLACEHOLDER_IMAGE}" 
+           alt="${producto.nombre}" 
+           class="producto-img" 
+           loading="lazy"
+           aria-hidden="true">
+      <div class="producto-info">
+        <h3 class="producto-nombre" id="producto-${producto.id}">${producto.nombre}</h3>
+        <p class="producto-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
+        <p class="producto-stock">
+          ${agotado ? 
+            '<span class="texto-agotado" aria-label="Producto agotado">Agotado</span>' : 
+            `Stock: ${disponibles}`}
+        </p>
+        <p class="producto-categoria">Categoría: ${producto.categoria}</p>
+        ${producto.adicionales ? `<p class="producto-adicionales">${producto.adicionales}</p>` : ''}
+        ${producto.alto || producto.ancho || producto.profundidad ? `
+          <p class="producto-medidas">
+            Medidas: ${producto.alto ? `${producto.alto} cm (alto)` : ''}
+                    ${producto.ancho ? ` x ${producto.ancho} cm (ancho)` : ''}
+                    ${producto.profundidad ? ` x ${producto.profundidad} cm (prof.)` : ''}
+          </p>
+        ` : ''}
+      </div>
       <div class="card-acciones">
-        <button class="boton-agregar${agotado ? ' agotado' : ''}" onclick="agregarAlCarrito(${producto.id}, 1)" ${agotado ? 'disabled' : ''}>
+        <button class="boton-agregar${agotado ? ' agotado' : ''}" 
+                onclick="agregarAlCarrito(${producto.id}, 1)" 
+                ${agotado ? 'disabled' : ''}
+                aria-label="${agotado ? 'Producto agotado' : `Agregar ${producto.nombre} al carrito`}">
           ${agotado ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
         </button>
         ${agotado ? `
-        <button class="boton-aviso-stock" onclick="preguntarStock('${producto.nombre}')">
+        <button class="boton-aviso-stock"
+                onclick="preguntarStock('${producto.nombre}')"
+                aria-label="Solicitar notificación de stock para ${producto.nombre}">
           📩 Avisame cuando haya stock
         </button>` : ''}
       </div>
-      <button class="boton-detalles" onclick="verDetalle(${producto.id})">🔍 Ver Detalle</button>
+      <button class="boton-detalles"
+              onclick="verDetalle(${producto.id})"
+              aria-label="Ver detalles de ${producto.nombre}">
+        <i class="fas fa-search"></i> Ver Detalle
+      </button>
     `;
+
+    // Add keyboard navigation
+    card.querySelector('.boton-agregar')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.target.click();
+      }
+    });
+
+    card.querySelector('.boton-detalles')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.target.click();
+      }
+    });
+
     galeria.appendChild(card);
   });
+
+  // Render pagination
+  renderizarPaginacion(productosFiltrados.length);
 }
 
 // Actualiza la función filtrarProductos
