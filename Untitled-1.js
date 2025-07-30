@@ -7,15 +7,25 @@ const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
 // ======== Primero declaramos firebaseConfig y luego inicializamos Firebase ========
+// Import Firebase core module for initializeApp
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+// Import Authentication functions
+import {
+  getAuth,
+  signInAnonymously
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+// Import Realtime Database functions
 import {
   getDatabase,
   ref,
   runTransaction,
   onValue,
-  get // 👈 Add this import
+  get
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-
+// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
   authDomain: "patofelting-b188f.firebaseapp.com",
@@ -26,14 +36,14 @@ const firebaseConfig = {
   appId: "1:858377467588:web:cade9de05ebccc17f87b91"
 };
 
-// ✅ Inicializar Firebase App
+// Initialize Firebase App
 const app = initializeApp(firebaseConfig);
 
-// ✅ Obtener instancias de servicios
+// Obtain service instances
 const db = getDatabase(app);
 const auth = getAuth(app);
 
-// ==================== AUTENTICACIÓN ANÓNIMA ====================
+// Anonymous authentication
 signInAnonymously(auth)
   .then(() => console.log("✅ Signed in anonymously"))
   .catch(error => console.error("❌ Error signing in:", error));
