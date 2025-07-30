@@ -66,7 +66,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function verDetalle(id) {
   const producto = productos.find(p => p.id === id);
-  if (producto) mostrarModalProducto(producto);
+  if (!producto) return;
+
+  if (producto.stock === 0) {
+    alert("Este producto no está disponible actualmente.");
+    return;
+  }
+
+  mostrarModalProducto(producto);
 }
 
 function agregarAlCarrito(id, cantidad = 1) {
