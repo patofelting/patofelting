@@ -427,97 +427,133 @@ function toggleCarrito(forceState) {
 // ===============================
 // PRODUCTOS, FILTROS Y PAGINACIÓN
 // ===============================
-function renderizarProductos(datos = productos) {
-  const galeria = elementos.galeriaProductos;
-  if (!galeria) return;
+function mostrarModalProducto(producto) {
+  const modal = elementos.productoModal;
+  const contenido = elementos.modalContenido;
+  if (!modal || !contenido) return;
 
-  // Filtrar y paginar productos
-  const productosFiltrados = filtrarProductos();
-  const totalProductos = productosFiltrados.length;
-  const startIndex = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
-  const endIndex = startIndex + PRODUCTOS_POR_PAGINA;
-  const productosAPerPage = productosFiltrados.slice(startIndex, endIndex);
+  const enCarrito = carrito.find(item => item.id === producto.id) || { cantidad: 0 }; //
+  const disponibles = Math.max(0, producto.stock - enCarrito.cantidad); //
+  const agotado = disponibles <= 0; //
+  let currentIndex = 0; //
 
-  // Limpiar galería
-  galeria.innerHTML = '';
-
-  // Mostrar mensaje si no hay productos
-  if (!productosAPerPage || productosAPerPage.length === 0) {
-    galeria.innerHTML = `
-      <div class="sin-resultados">
-        <i class="fas fa-search"></i>
-        <p>No encontramos productos que coincidan con tus filtros</p>
-        <button class="boton-resetear-filtros" onclick="resetearFiltros()">
-          <i class="fas fa-undo"></i> Reiniciar filtros
-        </button>
+  function renderCarrusel() {
+    // Clear the existing content to remove old elements and their associated listeners
+    contenido.innerHTML = `
+      <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
+      <div class="modal-flex">
+        <div class="modal-carrusel">
+          <img src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}" loading="lazy">
+          ${
+            producto.imagenes.length > 1
+              ? `
+            <div class="modal-controls">
+              <button class="modal-prev" aria-label="Imagen anterior" ${currentIndex === 0 ? 'disabled' : ''}>
+                <svg width="26" height="26" viewBox="0 0 26 26"><polyline points="17 22 9 13 17 4" fill="none" stroke="#2e7d32" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <button class="modal-next" aria-label="Siguiente imagen" ${currentIndex === producto.imagenes.length - 1 ? 'disabled' : ''}>
+                <svg width="26" height="26" viewBox="0 0 26 26"><polyline points="9 4 17 13 9 22" fill="none" stroke="#2e7d32" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+            `
+              : ''
+          }
+          <div class="modal-thumbnails">
+            ${producto.imagenes
+              .map(
+                (img, i) =>
+                  `<img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}" loading="lazy">`
+              )
+              .join('')}
+          </div>
+        </div>
+        <div class="modal-info">
+          <h1 class="modal-nombre">${producto.nombre}</h1>
+          <p class="modal-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
+          <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">
+            ${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}
+          </p>
+          <div class="modal-descripcion">
+            ${producto.descripcion || ''}
+            <br>
+            ${producto.adicionales ? `<small><b>Adicionales:</b> ${producto.adicionales}</small><br>` : ''}
+            ${
+              producto.alto || producto.ancho || producto.profundidad
+                ? `<small><b>Medidas:</b> ${producto.alto ? producto.alto + ' cm (alto)' : ''}${producto.ancho ? ' x ' + producto.ancho + ' cm (ancho)' : ''}${producto.profundidad ? ' x ' + producto.profundidad + ' cm (prof.)' : ''}</small>`
+                : ''
+            }
+          </div>
+          <div class="modal-acciones">
+            <input type="number" value="1" min="1" max="${disponibles}" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
+            <button class="boton-agregar-modal ${agotado ? 'agotado' : ''}" data-id="${producto.id}" ${agotado ? 'disabled' : ''}>
+              ${agotado ? 'Agotado' : 'Agregar al carrito'}
+            </button>
+          </div>
+        </div>
       </div>
     `;
-    return;
+
+    // Attach event listeners *after* the HTML has been rendered and replaces the old content
+    contenido.querySelector('.cerrar-modal').onclick = () => cerrarModal(); //
+
+    const botonAgregar = contenido.querySelector('.boton-agregar-modal'); //
+    if (botonAgregar) { //
+      // No need to clone the button here because `contenido.innerHTML = ...` effectively recreates the elements
+      // and removes any old listeners on those recreated elements.
+      botonAgregar.addEventListener('click', () => { //
+        const input = contenido.querySelector('.cantidad-modal-input'); //
+        const cantidad = +(input?.value || 1); //
+        agregarAlCarrito(producto.id, cantidad); //
+        cerrarModal(); //
+      });
+    }
+
+    const btnPrev = contenido.querySelector('.modal-prev'); //
+    const btnNext = contenido.querySelector('.modal-next'); //
+    const thumbnails = contenido.querySelectorAll('.thumbnail'); //
+
+    btnPrev?.addEventListener('click', () => { //
+      if (currentIndex > 0) { //
+        currentIndex--; //
+        renderCarrusel(); //
+      }
+    });
+
+    btnNext?.addEventListener('click', () => { //
+      if (currentIndex < producto.imagenes.length - 1) { //
+        currentIndex++; //
+        renderCarrusel(); //
+      }
+    });
+
+    thumbnails.forEach(th => { //
+      th.addEventListener('click', () => { //
+        currentIndex = parseInt(th.dataset.index); //
+        renderCarrusel(); //
+      });
+    });
   }
 
-  // Crear fragmento de documento para mejor performance
-  const fragment = document.createDocumentFragment();
+  renderCarrusel(); // Initial call to render and attach listeners for the modal content
 
-  productosAPerPage.forEach(producto => {
-    const enCarrito = carrito.find(item => item.id === producto.id);
-    const disponibles = Math.max(0, producto.stock - (enCarrito?.cantidad || 0));
-    const agotado = disponibles <= 0;
-    const imagenValida = producto.imagenes?.[0] || PLACEHOLDER_IMAGE;
+  modal.style.display = 'flex'; //
+  setTimeout(() => { //
+    modal.classList.add('visible'); //
+    document.body.classList.add('no-scroll'); //
+  }, 10); //
 
-    // Escapar caracteres especiales para prevenir XSS
-    const escapeHTML = str => str.replace(/[&<>'"]/g, tag => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      "'": '&#39;',
-      '"': '&quot;'
-    }[tag] || tag));
+  modal.onclick = e => { //
+    if (e.target === modal) cerrarModal(); //
+  };
 
-    const card = document.createElement('div');
-    card.className = `producto-card ${agotado ? 'agotado' : ''} ${producto.estado === 'nuevo' ? 'nuevo' : ''}`;
-    card.dataset.id = producto.id;
-    card.dataset.categoria = producto.categoria;
-
-    // Mejor estructura del card con eventos delegados
-    card.innerHTML = `
-      <div class="producto-imagen-container">
-        <img src="${imagenValida}" alt="${escapeHTML(producto.nombre)}" class="producto-img" loading="lazy">
-        ${producto.estado === 'oferta' ? '<span class="etiqueta-oferta">OFERTA</span>' : ''}
-        ${producto.estado === 'nuevo' ? '<span class="etiqueta-nuevo">NUEVO</span>' : ''}
-      </div>
-      <div class="producto-info">
-        <h3 class="producto-nombre">${escapeHTML(producto.nombre)}</h3>
-        <p class="producto-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
-        <p class="producto-stock ${agotado ? 'texto-agotado' : 'texto-disponible'}">
-          ${agotado ? '<i class="fas fa-times-circle"></i> AGOTADO' : `<i class="fas fa-check-circle"></i> Disponible: ${disponibles}`}
-        </p>
-        <div class="card-acciones">
-          <button class="boton-agregar ${agotado ? 'agotado' : ''}" data-id="${producto.id}" ${agotado ? 'disabled aria-disabled="true"' : ''}>
-            ${agotado ? 'Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
-          </button>
-          ${agotado ? `
-          <button class="boton-aviso-stock" data-id="${producto.id}" data-nombre="${escapeHTML(producto.nombre)}">
-            <i class="fas fa-bell"></i> Avisame
-          </button>` : ''}
-        </div>
-        <button class="boton-detalles" data-id="${producto.id}">
-          <i class="fas fa-search"></i> Ver Detalle
-        </button>
-      </div>
-    `;
-
-    fragment.appendChild(card);
-  });
-
-  galeria.appendChild(fragment);
-  renderizarPaginacion(totalProductos);
-
-  // Delegación de eventos para mejor performance
-  // Remove existing listener to avoid duplicates
-  galeria.removeEventListener('click', manejarEventosGaleria);
-  galeria.addEventListener('click', manejarEventosGaleria);
+  function cerrarModal() {
+    modal.classList.remove('visible'); //
+    setTimeout(() => { //
+      modal.style.display = 'none'; //
+      document.body.classList.remove('no-scroll'); //
+    }, 300); //
+  }
 }
-
 // Función para manejar eventos delegados
 function manejarEventosGaleria(e) {
   const target = e.target.closest('[data-id]');
