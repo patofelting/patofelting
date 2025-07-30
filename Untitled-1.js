@@ -1060,7 +1060,6 @@ function agregarAlCarrito(id) {
         imagen: producto.imagenes?.[0] || PLACEHOLDER_IMAGE
       });
     }
-
     guardarCarrito();
     actualizarCarritoUI();
     mostrarNotificacion("Producto agregado al carrito", "exito");
