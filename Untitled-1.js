@@ -356,6 +356,7 @@ function renderizarProductos(data = productos) {
 }
 
 // Actualiza la función filtrarProductos
+// Filtrado de productos
 function filtrarProductos() {
   return productos.filter(p => {
     const { precioMin, precioMax, categoria, busqueda } = filtrosActuales;
@@ -368,6 +369,12 @@ function filtrarProductos() {
       (!b || p.nombre.toLowerCase().includes(b) || p.descripcion.toLowerCase().includes(b))
     );
   });
+}
+
+// Aplicar filtros
+function aplicarFiltros() {
+  paginaActual = 1;
+  renderizarProductos();
 }
 
 // ✅ Hacés públicas las funciones al final del archivo o después de definirlas
@@ -925,11 +932,7 @@ document.getElementById('form-envio').addEventListener('submit', function(e) {
   }, 1000);
 });
 
-function preguntarStock(nombreProducto) {
-  const asunto = encodeURIComponent(`Consulta por disponibilidad de "${nombreProducto}"`);
-  const cuerpo = encodeURIComponent(`Hola! Quisiera saber cuándo estará disponible el producto "${nombreProducto}". Muchas gracias!`);
-  window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
-}
+
 
 // Controladores para los sliders de precio
 
@@ -974,3 +977,9 @@ import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10
 const database = getDatabase();
 
 document.addEventListener('DOMContentLoaded', init);
+
+function preguntarStock(nombreProducto) {
+  const asunto = encodeURIComponent(`Consulta sobre disponibilidad de "${nombreProducto}"`);
+  const cuerpo = encodeURIComponent(`Hola Patofelting,\n\nMe gustaría saber cuándo estará disponible el producto: ${nombreProducto}\n\nSaludos cordiales,\n[Nombre del Cliente]`);
+  window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
+}
