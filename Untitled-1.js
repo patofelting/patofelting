@@ -5,6 +5,8 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
+const app = initializeApp(firebaseConfig);
+import { getDatabase, ref, set, update, runTransaction } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
 
 // ===============================
 // ESTADO GLOBAL
@@ -39,7 +41,7 @@ const firebaseConfig = {
   appId: "1:858377467588:web:cade9de05ebccc17f87b91"
 };
 
-const app = initializeApp(firebaseConfig);
+
 const database = getDatabase(app);
 const auth = getAuth(app);
 
