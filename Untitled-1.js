@@ -208,6 +208,11 @@ async function cargarProductosDesdeFirebase() {
       const p = data[key];
       if (!p || typeof p !== 'object') return null;
 
+      // Handle cases where 'imagenes' might be undefined
+      const imagenPrincipal = Array.isArray(p.imagenes) && p.imagenes.length > 0 
+        ? p.imagenes[0] 
+        : PLACEHOLDER_IMAGE;
+
       return {
         id: p.id || parseInt(key),
         nombre: p.nombre || '',
@@ -228,13 +233,8 @@ async function cargarProductosDesdeFirebase() {
     console.log("✅ Productos cargados:", productos);
 
     renderizarProductos();
-    actualizarCategorias(); // Actualizar las categorías después de cargar los productos
+    actualizarCategorias();
     actualizarUI();
-
-    // Habilitar los botones solo cuando hay productos
-    document.querySelectorAll('.boton-agregar').forEach(btn => {
-      btn.disabled = false;
-    });
 
   } catch (e) {
     console.error(e);
@@ -247,7 +247,6 @@ async function cargarProductosDesdeFirebase() {
     }
   }
 }
-
 function renderizarCarrito() {
   if (!elementos.listaCarrito || !elementos.totalCarrito) return;
   
@@ -415,10 +414,11 @@ function crearCardProducto(p) {
   const enCarrito = carrito.find(i => i.id === p.id);
   const disp = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
   const agot = disp <= 0;
+  const imagenPrincipal = p.imagenes && p.imagenes.length > 0 ? p.imagenes[0] : PLACEHOLDER_IMAGE;
 
   return `
     <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}">
-      <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img" loading="lazy">
+      <img src="${imagenPrincipal}" alt="${p.nombre}" class="producto-img" loading="lazy">
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
       <p class="producto-stock">
@@ -429,7 +429,7 @@ function crearCardProducto(p) {
           ${agot ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
         </button>
         ${agot ? `
-        <button class="boton-aviso-stock" onclick="preguntarStock('${p.nombre}')">
+        <button class="boton-aviso-stock" onclick="preguntarStock('${p.nombre}', ${p.id})">
           📩 Avisame cuando haya stock
         </button>` : ''}
       </div>
@@ -437,7 +437,6 @@ function crearCardProducto(p) {
     </div>
   `;
 }
-
 function renderizarPaginacion(totalProductos) {
   const totalPages = Math.ceil(totalProductos / PRODUCTOS_POR_PAGINA);
   const paginacionContainer = elementos.paginacion;
@@ -995,3 +994,20 @@ function preguntarStock(nombreProducto) {
   const cuerpo = encodeURIComponent(`Hola Patofelting,\n\nMe gustaría saber cuándo estará disponible el producto: ${nombreProducto}\n\nSaludos cordiales,\n[Nombre del Cliente]`);
   window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
 }
+
+
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+// Initialize Firebase Authentication
+const auth = getAuth();
+
+// Sign in anonymously
+signInAnonymously(auth)
+  .then(() => {
+    console.log('Signed in anonymously');
+    // Load products after successful authentication
+    cargarProductosDesdeFirebase();
+  })
+  .catch((error) => {
+    console.error('Error signing in:', error);
+  });
