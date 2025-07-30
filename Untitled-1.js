@@ -1069,6 +1069,7 @@ function verDetalle(id) {
 }
 
 function agregarAlCarrito(id) {
+  console.log("Adding to cart:", id); // Debug log
   const producto = productos.find(p => p.id === id);
   if (!producto) {
     mostrarNotificacion("Producto no encontrado", "error");
@@ -1082,7 +1083,6 @@ function agregarAlCarrito(id) {
   runTransaction(productRef, (currentStock) => {
     if (currentStock === null) return currentStock;
     if (currentStock < cantidadAgregar) return;
-
     return currentStock - cantidadAgregar;
   }).then(() => {
     if (enCarrito) {
