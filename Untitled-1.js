@@ -58,28 +58,47 @@ function agregarAlCarrito(id, cantidad = 1) {
   cantidad = parseInt(cantidad);
   if (isNaN(cantidad) || cantidad < 1) return;
 
-  const enCarrito = carrito.find(item => item.id === id);
-  const disponibles = producto.stock - (enCarrito?.cantidad || 0);
+  // Check stock availability in Firebase
+  const db = getDatabase();
+  const productRef = ref(db, `productos/${id}`);
+  
+  transaction(productRef, (currentData) => {
+    if (!currentData) return; // Product doesn't exist
 
-  if (disponibles < cantidad) {
-    return mostrarNotificacion(`No hay suficiente stock. Disponibles: ${disponibles}`, 'error');
-  }
+    const enCarrito = carrito.find(item => item.id === id);
+    const maxCantidad = currentData.stock - (enCarrito?.cantidad || 0);
+    
+    if (maxCantidad < cantidad) {
+      mostrarNotificacion(`No hay suficiente stock. Disponibles: ${maxCantidad}`, 'error');
+      return; // Abort the transaction
+    }
 
-  if (enCarrito) {
-    enCarrito.cantidad += cantidad;
-  } else {
-    carrito.push({
-      id: producto.id,
-      nombre: producto.nombre,
-      precio: producto.precio,
-      cantidad: cantidad,
-      imagen: producto.imagenes[0] || PLACEHOLDER_IMAGE
-    });
-  }
-
-  guardarCarrito();
-  actualizarUI();
-  mostrarNotificacion(`"${producto.nombre}" añadido al carrito`, 'exito');
+    // Update stock in Firebase
+    currentData.stock -= cantidad;
+    
+    // Add to cart if transaction is successful
+    if (enCarrito) {
+      enCarrito.cantidad += cantidad;
+    } else {
+      carrito.push({
+        id: producto.id,
+        nombre: producto.nombre,
+        precio: producto.precio,
+        cantidad: cantidad,
+        imagen: producto.imagenes[0] || PLACEHOLDER_IMAGE
+      });
+    }
+    
+    guardarCarrito();
+    actualizarUI();
+    mostrarNotificacion(`"${producto.nombre}" añadido al carrito`, 'exito');
+    return currentData; // Return updated data
+  }, (error, committed, snapshot) => {
+    if (error) {
+      console.error('Error al actualizar stock:', error);
+      mostrarNotificacion('Error al procesar la compra', 'error');
+    }
+  });
 }
 
 // ===============================
