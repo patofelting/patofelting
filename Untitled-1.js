@@ -1154,7 +1154,6 @@ window.agregarAlCarrito = async function(id, cantidad = 1) {
         }
       }
     }
-
     mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
   } catch (err) {
     console.error(err);
