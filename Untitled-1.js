@@ -5,15 +5,8 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
-const app = initializeApp(firebaseConfig);
 
-// ======== CORRECCIÓN: Eliminar la segunda declaración de 'getDatabase' ========
-
-// Eliminé la segunda declaración de 'getDatabase' para evitar conflicto
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getDatabase, ref, get, runTransaction } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
-import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-
+// ======== Primero declaramos firebaseConfig ========
 const firebaseConfig = {
   apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
   authDomain: "patofelting-b188f.firebaseapp.com",
@@ -24,8 +17,27 @@ const firebaseConfig = {
   appId: "1:858377467588:web:cade9de05ebccc17f87b91"
 };
 
+// Luego inicializamos Firebase
+const app = initializeApp(firebaseConfig);
+import { getDatabase, ref, get, runTransaction } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
 const database = getDatabase(app);
 const auth = getAuth(app);
+
+// ===============================
+// ESTADO GLOBAL
+// ===============================
+let productos = [];
+let carrito = [];
+let paginaActual = 1;
+
+let filtrosActuales = {
+  precioMin: null,
+  precioMax: null,
+  categoria: 'todos',
+  busqueda: ''
+};
 
 // ===============================
 // LOAD PRODUCTS ON PAGE LOAD
