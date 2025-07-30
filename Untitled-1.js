@@ -26,7 +26,7 @@ const FIREBASE_URL = 'https://patofelting-b188f-default-rtdb.firebaseio.com/prod
 // FIREBASE INITIALIZATION
 // ===============================
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getDatabase, ref, get, transaction } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { getDatabase, ref, get, runTransaction } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
 const firebaseConfig = {
@@ -72,7 +72,7 @@ function agregarAlCarrito(id, cantidad = 1) {
 
   const productRef = ref(database, `productos/${id}`);
   
-  transaction(productRef, (currentData) => {
+  runTransaction(productRef, (currentData) => {
     if (!currentData) return null; // Product doesn't exist
 
     const enCarrito = carrito.find(item => item.id === id);
@@ -100,15 +100,15 @@ function agregarAlCarrito(id, cantidad = 1) {
     }
     
     return currentData; // Return updated data
-  }, (error, committed, snapshot) => {
-    if (error) {
-      console.error('Error al actualizar stock:', error);
-      mostrarNotificacion('Error al procesar la compra', 'error');
-    } else if (committed) {
+  }).then((result) => {
+    if (result.committed) {
       guardarCarrito();
       actualizarUI();
       mostrarNotificacion(`"${producto.nombre}" añadido al carrito`, 'exito');
     }
+  }).catch((error) => {
+    console.error('Error al actualizar stock:', error);
+    mostrarNotificacion('Error al procesar la compra', 'error');
   });
 }
 
