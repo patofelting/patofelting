@@ -196,61 +196,77 @@ function actualizarContadorCarrito() {
 }
 
 async function cargarProductosDesdeFirebase() {
-   const productosRef = ref(db, 'productos');
+  const productosRef = ref(db, 'productos');
+  
   try {
+    // Mostrar loader
     if (elementos.productLoader) {
       elementos.productLoader.style.display = 'flex';
       elementos.productLoader.hidden = false;
     }
 
-    const productsRef = ref(db, 'productos');
-    const snapshot = await get(productsRef);
-    
-    if (!snapshot.exists()) {
-      elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles.</p>';
-      return;
-    }
+    // Configurar listener en tiempo real
+    onValue(productosRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles.</p>';
+        return;
+      }
 
-    const data = snapshot.val();
-    productos = Object.keys(data).map(key => {
-      const p = data[key];
-      if (!p || typeof p !== 'object') return null;
+      const data = snapshot.val();
+      productos = Object.keys(data).map(key => {
+        const p = data[key];
+        
+        // Validación más robusta del producto
+        if (!p || typeof p !== 'object') {
+          console.warn(`Producto ${key} tiene datos inválidos`, p);
+          return null;
+        }
 
-      const imagenPrincipal = Array.isArray(p.imagenes) && p.imagenes.length > 0 
-        ? p.imagenes[0] 
-        : PLACEHOLDER_IMAGE;
+        // Procesamiento de imágenes con validación
+        let imagenes = [PLACEHOLDER_IMAGE];
+        if (Array.isArray(p.imagenes) && p.imagenes.length > 0) {
+          imagenes = p.imagenes.filter(img => typeof img === 'string' && img.trim() !== '');
+        }
 
-      return {
-        id: p.id || parseInt(key),
-        nombre: p.nombre || '',
-        descripcion: p.descripcion || '',
-        precio: parseFloat(p.precio) || 0,
-        stock: parseInt(p.stock, 10) || 0,
-        imagenes: Array.isArray(p.imagenes) ? p.imagenes : [PLACEHOLDER_IMAGE],
-        adicionales: p.adicionales || '',
-        alto: parseFloat(p.alto) || null,
-        ancho: parseFloat(p.ancho) || null,
-        profundidad: parseFloat(p.profundidad) || null,
-        categoria: p.categoria ? p.categoria.toLowerCase() : 'otros',
-        vendido: p.vendido || '',
-        estado: p.estado || ''
-      };
-    }).filter(Boolean);
+        // Validación y normalización de datos
+        return {
+          id: p.id && !isNaN(p.id) ? parseInt(p.id) : parseInt(key),
+          nombre: typeof p.nombre === 'string' ? p.nombre.trim() : 'Sin nombre',
+          descripcion: typeof p.descripcion === 'string' ? p.descripcion.trim() : '',
+          precio: !isNaN(parseFloat(p.precio)) ? parseFloat(p.precio) : 0,
+          stock: !isNaN(parseInt(p.stock, 10)) ? Math.max(0, parseInt(p.stock, 10)) : 0,
+          imagenes: imagenes,
+          adicionales: typeof p.adicionales === 'string' ? p.adicionales.trim() : '',
+          alto: !isNaN(parseFloat(p.alto)) ? parseFloat(p.alto) : null,
+          ancho: !isNaN(parseFloat(p.ancho)) ? parseFloat(p.ancho) : null,
+          profundidad: !isNaN(parseFloat(p.profundidad)) ? parseFloat(p.profundidad) : null,
+          categoria: typeof p.categoria === 'string' ? p.categoria.toLowerCase().trim() : 'otros',
+          vendido: typeof p.vendido === 'string' ? p.vendido.trim() : '',
+          estado: typeof p.estado === 'string' ? p.estado.trim() : ''
+        };
+      }).filter(Boolean);
 
-    console.log("✅ Productos cargados:", productos);
-    renderizarProductos();
-    actualizarCategorias();
-    actualizarUI();
+      console.log("✅ Productos actualizados:", productos);
+      renderizarProductos();
+      actualizarCategorias();
+      actualizarUI();
+    }, (error) => {
+      console.error('Error en listener de productos:', error);
+      mostrarNotificacion('Error al recibir actualizaciones de productos', 'error');
+    });
 
   } catch (e) {
     console.error('Error al cargar productos:', e);
-    mostrarNotificacion('Error al cargar productos: ' + e.message, 'error');
+    mostrarNotificacion('Error al cargar productos: ' + (e.message || 'Error desconocido'), 'error');
     elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos.</p>';
   } finally {
-    if (elementos.productLoader) {
-      elementos.productLoader.style.display = 'none';
-      elementos.productLoader.hidden = true;
-    }
+    // Ocultar loader después de un pequeño delay para evitar parpadeo
+    setTimeout(() => {
+      if (elementos.productLoader) {
+        elementos.productLoader.style.display = 'none';
+        elementos.productLoader.hidden = true;
+      }
+    }, 300);
   }
 }
 
@@ -333,47 +349,107 @@ function renderizarProductos(datos = productos) {
   const galeria = elementos.galeriaProductos;
   if (!galeria) return;
 
+  // Filtrar y paginar productos
   const productosFiltrados = filtrarProductos();
+  const totalProductos = productosFiltrados.length;
   const startIndex = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
   const endIndex = startIndex + PRODUCTOS_POR_PAGINA;
   const productosAPerPage = productosFiltrados.slice(startIndex, endIndex);
 
+  // Limpiar galería
   galeria.innerHTML = '';
 
+  // Mostrar mensaje si no hay productos
   if (!productosAPerPage || productosAPerPage.length === 0) {
-    galeria.innerHTML = '<p class="sin-productos">No hay productos que coincidan con los filtros</p>';
+    galeria.innerHTML = `
+      <div class="sin-resultados">
+        <i class="fas fa-search"></i>
+        <p>No encontramos productos que coincidan con tus filtros</p>
+        <button class="boton-resetear-filtros" onclick="resetearFiltros()">
+          <i class="fas fa-undo"></i> Reiniciar filtros
+        </button>
+      </div>
+    `;
     return;
   }
+
+  // Crear fragmento de documento para mejor performance
+  const fragment = document.createDocumentFragment();
 
   productosAPerPage.forEach(producto => {
     const enCarrito = carrito.find(item => item.id === producto.id);
     const disponibles = Math.max(0, producto.stock - (enCarrito?.cantidad || 0));
     const agotado = disponibles <= 0;
+    const imagenValida = producto.imagenes?.[0] || PLACEHOLDER_IMAGE;
+
+    // Escapar caracteres especiales para prevenir XSS
+    const escapeHTML = str => str.replace(/[&<>'"]/g, tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag));
 
     const card = document.createElement('div');
-    card.className = `producto-card ${agotado ? 'agotado' : ''}`;
+    card.className = `producto-card ${agotado ? 'agotado' : ''} ${producto.estado === 'nuevo' ? 'nuevo' : ''}`;
     card.dataset.id = producto.id;
+    card.dataset.categoria = producto.categoria;
 
+    // Mejor estructura del card con eventos delegados
     card.innerHTML = `
-      <img src="${producto.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${producto.nombre}" class="producto-img">
-      <h3 class="producto-nombre">${producto.nombre}</h3>
-      <p class="producto-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
-      <p class="producto-stock">${agotado ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${disponibles}`}</p>
-      <div class="card-acciones">
-        <button class="boton-agregar${agotado ? ' agotado' : ''}" onclick="agregarAlCarrito(${producto.id}, 1)" ${agotado ? 'disabled' : ''}>
-          ${agotado ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
-        </button>
-        ${agotado ? `
-        <button class="boton-aviso-stock" onclick="preguntarStock('${producto.nombre}')">
-          📩 Avisame cuando haya stock
-        </button>` : ''}
+      <div class="producto-imagen-container">
+        <img src="${imagenValida}" alt="${escapeHTML(producto.nombre)}" class="producto-img" loading="lazy">
+        ${producto.estado === 'oferta' ? '<span class="etiqueta-oferta">OFERTA</span>' : ''}
+        ${producto.estado === 'nuevo' ? '<span class="etiqueta-nuevo">NUEVO</span>' : ''}
       </div>
-      <button class="boton-detalles" onclick="verDetalle(${producto.id})">🔍 Ver Detalle</button>
+      <div class="producto-info">
+        <h3 class="producto-nombre">${escapeHTML(producto.nombre)}</h3>
+        <p class="producto-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
+        <p class="producto-stock ${agotado ? 'texto-agotado' : 'texto-disponible'}">
+          ${agotado ? '<i class="fas fa-times-circle"></i> AGOTADO' : `<i class="fas fa-check-circle"></i> Disponible: ${disponibles}`}
+        </p>
+        <div class="card-acciones">
+          <button class="boton-agregar ${agotado ? 'agotado' : ''}" data-id="${producto.id}" ${agotado ? 'disabled aria-disabled="true"' : ''}>
+            ${agotado ? 'Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
+          </button>
+          ${agotado ? `
+          <button class="boton-aviso-stock" data-id="${producto.id}" data-nombre="${escapeHTML(producto.nombre)}">
+            <i class="fas fa-bell"></i> Avisame
+          </button>` : ''}
+        </div>
+        <button class="boton-detalles" data-id="${producto.id}">
+          <i class="fas fa-search"></i> Ver Detalle
+        </button>
+      </div>
     `;
-    galeria.appendChild(card);
+
+    fragment.appendChild(card);
   });
 
-  renderizarPaginacion(productosFiltrados.length);
+  galeria.appendChild(fragment);
+  renderizarPaginacion(totalProductos);
+
+  // Delegación de eventos para mejor performance
+  galeria.addEventListener('click', manejarEventosGaleria);
+}
+
+// Función para manejar eventos delegados
+function manejarEventosGaleria(e) {
+  const target = e.target.closest('[data-id]');
+  if (!target) return;
+
+  const id = parseInt(target.dataset.id);
+  const producto = productos.find(p => p.id === id);
+  if (!producto) return;
+
+  if (target.classList.contains('boton-detalles')) {
+    verDetalle(id);
+  } else if (target.classList.contains('boton-agregar')) {
+    agregarAlCarrito(id, 1);
+  } else if (target.classList.contains('boton-aviso-stock')) {
+    preguntarStock(target.dataset.nombre || producto.nombre);
+  }
 }
 
 function filtrarProductos() {
@@ -995,12 +1071,6 @@ function agregarAlCarrito(id) {
   }
 
   const enCarrito = carrito.find(item => item.id === id);
-
-  if (producto.stock <= 0) {
-    mostrarNotificacion("Producto sin stock", "error");
-    return;
-  }
-
   const cantidadAgregar = 1;
 
   const productRef = ref(db, `productos/${id}/stock`);
@@ -1022,14 +1092,14 @@ function agregarAlCarrito(id) {
       });
     }
     guardarCarrito();
-    actualizarCarritoUI();
+    renderizarProductos(); // ← AÑADIR ESTA LÍNEA
+    renderizarCarrito();   // ← Y ESTA LÍNEA
     mostrarNotificacion("Producto agregado al carrito", "exito");
   }).catch((error) => {
     console.error("Error al agregar al carrito:", error);
     mostrarNotificacion("No se pudo agregar al carrito", "error");
   });
 }
-
 
 function actualizarCarritoUI() {
   const carritoBtn = document.querySelector('.carrito-icono span');
