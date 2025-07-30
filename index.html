@@ -178,36 +178,31 @@
       <div id="paginacion" class="paginacion"></div>
     </div>
   </section>
+
   <div id="producto-modal" class="modal-overlay">
-    <div id="modal-contenido" class="modal-contenido-producto">
-      <button class="cerrar-modal" aria-label="Cerrar modal">&times;</button>
-      <div class="modal-flex">
-        <div class="modal-carrusel">
-          <img src="..." class="modal-img" alt="Imagen del producto">
-          <div class="modal-controls">
-            <button class="modal-prev" aria-label="Anterior">
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                <path d="M14 4l-6 7 6 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-            <button class="modal-next" aria-label="Siguiente">
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                <path d="M8 18l6-7-6-7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-          </div>
+  <div id="modal-contenido" class="modal-contenido-producto">
+    <button class="cerrar-modal" aria-label="Cerrar modal" onclick="cerrarModal()">&times;</button>
+    <div class="modal-flex">
+      <div class="modal-carrusel">
+        <img id="modal-imagen" src="" class="modal-img" alt="Imagen del producto">
+        <div class="modal-controls">
+          <button class="modal-prev" aria-label="Anterior">...</button>
+          <button class="modal-next" aria-label="Siguiente">...</button>
         </div>
-        <div class="modal-info">
-          </div>
       </div>
-      <div class="modal-thumbnails">
-        </div>
-      <div class="modal-acciones">
-        <input type="number" class="cantidad-modal-input" value="1" min="1">
-        <button class="boton-agregar-modal">Agregar al carrito</button>
+      <div class="modal-info">
+        <h2 id="modal-nombre"></h2>
+        <p id="modal-descripcion"></p>
+        <p id="modal-precio"></p>
       </div>
     </div>
+    <div class="modal-thumbnails"></div>
+    <div class="modal-acciones">
+      <input type="number" class="cantidad-modal-input" value="1" min="1">
+      <button class="boton-agregar-modal">Agregar al carrito</button>
+    </div>
   </div>
+</div>
 
   <div id="aviso-pre-compra-modal" class="modal-aviso" role="dialog" aria-modal="true" hidden>
     <div class="modal-aviso-contenido">
