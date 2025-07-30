@@ -17,7 +17,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const auth = getAuth(app); // 👈 Esto estaba faltando
+const auth = getAuth(app); 
 
 signInAnonymously(auth)
   .then(() => console.log("✅ Signed in anonymously"))
