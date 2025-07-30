@@ -5,6 +5,8 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
+const productosRef = ref(db, 'productos');
+
 
 // ======== Importación de Firebase (SOLO en <script type="module">) ========
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -24,8 +26,8 @@ const firebaseConfig = {
 
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);       // ✅ OK
-const auth = getAuth(app);         // ✅ DEFINILO ANTES DE USARLO
+const db = getDatabase(app);       // 
+const auth = getAuth(app);         // 
 
 // ==================== AUTENTICACIÓN ANÓNIMA ====================
 signInAnonymously(auth)
@@ -975,6 +977,7 @@ function verDetalle(id) {
     mostrarNotificacion("Producto no encontrado", "error");
   }
 }
+
 
 
 
