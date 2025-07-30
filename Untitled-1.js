@@ -431,10 +431,7 @@ function filtrarProductos() {
 }
 
 // Aplicar filtros
-function aplicarFiltros() {
-  paginaActual = 1;
-  renderizarProductos();
-}
+
 
 // ✅ Hacés públicas las funciones al final del archivo o después de definirlas
 window.verDetalle = verDetalle;
