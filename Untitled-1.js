@@ -37,6 +37,7 @@ let filtrosActuales = {
 const FIREBASE_URL = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json';
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Cargar productos desde Firebase
   fetch(FIREBASE_URL)
     .then(res => res.json())
     .then(data => {
@@ -47,7 +48,16 @@ document.addEventListener('DOMContentLoaded', () => {
     .catch(err => {
       console.error("Error cargando productos:", err);
     });
+
+  // Cerrar modal al hacer clic en la X
+  const btnCerrarModal = document.getElementById('cerrar-modal');
+  btnCerrarModal?.addEventListener('click', () => {
+    const modal = document.getElementById('producto-modal');
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+  });
 });
+
   // Evento para cerrar el modal de aviso (si lo usás)
   const modalAviso = document.getElementById('aviso-pre-compra-modal');
   const btnCancelarAviso = document.getElementById('btn-cancelar-aviso');
@@ -390,21 +400,21 @@ function verDetalle(id) {
   if (!producto) return;
 
   const modal = document.getElementById('producto-modal');
-  const contenido = modal.querySelector('.modal-contenido');
+  const modalNombre = document.getElementById('modal-nombre');
+  const modalDescripcion = document.getElementById('modal-descripcion');
+  const modalPrecio = document.getElementById('modal-precio');
+  const modalImagen = document.getElementById('modal-imagen');
 
-  contenido.innerHTML = `
-    <h2>${producto.nombre}</h2>
-    <img src="${producto.imagenes?.[0] || PLACEHOLDER_IMAGE}" alt="${producto.nombre}">
-    <p><strong>Precio:</strong> $U ${producto.precio}</p>
-    <p><strong>Descripción:</strong> ${producto.descripcion}</p>
-    <p><strong>Adicionales:</strong> ${producto.adicionales || '-'}</p>
-    <p><strong>Dimensiones:</strong> ${producto.alto || '-'} x ${producto.ancho || '-'} x ${producto.profundidad || '-'}</p>
-    <button onclick="cerrarModal()">Cerrar</button>
-  `;
+  modalNombre.textContent = producto.nombre;
+  modalDescripcion.textContent = producto.descripcion;
+  modalPrecio.textContent = `$U ${producto.precio}`;
+  modalImagen.src = producto.imagenes?.[0] || PLACEHOLDER_IMAGE;
+  modalImagen.alt = producto.nombre;
 
   modal.style.display = 'flex';
   modal.setAttribute('aria-hidden', 'false');
 }
+
 
 // Cerrar modal
 function cerrarModal() {
