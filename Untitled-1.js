@@ -972,14 +972,6 @@ function preguntarStock(nombreProducto) {
 document.addEventListener('DOMContentLoaded', init);
 
 
-function verDetalle(id) {
-  const producto = productos.find(p => p.id === id);
-  if (producto) {
-    mostrarModalProducto(producto);
-  } else {
-    console.warn("Producto no encontrado:", id);
-  }
-}
 
 function agregarAlCarrito(id) {
   const producto = productos.find(p => p.id === id);
