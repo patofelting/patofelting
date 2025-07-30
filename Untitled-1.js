@@ -6,15 +6,6 @@ const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
-const firebaseConfig = {
-  apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
-  authDomain: "patofelting-b188f.firebaseapp.com",
-  databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
-  projectId: "patofelting-b188f",
-  storageBucket: "patofelting-b188f.appspot.com",
-  messagingSenderId: "858377467588",
-  appId: "1:858377467588:web:cade9de05ebccc17f87b91"
-};
 
 // ===============================
 // ESTADO GLOBAL
@@ -195,15 +186,17 @@ async function cargarProductosDesdeFirebase() {
       elementos.productLoader.hidden = false;
     }
 
-    const response = await fetch(FIREBASE_URL);
-    if (!response.ok) throw new Error('Error al obtener productos desde Firebase');
-
-    const data = await response.json();
-    if (!data || typeof data !== 'object') {
+    // Reference to the products in the database
+    const productsRef = ref(database, 'productos');
+    
+    // Fetch data from Firebase
+    const snapshot = await get(productsRef);
+    if (!snapshot.exists()) {
       elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles.</p>';
       return;
     }
 
+    const data = snapshot.val();
     productos = Object.keys(data).map(key => {
       const p = data[key];
       if (!p || typeof p !== 'object') return null;
@@ -247,6 +240,10 @@ async function cargarProductosDesdeFirebase() {
     }
   }
 }
+
+
+
+
 function renderizarCarrito() {
   if (!elementos.listaCarrito || !elementos.totalCarrito) return;
   
@@ -983,7 +980,25 @@ minSlider.addEventListener('input', updateRange);
 maxSlider.addEventListener('input', updateRange);
 updateRange();
 
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+// Initialize Firebase
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
+  authDomain: "patofelting-b188f.firebaseapp.com",
+  databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
+  projectId: "patofelting-b188f",
+  storageBucket: "patofelting-b188f.appspot.com",
+  messagingSenderId: "858377467588",
+  appId: "1:858377467588:web:cade9de05ebccc17f87b91"
+};
+
+// Initialize Firebase app
+const app = initializeApp(firebaseConfig);
+
+
 
 const database = getDatabase();
 
