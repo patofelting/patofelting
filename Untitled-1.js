@@ -222,26 +222,27 @@ function cargarCarrito() {
 async function vaciarCarrito() {
   if (carrito.length === 0) return;
 
-  const updates = carrito.map(async item => {
-    const productRef = ref(db, `productos/${item.id}/stock`);
-    return runTransaction(productRef, (currentStock) => {
-      if (currentStock === null) return item.cantidad;
-      return currentStock + item.cantidad;
-    });
-  });
-
   try {
-    await Promise.all(updates); // Esperar que todas las actualizaciones terminen
+    await Promise.all(carrito.map(async item => {
+      const productRef = ref(db, `productos/${item.id}/stock`);
+      await runTransaction(productRef, (currentStock) => {
+        if (currentStock === null) throw new Error("Stock no encontrado");
+        return currentStock + item.cantidad;
+      });
+    }));
+
     carrito = [];
-    guardarCarrito(); // si tenés esta función para guardar en session/localStorage
+    guardarCarrito();  // si usás local/sessionStorage
+    renderizarCarrito();
+    renderizarProductos();
     mostrarNotificacion('Carrito vaciado y stock restaurado', 'exito');
-    renderizarCarrito(); // vuelve a mostrar el carrito vacío
-    renderizarProductos(); // opcional: actualiza la galería de productos
+
   } catch (error) {
     console.error("Error al restaurar stock:", error);
     mostrarNotificacion('Error al restaurar stock', 'error');
   }
 }
+
 
 
 function actualizarContadorCarrito() {
