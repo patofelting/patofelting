@@ -225,6 +225,7 @@ async function vaciarCarrito() {
   if (carrito.length === 0) return;
 
   try {
+    const db = window.firebaseDatabase;  // ✅ usa el objeto global
     await Promise.all(carrito.map(async item => {
       const productRef = ref(db, `productos/${item.id}/stock`);
       await runTransaction(productRef, (currentStock) => {
@@ -234,7 +235,7 @@ async function vaciarCarrito() {
     }));
 
     carrito = [];
-    guardarCarrito();  // si usás local/sessionStorage
+    guardarCarrito();
     renderizarCarrito();
     renderizarProductos();
     mostrarNotificacion('Carrito vaciado y stock restaurado', 'exito');
@@ -244,6 +245,10 @@ async function vaciarCarrito() {
     mostrarNotificacion('Error al restaurar stock', 'error');
   }
 }
+
+
+elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
+
 
 elementos.btnVaciarCarrito?.addEventListener('click', async () => {
   if (carrito.length === 0) {
@@ -261,7 +266,7 @@ elementos.btnVaciarCarrito?.addEventListener('click', async () => {
   }
 
   carrito = [];
-  actualizarCarritoUI();
+  
   mostrarNotificacion('Carrito vaciado y stock restaurado', 'success');
 });
 
