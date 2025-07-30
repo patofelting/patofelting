@@ -1253,10 +1253,6 @@ window.agregarAlCarrito = async function(id, cantidad = 1) {
 window.agregarAlCarrito = agregarAlCarrito;
 
 
-function verDetalle(id) {
-  console.log(`Ver detalle de producto con ID: ${id}`);
-  // Aquí puedes agregar más lógica, como mostrar un modal con detalles del producto
-}
 
 
 async function agregarAlCarrito(id, cantidad = 1) {
