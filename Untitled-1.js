@@ -189,6 +189,7 @@ function actualizarContadorCarrito() {
 }
 
 async function cargarProductosDesdeFirebase() {
+   const productosRef = ref(db, 'productos');
   try {
     if (elementos.productLoader) {
       elementos.productLoader.style.display = 'flex';
