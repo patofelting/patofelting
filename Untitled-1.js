@@ -374,10 +374,6 @@ function filtrarProductos() {
   });
 }
 
-function aplicarFiltros() {
-  paginaActual = 1;
-  renderizarProductos();
-}
 
 function actualizarCategorias() {
   if (!elementos.selectCategoria) return;
