@@ -64,22 +64,25 @@ let filtrosActuales = {
 // ===============================
 // LOAD PRODUCTS ON PAGE LOAD
 // ===============================
-document.addEventListener('DOMContentLoaded', () => {
-  signInAnonymously(auth)
-    .then(() => {
-      console.log('Signed in anonymously');
-      cargarProductosDesdeFirebase();
-    })
-    .catch((error) => {
-      console.error('Error signing in:', error);
-      let errorMessage = 'Error de autenticación';
-      if (error.code === 'auth/configuration-not-found') {
-        errorMessage = 'Autenticación anónima no está habilitada en Firebase. Por favor, contacta al administrador.';
-      } else if (error.code === 'auth/network-request-failed') {
-        errorMessage = 'Error de red. Por favor, verifica tu conexión a internet.';
-      }
-      mostrarNotificacion(errorMessage, 'error');
-    });
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    await cargarProductosDesdeCSV();
+  } catch {}
+
+  try {
+    await signInAnonymously(auth);
+    console.log('Signed in anonymously');
+    cargarProductosDesdeFirebase();
+  } catch (error) {
+    console.error('Error signing in:', error);
+    let errorMessage = 'Error de autenticación';
+    if (error.code === 'auth/configuration-not-found') {
+      errorMessage = 'Autenticación anónima no está habilitada en Firebase. Por favor, contacta al administrador.';
+    } else if (error.code === 'auth/network-request-failed') {
+      errorMessage = 'Error de red. Por favor, verifica tu conexión a internet.';
+    }
+    mostrarNotificacion(errorMessage, 'error');
+  }
 });
 
 // Resto del código...
@@ -204,6 +207,51 @@ function actualizarContadorCarrito() {
   }
 }
 
+// Cargar datos de productos desde Google Sheets (CSV)
+async function cargarProductosDesdeCSV() {
+  if (!CSV_URL) return;
+  return new Promise((resolve, reject) => {
+    Papa.parse(CSV_URL, {
+      download: true,
+      header: true,
+      dynamicTyping: true,
+      complete: (result) => {
+        try {
+          productos = result.data
+            .filter(row => row && row.id)
+            .map(row => ({
+              id: parseInt(row.id),
+              nombre: row.nombre ? String(row.nombre).trim() : 'Sin nombre',
+              descripcion: row.descripcion ? String(row.descripcion).trim() : '',
+              precio: !isNaN(parseFloat(row.precio)) ? parseFloat(row.precio) : 0,
+              stock: !isNaN(parseInt(row.stock)) ? parseInt(row.stock) : 0,
+              imagenes: row.imagenes
+                ? String(row.imagenes)
+                    .split('|')
+                    .map(u => u.trim())
+                    .filter(Boolean)
+                : [PLACEHOLDER_IMAGE],
+              categoria: row.categoria
+                ? String(row.categoria).toLowerCase().trim()
+                : 'otros',
+              estado: row.estado ? String(row.estado).trim() : ''
+            }));
+          renderizarProductos();
+          actualizarCategorias();
+          actualizarUI();
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      },
+      error: (err) => reject(err)
+    });
+  }).catch(err => {
+    console.error('Error al cargar CSV:', err);
+    mostrarNotificacion('Error al cargar hoja de productos', 'error');
+  });
+}
+
 async function cargarProductosDesdeFirebase() {
   const productosRef = ref(db, 'productos');
   
@@ -222,13 +270,13 @@ async function cargarProductosDesdeFirebase() {
       return;
     }
 
-    // Procesar datos iniciales
-    procesarDatosProductos(snapshot.val());
+    // Procesar datos iniciales fusionando con los obtenidos del CSV
+    mergeProductosConFirebase(snapshot.val());
 
     // Configurar listener en tiempo real
     onValue(productosRef, (snapshot) => {
       if (!snapshot.exists()) return;
-      procesarDatosProductos(snapshot.val());
+      mergeProductosConFirebase(snapshot.val());
     }, (error) => {
       console.error('Error en listener de productos:', error);
       mostrarNotificacion('Error al recibir actualizaciones de productos', 'error');
@@ -268,6 +316,37 @@ function procesarDatosProductos(data) {
       estado: typeof p.estado === 'string' ? p.estado.trim() : ''
     };
   }).filter(Boolean);
+
+  renderizarProductos();
+  actualizarCategorias();
+  actualizarUI();
+}
+
+// Fusionar la información existente con la obtenida desde Firebase
+function mergeProductosConFirebase(data) {
+  const nuevos = Object.keys(data).map(key => {
+    const p = data[key];
+    if (!p || typeof p !== 'object') return null;
+    return {
+      id: p.id && !isNaN(p.id) ? parseInt(p.id) : parseInt(key),
+      nombre: typeof p.nombre === 'string' ? p.nombre.trim() : 'Sin nombre',
+      descripcion: typeof p.descripcion === 'string' ? p.descripcion.trim() : '',
+      precio: !isNaN(parseFloat(p.precio)) ? parseFloat(p.precio) : 0,
+      stock: !isNaN(parseInt(p.stock, 10)) ? Math.max(0, parseInt(p.stock, 10)) : 0,
+      imagenes: Array.isArray(p.imagenes) ? p.imagenes.filter(img => typeof img === 'string') : [PLACEHOLDER_IMAGE],
+      categoria: typeof p.categoria === 'string' ? p.categoria.toLowerCase().trim() : 'otros',
+      estado: typeof p.estado === 'string' ? p.estado.trim() : ''
+    };
+  }).filter(Boolean);
+
+  nuevos.forEach(n => {
+    const idx = productos.findIndex(pr => pr.id === n.id);
+    if (idx !== -1) {
+      productos[idx] = { ...productos[idx], ...n };
+    } else {
+      productos.push(n);
+    }
+  });
 
   renderizarProductos();
   actualizarCategorias();
@@ -619,6 +698,31 @@ function mostrarModalProducto(producto) {
       cerrarModal();
     });
   }
+
+  const btnPrev = contenido.querySelector('.modal-prev');
+  const btnNext = contenido.querySelector('.modal-next');
+  const thumbnails = contenido.querySelectorAll('.thumbnail');
+
+  btnPrev?.addEventListener('click', () => {
+    if (currentIndex > 0) {
+      currentIndex--;
+      renderCarrusel();
+    }
+  });
+
+  btnNext?.addEventListener('click', () => {
+    if (currentIndex < producto.imagenes.length - 1) {
+      currentIndex++;
+      renderCarrusel();
+    }
+  });
+
+  thumbnails.forEach(th => {
+    th.addEventListener('click', () => {
+      currentIndex = parseInt(th.dataset.index);
+      renderCarrusel();
+    });
+  });
 }
 
 
@@ -641,26 +745,6 @@ function mostrarModalProducto(producto) {
       document.body.classList.remove('no-scroll');
     }, 300);
   }
-}
-
-// ===============================
-// CLICK EN DETALLE DEL PRODUCTO
-// ===============================
-function conectarEventoModal() {
-  if (!elementos.galeriaProductos) return;
-  elementos.galeriaProductos.onclick = (e) => {
-    const btn = e.target.closest('.boton-detalles');
-    if (btn) {
-      const id = +btn.dataset.id;
-      const producto = productos.find(p => p.id === id);
-      if (!producto) return mostrarNotificacion('Producto no encontrado', 'error');
-    }
-    const btnAgregar = e.target.closest('.boton-agregar');
-    if (btnAgregar) {
-      const id = +btnAgregar.dataset.id;
-      agregarAlCarrito(id, 1);
-    }
-  };
 }
 
 // ===============================
@@ -832,7 +916,6 @@ function inicializarEventos() {
   });
   
   elementos.botonResetearFiltros?.addEventListener('click', resetearFiltros);
-  conectarEventoModal();
 }
 
 function actualizarResumenPedido() {
@@ -1058,8 +1141,8 @@ function verDetalle(id) {
   }
 }
 
-function agregarAlCarrito(id) {
-  console.log("Adding to cart:", id); // Debug log
+function agregarAlCarrito(id, cantidad = 1) {
+  console.log("Adding to cart:", id, cantidad); // Debug log
   const producto = productos.find(p => p.id === id);
   if (!producto) {
     mostrarNotificacion("Producto no encontrado", "error");
@@ -1067,14 +1150,18 @@ function agregarAlCarrito(id) {
   }
 
   const enCarrito = carrito.find(item => item.id === id);
-  const cantidadAgregar = 1;
+  const cantidadAgregar = Math.max(1, parseInt(cantidad));
 
   const productRef = ref(db, `productos/${id}/stock`);
   runTransaction(productRef, (currentStock) => {
     if (currentStock === null) return currentStock;
     if (currentStock < cantidadAgregar) return;
     return currentStock - cantidadAgregar;
-  }).then(() => {
+  }).then((res) => {
+    if (!res.committed) {
+      mostrarNotificacion('Stock insuficiente', 'error');
+      return;
+    }
     if (enCarrito) {
       enCarrito.cantidad += cantidadAgregar;
     } else {
