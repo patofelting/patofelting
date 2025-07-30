@@ -538,6 +538,11 @@ function renderizarPaginacion(totalProductos) {
 function mostrarModalProducto(producto) {
   const modal = document.getElementById('producto-modal');
   const contenido = document.getElementById('modal-contenido');
+
+  // Evitar duplicaciones anteriores
+  const viejaAccion = contenido.querySelector('.modal-acciones');
+  if (viejaAccion) viejaAccion.remove();
+
   const imagen = contenido.querySelector('#modal-imagen');
   const nombre = contenido.querySelector('#modal-nombre');
   const descripcion = contenido.querySelector('#modal-descripcion');
@@ -565,32 +570,28 @@ function mostrarModalProducto(producto) {
     thumbnails.appendChild(thumb);
   });
 
-  // 💡 Agregar dinámicamente el botón si no existe
-  let acciones = contenido.querySelector('.modal-acciones');
-  if (!acciones) {
-    acciones = document.createElement('div');
-    acciones.classList.add('modal-acciones');
+  // Crear y agregar sección de acciones
+  const acciones = document.createElement('div');
+  acciones.className = 'modal-acciones';
 
-    const input = document.createElement('input');
-    input.type = 'number';
-    input.className = 'cantidad-modal-input';
-    input.value = 1;
-    input.min = 1;
+  const inputCantidad = document.createElement('input');
+  inputCantidad.type = 'number';
+  inputCantidad.className = 'cantidad-modal-input';
+  inputCantidad.value = 1;
+  inputCantidad.min = 1;
 
-    const boton = document.createElement('button');
-    boton.className = 'boton-agregar-modal';
-    boton.textContent = 'Agregar al carrito';
+  const botonAgregar = document.createElement('button');
+  botonAgregar.className = 'boton-agregar-modal';
+  botonAgregar.textContent = 'Agregar al carrito';
+  botonAgregar.addEventListener('click', () => {
+    const cantidad = parseInt(inputCantidad.value) || 1;
+    agregarAlCarrito(producto.id, cantidad);
+    cerrarModal();
+  });
 
-    boton.onclick = () => {
-      const cantidad = parseInt(input.value) || 1;
-      agregarAlCarrito(producto.id, cantidad);
-      cerrarModal();
-    };
-
-    acciones.appendChild(input);
-    acciones.appendChild(boton);
-    contenido.appendChild(acciones);
-  }
+  acciones.appendChild(inputCantidad);
+  acciones.appendChild(botonAgregar);
+  contenido.appendChild(acciones);
 
   modal.style.display = 'flex';
 }
