@@ -85,44 +85,67 @@ function agregarAlCarrito(id, cantidad = 1) {
 
   const productRef = ref(database, `productos/${id}`);
   
-  runTransaction(productRef, (currentData) => {
-    if (!currentData) return null; // Product doesn't exist
+runTransaction(productRef, (currentData) => {
+  if (!currentData) return null;
 
-    const enCarrito = carrito.find(item => item.id === id);
-    const maxCantidad = currentData.stock - (enCarrito?.cantidad || 0);
-    
-    if (maxCantidad < cantidad) {
-      mostrarNotificacion(`No hay suficiente stock. Disponibles: ${maxCantidad}`, 'error');
-      return null; // Abort transaction
-    }
+  const enCarrito = carrito.find(item => item.id === id);
+  const maxCantidad = currentData.stock - (enCarrito?.cantidad || 0);
 
-    // Update stock in Firebase
-    currentData.stock -= cantidad;
-    
-    // Add to cart if transaction is successful
-    if (enCarrito) {
-      enCarrito.cantidad += cantidad;
-    } else {
-      carrito.push({
-        id: producto.id,
-        nombre: producto.nombre,
-        precio: producto.precio,
-        cantidad: cantidad,
-        imagen: producto.imagenes[0] || PLACEHOLDER_IMAGE
-      });
+  if (maxCantidad < cantidad) {
+    mostrarNotificacion(`No hay suficiente stock. Disponibles: ${maxCantidad}`, 'error');
+    return null;
+  }
+
+  currentData.stock -= cantidad;
+  return currentData;
+
+}).then(({ committed }) => {
+  if (!committed) return;
+
+  // Actualizar carrito local
+  const enCarrito = carrito.find(item => item.id === id);
+  if (enCarrito) {
+    enCarrito.cantidad += cantidad;
+  } else {
+    carrito.push({
+      id: producto.id,
+      nombre: producto.nombre,
+      precio: producto.precio,
+      cantidad: cantidad,
+      imagen: producto.imagenes?.[0] || PLACEHOLDER_IMAGE
+    });
+  }
+
+  guardarCarrito();
+  actualizarUI();
+
+  // Actualizar tarjeta visual
+  const productoCard = document.querySelector(`.producto-card[data-id="${id}"]`);
+  if (productoCard) {
+    const stockEl = productoCard.querySelector('.producto-stock');
+    const btnAgregar = productoCard.querySelector('.boton-agregar');
+
+    const nuevoStock = producto.stock - cantidad;
+    producto.stock = nuevoStock; // actualizar localmente
+
+    if (stockEl) stockEl.textContent = nuevoStock <= 0
+      ? 'Agotado'
+      : `Stock: ${nuevoStock}`;
+
+    if (btnAgregar) {
+      if (nuevoStock <= 0) {
+        btnAgregar.disabled = true;
+        btnAgregar.innerHTML = '<i class="fas fa-times-circle"></i> Agotado';
+        btnAgregar.classList.add('agotado');
+      }
     }
-    
-    return currentData; // Return updated data
-  }).then((result) => {
-    if (result.committed) {
-      guardarCarrito();
-      actualizarUI();
-      mostrarNotificacion(`"${producto.nombre}" añadido al carrito`, 'exito');
-    }
-  }).catch((error) => {
-    console.error('Error al actualizar stock:', error);
-    mostrarNotificacion('Error al procesar la compra', 'error');
-  });
+  }
+
+  mostrarNotificacion(`"${producto.nombre}" x${cantidad} añadido al carrito`, 'exito');
+}).catch(error => {
+  console.error(error);
+  mostrarNotificacion('Error al verificar stock', 'error');
+});
 }
 
 // ===============================
@@ -599,7 +622,7 @@ function conectarEventoModal() {
     if (btn) {
       const id = +btn.dataset.id;
       const producto = productos.find(p => p.id === id);
-      if (producto) mostrarModalProducto(producto);
+      if (!producto) return mostrarNotificacion('Producto no encontrado', 'error');
     }
     const btnAgregar = e.target.closest('.boton-agregar');
     if (btnAgregar) {
