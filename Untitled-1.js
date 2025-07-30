@@ -399,7 +399,6 @@ function renderizarProductos(datos = productos) {
     card.dataset.id = producto.id;
     card.dataset.categoria = producto.categoria;
 
-    // Mejor estructura del card con eventos delegados
     card.innerHTML = `
       <div class="producto-imagen-container">
         <img src="${imagenValida}" alt="${escapeHTML(producto.nombre)}" class="producto-img" loading="lazy">
@@ -434,11 +433,9 @@ function renderizarProductos(datos = productos) {
   renderizarPaginacion(totalProductos);
 
   // Delegación de eventos para mejor performance
-  // Remove existing listener to avoid duplicates
   galeria.removeEventListener('click', manejarEventosGaleria);
   galeria.addEventListener('click', manejarEventosGaleria);
 }
-
 // Función para manejar eventos delegados
 function manejarEventosGaleria(e) {
   const target = e.target.closest('[data-id]');
