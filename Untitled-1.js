@@ -196,7 +196,7 @@ async function cargarProductosDesdeFirebase() {
       elementos.productLoader.hidden = false;
     }
 
-    const productsRef = ref(database, 'productos');
+    const productsRef = ref(db, 'productos');
     const snapshot = await get(productsRef);
     
     if (!snapshot.exists()) {
@@ -1018,6 +1018,7 @@ function agregarAlCarrito(id) {
         imagen: producto.imagenes?.[0] || PLACEHOLDER_IMAGE
       });
     }
+
     guardarCarrito();
     actualizarCarritoUI();
     mostrarNotificacion("Producto agregado al carrito", "exito");
