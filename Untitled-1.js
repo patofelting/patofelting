@@ -208,7 +208,7 @@ async function cargarProductosDesdeFirebase() {
 
     console.log("✅ Productos cargados:", productos);
 
-    renderizarProductos(productos);
+    renderizarProductos();
     actualizarCategorias(); // Actualizar las categorías después de cargar los productos
     actualizarUI();
 
@@ -374,7 +374,6 @@ function filtrarProductos() {
   });
 }
 
-
 function actualizarCategorias() {
   if (!elementos.selectCategoria) return;
   const cats = ['todos', ...new Set(productos.map(p => p.categoria).filter(Boolean))];
@@ -382,20 +381,12 @@ function actualizarCategorias() {
     .map(cat => `<option value="${cat}">${cat.charAt(0).toUpperCase() + cat.slice(1)}</option>`)
     .join('');
 }
-// Actualiza la función filtrarProductos
-// Filtrado de productos
 
-
-
-
-
-// ✅ Hacés públicas las funciones al final del archivo o después de definirlas
+// ===============================
+// FUNCIONES GLOBALES
+// ===============================
 window.verDetalle = verDetalle;
 window.agregarAlCarrito = agregarAlCarrito;
-
-
-
-
 
 function crearCardProducto(p) {
   const enCarrito = carrito.find(i => i.id === p.id);
@@ -584,11 +575,8 @@ function conectarEventoModal() {
 // ACTUALIZAR UI
 // ===============================
 function actualizarUI() {
-  // Forzar rerenderizado de productos para actualizar stocks
-  
   renderizarCarrito();
   actualizarContadorCarrito();
-  
 }
 
 // ===============================
@@ -714,25 +702,25 @@ function inicializarEventos() {
     }
   });
 
-elementos.inputBusqueda?.addEventListener('input', (e) => {
-  filtrosActuales.busqueda = e.target.value.toLowerCase();
-  aplicarFiltros();
-});
+  elementos.inputBusqueda?.addEventListener('input', (e) => {
+    filtrosActuales.busqueda = e.target.value.toLowerCase();
+    aplicarFiltros();
+  });
   
   elementos.selectCategoria?.addEventListener('change', (e) => {
     filtrosActuales.categoria = e.target.value;
     aplicarFiltros();
   });
   
-elementos.precioMinInput?.addEventListener('input', (e) => {
-  filtrosActuales.precioMin = e.target.value ? parseFloat(e.target.value) : null;
-  aplicarFiltros();
-});
+  elementos.precioMinInput?.addEventListener('input', (e) => {
+    filtrosActuales.precioMin = e.target.value ? parseFloat(e.target.value) : null;
+    aplicarFiltros();
+  });
   
-elementos.precioMaxInput?.addEventListener('input', (e) => {
-  filtrosActuales.precioMax = e.target.value ? parseFloat(e.target.value) : null;
-  aplicarFiltros();
-});
+  elementos.precioMaxInput?.addEventListener('input', (e) => {
+    filtrosActuales.precioMax = e.target.value ? parseFloat(e.target.value) : null;
+    aplicarFiltros();
+  });
   
   elementos.aplicarRangoBtn?.addEventListener('click', () => {
     filtrosActuales.precioMin = elementos.precioMinInput.value ? parseFloat(elementos.precioMinInput.value) : null;
@@ -760,22 +748,14 @@ function init() {
 
   inicializarEventos();
 }
-// ==== FUNCIONES GLOBALES ====
-window.resetearFiltros = resetearFiltros;
-window.toggleCarrito = toggleCarrito;
-window.agregarAlCarrito = agregarAlCarrito;
-window.mostrarModalProducto = mostrarModalProducto;
-window.mostrarNotificacion = mostrarNotificacion;
-window.cargarProductosDesdeSheets = cargarProductosDesdeSheets;
-window.guardarCarrito = guardarCarrito;
 
-// Función para actualizar el resumen del pedido
+// Function to update the summary of the order
 function actualizarResumenPedido() {
   const resumenProductos = document.getElementById('resumen-productos');
   const resumenTotal = document.getElementById('resumen-total');
   
   if (!resumenProductos || !resumenTotal) {
-    console.error('Elementos del resumen no encontrados');
+    console.error('Elements for the summary not found');
     return;
   }
 
@@ -988,5 +968,3 @@ function preguntarStock(nombreProducto) {
   const cuerpo = encodeURIComponent(`Hola Patofelting,\n\nMe gustaría saber cuándo estará disponible el producto: ${nombreProducto}\n\nSaludos cordiales,\n[Nombre del Cliente]`);
   window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
 }
-
-
