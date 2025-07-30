@@ -243,6 +243,26 @@ async function vaciarCarrito() {
   }
 }
 
+elementos.btnVaciarCarrito?.addEventListener('click', async () => {
+  if (carrito.length === 0) {
+    mostrarNotificacion('El carrito ya está vacío', 'info');
+    return;
+  }
+
+  for (const item of carrito) {
+    const productoRef = ref(firebaseDatabase, `productos/${item.id}/stock`);
+    
+    await runTransaction(productoRef, (stockActual) => {
+      if (stockActual === null) return stockActual;
+      return stockActual + item.cantidad;
+    });
+  }
+
+  carrito = [];
+  actualizarCarritoUI();
+  mostrarNotificacion('Carrito vaciado y stock restaurado', 'success');
+});
+
 
 
 function actualizarContadorCarrito() {
