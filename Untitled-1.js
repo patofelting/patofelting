@@ -143,7 +143,6 @@ async function vaciarCarrito() {
   if (carrito.length === 0) return;
 
   try {
-    const db = window.firebaseDatabase;  // ✅ usa el objeto global
     await Promise.all(carrito.map(async item => {
       const productRef = ref(db, `productos/${item.id}/stock`);
       await runTransaction(productRef, (currentStock) => {
@@ -986,10 +985,6 @@ function verDetalle(id) {
   }
 }
 
-
-
-
-
 function agregarAlCarrito(id) {
   const producto = productos.find(p => p.id === id);
   if (!producto) {
@@ -1032,6 +1027,12 @@ function agregarAlCarrito(id) {
     console.error("Error al agregar al carrito:", error);
     mostrarNotificacion("No se pudo agregar al carrito", "error");
   });
+}
+
+
+function actualizarCarritoUI() {
+  const carritoBtn = document.querySelector('.carrito-icono span');
+  if (carritoBtn) carritoBtn.textContent = `(${carrito.length})`;
 }
 window.verDetalle = verDetalle;
 window.agregarAlCarrito = agregarAlCarrito;
