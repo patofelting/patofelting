@@ -1106,6 +1106,7 @@ function agregarAlCarrito(id) {
   });
 }
 
+
 function actualizarCarritoUI() {
   const carritoBtn = document.querySelector('.carrito-icono span');
   if (carritoBtn) carritoBtn.textContent = `(${carrito.length})`;
