@@ -317,19 +317,23 @@ function toggleCarrito(forceState) {
 // ===============================
 // PRODUCTOS, FILTROS Y PAGINACIÓN
 // ===============================
-function renderizarProductos() {
+function renderizarProductos(datos = productos) {
   const galeria = elementos.galeriaProductos;
   if (!galeria) return;
 
   const productosFiltrados = filtrarProductos();
+  const startIndex = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
+  const endIndex = startIndex + PRODUCTOS_POR_PAGINA;
+  const productosAPerPage = productosFiltrados.slice(startIndex, endIndex);
+
   galeria.innerHTML = '';
 
-  if (productosFiltrados.length === 0) {
+  if (productosAPerPage.length === 0) {
     galeria.innerHTML = '<p class="sin-productos">No hay productos que coincidan con los filtros</p>';
     return;
   }
 
-  productosFiltrados.forEach(producto => {
+  productosAPerPage.forEach(producto => {
     const enCarrito = carrito.find(item => item.id === producto.id);
     const disponibles = Math.max(0, producto.stock - (enCarrito?.cantidad || 0));
     const agotado = disponibles <= 0;
@@ -415,21 +419,25 @@ function crearCardProducto(p) {
   `;
 }
 
-function renderizarPaginacion(total) {
-  const pages = Math.ceil(total / PRODUCTOS_POR_PAGINA);
-  const cont = elementos.paginacion;
-  if (!cont) return;
-  cont.innerHTML = '';
-  if (pages <= 1) return;
-  for (let i = 1; i <= pages; i++) {
-    const b = document.createElement('button');
-    b.textContent = i;
-    b.className = i === paginaActual ? 'pagina-activa' : '';
-    b.addEventListener('click', () => {
+function renderizarPaginacion(totalProductos) {
+  const totalPages = Math.ceil(totalProductos / PRODUCTOS_POR_PAGINA);
+  const paginacionContainer = elementos.paginacion;
+
+  if (totalPages <= 1) {
+    paginacionContainer.innerHTML = '';
+    return;
+  }
+
+  paginacionContainer.innerHTML = '';
+  for (let i = 1; i <= totalPages; i++) {
+    const pageButton = document.createElement('button');
+    pageButton.textContent = i;
+    pageButton.className = i === paginaActual ? 'active' : '';
+    pageButton.addEventListener('click', () => {
       paginaActual = i;
       renderizarProductos();
     });
-    cont.appendChild(b);
+    paginacionContainer.appendChild(pageButton);
   }
 }
 
