@@ -1,42 +1,173 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
+  <link rel="icon" href="data:,"> <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Patofelting - Creaciones en Fieltro</title>
   <link rel="stylesheet" href="Untitled-1.css" />
-  <link rel="icon" href="data:,">
+  <svg width="0" height="0" style="position:absolute;">
+    <defs>
+      <pattern id="lana-pattern" patternUnits="userSpaceOnUse" width="100" height="100">
+        <path d="M20,50 Q35,30 50,50 Q65,70 80,50" stroke="#7ed957" stroke-width="1.5" fill="none" opacity="0.1"/>
+        <path d="M10,70 Q25,50 40,70 Q55,90 70,70" stroke="#5a8f40" stroke-width="1" fill="none" opacity="0.05"/>
+      </pattern>
+    </defs>
+  </svg>
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTnHg4CGR2D7kSs0v4LLanw2qksYuRlEzO+tcaEPQogQ0KaoGN26/zrn20ImR1DfuLWnOo7aBA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  
   <script>
     window.SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
     window.PLACEHOLDER_IMAGE = 'img/placeholder.png';
-    window.FIREBASE_URL = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json';
+    window.FIREBASE_URL = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json'; 
   </script>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-    const firebaseConfig = {
-      apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
-      authDomain: "patofelting-b188f.firebaseapp.com",
-      databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
-      projectId: "patofelting-b188f",
-      storageBucket: "patofelting-b188f.appspot.com",
-      messagingSenderId: "858377467588",
-      appId: "1:858377467588:web:cade9de05ebccc17f87b91"
-    };
-    const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app);
-    window.firebaseDatabase = database;
-  </script>
-</head>
-<body>
-  <!-- Aquí va tu navbar, secciones, filtros, etc. como los tenías antes -->
 
-  <section id="productos" class="productos">
+ <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
+    authDomain: "patofelting-b188f.firebaseapp.com",
+    databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
+    projectId: "patofelting-b188f",
+    storageBucket: "patofelting-b188f.appspot.com",
+    messagingSenderId: "858377467588",
+    appId: "1:858377467588:web:cade9de05ebccc17f87b91"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const database = getDatabase(app);
+
+  // ✅ Hacerlo accesible en todo el sitio:
+  window.firebaseDatabase = database;
+</script>
+
+</head>
+<body oncontextmenu="return true;">
+  <nav class="nav">
+    <div class="nav-container">
+      <div class="logo-container">
+        <img src="img/patofelting.jpg" alt="Logo Patofelting" class="logo-img" />
+        <h2 class="logo-text">Patofelting</h2>
+      </div>
+      <button class="hamburguesa" aria-label="Menú de navegación" aria-expanded="false">☰</button>
+      <button class="carrito-btn" id="carrito-btn-main" aria-label="Abrir carrito de compras">
+        <i class="fas fa-shopping-cart"></i> Carrito (<span id="contador-carrito">0</span>)
+      </button>
+      <ul id="menu" class="menu">
+        <li><a href="#inicio">Inicio</a></li>
+        <li><a href="#sobre">Sobre mí</a></li>
+        <li><a href="#productos">Productos</a></li>
+        <li><a href="#contacto">Contacto</a></li>
+        <li><a href="#preguntas">Preguntas</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div id="carrito-panel" class="carrito-panel">
+    <div class="carrito-header">
+      <h2>Tu Carrito</h2>
+      <button class="cerrar-carrito" aria-label="Cerrar carrito">×</button>
+    </div>
+    <ul id="lista-carrito" class="lista-carrito"></ul>
+    <div class="carrito-footer">
+      <p id="total">Total: $U 0</p>
+      <div class="carrito-acciones">
+        <button class="boton-vaciar-carrito">Vaciar Carrito</button>
+        <button class="boton-finalizar-compra">Finalizar Compra</button>
+      </div>
+    </div>
+  </div>
+  <div class="carrito-overlay"></div>
+
+  <section id="inicio" class="hero">
+    <video autoplay muted loop playsinline class="video-fondo" aria-hidden="true" poster="" preload="metadata">
+      <source src="https://i.imgur.com/nWNPya9.mp4" type="video/mp4">
+    </video>
+    <div class="hero-content">
+      <div class="content-wrapper">
+        <h1 class="hero-title">Patofelting</h1>
+        <h2 class="hero-subtitle">Creaciones con alma en fieltro</h2>
+        <p class="hero-description">Figuras únicas, hechas a mano con amor y dedicación</p>
+        <div class="cta-container">
+          <a href="#productos" class="cta-button">Ver Productos</a>
+          <a href="#contacto" class="cta-button secondary">Contactar</a>
+        </div>
+      </div>
+    </div>
+    <div class="scroll-indicator">
+      <span class="scroll-text">Desplázate</span>
+      <div class="arrow-down"></div>
+    </div>
+  </section>
+
+  <section id="sobre" class="about-me seccion">
     <div class="container">
-      <h2>Nuestros Productos</h2>
+      <div class="about-content">
+        <div class="about-text">
+          <h2>Convierte Ideas en Arte: Descubrí el Universo de Patofelting</h2>
+          <p>¡Hola! Soy Patricia 👩‍🎨, la pasión y el corazón creativo detrás de <strong>Patofelting</strong>.</p>
+          <p>Desde 2018, he perfeccionado el arte del <strong>needle felting</strong> (fieltro con aguja), una técnica mágica que no solo transforma fibras de lana en figuras, sino que da vida a tus ideas más queridas.</p>
+          <ul>
+            <li>🧶 <strong>Maestría Artesanal:</strong> Cada creación es <strong>100% hecha a mano</strong> con las más finas fibras naturales, garantizando una calidad y calidez inigualables.</li>
+            <li>🍃 <strong>Inspiración sin Límites:</strong> ¿Sueñas con un personaje de la naturaleza, un animal querido, un recuerdo cotidiano... o ese <strong>personaje favorito?</strong>? Desde la fantasía a la realidad, diseño piezas <strong>totalmente personalizadas</strong> que capturan tu esencia y se adaptan perfectamente a tu imaginación.</li>
+            <li>✨ <strong>Más que una Figura: Una Pieza de Colección Única.</strong> Cada obra de Patofelting es <strong>irrepetible</strong>, poseyendo su propia alma, detalles exclusivos y una historia que te invita a coleccionar momentos y emociones.</li>
+          </ul>
+          <blockquote>🌿 <em>"Mi magia consiste en hilar la lana con emoción, tejiendo paciencia y amor en cada puntada, para que cada pieza se convierta en un sentimiento palpable."</em></blockquote>
+          <p class="cta">
+            ¿Listo/a para dar vida a esa idea tan especial?<br>
+            <strong>¡Conversemos! Juntos, crearemos la pieza de tus sueños.</strong> 🐑✨
+          </p>
+          <p class="cta-demanda">
+            ¿Buscás un regalo que realmente deje huella?<br>
+            🎁 Una figura de fieltro de Patofelting no es solo un objeto bello: 
+            <strong>es un recuerdo que perdura, una emoción, una historia que se cuenta sin palabras.</strong><br>
+            Desde el primer "pinchazo" de inspiración hasta el último detalle, cada creación está diseñada para decir: 
+            <em>"Esto es especialmente para vos".</em>
+          </p>
+        </div>
+        <div class="about-image">
+          <img src="img/patofeltinglogo.jpg" alt="Logo de Patofelting" class="logo-patofelting" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+<section id="productos" class="productos">
+  <div class="container">
+    <h2>Nuestros Productos</h2>
+    
+    <div class="filtros-container">
+  <div class="filtro-categoria">
+    <label for="filtro-categoria">Categorías:</label>
+    <select id="filtro-categoria">
+      <option value="todos"></option>
+      <option value="animales"></option>
+      <option value="fantasia"></option>
+    </select>
+  </div>
+
+
+       <div class="price-filter">
+    <div class="price-header">
+      <span id="min-price">$U0</span>
+      <span id="max-price">$U3000</span>
+    </div>
+    <div class="range-slider">
+      <input type="range" id="min-slider" min="0" max="3000" value="0" class="slider">
+      <input type="range" id="max-slider" min="0" max="3000" value="3000" class="slider">
+      <div class="track"></div>
+      <div class="range"></div>
+    </div>
+    <button class="aplicar-rango-btn" onclick="aplicarRango()">Aplicar</button>
+  </div>
+
+  <div class="filtro-busqueda">
+    <input type="text" class="input-busqueda" placeholder="Buscar por nombre o descripción...">
+  </div>
+</section>        </div>
       <div id="galeria-productos" class="galeria-productos"></div>
       <div id="product-loader" class="loader" hidden aria-live="polite">
         <svg class="spinner" viewBox="0 0 50 50">
@@ -44,34 +175,193 @@
         </svg>
         <p>Cargando productos...</p>
       </div>
+      <div id="paginacion" class="paginacion"></div>
     </div>
   </section>
 
-  <div id="producto-modal" class="modal-overlay">
-    <div id="modal-contenido" class="modal-contenido-producto">
-      <button class="cerrar-modal" aria-label="Cerrar modal" onclick="cerrarModal()">&times;</button>
-      <div class="modal-flex">
-        <div class="modal-carrusel">
-          <img id="modal-imagen" src="" class="modal-img" alt="Imagen del producto">
-          <div class="modal-controls">
-            <button class="modal-prev" aria-label="Anterior">...</button>
-            <button class="modal-next" aria-label="Siguiente">...</button>
-          </div>
-        </div>
-        <div class="modal-info">
-          <h2 id="modal-nombre"></h2>
-          <p id="modal-descripcion"></p>
-          <p id="modal-precio"></p>
+<div id="producto-modal" class="modal-overlay">
+  <div id="modal-contenido" class="modal-contenido-producto">
+    <button class="cerrar-modal" aria-label="Cerrar modal" onclick="cerrarModal()">&times;</button>
+    <div class="modal-flex">
+      <div class="modal-carrusel">
+        <img id="modal-imagen" src="" class="modal-img" alt="Imagen del producto">
+        <div class="modal-controls">
+          <button class="modal-prev" aria-label="Anterior">...</button>
+          <button class="modal-next" aria-label="Siguiente">...</button>
         </div>
       </div>
-      <div class="modal-thumbnails"></div>
-      <div class="modal-acciones">
-        <input type="number" class="cantidad-modal-input" value="1" min="1">
-        <button class="boton-agregar-modal">Agregar al carrito</button>
+      <div class="modal-info">
+        <h2 id="modal-nombre"></h2>
+        <p id="modal-descripcion"></p>
+        <p id="modal-precio"></p>
+      </div>
+    </div>
+    <div class="modal-thumbnails"></div>
+    <div class="modal-acciones">
+      <input type="number" class="cantidad-modal-input" value="1" min="1">
+      <button class="boton-agregar-modal">Agregar al carrito</button>
+    </div>
+  </div>
+</div>
+
+
+  <div id="aviso-pre-compra-modal" class="modal-aviso" role="dialog" aria-modal="true" hidden>
+    <div class="modal-aviso-contenido">
+      <h3>🧙‍♀️ Antes de confirmar tu pedido</h3>
+      <p><strong>Te pedimos que leas cuidadosamente las <em>especificaciones de compra</em></strong>: esto incluye las <strong>características del producto</strong>, <strong>los tiempos de envío</strong>, y nuestra <strong>política de devoluciones</strong>.</p>
+      <p>💫 Cada pieza es creada artesanalmente con paciencia, emoción y muchos pinchazos de amor dependiendo de la complejidad y el volumen de pedidos.</p>
+      <p>🌟 Nuestra intención es que vivas una experiencia mágica y transparente, y que tu figura llegue tal como la soñaste. Te agradecemos por valorar el trabajo hecho a mano.</p>
+      <div class="modal-aviso-botones">
+        <button id="btn-entendido-aviso" class="boton-aviso-entendido">Sí, he leído y deseo continuar 🐑</button>
+        <button id="btn-cancelar-aviso" class="boton-aviso-cancelar">Cancelar compra</button>
       </div>
     </div>
   </div>
 
-  <script src="Untitled-1.js" defer></script>
+  <div id="modal-datos-envio" class="modal-datos-envio" role="dialog" aria-modal="true" hidden>
+    <div class="modal-envio-contenido">
+      <button id="btn-cerrar-modal-envio" class="cerrar-modal-envio" aria-label="Cerrar modal">×</button>
+      <div class="modal-envio-header">
+        <h3>Completa tus datos</h3>
+        <p>Finalizá tu compra ingresando la información de envío</p>
+      </div>
+      <form id="form-envio" class="form-envio">
+        <div class="form-grupo">
+          <label for="input-nombre">Nombre*</label>
+          <input type="text" id="input-nombre" placeholder="Ej: María" required>
+        </div>
+        <div class="form-grupo">
+          <label for="input-apellido">Apellido*</label>
+          <input type="text" id="input-apellido" placeholder="Ej: González" required>
+        </div>
+        <div class="form-grupo">
+          <label for="input-telefono">Teléfono*</label>
+          <input type="tel" id="input-telefono" placeholder="Ej: 099123456" required>
+        </div>
+        <div class="form-grupo" id="grupo-direccion">
+          <label for="input-direccion">Dirección*</label>
+          <input type="text" id="input-direccion" placeholder="Ej: Av. 18 de Julio 1234" required>
+          <small class="ayuda-texto">Solo si seleccionás envío</small>
+        </div>
+        <div class="form-grupo">
+          <label for="select-envio">Método de envío*</label>
+          <select id="select-envio" required>
+            <option value="">Seleccionar método</option>
+            <option value="retiro">Retiro en local (Gratis)</option>
+            <option value="montevideo">Envío Montevideo ($150)</option>
+            <option value="interior">Envío Interior ($300)</option>
+          </select>
+        </div>
+        <div class="form-notas">
+          <label for="input-notas">Notas adicionales</label>
+          <textarea id="input-notas" placeholder="Detalles especiales, horarios preferidos, etc." rows="3"></textarea>
+        </div>
+        <div class="resumen-pedido">
+          <h4>Resumen de tu pedido</h4>
+          <div id="resumen-productos"></div>
+          <div class="resumen-total">
+            <span>Total:</span>
+            <span id="resumen-total">$U 0</span>
+          </div>
+        </div>
+        <button type="submit" class="boton-confirmar-envio">
+          <i class="fab fa-whatsapp"></i> Enviar pedido por WhatsApp
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <section id="contacto" class="contact">
+    <div class="container">
+      <h2>Contáctame</h2>
+      <p>¿Tienes alguna pregunta, una idea para una figura personalizada o simplemente quieres saludar? ¡No dudes en contactarme!</p>
+      <form id="formContacto">
+        <label for="nombre">Nombre:</label>
+        <input type="text" id="nombre" name="nombre" required>
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required>
+        <label for="mensaje">Mensaje:</label>
+        <textarea id="mensaje" name="mensaje" required></textarea>
+        <button type="submit">Enviar</button>
+      </form>
+      <div id="successMessage" class="hidden">¡Mensaje enviado con éxito!</div>
+      <div id="errorMessage" class="hidden">Error al enviar el mensaje. Intenta de nuevo.</div>
+    </div>
+  </section>
+
+  <section class="faq-section" id="preguntas">
+    <h2>Preguntas Frecuentes</h2>
+    <div class="faq-item" data-category="envios">
+      <button class="faq-toggle" aria-expanded="false">¿A qué lugares realizan envíos?</button>
+      <div class="faq-content" hidden>
+        Realizamos envíos a todo el país. Si tienes dudas sobre tu zona, <a href="#contacto" class="faq-more">contáctanos</a>.
+      </div>
+    </div>
+    <div class="faq-item" data-category="envios">
+      <button class="faq-toggle" aria-expanded="false">¿Cuánto cuesta el envío?</button>
+      <div class="faq-content" hidden>
+        El costo depende de tu localidad y del tamaño del paquete. Te lo informamos antes de finalizar tu compra.
+      </div>
+    </div>
+    <div class="faq-item" data-category="envios">
+      <button class="faq-toggle" aria-expanded="false">¿Puedo retirar mi pedido en persona?</button>
+      <div class="faq-content" hidden>
+        Sí, si estás en nuestra ciudad podemos coordinar un punto de retiro.
+      </div>
+    </div>
+    <div class="faq-item" data-category="personalizacion">
+      <button class="faq-toggle" aria-expanded="false">¿Puedo personalizar mi figura?</button>
+      <div class="faq-content" hidden>
+        ¡Sí! Puedes elegir colores, tamaño, detalles y enviarnos tus ideas o imágenes de referencia.
+      </div>
+    </div>
+    <div class="faq-item" data-category="personalizacion">
+      <button class="faq-toggle" aria-expanded="false">¿Cuánto demora una figura personalizada?</button>
+      <div class="faq-content" hidden>
+        El tiempo de producción suele ser entre 10 y 20 días hábiles, dependiendo del diseño.
+      </div>
+    </div>
+    <div class="faq-item" data-category="personalizacion">
+      <button class="faq-toggle" aria-expanded="false">¿Puedo pedir una figura que no está en el catálogo?</button>
+      <div class="faq-content" hidden>
+        Sí, puedes pedir figuras de personajes, mascotas u objetos personalizados. Escríbenos tu idea.
+      </div>
+    </div>
+    <div class="faq-item" data-category="personalizacion">
+      <button class="faq-toggle" aria-expanded="false">¿Tienen stock para entrega inmediata?</button>
+      <div class="faq-content" hidden>
+        Algunas figuras sí, revisa las que dicen "Disponible". Las personalizadas se hacen a pedido.
+      </div>
+    </div>
+    <div class="faq-item" data-category="devoluciones">
+      <button class="faq-toggle" aria-expanded="false">¿Puedo devolver o cambiar mi figura?</button>
+      <div class="faq-content" hidden>
+        Aceptamos devoluciones solo si la figura llegó dañada o con un error respecto a lo acordado. <a href="politicaempresa.html" class="faq-more">Consultar política</a>
+      </div>
+    </div>
+    <div class="faq-item" data-category="devoluciones">
+      <button class="faq-toggle" aria-expanded="false">¿Qué hago si mi pedido llega dañado?</button>
+      <div class="faq-content" hidden>
+        Contáctanos dentro de las 48 horas y adjunta fotos del daño. ¡Te ayudamos a solucionarlo!
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <p>
+        Seguime en
+        <a href="https://www.instagram.com/pato_felting" target="_blank" aria-label="Instagram de Patofelting">
+          <i class="fab fa-instagram"></i> @patofelting
+        </a>
+      </p>
+      <p>📧 <a href="mailto:patofelting@gmail.com">patofelting@gmail.com</a></p>
+      <p><a href="politicaempresa.html">Política de la empresa</a></p>
+      <p><a href="comocomprar.html">Cómo comprar</a></p>
+      <p>© 2025 <strong>Patofelting</strong> — Hecho con amor en Uruguay 🧶</p>
+    </div>
+  </footer>
+
+  <script src="Untitled-1.js" defer type="module"></script>
 </body>
 </html>
