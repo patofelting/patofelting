@@ -545,15 +545,16 @@ function mostrarModalProducto(producto) {
   const agotado = disponibles <= 0;
   let currentIndex = 0;
 
- function renderCarrusel() {
-  contenido.innerHTML = `
+function renderCarrusel() {
+  // Limpiar listeners antiguos antes de inyectar contenido nuevo
+  const nuevoContenido = document.createElement('div');
+  nuevoContenido.innerHTML = `
     <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
     <div class="modal-flex">
       <div class="modal-carrusel">
         <img src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
-        ${
-          producto.imagenes.length > 1
-            ? `
+        ${producto.imagenes.length > 1
+          ? `
         <div class="modal-controls">
           <button class="modal-prev" aria-label="Imagen anterior" ${currentIndex === 0 ? 'disabled' : ''}>
             <svg width="26" height="26" viewBox="0 0 26 26"><polyline points="17 22 9 13 17 4" fill="none" stroke="#2e7d32" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -563,14 +564,12 @@ function mostrarModalProducto(producto) {
           </button>
         </div>
         `
-            : ''
+          : ''
         }
         <div class="modal-thumbnails">
           ${producto.imagenes
-            .map(
-              (img, i) =>
-                `<img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}">`
-            )
+            .map((img, i) =>
+              `<img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}">`)
             .join('')}
         </div>
       </div>
@@ -586,7 +585,7 @@ function mostrarModalProducto(producto) {
           ${producto.adicionales ? `<small><b>Adicionales:</b> ${producto.adicionales}</small><br>` : ''}
           ${
             producto.alto || producto.ancho || producto.profundidad
-              ? `<small><b>Medidas:</b> ${producto.alto ? producto.alto + ' cm (alto)' : ''}${producto.ancho ? ' x ' + producto.ancho + ' cm (ancho)' : ''}${producto.profundidad ? ' x ' + producto.profundidad + ' cm (prof.)' : ''}</small>`
+              ? `<small><b>Medidas:</b> ${producto.alto ? producto.alto + ' cm (alto)' : ''} ${producto.ancho ? ' x ' + producto.ancho + ' cm (ancho)' : ''} ${producto.profundidad ? ' x ' + producto.profundidad + ' cm (prof.)' : ''}</small>`
               : ''
           }
         </div>
@@ -600,23 +599,23 @@ function mostrarModalProducto(producto) {
     </div>
   `;
 
-  // Cierre modal
-  contenido.querySelector('.cerrar-modal').onclick = () => cerrarModal();
+  // Limpiar contenido previo
+  contenido.innerHTML = '';
+  contenido.appendChild(nuevoContenido);
 
-  // Delegación y prevención de múltiples registros de evento
+  // Asignar eventos una sola vez
+  contenido.querySelector('.cerrar-modal').onclick = cerrarModal;
+
   const botonAgregar = contenido.querySelector('.boton-agregar-modal');
   if (botonAgregar) {
-    const nuevoBoton = botonAgregar.cloneNode(true);
-    botonAgregar.parentNode.replaceChild(nuevoBoton, botonAgregar);
-
-    nuevoBoton.addEventListener('click', () => {
-      const input = contenido.querySelector('.cantidad-modal-input');
-      const cantidad = +(input?.value || 1);
+    botonAgregar.addEventListener('click', () => {
+      const cantidad = +(contenido.querySelector('.cantidad-modal-input')?.value || 1);
       agregarAlCarrito(producto.id, cantidad);
       cerrarModal();
     });
   }
 }
+
 
 
   renderCarrusel();
