@@ -1,19 +1,10 @@
 // ===============================
-// CONFIGURACIÓN GLOBAL
+// CONFIGURACIÓN DE FIREBASE
 // ===============================
-const PRODUCTOS_POR_PAGINA = 6;
-const LS_CARRITO_KEY = 'carrito';
-const CSV_URL = window.SHEET_CSV_URL;
-const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
-const productosRef = ref(db, 'productos');
-
-
-// ======== Importación de Firebase (SOLO en <script type="module">) ========
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-// ======== Configuración de Firebase ========
 const firebaseConfig = {
   apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
   authDomain: "patofelting-b188f.firebaseapp.com",
@@ -24,15 +15,14 @@ const firebaseConfig = {
   appId: "1:858377467588:web:cade9de05ebccc17f87b91"
 };
 
-// Inicializar Firebase
 const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);       // 
-const auth = getAuth(app);         // 
+const db = getDatabase(app);
+const auth = getAuth(app); // 👈 Esto estaba faltando
 
-// ==================== AUTENTICACIÓN ANÓNIMA ====================
 signInAnonymously(auth)
   .then(() => console.log("✅ Signed in anonymously"))
   .catch(error => console.error("❌ Error signing in:", error));
+
 
 // ==================== ESTADO GLOBAL ====================
 let productos = [];
