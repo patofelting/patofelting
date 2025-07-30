@@ -434,6 +434,8 @@ function renderizarProductos(datos = productos) {
   renderizarPaginacion(totalProductos);
 
   // Delegación de eventos para mejor performance
+  // Remove existing listener to avoid duplicates
+  galeria.removeEventListener('click', manejarEventosGaleria);
   galeria.addEventListener('click', manejarEventosGaleria);
 }
 
@@ -1095,8 +1097,8 @@ function agregarAlCarrito(id) {
       });
     }
     guardarCarrito();
-    renderizarProductos(); // ← AÑADIR ESTA LÍNEA
-    renderizarCarrito();   // ← Y ESTA LÍNEA
+    renderizarProductos();
+    renderizarCarrito();
     mostrarNotificacion("Producto agregado al carrito", "exito");
   }).catch((error) => {
     console.error("Error al agregar al carrito:", error);
