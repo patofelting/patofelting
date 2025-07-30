@@ -397,13 +397,7 @@ function actualizarCategorias() {
 window.verDetalle = verDetalle;
 window.agregarAlCarrito = agregarAlCarrito;
 
-function actualizarCategorias() {
-  if (!elementos.selectCategoria) return;
-  const cats = ['todos', ...new Set(productos.map(p => p.categoria).filter(Boolean))];
-  elementos.selectCategoria.innerHTML = cats
-    .map(cat => `<option value="${cat}">${cat.charAt(0).toUpperCase() + cat.slice(1)}</option>`)
-    .join('');
-}
+
 
 
 
