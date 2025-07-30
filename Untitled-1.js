@@ -12,7 +12,7 @@ import {
   getDatabase,
   ref,
   runTransaction,
-  get // 👈 AÑADILO ACÁ
+  onValue  // 👈 AÑADILO ACÁ
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
@@ -205,51 +205,21 @@ async function cargarProductosDesdeFirebase() {
       elementos.productLoader.hidden = false;
     }
 
+    // Usar get() para la carga inicial
+    const snapshot = await get(productosRef);
+    
+    if (!snapshot.exists()) {
+      elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles.</p>';
+      return;
+    }
+
+    // Procesar datos iniciales
+    procesarDatosProductos(snapshot.val());
+
     // Configurar listener en tiempo real
     onValue(productosRef, (snapshot) => {
-      if (!snapshot.exists()) {
-        elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles.</p>';
-        return;
-      }
-
-      const data = snapshot.val();
-      productos = Object.keys(data).map(key => {
-        const p = data[key];
-        
-        // Validación más robusta del producto
-        if (!p || typeof p !== 'object') {
-          console.warn(`Producto ${key} tiene datos inválidos`, p);
-          return null;
-        }
-
-        // Procesamiento de imágenes con validación
-        let imagenes = [PLACEHOLDER_IMAGE];
-        if (Array.isArray(p.imagenes) && p.imagenes.length > 0) {
-          imagenes = p.imagenes.filter(img => typeof img === 'string' && img.trim() !== '');
-        }
-
-        // Validación y normalización de datos
-        return {
-          id: p.id && !isNaN(p.id) ? parseInt(p.id) : parseInt(key),
-          nombre: typeof p.nombre === 'string' ? p.nombre.trim() : 'Sin nombre',
-          descripcion: typeof p.descripcion === 'string' ? p.descripcion.trim() : '',
-          precio: !isNaN(parseFloat(p.precio)) ? parseFloat(p.precio) : 0,
-          stock: !isNaN(parseInt(p.stock, 10)) ? Math.max(0, parseInt(p.stock, 10)) : 0,
-          imagenes: imagenes,
-          adicionales: typeof p.adicionales === 'string' ? p.adicionales.trim() : '',
-          alto: !isNaN(parseFloat(p.alto)) ? parseFloat(p.alto) : null,
-          ancho: !isNaN(parseFloat(p.ancho)) ? parseFloat(p.ancho) : null,
-          profundidad: !isNaN(parseFloat(p.profundidad)) ? parseFloat(p.profundidad) : null,
-          categoria: typeof p.categoria === 'string' ? p.categoria.toLowerCase().trim() : 'otros',
-          vendido: typeof p.vendido === 'string' ? p.vendido.trim() : '',
-          estado: typeof p.estado === 'string' ? p.estado.trim() : ''
-        };
-      }).filter(Boolean);
-
-      console.log("✅ Productos actualizados:", productos);
-      renderizarProductos();
-      actualizarCategorias();
-      actualizarUI();
+      if (!snapshot.exists()) return;
+      procesarDatosProductos(snapshot.val());
     }, (error) => {
       console.error('Error en listener de productos:', error);
       mostrarNotificacion('Error al recibir actualizaciones de productos', 'error');
@@ -260,7 +230,6 @@ async function cargarProductosDesdeFirebase() {
     mostrarNotificacion('Error al cargar productos: ' + (e.message || 'Error desconocido'), 'error');
     elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos.</p>';
   } finally {
-    // Ocultar loader después de un pequeño delay para evitar parpadeo
     setTimeout(() => {
       if (elementos.productLoader) {
         elementos.productLoader.style.display = 'none';
@@ -270,6 +239,31 @@ async function cargarProductosDesdeFirebase() {
   }
 }
 
+// Función auxiliar para procesar datos
+function procesarDatosProductos(data) {
+  productos = Object.keys(data).map(key => {
+    const p = data[key];
+    if (!p || typeof p !== 'object') {
+      console.warn(`Producto ${key} tiene datos inválidos`, p);
+      return null;
+    }
+
+    return {
+      id: p.id && !isNaN(p.id) ? parseInt(p.id) : parseInt(key),
+      nombre: typeof p.nombre === 'string' ? p.nombre.trim() : 'Sin nombre',
+      descripcion: typeof p.descripcion === 'string' ? p.descripcion.trim() : '',
+      precio: !isNaN(parseFloat(p.precio)) ? parseFloat(p.precio) : 0,
+      stock: !isNaN(parseInt(p.stock, 10)) ? Math.max(0, parseInt(p.stock, 10)) : 0,
+      imagenes: Array.isArray(p.imagenes) ? p.imagenes.filter(img => typeof img === 'string') : [PLACEHOLDER_IMAGE],
+      categoria: typeof p.categoria === 'string' ? p.categoria.toLowerCase().trim() : 'otros',
+      estado: typeof p.estado === 'string' ? p.estado.trim() : ''
+    };
+  }).filter(Boolean);
+
+  renderizarProductos();
+  actualizarCategorias();
+  actualizarUI();
+}
 function renderizarCarrito() {
   if (!elementos.listaCarrito || !elementos.totalCarrito) return;
   
