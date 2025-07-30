@@ -382,21 +382,7 @@ function actualizarCategorias() {
     .join('');
 }
 
-function filtrarProductos() {
-  return productos.filter(p => {
-    const { precioMin, precioMax, categoria, busqueda } = filtrosActuales;
-    const b = busqueda?.toLowerCase() || "";
-    const enCarrito = carrito.find(i => i.id === p.id);
-    const disponibles = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
-    
-    return (
-      (precioMin === null || p.precio >= precioMin) &&
-      (precioMax === null || p.precio <= precioMax) &&
-      (categoria === 'todos' || p.categoria === categoria) &&
-      (!b || p.nombre.toLowerCase().includes(b) || p.descripcion.toLowerCase().includes(b))
-    );
-  });
-}
+
 
 function crearCardProducto(p) {
   const enCarrito = carrito.find(i => i.id === p.id);
