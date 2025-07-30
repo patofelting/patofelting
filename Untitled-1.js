@@ -6,11 +6,9 @@ const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
-
 // ===============================
 // ESTADO GLOBAL
 // ===============================
-
 let productos = [];
 let carrito = [];
 let paginaActual = 1;
@@ -24,16 +22,39 @@ let filtrosActuales = {
 
 const FIREBASE_URL = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json';
 
+// ===============================
+// FIREBASE INITIALIZATION
+// ===============================
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getDatabase, ref, get, transaction } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
+  authDomain: "patofelting-b188f.firebaseapp.com",
+  databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
+  projectId: "patofelting-b188f",
+  storageBucket: "patofelting-b188f.appspot.com",
+  messagingSenderId: "858377467588",
+  appId: "1:858377467588:web:cade9de05ebccc17f87b91"
+};
+
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+const auth = getAuth(app);
+
+// ===============================
+// LOAD PRODUCTS ON PAGE LOAD
+// ===============================
 document.addEventListener('DOMContentLoaded', () => {
-  fetch(FIREBASE_URL)
-    .then(res => res.json())
-    .then(data => {
-      productos = Object.values(data).filter(p => p !== null);
-      console.log("✅ Productos cargados:", productos);
-      renderizarProductos(productos);
+  signInAnonymously(auth)
+    .then(() => {
+      console.log('Signed in anonymously');
+      cargarProductosDesdeFirebase();
     })
-    .catch(err => {
-      console.error("Error cargando productos:", err);
+    .catch((error) => {
+      console.error('Error signing in:', error);
+      mostrarNotificacion('Error de autenticación', 'error');
     });
 });
 
@@ -47,21 +68,19 @@ function agregarAlCarrito(id, cantidad = 1) {
   if (!producto) return mostrarNotificacion('Producto no encontrado', 'error');
 
   cantidad = parseInt(cantidad);
-  if (isNaN(cantidad) || cantidad < 1) return;
+  if (isNaN(cantidad) || cantidad < 1) return mostrarNotificacion('Cantidad inválida', 'error');
 
-  // Check stock availability in Firebase
-  const db = getDatabase();
-  const productRef = ref(db, `productos/${id}`);
+  const productRef = ref(database, `productos/${id}`);
   
   transaction(productRef, (currentData) => {
-    if (!currentData) return; // Product doesn't exist
+    if (!currentData) return null; // Product doesn't exist
 
     const enCarrito = carrito.find(item => item.id === id);
     const maxCantidad = currentData.stock - (enCarrito?.cantidad || 0);
     
     if (maxCantidad < cantidad) {
       mostrarNotificacion(`No hay suficiente stock. Disponibles: ${maxCantidad}`, 'error');
-      return; // Abort the transaction
+      return null; // Abort transaction
     }
 
     // Update stock in Firebase
@@ -80,14 +99,15 @@ function agregarAlCarrito(id, cantidad = 1) {
       });
     }
     
-    guardarCarrito();
-    actualizarUI();
-    mostrarNotificacion(`"${producto.nombre}" añadido al carrito`, 'exito');
     return currentData; // Return updated data
   }, (error, committed, snapshot) => {
     if (error) {
       console.error('Error al actualizar stock:', error);
       mostrarNotificacion('Error al procesar la compra', 'error');
+    } else if (committed) {
+      guardarCarrito();
+      actualizarUI();
+      mostrarNotificacion(`"${producto.nombre}" añadido al carrito`, 'exito');
     }
   });
 }
@@ -186,11 +206,9 @@ async function cargarProductosDesdeFirebase() {
       elementos.productLoader.hidden = false;
     }
 
-    // Reference to the products in the database
     const productsRef = ref(database, 'productos');
-    
-    // Fetch data from Firebase
     const snapshot = await get(productsRef);
+    
     if (!snapshot.exists()) {
       elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles.</p>';
       return;
@@ -201,7 +219,6 @@ async function cargarProductosDesdeFirebase() {
       const p = data[key];
       if (!p || typeof p !== 'object') return null;
 
-      // Handle cases where 'imagenes' might be undefined
       const imagenPrincipal = Array.isArray(p.imagenes) && p.imagenes.length > 0 
         ? p.imagenes[0] 
         : PLACEHOLDER_IMAGE;
@@ -224,13 +241,12 @@ async function cargarProductosDesdeFirebase() {
     }).filter(Boolean);
 
     console.log("✅ Productos cargados:", productos);
-
     renderizarProductos();
     actualizarCategorias();
     actualizarUI();
 
   } catch (e) {
-    console.error(e);
+    console.error('Error al cargar productos:', e);
     mostrarNotificacion('Error al cargar productos: ' + e.message, 'error');
     elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos.</p>';
   } finally {
@@ -240,9 +256,6 @@ async function cargarProductosDesdeFirebase() {
     }
   }
 }
-
-
-
 
 function renderizarCarrito() {
   if (!elementos.listaCarrito || !elementos.totalCarrito) return;
@@ -292,20 +305,7 @@ function renderizarCarrito() {
   document.querySelectorAll('.aumentar-cantidad').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const id = parseInt(e.target.dataset.id);
-      const item = carrito.find(item => item.id === id);
-      const producto = productos.find(p => p.id === id);
-      
-      if (item && producto) {
-        const disponibles = Math.max(0, producto.stock - item.cantidad);
-        if (disponibles > 0) {
-          item.cantidad++;
-          guardarCarrito();
-          renderizarCarrito();
-          mostrarNotificacion(`Aumentada cantidad de "${item.nombre}"`, 'info');
-        } else {
-          mostrarNotificacion(`No hay más stock disponible de "${item.nombre}"`, 'error');
-        }
-      }
+      agregarAlCarrito(id, 1); // Use transaction-based add to check stock
     });
   });
 }
@@ -343,7 +343,7 @@ function renderizarProductos(datos = productos) {
 
   galeria.innerHTML = '';
 
-  if (productosAPerPage.length === 0) {
+  if (!productosAPerPage || productosAPerPage.length === 0) {
     galeria.innerHTML = '<p class="sin-productos">No hay productos que coincidan con los filtros</p>';
     return;
   }
@@ -381,6 +381,7 @@ function renderizarProductos(datos = productos) {
 
 function filtrarProductos() {
   return productos.filter(p => {
+    if (!p) return false;
     const { precioMin, precioMax, categoria, busqueda } = filtrosActuales;
     const b = busqueda?.toLowerCase() || "";
 
@@ -434,6 +435,7 @@ function crearCardProducto(p) {
     </div>
   `;
 }
+
 function renderizarPaginacion(totalProductos) {
   const totalPages = Math.ceil(totalProductos / PRODUCTOS_POR_PAGINA);
   const paginacionContainer = elementos.paginacion;
@@ -699,6 +701,17 @@ function setupContactForm() {
 // ===============================
 // INICIALIZACIÓN GENERAL
 // ===============================
+function init() {
+  inicializarMenuHamburguesa();
+  inicializarFAQ();
+  setupContactForm();
+  cargarCarrito();
+  inicializarEventos();
+}
+
+// ===============================
+// EVENTOS
+// ===============================
 function inicializarEventos() {
   elementos.carritoBtnMain?.addEventListener('click', () => toggleCarrito(true));
   elementos.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
@@ -755,24 +768,6 @@ function inicializarEventos() {
   conectarEventoModal();
 }
 
-// ===============================
-// INICIALIZADOR ÚNICO
-// ===============================
-function init() {
-  inicializarMenuHamburguesa();
-  inicializarFAQ();
-  setupContactForm();
-
-  cargarCarrito();
-
-  if (FIREBASE_URL) {
-    cargarProductosDesdeFirebase(); 
-  }
-
-  inicializarEventos();
-}
-
-// Function to update the summary of the order
 function actualizarResumenPedido() {
   const resumenProductos = document.getElementById('resumen-productos');
   const resumenTotal = document.getElementById('resumen-total');
@@ -834,7 +829,7 @@ function actualizarResumenPedido() {
 }
 
 // Cerrar modal de envío
-document.getElementById('btn-cerrar-modal-envio').addEventListener('click', function() {
+document.getElementById('btn-cerrar-modal-envio')?.addEventListener('click', function() {
   const modalEnvio = document.getElementById('modal-datos-envio');
   modalEnvio.classList.remove('visible');
   setTimeout(() => {
@@ -843,7 +838,7 @@ document.getElementById('btn-cerrar-modal-envio').addEventListener('click', func
 });
 
 // Actualizar total cuando cambia el método de envío
-document.getElementById('select-envio').addEventListener('change', function() {
+document.getElementById('select-envio')?.addEventListener('change', function() {
   const grupoDireccion = document.getElementById('grupo-direccion');
   const resumenTotal = document.getElementById('resumen-total');
   
@@ -871,7 +866,7 @@ document.getElementById('select-envio').addEventListener('change', function() {
 });
 
 // Validar y enviar por WhatsApp
-document.getElementById('form-envio').addEventListener('submit', function(e) {
+document.getElementById('form-envio')?.addEventListener('submit', function(e) {
   e.preventDefault();
   
   const nombre = document.getElementById('input-nombre').value.trim();
@@ -940,10 +935,9 @@ document.getElementById('form-envio').addEventListener('submit', function(e) {
   }, 1000);
 });
 
-
-
-// Controladores para los sliders de precio
-
+// ===============================
+// CONTROLADORES PARA LOS SLIDERS DE PRECIO
+// ===============================
 const minSlider = document.getElementById('min-slider');
 const maxSlider = document.getElementById('max-slider');
 const minPrice = document.getElementById('min-price');
@@ -976,33 +970,9 @@ function aplicarRango() {
   aplicarFiltros();
 }
 
-minSlider.addEventListener('input', updateRange);
-maxSlider.addEventListener('input', updateRange);
-updateRange();
-
-// Initialize Firebase
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-
-import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
-
-const firebaseConfig = {
-  apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
-  authDomain: "patofelting-b188f.firebaseapp.com",
-  databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
-  projectId: "patofelting-b188f",
-  storageBucket: "patofelting-b188f.appspot.com",
-  messagingSenderId: "858377467588",
-  appId: "1:858377467588:web:cade9de05ebccc17f87b91"
-};
-
-// Initialize Firebase app
-const app = initializeApp(firebaseConfig);
-
-
-
-const database = getDatabase();
-
-document.addEventListener('DOMContentLoaded', init);
+minSlider?.addEventListener('input', updateRange);
+maxSlider?.addEventListener('input', updateRange);
+if (minSlider && maxSlider) updateRange();
 
 function preguntarStock(nombreProducto) {
   const asunto = encodeURIComponent(`Consulta sobre disponibilidad de "${nombreProducto}"`);
@@ -1010,19 +980,4 @@ function preguntarStock(nombreProducto) {
   window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
 }
 
-
-import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-
-// Initialize Firebase Authentication
-
-
-// Sign in anonymously
-signInAnonymously(auth)
-  .then(() => {
-    console.log('Signed in anonymously');
-    // Load products after successful authentication
-    cargarProductosDesdeFirebase();
-  })
-  .catch((error) => {
-    console.error('Error signing in:', error);
-  });
+document.addEventListener('DOMContentLoaded', init);
