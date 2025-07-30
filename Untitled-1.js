@@ -8,8 +8,14 @@ const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.c
 
 // ======== Primero declaramos firebaseConfig y luego inicializamos Firebase ========
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import {
+  getDatabase,
+  ref,
+  runTransaction,
+  get // 👈 AÑADILO ACÁ
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
 
 const firebaseConfig = {
   apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
@@ -1018,6 +1024,7 @@ function agregarAlCarrito(id) {
         imagen: producto.imagenes?.[0] || PLACEHOLDER_IMAGE
       });
     }
+
     guardarCarrito();
     actualizarCarritoUI();
     mostrarNotificacion("Producto agregado al carrito", "exito");
