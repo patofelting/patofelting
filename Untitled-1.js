@@ -27,14 +27,14 @@ const app = initializeApp(firebaseConfig);
 // ✅ DEFINIR db ANTES DE USARLO
 const db = getDatabase(app);
 
-// También inicializar auth si es necesario
-const auth = getAuth(app);
+
+// ==================== AUTENTICACIÓN ANÓNIMA ====================
 signInAnonymously(auth)
   .then(() => console.log("✅ Signed in anonymously"))
   .catch(error => console.error("❌ Error signing in:", error));
 
-// ===============================
-// ESTADO GLOBAL
+
+// ESTADO GLOBAL//
 // ===============================
 let productos = [];
 let carrito = [];
@@ -1060,6 +1060,7 @@ function agregarAlCarrito(id) {
         imagen: producto.imagenes?.[0] || PLACEHOLDER_IMAGE
       });
     }
+
     guardarCarrito();
     actualizarCarritoUI();
     mostrarNotificacion("Producto agregado al carrito", "exito");
