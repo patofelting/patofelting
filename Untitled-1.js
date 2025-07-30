@@ -37,7 +37,6 @@ let filtrosActuales = {
 const FIREBASE_URL = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json';
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Cargar productos desde Firebase
   fetch(FIREBASE_URL)
     .then(res => res.json())
     .then(data => {
@@ -48,16 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     .catch(err => {
       console.error("Error cargando productos:", err);
     });
-
-  // Cerrar modal al hacer clic en la X
-  const btnCerrarModal = document.getElementById('cerrar-modal');
-  btnCerrarModal?.addEventListener('click', () => {
-    const modal = document.getElementById('producto-modal');
-    modal.style.display = 'none';
-    modal.setAttribute('aria-hidden', 'true');
-  });
 });
-
   // Evento para cerrar el modal de aviso (si lo usás)
   const modalAviso = document.getElementById('aviso-pre-compra-modal');
   const btnCancelarAviso = document.getElementById('btn-cancelar-aviso');
@@ -328,7 +318,7 @@ function renderizarProductos(data = productos) {
     return;
   }
 
-  data.forEach(producto => {
+  data.forEach((producto, index) => {
     const agotado = producto.stock <= 0;
     const productoHTML = `
       <div class="card producto-card" data-id="${producto.id}">
@@ -348,87 +338,9 @@ function renderizarProductos(data = productos) {
   });
 }
 
-// ✅ Agregá esto después de renderizarProductos
-window.verDetalle = function(id) {
-  const producto = productos.find(p => p.id === id);
-  if (!producto) return;
-
-  const modal = document.getElementById('producto-modal');
-  const contenido = modal.querySelector('.modal-contenido');
-
-  contenido.innerHTML = `
-    <h2>${producto.nombre}</h2>
-    <img src="${producto.imagenes?.[0] || PLACEHOLDER_IMAGE}" alt="${producto.nombre}">
-    <p><strong>Precio:</strong> $U ${producto.precio}</p>
-    <p><strong>Descripción:</strong> ${producto.descripcion}</p>
-    <p><strong>Adicionales:</strong> ${producto.adicionales || '-'}</p>
-    <p><strong>Dimensiones:</strong> ${producto.alto || '-'} x ${producto.ancho || '-'} x ${producto.profundidad || '-'}</p>
-    <button onclick="cerrarModal()">Cerrar</button>
-  `;
-
-  modal.style.display = 'flex';
-  modal.setAttribute('aria-hidden', 'false');
-};
-
-
-// ✅ Agregá esto después de renderizarProductos
-window.verDetalle = function(id) {
-  const producto = productos.find(p => p.id === id);
-  if (!producto) return;
-
-  const modal = document.getElementById('producto-modal');
-  const contenido = modal.querySelector('.modal-contenido');
-
-  contenido.innerHTML = `
-    <h2>${producto.nombre}</h2>
-    <img src="${producto.imagenes?.[0] || PLACEHOLDER_IMAGE}" alt="${producto.nombre}">
-    <p><strong>Precio:</strong> $U ${producto.precio}</p>
-    <p><strong>Descripción:</strong> ${producto.descripcion}</p>
-    <p><strong>Adicionales:</strong> ${producto.adicionales || '-'}</p>
-    <p><strong>Dimensiones:</strong> ${producto.alto || '-'} x ${producto.ancho || '-'} x ${producto.profundidad || '-'}</p>
-    <button onclick="cerrarModal()">Cerrar</button>
-  `;
-
-  modal.style.display = 'flex';
-  modal.setAttribute('aria-hidden', 'false');
-};
-
-
-// Función para abrir el modal de detalle
-function verDetalle(id) {
-  const producto = productos.find(p => p.id === id);
-  if (!producto) return;
-
-  const modal = document.getElementById('producto-modal');
-  const modalNombre = document.getElementById('modal-nombre');
-  const modalDescripcion = document.getElementById('modal-descripcion');
-  const modalPrecio = document.getElementById('modal-precio');
-  const modalImagen = document.getElementById('modal-imagen');
-
-  modalNombre.textContent = producto.nombre;
-  modalDescripcion.textContent = producto.descripcion;
-  modalPrecio.textContent = `$U ${producto.precio}`;
-  modalImagen.src = producto.imagenes?.[0] || PLACEHOLDER_IMAGE;
-  modalImagen.alt = producto.nombre;
-
-  modal.style.display = 'flex';
-  modal.setAttribute('aria-hidden', 'false');
-}
-
-
-// Cerrar modal
-function cerrarModal() {
-  const modal = document.getElementById('producto-modal');
-  if (modal) {
-    modal.style.display = 'none';
-    modal.setAttribute('aria-hidden', 'true');
-  }
-}
-
-
-// Exponer funciones globalmente
+// ✅ Hacés públicas las funciones al final del archivo o después de definirlas
 window.verDetalle = verDetalle;
-window.cerrarModal = cerrarModal;
+window.agregarAlCarrito = agregarAlCarrito;
 
 
 function actualizarCategorias() {
@@ -1249,86 +1161,4 @@ window.agregarAlCarrito = async function(id, cantidad = 1) {
     mostrarNotificacion('Error al verificar stock en tiempo real', 'error');
   }
 };
-
-window.agregarAlCarrito = agregarAlCarrito;
-
-
-
-
-async function agregarAlCarrito(id, cantidad = 1) {
-  const prod = productos.find(p => p.id === id);
-  if (!prod) return mostrarNotificacion('Producto no encontrado', 'error');
-
-  cantidad = parseInt(cantidad, 10);
-  if (isNaN(cantidad) || cantidad < 1) {
-    return mostrarNotificacion('Cantidad inválida', 'error');
-  }
-
-  const firebaseURL = `https://patofelting-b188f-default-rtdb.firebaseio.com/productos/${id}/stock.json`;
-
-  try {
-    const response = await fetch(firebaseURL);
-    const stockEnFirebase = await response.json();
-
-    if (stockEnFirebase === null || stockEnFirebase <= 0) {
-      return mostrarNotificacion('Otro usuario compró este producto. Ya no hay stock.', 'error');
-    }
-
-    if (stockEnFirebase < cantidad) {
-      return mostrarNotificacion(`Solo hay ${stockEnFirebase} disponibles`, 'error');
-    }
-
-    const nuevoStock = stockEnFirebase - cantidad;
-    await fetch(firebaseURL, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(nuevoStock)
-    });
-
-    prod.stock = nuevoStock;
-
-    const enCarrito = carrito.find(item => item.id === id);
-    if (enCarrito) {
-      enCarrito.cantidad += cantidad;
-    } else {
-      carrito.push({
-        id,
-        nombre: prod.nombre,
-        precio: prod.precio,
-        cantidad,
-        imagen: prod.imagenes?.[0] || PLACEHOLDER_IMAGE
-      });
-    }
-
-    guardarCarrito();
-    actualizarUI();
-
-    const productoCard = document.querySelector(`.producto-card[data-id="${id}"]`);
-    if (productoCard) {
-      const stockEl = productoCard.querySelector('.producto-stock');
-      const btnAgregar = productoCard.querySelector('.boton-agregar');
-
-      if (stockEl) stockEl.textContent = nuevoStock <= 0 ? 'Agotado' : `Stock: ${nuevoStock}`;
-      if (btnAgregar) {
-        if (nuevoStock <= 0) {
-          btnAgregar.disabled = true;
-          btnAgregar.innerHTML = '<i class="fas fa-times-circle"></i> Agotado';
-          btnAgregar.classList.add('agotado');
-        }
-      }
-    }
-
-    mostrarNotificacion(`"${prod.nombre}" x${cantidad} añadido al carrito`, 'exito');
-  } catch (err) {
-    console.error(err);
-    mostrarNotificacion('Error al verificar stock en tiempo real', 'error');
-  }
-}
-
-
-// Exportar funciones globalmente
-
-
-window.agregarAlCarrito = agregarAlCarrito;
-
 
