@@ -546,7 +546,7 @@ function filtrarProductos() {
     } = filtrosActuales;
     const b = busqueda?.toLowerCase() || "";
 
-    const matchesPrice = (p.precio >= precioMin) && (p.precio <= precioMax);
+    const matchesPrice = (precioMin === null || p.precio >= precioMin) && (precioMax === null || p.precio <= precioMax);
     const matchesCategory = (categoria === 'todos' || p.categoria === categoria);
     const matchesSearch = (!b || p.nombre.toLowerCase().includes(b) || p.descripcion.toLowerCase().includes(b));
 
@@ -741,9 +741,6 @@ function mostrarModalProducto(producto) {
     `;
 
     // Event listeners for modal elements
-    // Ya no es necesario setear el onclick en el HTML si lo hacemos aquí
-    // contenido.querySelector('.cerrar-modal').onclick = () => cerrarModal();
-
     const btnPrev = contenido.querySelector('.modal-prev');
     const btnNext = contenido.querySelector('.modal-next');
     const thumbnails = contenido.querySelectorAll('.thumbnail');
@@ -809,16 +806,17 @@ function aplicarFiltros() {
 
 function resetearFiltros() {
   filtrosActuales = {
-    precioMin: 0,
-    precioMax: 3000, // Assuming max price is 3000 from the slider setup
+    precioMin: null, // Mantener como null para no forzar el min/max del slider aquí
+    precioMax: null, // Mantener como null
     categoria: 'todos',
     busqueda: ''
   };
   if (elementos.inputBusqueda) elementos.inputBusqueda.value = '';
   if (elementos.selectCategoria) elementos.selectCategoria.value = 'todos';
-  if (elementos.precioMinInput) elementos.precioMinInput.value = '0'; // Reset slider values
-  if (elementos.precioMaxInput) elementos.precioMaxInput.value = '3000'; // Reset slider values
-  updateRange(); // Update slider UI
+  // Restablecer los sliders a sus valores iniciales si existen
+  if (elementos.precioMinInput) elementos.precioMinInput.value = elementos.precioMinInput.min;
+  if (elementos.precioMaxInput) elementos.precioMaxInput.value = elementos.precioMaxInput.max;
+  updateRange(); // Actualizar la visualización de los sliders
   aplicarFiltros();
 }
 
@@ -983,23 +981,24 @@ function inicializarEventos() {
   });
 
   // Update filters immediately when sliders are moved
-  elementos.precioMinInput?.addEventListener('input', () => {
-    filtrosActuales.precioMin = parseFloat(elementos.precioMinInput.value); // Asegúrate de actualizar el filtro
+  elementos.precioMinInput?.addEventListener('input', (e) => {
+    filtrosActuales.precioMin = parseFloat(e.target.value);
     updateRange();
-    aplicarFiltros(); // Apply filters immediately on slider change
+    aplicarFiltros(); // Aplica filtros inmediatamente al mover el slider
   });
 
-  elementos.precioMaxInput?.addEventListener('input', () => {
-    filtrosActuales.precioMax = parseFloat(elementos.precioMaxInput.value); // Asegúrate de actualizar el filtro
+  elementos.precioMaxInput?.addEventListener('input', (e) => {
+    filtrosActuales.precioMax = parseFloat(e.target.value);
     updateRange();
-    aplicarFiltros(); // Apply filters immediately on slider change
+    aplicarFiltros(); // Aplica filtros inmediatamente al mover el slider
   });
 
+  // Si existe un botón explícito para aplicar el rango, este listener manejará su click.
   elementos.aplicarRangoBtn?.addEventListener('click', () => {
-    // This button is redundant if filters apply on input, but keep if user needs explicit apply.
-    // Ensure that the filter values are updated from the slider inputs, not just by updateRange()
-    filtrosActuales.precioMin = parseInt(elementos.precioMinInput.value);
-    filtrosActuales.precioMax = parseInt(elementos.precioMaxInput.value);
+    // Los filtros ya se aplican en el evento 'input' de los sliders,
+    // pero si este botón es crucial, aseguramos que se sincronicen los valores.
+    filtrosActuales.precioMin = parseFloat(elementos.precioMinInput.value);
+    filtrosActuales.precioMax = parseFloat(elementos.precioMaxInput.value);
     aplicarFiltros();
   });
 
@@ -1231,6 +1230,13 @@ if (minSlider && maxSlider) {
   updateRange(); // Call once on load to set initial state
 }
 
+// Define 'aplicarRango' function to handle potential direct calls from HTML
+function aplicarRango() {
+  // Read current slider values and update filters
+  filtrosActuales.precioMin = parseFloat(elementos.precioMinInput.value);
+  filtrosActuales.precioMax = parseFloat(elementos.precioMaxInput.value);
+  aplicarFiltros(); // Call the main filter function
+}
 
 function preguntarStock(nombreProducto) {
   const asunto = encodeURIComponent(`Consulta sobre disponibilidad de "${nombreProducto}"`);
@@ -1253,5 +1259,5 @@ function verDetalle(id) {
 // Expose functions to global scope if they are called from inline HTML event handlers (e.g., onclick)
 window.verDetalle = verDetalle;
 window.agregarAlCarrito = agregarAlCarrito;
-window.aplicarRango = aplicarRango; // Expose aplicarRango if needed by HTML button
+window.aplicarRango = aplicarRango; // Now this correctly references the new function
 window.preguntarStock = preguntarStock;
