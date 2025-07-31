@@ -212,6 +212,7 @@ function renderizarProductos() {
     });
   });
 }
+
 function crearCardProducto(p) {
   const enCarrito = carrito.find(i => i.id === p.id);
   const disp = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
@@ -224,7 +225,7 @@ function crearCardProducto(p) {
       <div class="card-acciones">
         ${
           agot
-            ? `<button class="boton-stock-naranja" style="background:#FFA500;color:#fff;cursor:not-allowed;" disabled>🟠 Avisame cuando haya stock</button>`
+            ? `<button class="boton-stock-naranja" data-producto="${encodeURIComponent(p.nombre)}" data-productoid="${p.id}" style="background:#FFA500;color:#fff;">🟠 Avisame cuando haya stock</button>`
             : `<button class="boton-agregar">Agregar</button>`
         }
         <button class="boton-detalles">Ver Detalle</button>
@@ -586,3 +587,39 @@ document.addEventListener('DOMContentLoaded', () => {
   renderizarCarrito();
   inicializarEventos();
 });
+
+
+// ===============================
+// CONTACT FORM CON EMAILJS
+// ===============================
+function setupContactForm() {
+  const formContacto = document.getElementById('formContacto');
+  const successMessage = document.getElementById('successMessage');
+  const errorMessage = document.getElementById('errorMessage');
+
+  if (formContacto) {
+    formContacto.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const nombre = document.getElementById('nombre').value;
+      const email = document.getElementById('email').value;
+      const mensaje = document.getElementById('mensaje').value;
+
+      emailjs.send('service_89by24g', 'template_8mn7hdp', {
+        from_name: nombre,
+        from_email: email,
+        message: mensaje
+      })
+      .then(() => {
+        successMessage.classList.remove('hidden');
+        errorMessage.classList.add('hidden');
+        formContacto.reset();
+        setTimeout(() => successMessage.classList.add('hidden'), 3000);
+      }, (error) => {
+        console.error('Error al enviar el mensaje:', error);
+        errorMessage.classList.remove('hidden');
+        successMessage.classList.add('hidden');
+        setTimeout(() => errorMessage.classList.add('hidden'), 3000);
+      });
+    });
+  }
+}
