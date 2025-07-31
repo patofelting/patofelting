@@ -289,12 +289,13 @@ async function cargarProductosDesdeFirebase() {
     return;
   }
 
-  const data = snapshot.val();
-  productos = Object.keys(data).map(key => ({
-    ...data[key],
-    id: parseInt(key),
-    imagenes: Array.isArray(data[key].imagenes) ? data[key].imagenes : [PLACEHOLDER_IMAGE]
-  }));
+productos = Object.keys(data).map(key => ({
+  ...data[key],
+  id: parseInt(key),
+  precio: parseFloat(data[key].precio), // <--- 💥 ESTA LÍNEA
+  imagenes: Array.isArray(data[key].imagenes) ? data[key].imagenes : [PLACEHOLDER_IMAGE]
+}));
+ 
 
   renderizarProductos();
   actualizarCategorias();
