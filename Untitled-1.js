@@ -438,6 +438,11 @@ function toggleCarrito(forceState) {
 
 // Función para manejar eventos delegados
 function agregarAlCarrito(id, cantidad = 1, boton = null) {
+  if (isNaN(id) || id === null) {
+    mostrarNotificacion("ID de producto inválido", "error");
+    return;
+  }
+
   const producto = productos.find(p => p.id === id);
   if (!producto) {
     mostrarNotificacion("Producto no encontrado", "error");
@@ -451,17 +456,24 @@ function agregarAlCarrito(id, cantidad = 1, boton = null) {
   }
 
   const enCarrito = carrito.find(item => item.id === id);
-
   if (boton) boton.disabled = true;
 
   const productRef = ref(db, `productos/${id}/stock`);
   runTransaction(productRef, (currentStock) => {
-    if (typeof currentStock !== 'number') return currentStock;
-    if (currentStock < cantidadAgregar) return; // cancela transacción
-    return currentStock - cantidadAgregar;
+    // Validación del stock actual
+    if (typeof currentStock !== 'number' || isNaN(currentStock)) {
+      console.warn(`Stock inválido para producto ID ${id}, abortando operación`);
+      return; // aborta la transacción
+    }
+
+    if (currentStock < cantidadAgregar) {
+      return; // no hay stock suficiente
+    }
+
+    return currentStock - cantidadAgregar; // nuevo stock
   }).then((res) => {
     if (!res.committed) {
-      mostrarNotificacion('❌ Stock insuficiente', 'error');
+      mostrarNotificacion('❌ Stock insuficiente o producto sin stock válido', 'error');
       return;
     }
 
@@ -481,13 +493,16 @@ function agregarAlCarrito(id, cantidad = 1, boton = null) {
     renderizarCarrito();
     renderizarProductos();
     mostrarNotificacion("✅ Producto agregado al carrito", "exito");
+
   }).catch((error) => {
     console.error("Error al agregar al carrito:", error);
-    mostrarNotificacion("Error inesperado al agregar al carrito", "error");
+    mostrarNotificacion("⚠️ Error inesperado al agregar al carrito", "error");
+
   }).finally(() => {
     if (boton) boton.disabled = false;
   });
 }
+
 
 
 function filtrarProductos() {
@@ -1080,58 +1095,7 @@ function verDetalle(id) {
     mostrarNotificacion("Producto no encontrado", "error");
   }
 }
-function agregarAlCarrito(id, cantidad = 1, boton = null) {
-  const producto = productos.find(p => p.id === id);
-  if (!producto) {
-    mostrarNotificacion("Producto no encontrado", "error");
-    return;
-  }
 
-  const cantidadAgregar = Math.max(1, parseInt(cantidad));
-  if (isNaN(cantidadAgregar)) {
-    mostrarNotificacion("Cantidad inválida", "error");
-    return;
-  }
-
-  const enCarrito = carrito.find(item => item.id === id);
-
-  // Desactivar el botón mientras se procesa
-  if (boton) boton.disabled = true;
-
-  const productRef = ref(db, `productos/${id}/stock`);
-  runTransaction(productRef, (currentStock) => {
-    if (typeof currentStock !== 'number') return currentStock;
-    if (currentStock < cantidadAgregar) return; // cancela transacción
-    return currentStock - cantidadAgregar;
-  }).then((res) => {
-    if (!res.committed) {
-      mostrarNotificacion('❌ Stock insuficiente', 'error');
-      return;
-    }
-
-    if (enCarrito) {
-      enCarrito.cantidad += cantidadAgregar;
-    } else {
-      carrito.push({
-        id: producto.id,
-        nombre: producto.nombre,
-        precio: producto.precio,
-        cantidad: cantidadAgregar,
-        imagen: producto.imagenes?.[0] || PLACEHOLDER_IMAGE
-      });
-    }
-
-    guardarCarrito();
-    renderizarCarrito();
-    renderizarProductos();
-    mostrarNotificacion("✅ Producto agregado al carrito", "exito");
-  }).catch((error) => {
-    console.error("Error al agregar al carrito:", error);
-    mostrarNotificacion("Error inesperado al agregar al carrito", "error");
-  }).finally(() => {
-    if (boton) boton.disabled = false;
-  });
-}
 
 
 
