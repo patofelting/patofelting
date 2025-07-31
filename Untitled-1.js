@@ -161,7 +161,9 @@ function init() {
   setupContactForm();
   inicializarMenuHamburguesa();
   updateRange();
+  aplicarFiltros();
 }
+
 
 
 // ===============================
@@ -266,11 +268,6 @@ function preguntarStock(nombreProducto) {
   window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  cargarCarrito();
-  cargarProductosDesdeFirebase(); // tu función actual
-});
-
 
 function verDetalle(id) {
   const producto = productos.find(p => p.id === id);
@@ -282,3 +279,24 @@ function verDetalle(id) {
 }
 
 
+async function cargarProductosDesdeFirebase() {
+  const productosRef = ref(db, 'productos');
+  const snapshot = await get(productosRef);
+
+  if (!snapshot.exists()) {
+    productos = [];
+    renderizarProductos(); // <- MUY IMPORTANTE
+    return;
+  }
+
+  const data = snapshot.val();
+  productos = Object.keys(data).map(key => ({
+    ...data[key],
+    id: parseInt(key),
+    imagenes: Array.isArray(data[key].imagenes) ? data[key].imagenes : [PLACEHOLDER_IMAGE]
+  }));
+
+  renderizarProductos();
+  actualizarCategorias();
+}
+document.addEventListener('DOMContentLoaded', init);
