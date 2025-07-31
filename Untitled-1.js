@@ -992,6 +992,8 @@ document.getElementById('form-envio')?.addEventListener('submit', function(e) {
 // ===============================
 // CONTROLADORES PARA LOS SLIDERS DE PRECIO
 // ===============================
+// ================= FILTROS DE PRECIO =================
+
 const minSlider = document.getElementById('min-slider');
 const maxSlider = document.getElementById('max-slider');
 const minPrice = document.getElementById('min-price');
@@ -1008,8 +1010,9 @@ function updateRange() {
     maxSlider.value = maxVal;
   }
 
-  const porcentajeMin = (minVal / 3000) * 100;
-  const porcentajeMax = (maxVal / 3000) * 100;
+  const maxRangeValue = parseInt(maxSlider.max) || 3000;
+  const porcentajeMin = (minVal / maxRangeValue) * 100;
+  const porcentajeMax = (maxVal / maxRangeValue) * 100;
 
   range.style.left = porcentajeMin + '%';
   range.style.width = (porcentajeMax - porcentajeMin) + '%';
@@ -1024,9 +1027,12 @@ function aplicarRango() {
   aplicarFiltros();
 }
 
+// Inicialización de eventos
 minSlider?.addEventListener('input', updateRange);
 maxSlider?.addEventListener('input', updateRange);
 if (minSlider && maxSlider) updateRange();
+
+// ================= CONSULTA POR STOCK =================
 
 function preguntarStock(nombreProducto) {
   const asunto = encodeURIComponent(`Consulta sobre disponibilidad de "${nombreProducto}"`);
@@ -1034,7 +1040,10 @@ function preguntarStock(nombreProducto) {
   window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
 }
 
+// ================= INICIALIZADOR GENERAL =================
+
 document.addEventListener('DOMContentLoaded', init);
+
 
 // ===============================
 // FUNCIONES GLOBALES ADICIONALES
