@@ -280,26 +280,38 @@ function verDetalle(id) {
 
 
 async function cargarProductosDesdeFirebase() {
-  const productosRef = ref(db, 'productos');
-  const snapshot = await get(productosRef);
+  try {
+    const productosRef = ref(db, 'productos');
+    const snapshot = await get(productosRef);
 
-  if (!snapshot.exists()) {
-    productos = [];
-    renderizarProductos(); // <- MUY IMPORTANTE
-    return;
+    if (!snapshot.exists()) {
+      console.warn("📭 No se encontraron productos en Firebase");
+      productos = [];
+      renderizarProductos();
+      return;
+    }
+
+    const data = snapshot.val();
+
+    productos = Object.entries(data)
+      .map(([key, value]) => ({
+        ...value,
+        id: parseInt(key),
+        precio: parseFloat(value.precio),
+        imagenes: Array.isArray(value.imagenes) ? value.imagenes : [PLACEHOLDER_IMAGE]
+      }))
+      .filter(p => p.vendido?.toLowerCase() !== 'vendido'); // ❗ Excluye productos marcados como "Vendido"
+
+    console.log("✅ Productos cargados:", productos);
+
+    renderizarProductos();
+    actualizarCategorias();
+  } catch (error) {
+    console.error("❌ Error al cargar productos desde Firebase:", error);
+    mostrarNotificacion("Error al cargar productos", "error");
   }
-
-productos = Object.keys(data).map(key => ({
-  ...data[key],
-  id: parseInt(key),
-  precio: parseFloat(data[key].precio), // <--- 💥 ESTA LÍNEA
-  imagenes: Array.isArray(data[key].imagenes) ? data[key].imagenes : [PLACEHOLDER_IMAGE]
-}));
- 
-
-  renderizarProductos();
-  actualizarCategorias();
 }
+
 
 function renderizarProductos() {
   const contenedor = elementos.galeriaProductos;
