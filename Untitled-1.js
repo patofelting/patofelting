@@ -492,13 +492,56 @@ function renderizarProductos() {
   if (paginados.length === 0) {
     elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No se encontraron productos.</p>';
   } else {
-    elementos.galeriaProductos.innerHTML = paginados.map(crearCardProducto).join('');
+    elementos.galeriaProductos.innerHTML = paginados.map(producto => {
+      const enCarrito = carrito.find(item => item.id === producto.id);
+      const disponibles = Math.max(0, producto.stock - (enCarrito?.cantidad || 0));
+
+      return `
+        <div class="producto-card">
+          <img src="${producto.imagenes?.[0] || PLACEHOLDER_IMAGE}" alt="${producto.nombre}" class="producto-img">
+          <h3 class="producto-nombre">${producto.nombre}</h3>
+          <p class="producto-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
+          <p class="stock">Stock: ${disponibles}</p>
+          <button class="boton-agregar" data-id="${producto.id}" ${disponibles <= 0 ? 'disabled' : ''}>
+            🛒 AGREGAR
+          </button>
+          <button class="boton-detalles" data-id="${producto.id}">
+            🔍 VER DETALLE
+          </button>
+        </div>
+      `;
+    }).join('');
   }
 
   renderizarPaginacion(productosFiltrados.length);
 
+  // Refrescar eventos delegados
   elementos.galeriaProductos.removeEventListener('click', manejarEventosGaleria);
   elementos.galeriaProductos.addEventListener('click', manejarEventosGaleria);
+}
+
+function renderizarPaginacion(totalProductos) {
+  const totalPages = Math.ceil(totalProductos / PRODUCTOS_POR_PAGINA);
+  const paginacionContainer = elementos.paginacion;
+
+  if (!paginacionContainer) return;
+
+  if (totalPages <= 1) {
+    paginacionContainer.innerHTML = '';
+    return;
+  }
+
+  paginacionContainer.innerHTML = '';
+  for (let i = 1; i <= totalPages; i++) {
+    const pageButton = document.createElement('button');
+    pageButton.textContent = i;
+    pageButton.className = i === paginaActual ? 'active' : '';
+    pageButton.addEventListener('click', () => {
+      paginaActual = i;
+      renderizarProductos();
+    });
+    paginacionContainer.appendChild(pageButton);
+  }
 }
 
 function renderizarPaginacion(totalProductos) {
