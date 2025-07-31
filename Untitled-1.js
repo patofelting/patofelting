@@ -264,7 +264,11 @@ function preguntarStock(nombreProducto) {
   window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
 }
 
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => {
+  cargarCarrito();
+  cargarProductosDesdeFirebase(); // tu función actual
+});
+
 
 function verDetalle(id) {
   const producto = productos.find(p => p.id === id);
