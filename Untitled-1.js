@@ -299,4 +299,75 @@ async function cargarProductosDesdeFirebase() {
   renderizarProductos();
   actualizarCategorias();
 }
+
+function renderizarProductos() {
+  const contenedor = elementos.galeriaProductos;
+  contenedor.innerHTML = '';
+
+  const productosFiltrados = aplicarFiltros();
+
+  const productosPagina = productosFiltrados.slice(
+    (paginaActual - 1) * PRODUCTOS_POR_PAGINA,
+    paginaActual * PRODUCTOS_POR_PAGINA
+  );
+
+  if (productosPagina.length === 0) {
+    contenedor.innerHTML = '<p>No se encontraron productos.</p>';
+    return;
+  }
+
+  productosPagina.forEach(producto => {
+    const div = document.createElement('div');
+    div.classList.add('producto');
+    div.innerHTML = `
+      <img src="${producto.imagenes?.[0] || PLACEHOLDER_IMAGE}" alt="${producto.nombre}" />
+      <h3>${producto.nombre}</h3>
+      <p>$U${producto.precio}</p>
+      <button onclick="agregarAlCarrito(${producto.id})">Agregar</button>
+      <button onclick="verDetalle(${producto.id})">Ver</button>
+    `;
+    contenedor.appendChild(div);
+  });
+}
+function actualizarCategorias() {
+  const categorias = [...new Set(productos.map(p => p.categoria))];
+  const select = elementos.selectCategoria;
+  select.innerHTML = `<option value="todos">Todos</option>` + 
+    categorias.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+}
+
+function aplicarFiltros() {
+  let resultado = [...productos];
+
+  if (filtrosActuales.categoria !== 'todos') {
+    resultado = resultado.filter(p => p.categoria === filtrosActuales.categoria);
+  }
+
+  if (filtrosActuales.precioMin !== null) {
+    resultado = resultado.filter(p => p.precio >= filtrosActuales.precioMin);
+  }
+
+  if (filtrosActuales.precioMax !== null) {
+    resultado = resultado.filter(p => p.precio <= filtrosActuales.precioMax);
+  }
+
+  if (filtrosActuales.busqueda.trim() !== '') {
+    const b = filtrosActuales.busqueda.toLowerCase();
+    resultado = resultado.filter(p => p.nombre.toLowerCase().includes(b));
+  }
+
+  return resultado;
+}
+
+function mostrarModalProducto(producto) {
+  elementos.modalContenido.innerHTML = `
+    <h2>${producto.nombre}</h2>
+    <img src="${producto.imagenes?.[0] || PLACEHOLDER_IMAGE}" alt="${producto.nombre}" />
+    <p>${producto.descripcion}</p>
+    <p>Precio: $U${producto.precio}</p>
+    <button onclick="agregarAlCarrito(${producto.id})">Agregar al carrito</button>
+  `;
+  elementos.productoModal.classList.add('visible');
+}
+
 document.addEventListener('DOMContentLoaded', init);
