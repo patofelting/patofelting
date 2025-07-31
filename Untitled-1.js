@@ -588,12 +588,18 @@ function manejarEventosGaleria(e) {
     preguntarStock(boton.dataset.nombre || producto.nombre);
   }
 }
+
 function renderizarProductos() {
   const productosFiltrados = filtrarProductos();
   const inicio = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
   const paginados = productosFiltrados.slice(inicio, inicio + PRODUCTOS_POR_PAGINA);
 
   if (!elementos.galeriaProductos) return;
+
+  // Eliminar los escuchadores de eventos existentes de todas las tarjetas de producto antes de volver a renderizar
+  elementos.galeriaProductos.querySelectorAll('.producto-card').forEach(card => {
+    card.removeEventListener('click', manejarEventosGaleria);
+  });
 
   if (paginados.length === 0) {
     elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No se encontraron productos.</p>';
@@ -603,11 +609,17 @@ function renderizarProductos() {
 
   renderizarPaginacion(productosFiltrados.length);
 
-  // Agregar eventos para ver detalle o agregar al carrito
+  // Añadir escuchadores de eventos a las tarjetas de producto recién renderizadas o actualizadas
   elementos.galeriaProductos.querySelectorAll('.producto-card').forEach(card => {
     card.addEventListener('click', manejarEventosGaleria);
   });
 }
+
+
+
+
+
+
 function renderizarPaginacion(totalProductos) {
   const totalPages = Math.ceil(totalProductos / PRODUCTOS_POR_PAGINA);
   const paginacionContainer = elementos.paginacion;
