@@ -470,48 +470,42 @@ function agregarAlCarrito(id, cantidad = 1, boton = null) {
     boton.innerHTML = `Agregando <span class="spinner"></span>`;
   }
 
-  const productRef = ref(db, `productos/$<built-in function id>/stock`);
-  runTransaction(productRef, (currentStock) => {
-    if (typeof currentStock !== 'number' || isNaN(currentStock)) {
-      return;
-    }
-    if (currentStock < cantidadAgregar) return;
-    return currentStock - cantidadAgregar;
-  }).then((res) => {
-    if (!res.committed) {
-      mostrarNotificacion('❌ Stock insuficiente', 'error');
-      return;
-    }
+  const productRef = ref(db, `productos/${id}/stock`);
+runTransaction(productRef, (currentStock) => {
+  if (typeof currentStock !== 'number' || isNaN(currentStock)) {
+    currentStock = 0; // aseguramos que sea un número
+  }
 
-    if (enCarrito) {
-      enCarrito.cantidad += cantidadAgregar;
-    } else {
-      carrito.push({
-        id: producto.id,
-        nombre: producto.nombre,
-        precio: producto.precio,
-        cantidad: cantidadAgregar,
-        imagen: producto.imagenes?.[0] || PLACEHOLDER_IMAGE
-      });
-    }
+  if (currentStock < cantidadAgregar) return; // cancela si no hay stock suficiente
+  return currentStock - cantidadAgregar;
+}).then((res) => {
+  if (!res.committed) {
+    mostrarNotificacion('❌ Stock insuficiente', 'error');
+    return;
+  }
 
-    guardarCarrito();
-    renderizarCarrito();
-    renderizarProductos();
-    mostrarNotificacion("✅ Producto agregado al carrito", "exito");
+  if (enCarrito) {
+    enCarrito.cantidad += cantidadAgregar;
+  } else {
+    carrito.push({
+      id: producto.id,
+      nombre: producto.nombre,
+      precio: producto.precio,
+      cantidad: cantidadAgregar,
+      imagen: producto.imagenes?.[0] || PLACEHOLDER_IMAGE
+    });
+  }
 
-  }).catch((error) => {
-    console.error("Error al agregar al carrito:", error);
-    mostrarNotificacion("⚠️ Error inesperado al agregar al carrito", "error");
+  guardarCarrito();
+  renderizarCarrito();
+  renderizarProductos();
+  mostrarNotificacion("✅ Producto agregado al carrito", "exito");
 
-  }).finally(() => {
-    if (boton) {
-      boton.disabled = false;
-      boton.innerHTML = textoOriginal;
-    }
-  });
+}).catch((error) => {
+  console.error("Error al agregar al carrito:", error);
+  mostrarNotificacion("⚠️ Error inesperado al agregar al carrito", "error");
+});
 }
-
 
 
 
