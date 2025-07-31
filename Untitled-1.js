@@ -456,24 +456,25 @@ function agregarAlCarrito(id, cantidad = 1, boton = null) {
   }
 
   const enCarrito = carrito.find(item => item.id === id);
-  if (boton) boton.disabled = true;
+
+  // Guardar texto original y mostrar spinner
+  let textoOriginal = null;
+  if (boton) {
+    boton.disabled = true;
+    textoOriginal = boton.innerHTML;
+    boton.innerHTML = `Agregando <span class="spinner"></span>`;
+  }
 
   const productRef = ref(db, `productos/${id}/stock`);
   runTransaction(productRef, (currentStock) => {
-    // Validación del stock actual
     if (typeof currentStock !== 'number' || isNaN(currentStock)) {
-      console.warn(`Stock inválido para producto ID ${id}, abortando operación`);
-      return; // aborta la transacción
+      return;
     }
-
-    if (currentStock < cantidadAgregar) {
-      return; // no hay stock suficiente
-    }
-
-    return currentStock - cantidadAgregar; // nuevo stock
+    if (currentStock < cantidadAgregar) return;
+    return currentStock - cantidadAgregar;
   }).then((res) => {
     if (!res.committed) {
-      mostrarNotificacion('❌ Stock insuficiente o producto sin stock válido', 'error');
+      mostrarNotificacion('❌ Stock insuficiente', 'error');
       return;
     }
 
@@ -499,9 +500,13 @@ function agregarAlCarrito(id, cantidad = 1, boton = null) {
     mostrarNotificacion("⚠️ Error inesperado al agregar al carrito", "error");
 
   }).finally(() => {
-    if (boton) boton.disabled = false;
+    if (boton) {
+      boton.disabled = false;
+      boton.innerHTML = textoOriginal;
+    }
   });
 }
+
 
 
 
@@ -559,6 +564,27 @@ function crearCardProducto(p) {
       <button class="boton-detalles" data-id="${p.id}">🔍 Ver Detalle</button>
     </div>
   `;
+}
+
+
+function manejarEventosGaleria(e) {
+  const boton = e.target.closest('button');
+  const tarjeta = e.target.closest('[data-id]');
+  if (!tarjeta || !boton) return;
+
+  const id = parseInt(tarjeta.dataset.id);
+  const producto = productos.find(p => p.id === id);
+  if (!producto || isNaN(id)) return;
+
+  e.stopPropagation();
+
+  if (boton.classList.contains('boton-detalles')) {
+    verDetalle(id);
+  } else if (boton.classList.contains('boton-agregar')) {
+    agregarAlCarrito(id, 1, boton); // le pasamos el botón para el spinner
+  } else if (boton.classList.contains('boton-aviso-stock')) {
+    preguntarStock(boton.dataset.nombre || producto.nombre);
+  }
 }
 function renderizarProductos() {
   const productosFiltrados = filtrarProductos();
