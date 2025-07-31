@@ -471,41 +471,47 @@ function agregarAlCarrito(id, cantidad = 1, boton = null) {
   }
 
   const productRef = ref(db, `productos/${id}/stock`);
-runTransaction(productRef, (currentStock) => {
-  if (typeof currentStock !== 'number' || isNaN(currentStock)) {
-    currentStock = 0; // aseguramos que sea un número
-  }
+  runTransaction(productRef, (currentStock) => {
+    if (typeof currentStock !== 'number' || isNaN(currentStock)) {
+      currentStock = 0;
+    }
 
-  if (currentStock < cantidadAgregar) return; // cancela si no hay stock suficiente
-  return currentStock - cantidadAgregar;
-}).then((res) => {
-  if (!res.committed) {
-    mostrarNotificacion('❌ Stock insuficiente', 'error');
-    return;
-  }
+    if (currentStock < cantidadAgregar) return;
+    return currentStock - cantidadAgregar;
+  }).then((res) => {
+    if (!res.committed) {
+      mostrarNotificacion('❌ Stock insuficiente', 'error');
+      return;
+    }
 
-  if (enCarrito) {
-    enCarrito.cantidad += cantidadAgregar;
-  } else {
-    carrito.push({
-      id: producto.id,
-      nombre: producto.nombre,
-      precio: producto.precio,
-      cantidad: cantidadAgregar,
-      imagen: producto.imagenes?.[0] || PLACEHOLDER_IMAGE
-    });
-  }
+    if (enCarrito) {
+      enCarrito.cantidad += cantidadAgregar;
+    } else {
+      carrito.push({
+        id: producto.id,
+        nombre: producto.nombre,
+        precio: producto.precio,
+        cantidad: cantidadAgregar,
+        imagen: producto.imagenes?.[0] || PLACEHOLDER_IMAGE
+      });
+    }
 
-  guardarCarrito();
-  renderizarCarrito();
-  renderizarProductos();
-  mostrarNotificacion("✅ Producto agregado al carrito", "exito");
+    guardarCarrito();
+    renderizarCarrito();
+    renderizarProductos();
+    mostrarNotificacion("✅ Producto agregado al carrito", "exito");
 
-}).catch((error) => {
-  console.error("Error al agregar al carrito:", error);
-  mostrarNotificacion("⚠️ Error inesperado al agregar al carrito", "error");
-});
+  }).catch((error) => {
+    console.error("Error al agregar al carrito:", error);
+    mostrarNotificacion("⚠️ Error inesperado al agregar al carrito", "error");
+  }).finally(() => {
+    if (boton) {
+      boton.disabled = false;
+      boton.innerHTML = textoOriginal;
+    }
+  });
 }
+
 
 
 
