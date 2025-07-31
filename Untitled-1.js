@@ -1215,10 +1215,12 @@ document.body.addEventListener("click", async (e) => {
     const id = parseInt(e.target.dataset.id);
     const producto = productos.find(p => p.id === id);
     if (producto) {
-      await agregarAlCarrito(producto, 1);
+      await agregarAlCarrito(id, 1);
     }
   }
 });
+
+
 
 // Botón Vaciar Carrito
 document.querySelector(".boton-vaciar-carrito").addEventListener("click", () => {
