@@ -429,51 +429,6 @@ function toggleCarrito(forceState) {
 // ===============================
 
 
-    const btnPrev = contenido.querySelector('.modal-prev'); //
-    const btnNext = contenido.querySelector('.modal-next'); //
-    const thumbnails = contenido.querySelectorAll('.thumbnail'); //
-
-    btnPrev?.addEventListener('click', () => { //
-      if (currentIndex > 0) { //
-        currentIndex--; //
-        renderCarrusel(); //
-      }
-    });
-
-    btnNext?.addEventListener('click', () => { //
-      if (currentIndex < producto.imagenes.length - 1) { //
-        currentIndex++; //
-        renderCarrusel(); //
-      }
-    });
-
-    thumbnails.forEach(th => { //
-      th.addEventListener('click', () => { //
-        currentIndex = parseInt(th.dataset.index); //
-        renderCarrusel(); //
-      });
-    });
-  
-
-  renderCarrusel(); // Initial call to render and attach listeners for the modal content
-
-  modal.style.display = 'flex'; //
-  setTimeout(() => { //
-    modal.classList.add('visible'); //
-    document.body.classList.add('no-scroll'); //
-  }, 10); //
-
-  modal.onclick = e => { //
-    if (e.target === modal) cerrarModal(); //
-  };
-
-  function cerrarModal() {
-    modal.classList.remove('visible'); //
-    setTimeout(() => { //
-      modal.style.display = 'none'; //
-      document.body.classList.remove('no-scroll'); //
-    }, 300); //
-  }
 
 // Función para manejar eventos delegados
 function manejarEventosGaleria(e) {
