@@ -374,6 +374,7 @@ btnCerrarModalEnvio?.addEventListener('click', () => {
 // ========== ENVIAR PEDIDO POR WHATSAPP ==========
 formEnvio?.addEventListener('submit', function(e) {
   e.preventDefault();
+
   const nombre = document.getElementById('input-nombre').value.trim();
   const apellido = document.getElementById('input-apellido').value.trim();
   const telefono = document.getElementById('input-telefono').value.trim();
@@ -388,26 +389,42 @@ formEnvio?.addEventListener('submit', function(e) {
 
   let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n`;
   mensaje += `*📋 Detalles del pedido:*\n`;
+
+  let subtotal = 0;
   carrito.forEach(item => {
-    mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}\n`;
+    const subtotalItem = item.precio * item.cantidad;
+    subtotal += subtotalItem;
+    mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${subtotalItem.toLocaleString('es-UY')}\n`;
   });
-  const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-  const costoEnvio = envio === 'montevideo' ? 150 : envio === 'interior' ? 300 : 0;
+
+  // Calcular costo de envío
+  let costoEnvio = 0;
+  let textoEnvio = 'Retiro en local (Gratis)';
+  if (envio === 'montevideo') {
+    costoEnvio = 150;
+    textoEnvio = 'Envío Montevideo ($150)';
+  } else if (envio === 'interior') {
+    costoEnvio = 300;
+    textoEnvio = 'Envío Interior ($300)';
+  }
   const total = subtotal + costoEnvio;
+
   mensaje += `\n*💰 Total:*\n`;
   mensaje += `Subtotal: $U ${subtotal.toLocaleString('es-UY')}\n`;
   mensaje += `Envío: $U ${costoEnvio.toLocaleString('es-UY')}\n`;
   mensaje += `*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
+
   mensaje += `*👤 Datos del cliente:*\n`;
   mensaje += `Nombre: ${nombre} ${apellido}\n`;
   mensaje += `Teléfono: ${telefono}\n`;
-  mensaje += `Método de envío: ${envio === 'montevideo' ? 'Envío Montevideo ($150)' : envio === 'interior' ? 'Envío Interior ($300)' : 'Retiro en local (Gratis)'}\n`;
+  mensaje += `Método de envío: ${textoEnvio}\n`;
   if (envio !== 'retiro') {
     mensaje += `Dirección: ${direccion}\n`;
   }
   if (notas) {
     mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
   }
+
   const numeroWhatsApp = '59893566283';
   sessionStorage.setItem('ultimoPedidoWhatsApp', mensaje);
   const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
@@ -417,6 +434,7 @@ formEnvio?.addEventListener('submit', function(e) {
       window.location.href = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${encodeURIComponent(mensaje)}`;
     }
   }, 500);
+
   setTimeout(() => {
     modalDatosEnvio.classList.remove('visible');
     setTimeout(() => {
