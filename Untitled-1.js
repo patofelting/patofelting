@@ -987,18 +987,16 @@ document.getElementById('form-envio')?.addEventListener('submit', function(e) {
       document.getElementById('form-envio').reset();
     }, 300);
   }, 1000);
-}
+});
 
-// ===============================
-// CONTROLADORES PARA LOS SLIDERS DE PRECIO
-// ===============================
-// ================= FILTROS DE PRECIO =================
 
-const minSlider = document.getElementById('min-slider');
-const maxSlider = document.getElementById('max-slider');
-const minPrice = document.getElementById('min-price');
-const maxPrice = document.getElementById('max-price');
-const range = document.querySelector('.range');
+
+const minSlider = document.getElementById("min-slider");
+const maxSlider = document.getElementById("max-slider");
+const minPrice = document.getElementById("min-price");
+const maxPrice = document.getElementById("max-price");
+const range = document.querySelector(".range");
+
 
 function updateRange() {
   let minVal = parseInt(minSlider.value);
