@@ -348,24 +348,61 @@ const modalDatosEnvio = document.getElementById('modal-datos-envio');
 const btnCerrarModalEnvio = document.getElementById('btn-cerrar-modal-envio');
 const formEnvio = document.getElementById('form-envio');
 
-elementos.btnFinalizarCompra?.addEventListener('click', (e) => {
-  e.preventDefault();
-  avisoPreCompraModal?.removeAttribute('hidden');
-  avisoPreCompraModal?.classList.add('visible');
-});
+// ---------- RESUMEN DEL PEDIDO EN EL MODAL ----------
+function renderizarResumenPedidoEnvio() {
+  const resumenProductos = document.getElementById('resumen-productos');
+  const resumenTotal = document.getElementById('resumen-total');
+  const selectEnvio = document.getElementById('select-envio');
+  if (!resumenProductos || !resumenTotal) return;
 
+  let html = '';
+  let subtotal = 0;
+  carrito.forEach(item => {
+    const subtotalItem = item.precio * item.cantidad;
+    subtotal += subtotalItem;
+    html += `<div>${item.nombre} x${item.cantidad} - $U ${subtotalItem.toLocaleString('es-UY')}</div>`;
+  });
+
+  let envio = selectEnvio?.value || '';
+  let costoEnvio = 0;
+  let textoEnvio = 'Retiro en local (Gratis)';
+  if (envio === 'montevideo') {
+    costoEnvio = 150;
+    textoEnvio = 'Envío Montevideo ($150)';
+  } else if (envio === 'interior') {
+    costoEnvio = 300;
+    textoEnvio = 'Envío Interior ($300)';
+  }
+
+  html += `<div><strong>Envío:</strong> $U ${costoEnvio.toLocaleString('es-UY')} (${textoEnvio})</div>`;
+  const total = subtotal + costoEnvio;
+  resumenProductos.innerHTML = html;
+  resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
+}
+
+// Al abrir el modal de datos de envío, renderiza el resumen
 btnEntendidoAviso?.addEventListener('click', () => {
   avisoPreCompraModal?.setAttribute('hidden', true);
   avisoPreCompraModal?.classList.remove('visible');
   modalDatosEnvio?.removeAttribute('hidden');
   modalDatosEnvio?.classList.add('visible');
+  renderizarResumenPedidoEnvio();
+});
+// Si cambia el método de envío, actualiza el resumen
+document.getElementById('select-envio')?.addEventListener('change', () => {
+  renderizarResumenPedidoEnvio();
 });
 
+// Resto del flujo de modales
+elementos.btnFinalizarCompra?.addEventListener('click', (e) => {
+  e.preventDefault();
+  avisoPreCompraModal?.removeAttribute('hidden');
+  avisoPreCompraModal?.classList.add('visible');
+});
 btnCancelarAviso?.addEventListener('click', () => {
   avisoPreCompraModal?.setAttribute('hidden', true);
   avisoPreCompraModal?.classList.remove('visible');
 });
-
 btnCerrarModalEnvio?.addEventListener('click', () => {
   modalDatosEnvio?.classList.remove('visible');
   setTimeout(() => { modalDatosEnvio?.setAttribute('hidden', true); }, 300);
@@ -387,6 +424,7 @@ formEnvio?.addEventListener('submit', function(e) {
     return;
   }
 
+  // --- ARMA EL MENSAJE Y LOS TOTALES IGUAL AL RESUMEN ---
   let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n`;
   mensaje += `*📋 Detalles del pedido:*\n`;
 
@@ -397,7 +435,6 @@ formEnvio?.addEventListener('submit', function(e) {
     mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${subtotalItem.toLocaleString('es-UY')}\n`;
   });
 
-  // Calcular costo de envío
   let costoEnvio = 0;
   let textoEnvio = 'Retiro en local (Gratis)';
   if (envio === 'montevideo') {
@@ -445,6 +482,7 @@ formEnvio?.addEventListener('submit', function(e) {
       renderizarProductos();
       mostrarNotificacion('Pedido listo para enviar por WhatsApp', 'exito');
       formEnvio.reset();
+      renderizarResumenPedidoEnvio();
     }, 300);
   }, 1000);
 });
