@@ -168,41 +168,7 @@
     <input type="text" class="input-busqueda" placeholder="Buscar por nombre o descripción...">
   </div>
 </section>        </div>
-      <div id="galeria-productos" class="galeria-productos">
-        <!-- Productos de ejemplo para probar el fondo -->
-        <div class="producto-card">
-          <img src="https://via.placeholder.com/300x300/7ed957/fff?text=Producto+1" alt="Producto 1" class="producto-img">
-          <h3 class="producto-nombre">Figura de Gatito</h3>
-          <p class="producto-precio">$U 850</p>
-          <div class="card-acciones">
-            <input type="number" value="1" min="1" class="cantidad-input">
-            <button class="boton-agregar">Agregar</button>
-          </div>
-          <button class="boton-detalles" onclick="abrirModal('producto1')">Ver Detalles</button>
-        </div>
-        
-        <div class="producto-card">
-          <img src="https://via.placeholder.com/300x300/43c160/fff?text=Producto+2" alt="Producto 2" class="producto-img">
-          <h3 class="producto-nombre">Unicornio Mágico</h3>
-          <p class="producto-precio">$U 1200</p>
-          <div class="card-acciones">
-            <input type="number" value="1" min="1" class="cantidad-input">
-            <button class="boton-agregar">Agregar</button>
-          </div>
-          <button class="boton-detalles" onclick="abrirModal('producto2')">Ver Detalles</button>
-        </div>
-        
-        <div class="producto-card">
-          <img src="https://via.placeholder.com/300x300/28705b/fff?text=Producto+3" alt="Producto 3" class="producto-img">
-          <h3 class="producto-nombre">Perrito Feliz</h3>
-          <p class="producto-precio">$U 950</p>
-          <div class="card-acciones">
-            <input type="number" value="1" min="1" class="cantidad-input">
-            <button class="boton-agregar">Agregar</button>
-          </div>
-          <button class="boton-detalles" onclick="abrirModal('producto3')">Ver Detalles</button>
-        </div>
-      </div>
+      <div id="galeria-productos" class="galeria-productos"></div>
       <div id="product-loader" class="loader" hidden aria-live="polite">
         <svg class="spinner" viewBox="0 0 50 50">
           <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"/>
@@ -394,56 +360,5 @@
   </footer>
 
   <script src="Untitled-1.js" defer type="module"></script>
-  <script>
-    // Función simple para probar el modal
-    function abrirModal(productoId) {
-      const modal = document.getElementById('producto-modal');
-      const modalNombre = document.getElementById('modal-nombre');
-      const modalDescripcion = document.getElementById('modal-descripcion');
-      const modalPrecio = document.getElementById('modal-precio');
-      const modalImagen = document.getElementById('modal-imagen');
-      
-      // Datos de ejemplo
-      const productos = {
-        'producto1': {
-          nombre: 'Figura de Gatito',
-          descripcion: 'Adorable gatito de fieltro hecho a mano con amor y dedicación. Perfecto para decorar cualquier espacio.',
-          precio: '$U 850',
-          imagen: 'https://via.placeholder.com/400x400/7ed957/fff?text=Gatito+Detalle'
-        },
-        'producto2': {
-          nombre: 'Unicornio Mágico',
-          descripcion: 'Unicornio mágico de fieltro con cuerno dorado y crin colorida. Una pieza única llena de fantasía.',
-          precio: '$U 1200',
-          imagen: 'https://via.placeholder.com/400x400/43c160/fff?text=Unicornio+Detalle'
-        },
-        'producto3': {
-          nombre: 'Perrito Feliz',
-          descripcion: 'Perrito sonriente de fieltro que transmite alegría y ternura. Ideal como regalo o compañía.',
-          precio: '$U 950',
-          imagen: 'https://via.placeholder.com/400x400/28705b/fff?text=Perrito+Detalle'
-        }
-      };
-      
-      const producto = productos[productoId];
-      if (producto) {
-        modalNombre.textContent = producto.nombre;
-        modalDescripcion.textContent = producto.descripcion;
-        modalPrecio.textContent = producto.precio;
-        modalImagen.src = producto.imagen;
-        
-        modal.classList.add('visible');
-        modal.style.display = 'flex';
-      }
-    }
-    
-    function cerrarModal() {
-      const modal = document.getElementById('producto-modal');
-      modal.classList.remove('visible');
-      setTimeout(() => {
-        modal.style.display = 'none';
-      }, 300);
-    }
-  </script>
 </body>
 </html>
