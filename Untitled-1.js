@@ -473,26 +473,28 @@ function toggleCarrito(forceState) {
 // Función para manejar eventos delegados
 async function agregarAlCarrito(id, cantidadAgregar = 1, boton = null) {
   try {
+    if (cantidadAgregar <= 0) {
+      mostrarNotificacion("Cantidad inválida", "error");
+      return;
+    }
+
     const producto = productos.find(p => p.id === id);
     if (!producto) {
       mostrarNotificacion("❌ Producto no encontrado", "error");
       return;
     }
 
+    if (boton) boton.disabled = true;
+
     const stockRef = ref(db, `productos/${id}/stock`);
     const resultado = await runTransaction(stockRef, (stockActual) => {
-      if (typeof stockActual !== 'number') return stockActual;
-
-      // ¿Hay suficiente stock?
-      if (stockActual < cantidadAgregar) {
-        return; // Cancela la transacción
-      }
-
-      return stockActual - cantidadAgregar; // Descuenta el stock
+      if (isNaN(stockActual) || stockActual < cantidadAgregar) return;
+      return stockActual - cantidadAgregar;
     });
 
     if (!resultado.committed) {
       mostrarNotificacion("❌ Stock insuficiente", "error");
+      if (boton) boton.disabled = false;
       return;
     }
 
@@ -503,8 +505,12 @@ async function agregarAlCarrito(id, cantidadAgregar = 1, boton = null) {
       carrito.push({ ...producto, cantidad: cantidadAgregar });
     }
 
+    guardarCarrito();
+    renderizarCarrito();
+    renderizarProductos();
+    mostrarNotificacion("✅ Producto agregado al carrito", "exito");
+
     if (boton) {
-      boton.disabled = true;
       const original = boton.innerHTML;
       boton.innerHTML = 'Agregando...';
       setTimeout(() => {
@@ -512,20 +518,31 @@ async function agregarAlCarrito(id, cantidadAgregar = 1, boton = null) {
         boton.disabled = false;
       }, 1000);
     }
-
-    guardarCarrito();
-    renderizarCarrito();
-    renderizarProductos();
-    mostrarNotificacion("✅ Producto agregado al carrito", "exito");
-
   } catch (err) {
     console.error("⚠️ Error al agregar al carrito:", err);
     mostrarNotificacion("Error al agregar producto", "error");
+    if (boton) boton.disabled = false;
   }
 }
 
 
 
+function escucharStockTiempoReal(id, callback) {
+  const stockRef = ref(db, `productos/${id}/stock`);
+  onValue(stockRef, (snapshot) => {
+    const nuevoStock = snapshot.val();
+    if (typeof nuevoStock === 'number') {
+      callback(nuevoStock);
+    }
+  });
+}
+
+
+escucharStockTiempoReal(producto.id, (nuevoStock) => {
+  console.log(`Stock actualizado para ${producto.nombre}: ${nuevoStock}`);
+  producto.stock = nuevoStock;
+  renderizarProductos();
+});
 
 
 
