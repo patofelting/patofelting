@@ -1,14 +1,12 @@
-// ===============================
-// CONFIGURACIÓN GLOBAL
-// ===============================
+// ========== CONFIGURACIÓN GLOBAL ==========
 const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
-// ======== Firebase Init ========
+// ========== INICIALIZAR FIREBASE ==========
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getDatabase, ref, runTransaction, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
@@ -24,9 +22,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 signInAnonymously(auth);
 
-// ===============================
-// ESTADO GLOBAL
-// ===============================
+// ========== ESTADO GLOBAL ==========
 let productos = [];
 let carrito = [];
 let paginaActual = 1;
@@ -37,10 +33,8 @@ let filtrosActuales = {
   busqueda: ''
 };
 
-// ===============================
-// REFERENCIAS DOM
-// ===============================
-const getEl = id => document.getElementById(id);
+// ========== REFERENCIAS DOM ==========
+function getEl(id) { return document.getElementById(id); }
 const elementos = {
   galeria: getEl('galeria-productos'),
   paginacion: getEl('paginacion'),
@@ -63,9 +57,7 @@ const elementos = {
   faqToggles: document.querySelectorAll('.faq-toggle')
 };
 
-// ===============================
-// UTILIDADES
-// ===============================
+// ========== UTILIDADES ==========
 function mostrarNotificacion(msg, tipo = 'exito') {
   const noti = document.createElement('div');
   noti.className = `notificacion ${tipo}`;
@@ -78,9 +70,7 @@ function mostrarNotificacion(msg, tipo = 'exito') {
   }, 2200);
 }
 
-// ===============================
-// CARRITO STORAGE Y RENDER
-// ===============================
+// ========== CARRITO (SOLO FRONTEND) ==========
 function guardarCarrito() {
   localStorage.setItem(LS_CARRITO_KEY, JSON.stringify(carrito));
   actualizarContadorCarrito();
@@ -107,19 +97,19 @@ function renderizarCarrito() {
     const prod = productos.find(p => p.id === item.id) || item;
     const disponibles = Math.max(0, prod.stock - item.cantidad);
     return `
-    <li class="carrito-item" data-id="${item.id}">
-      <img src="${prod.imagenes?.[0] || PLACEHOLDER_IMAGE}" class="carrito-item-img" alt="${prod.nombre}">
-      <div class="carrito-item-info">
-        <span class="carrito-item-nombre">${prod.nombre}</span>
-        <span class="carrito-item-precio">$U ${prod.precio.toLocaleString('es-UY')}</span>
-        <div class="carrito-item-controls">
-          <button class="disminuir-cantidad" data-id="${item.id}" ${item.cantidad <= 1 ? 'disabled' : ''}>-</button>
-          <span class="carrito-item-cantidad">${item.cantidad}</span>
-          <button class="aumentar-cantidad" data-id="${item.id}" ${disponibles <= 0 ? 'disabled' : ''}>+</button>
+      <li class="carrito-item" data-id="${item.id}">
+        <img src="${prod.imagenes?.[0] || PLACEHOLDER_IMAGE}" class="carrito-item-img" alt="${prod.nombre}">
+        <div class="carrito-item-info">
+          <span class="carrito-item-nombre">${prod.nombre}</span>
+          <span class="carrito-item-precio">$U ${prod.precio.toLocaleString('es-UY')}</span>
+          <div class="carrito-item-controls">
+            <button class="disminuir-cantidad" data-id="${item.id}" ${item.cantidad <= 1 ? 'disabled' : ''}>-</button>
+            <span class="carrito-item-cantidad">${item.cantidad}</span>
+            <button class="aumentar-cantidad" data-id="${item.id}" ${disponibles <= 0 ? 'disabled' : ''}>+</button>
+          </div>
+          <span class="carrito-item-subtotal">Subtotal: $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
         </div>
-        <span class="carrito-item-subtotal">Subtotal: $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
-      </div>
-    </li>
+      </li>
     `;
   }).join('');
   const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
@@ -145,9 +135,7 @@ function modificarCantidadEnCarrito(id, delta) {
   renderizarProductos();
 }
 
-// ===============================
-// PRODUCTOS Y STOCK EN TIEMPO REAL
-// ===============================
+// ========== LECTURA DE PRODUCTOS (SOLO LEE FIREBASE) ==========
 function escucharProductosFirebase() {
   const productosRef = ref(db, 'productos');
   onValue(productosRef, snap => {
@@ -187,9 +175,7 @@ function escucharProductosFirebase() {
   });
 }
 
-// ===============================
-// RENDER Y FILTROS
-// ===============================
+// ========== RENDER Y FILTROS ==========
 function filtrarProductos() {
   const { precioMin, precioMax, categoria, busqueda } = filtrosActuales;
   return productos.filter(p => {
@@ -212,7 +198,6 @@ function renderizarProductos() {
   }
   elementos.galeria.innerHTML = paginados.map(crearCardProducto).join('');
   renderizarPaginacion(productosFiltrados.length);
-  // Delegar eventos
   elementos.galeria.querySelectorAll('.producto-card').forEach(card => {
     card.querySelector('.boton-agregar')?.addEventListener('click', e => {
       e.stopPropagation();
@@ -266,10 +251,8 @@ function actualizarCategorias() {
     .join('');
 }
 
-// ===============================
-// AGREGAR AL CARRITO CON STOCK LIVE
-// ===============================
-async function agregarAlCarrito(id, cantidad = 1) {
+// ========== AGREGAR AL CARRITO ==========
+function agregarAlCarrito(id, cantidad = 1) {
   const prod = productos.find(p => p.id === id);
   if (!prod || prod.stock < cantidad) {
     mostrarNotificacion("❌ Stock insuficiente", "error");
@@ -292,9 +275,7 @@ async function agregarAlCarrito(id, cantidad = 1) {
 }
 window.agregarAlCarrito = agregarAlCarrito;
 
-// ===============================
-// MODAL DETALLE DE PRODUCTO
-// ===============================
+// ========== MODAL DETALLE ==========
 function verDetalle(id) {
   const prod = productos.find(p => p.id === id);
   if (!prod) return mostrarNotificacion("Producto no encontrado", "error");
@@ -356,9 +337,7 @@ function cerrarModal() {
   elementos.modal?.classList.remove('visible');
 }
 
-// ===============================
-// CARRITO UI
-// ===============================
+// ========== CARRITO UI ==========
 function toggleCarrito(forceState) {
   if (!elementos.carritoPanel || !elementos.carritoOverlay) return;
   let isOpen = typeof forceState === 'boolean'
@@ -370,9 +349,7 @@ function toggleCarrito(forceState) {
   if (isOpen) renderizarCarrito();
 }
 
-// ===============================
-// FILTROS Y EVENTOS
-// ===============================
+// ========== FILTROS, FAQ, EVENTOS ==========
 function aplicarFiltros() {
   paginaActual = 1;
   renderizarProductos();
@@ -385,10 +362,6 @@ function resetearFiltros() {
   if (elementos.maxSlider) elementos.maxSlider.value = '';
   aplicarFiltros();
 }
-
-// ===============================
-// FAQ INTERACTIVO
-// ===============================
 function inicializarFAQ() {
   document.querySelectorAll('.faq-toggle').forEach(toggle => {
     toggle.addEventListener('click', function () {
@@ -399,10 +372,6 @@ function inicializarFAQ() {
     });
   });
 }
-
-// ===============================
-// INICIALIZACIÓN GENERAL
-// ===============================
 function inicializarEventos() {
   elementos.carritoBtn?.addEventListener('click', () => toggleCarrito(true));
   elementos.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
@@ -434,9 +403,7 @@ function inicializarEventos() {
   inicializarFAQ();
 }
 
-// ===============================
-// INICIO
-// ===============================
+// ========== INICIO ==========
 document.addEventListener('DOMContentLoaded', () => {
   escucharProductosFirebase();
   cargarCarrito();
