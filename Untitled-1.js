@@ -468,24 +468,32 @@ async function agregarAlCarrito(id, cantidadAgregar = 1, boton = null) {
   try {
     const producto = productos.find(p => p.id === id);
     if (!producto) {
-      mostrarNotificacion("Producto no encontrado", "error");
-      return;
-    }
-
-    // Ya en carrito
-    const enCarrito = carrito.find(item => item.id === id);
-    if (enCarrito) {
-      mostrarNotificacion("⚠️ Ya tienes este producto en el carrito", "info");
+      mostrarNotificacion("❌ Producto no encontrado", "error");
       return;
     }
 
     const stockRef = ref(db, `productos/${id}/stock`);
-    const snapshot = await get(stockRef);
-    const stockFirebase = snapshot.exists() ? parseInt(snapshot.val()) : 0;
+    const resultado = await runTransaction(stockRef, (stockActual) => {
+      if (typeof stockActual !== 'number') return stockActual;
 
-    if (stockFirebase < 1) {
+      // ¿Hay suficiente stock?
+      if (stockActual < cantidadAgregar) {
+        return; // Cancela la transacción
+      }
+
+      return stockActual - cantidadAgregar; // Descuenta el stock
+    });
+
+    if (!resultado.committed) {
       mostrarNotificacion("❌ Stock insuficiente", "error");
       return;
+    }
+
+    const enCarrito = carrito.find(item => item.id === id);
+    if (enCarrito) {
+      enCarrito.cantidad += cantidadAgregar;
+    } else {
+      carrito.push({ ...producto, cantidad: cantidadAgregar });
     }
 
     if (boton) {
@@ -498,15 +506,17 @@ async function agregarAlCarrito(id, cantidadAgregar = 1, boton = null) {
       }, 1000);
     }
 
-    carrito.push({ ...producto, cantidad: 1 });
     guardarCarrito();
     renderizarCarrito();
-    mostrarNotificacion("✅ Producto agregado", "exito");
+    renderizarProductos();
+    mostrarNotificacion("✅ Producto agregado al carrito", "exito");
+
   } catch (err) {
-    console.error("Error al agregar producto:", err);
+    console.error("⚠️ Error al agregar al carrito:", err);
     mostrarNotificacion("Error al agregar producto", "error");
   }
 }
+
 
 
 
@@ -1156,5 +1166,64 @@ function actualizarCarritoUI() {
   const carritoBtn = document.querySelector('.carrito-icono span');
   if (carritoBtn) carritoBtn.textContent = `(${carrito.length})`;
 }
+
+
 window.verDetalle = verDetalle;
 window.agregarAlCarrito = agregarAlCarrito;
+
+
+// Asumiendo que firebase ya fue inicializado y tienes acceso a: db = window.firebaseDatabase
+
+async function obtenerStockActual(idProducto) {
+  const stockRef = ref(db, `productos/${idProducto}/stock`);
+  const snapshot = await get(stockRef);
+  if (!snapshot.exists()) return 0;
+  return parseInt(snapshot.val(), 10) || 0;
+}
+
+
+
+async function vaciarCarrito() {
+  if (carrito.length === 0) {
+    mostrarNotificacion("El carrito ya está vacío", "info");
+    return;
+  }
+
+  try {
+    await Promise.all(
+      carrito.map(async (item) => {
+        const stockRef = ref(db, `productos/${item.id}/stock`);
+        await runTransaction(stockRef, (currentStock) => {
+          return typeof currentStock === 'number'
+            ? currentStock + item.cantidad
+            : item.cantidad;
+        });
+      })
+    );
+
+    carrito = [];
+    guardarCarrito();
+    renderizarCarrito();
+    renderizarProductos();
+    mostrarNotificacion("Carrito vaciado correctamente", "exito");
+  } catch (error) {
+    console.error("Error al vaciar carrito:", error);
+    mostrarNotificacion("Error al vaciar el carrito", "error");
+  }
+}
+
+// Vincula el botón AGREGAR (Ejemplo)
+document.body.addEventListener("click", async (e) => {
+  if (e.target.classList.contains("boton-agregar")) {
+    const id = parseInt(e.target.dataset.id);
+    const producto = productos.find(p => p.id === id);
+    if (producto) {
+      await agregarAlCarrito(producto, 1);
+    }
+  }
+});
+
+// Botón Vaciar Carrito
+document.querySelector(".boton-vaciar-carrito").addEventListener("click", () => {
+  vaciarCarrito();
+});
