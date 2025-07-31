@@ -2351,3 +2351,106 @@ body.no-scroll {
     transform: rotate(360deg);
   }
 }
+
+/* Stock management styles */
+.producto-stock {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.producto-stock.disponible {
+  color: #2E7D32;
+  background-color: rgba(76, 175, 80, 0.1);
+}
+
+.producto-stock.agotado {
+  color: #d32f2f;
+  background-color: rgba(244, 67, 54, 0.1);
+}
+
+.cantidad-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.cantidad-controls.disabled {
+  opacity: 0.5;
+}
+
+.cantidad-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0;
+}
+
+.cantidad-input {
+  width: 60px;
+  padding: 6px 8px;
+  border: 1px solid var(--medium-gray);
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.cantidad-input:disabled {
+  background-color: var(--light-gray);
+  cursor: not-allowed;
+}
+
+.cantidad-modal-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.cantidad-modal-container label {
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0;
+}
+
+.carrito-stock-info {
+  font-size: 0.8rem;
+  color: var(--dark-gray);
+  margin-bottom: 5px;
+}
+
+.carrito-cantidad-input {
+  width: 50px;
+  padding: 4px 6px;
+  border: 1px solid var(--medium-gray);
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.carrito-cantidad-input:disabled {
+  background-color: var(--light-gray);
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .cantidad-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 5px;
+  }
+  
+  .cantidad-input {
+    width: 100%;
+  }
+  
+  .cantidad-modal-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+}
