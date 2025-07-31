@@ -6,7 +6,7 @@ const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/400x400/7ed957/fff?text=S
 // ========== INICIALIZAR FIREBASE ==========
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, onValue, runTransaction, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
@@ -95,17 +95,23 @@ function renderizarCarrito() {
   }
   elementos.listaCarrito.innerHTML = carrito.map(item => {
     const prod = productos.find(p => p.id === item.id) || item;
-    const disponibles = Math.max(0, prod.stock - item.cantidad);
+    const stockTotal = prod.stock || 0;
+    const disponibles = Math.max(0, stockTotal + item.cantidad); // Stock real + lo que ya tengo en carrito
+    const puedeAumentar = item.cantidad < disponibles;
+    
     return `
       <li class="carrito-item" data-id="${item.id}">
         <img src="${prod.imagenes?.[0] || PLACEHOLDER_IMAGE}" class="carrito-item-img" alt="${prod.nombre}">
         <div class="carrito-item-info">
           <span class="carrito-item-nombre">${prod.nombre}</span>
           <span class="carrito-item-precio">$U ${prod.precio.toLocaleString('es-UY')}</span>
+          <div class="carrito-stock-info">
+            <small>Stock disponible: ${disponibles} unidades</small>
+          </div>
           <div class="carrito-item-controls">
             <button class="disminuir-cantidad" data-id="${item.id}" ${item.cantidad <= 1 ? 'disabled' : ''}>-</button>
-            <span class="carrito-item-cantidad">${item.cantidad}</span>
-            <button class="aumentar-cantidad" data-id="${item.id}" ${disponibles <= 0 ? 'disabled' : ''}>+</button>
+            <input type="number" class="carrito-cantidad-input" value="${item.cantidad}" min="1" max="${disponibles}" data-id="${item.id}">
+            <button class="aumentar-cantidad" data-id="${item.id}" ${!puedeAumentar ? 'disabled' : ''}>+</button>
           </div>
           <span class="carrito-item-subtotal">Subtotal: $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
         </div>
@@ -114,25 +120,97 @@ function renderizarCarrito() {
   }).join('');
   const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
   elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
+  
+  // Event listeners para los controles
   document.querySelectorAll('.disminuir-cantidad').forEach(btn => {
     btn.onclick = () => modificarCantidadEnCarrito(parseInt(btn.dataset.id), -1);
   });
   document.querySelectorAll('.aumentar-cantidad').forEach(btn => {
     btn.onclick = () => modificarCantidadEnCarrito(parseInt(btn.dataset.id), 1);
   });
+  document.querySelectorAll('.carrito-cantidad-input').forEach(input => {
+    input.addEventListener('change', (e) => {
+      const id = parseInt(e.target.dataset.id);
+      const nuevaCantidad = parseInt(e.target.value);
+      const item = carrito.find(i => i.id === id);
+      if (item && nuevaCantidad > 0) {
+        const diferencia = nuevaCantidad - item.cantidad;
+        modificarCantidadEnCarrito(id, diferencia);
+      }
+    });
+  });
 }
-function modificarCantidadEnCarrito(id, delta) {
+async function modificarCantidadEnCarrito(id, delta) {
   const item = carrito.find(i => i.id === id);
   if (!item) return;
+  
   const prod = productos.find(p => p.id === id);
-  if (delta > 0 && item.cantidad < prod.stock) {
-    item.cantidad++;
-  } else if (delta < 0 && item.cantidad > 1) {
-    item.cantidad--;
+  if (!prod) return;
+
+  const nuevaCantidad = item.cantidad + delta;
+  
+  // Si vamos a disminuir, solo validamos que no sea menor a 1
+  if (delta < 0) {
+    if (nuevaCantidad < 1) return;
+    
+    // Devolver stock a Firebase
+    const productoRef = ref(db, `productos/${id}`);
+    try {
+      await runTransaction(productoRef, (currentData) => {
+        if (currentData === null) return currentData;
+        return {
+          ...currentData,
+          stock: (currentData.stock || 0) + Math.abs(delta)
+        };
+      });
+      
+      item.cantidad = nuevaCantidad;
+      guardarCarrito();
+      renderizarCarrito();
+      renderizarProductos();
+      
+    } catch (error) {
+      console.error("Error al devolver stock:", error);
+      mostrarNotificacion("❌ Error al actualizar cantidad", "error");
+    }
+    return;
   }
-  guardarCarrito();
-  renderizarCarrito();
-  renderizarProductos();
+  
+  // Si vamos a aumentar, validamos stock y usamos transacción
+  if (delta > 0) {
+    const productoRef = ref(db, `productos/${id}`);
+    try {
+      await runTransaction(productoRef, (currentData) => {
+        if (currentData === null) {
+          throw new Error("Producto no encontrado");
+        }
+        
+        const stockActual = currentData.stock || 0;
+        
+        if (stockActual < delta) {
+          throw new Error("Stock insuficiente");
+        }
+        
+        return {
+          ...currentData,
+          stock: stockActual - delta
+        };
+      });
+
+      item.cantidad = nuevaCantidad;
+      guardarCarrito();
+      renderizarCarrito();
+      renderizarProductos();
+      
+    } catch (error) {
+      console.error("Error al modificar cantidad:", error);
+      if (error.message === "Stock insuficiente") {
+        mostrarNotificacion("❌ Stock insuficiente", "error");
+      } else {
+        mostrarNotificacion("❌ Error al actualizar cantidad", "error");
+      }
+    }
+  }
 }
 
 // ========== LECTURA DE PRODUCTOS (SOLO LEE FIREBASE) ==========
@@ -172,7 +250,94 @@ function escucharProductosFirebase() {
     renderizarProductos();
     renderizarCarrito();
     actualizarCategorias();
+  }, (error) => {
+    console.error("Error al cargar productos:", error);
+    // Fallback con productos mock para demostración
+    loadMockProducts();
   });
+}
+
+// Mock products for demonstration when Firebase is not available
+function loadMockProducts() {
+  productos = [
+    {
+      id: 1,
+      nombre: "Gatito de fieltro",
+      precio: 850,
+      stock: 5,
+      categoria: "animales",
+      descripcion: "Adorable gatito hecho en fieltro con aguja. Perfecto para decorar o regalar.",
+      imagenes: [PLACEHOLDER_IMAGE]
+    },
+    {
+      id: 2,
+      nombre: "Hongo mágico",
+      precio: 650,
+      stock: 0,
+      categoria: "fantasia",
+      descripcion: "Hongo fantástico con detalles únicos.",
+      imagenes: [PLACEHOLDER_IMAGE]
+    },
+    {
+      id: 3,
+      nombre: "Perrito golden",
+      precio: 1200,
+      stock: 2,
+      categoria: "animales",
+      descripcion: "Perrito golden retriever en miniatura.",
+      imagenes: [PLACEHOLDER_IMAGE]
+    },
+    {
+      id: 4,
+      nombre: "Unicornio rosa",
+      precio: 950,
+      stock: 8,
+      categoria: "fantasia",
+      descripcion: "Unicornio mágico con crin de colores.",
+      imagenes: [PLACEHOLDER_IMAGE]
+    },
+    {
+      id: 5,
+      nombre: "Búho nocturno",
+      precio: 780,
+      stock: 1,
+      categoria: "animales",
+      descripcion: "Búho con grandes ojos expresivos.",
+      imagenes: [PLACEHOLDER_IMAGE]
+    },
+    {
+      id: 6,
+      nombre: "Dragón bebé",
+      precio: 1450,
+      stock: 3,
+      categoria: "fantasia",
+      descripción: "Pequeño dragón amigable con alas extendidas.",
+      imagenes: [PLACEHOLDER_IMAGE]
+    }
+  ];
+  
+  // Sync carrito con productos mock
+  let cambiado = false;
+  carrito.forEach(item => {
+    const prod = productos.find(p => p.id === item.id);
+    if (prod && item.cantidad > prod.stock) {
+      item.cantidad = prod.stock;
+      cambiado = true;
+    }
+    if (prod && prod.stock === 0) {
+      item.cantidad = 0;
+      cambiado = true;
+    }
+  });
+  if (cambiado) {
+    carrito = carrito.filter(i => i.cantidad > 0);
+    guardarCarrito();
+    mostrarNotificacion("⚠️ ¡Stock actualizado!", "info");
+  }
+  
+  renderizarProductos();
+  renderizarCarrito();
+  actualizarCategorias();
 }
 
 // ========== RENDER Y FILTROS ==========
@@ -201,7 +366,10 @@ function renderizarProductos() {
   elementos.galeria.querySelectorAll('.producto-card').forEach(card => {
     card.querySelector('.boton-agregar')?.addEventListener('click', e => {
       e.stopPropagation();
-      agregarAlCarrito(parseInt(card.dataset.id), 1);
+      const id = parseInt(card.dataset.id);
+      const cantidadInput = card.querySelector(`#cantidad-${id}`);
+      const cantidad = parseInt(cantidadInput?.value || 1);
+      agregarAlCarrito(id, cantidad);
     });
     card.querySelector('.boton-detalles')?.addEventListener('click', e => {
       e.stopPropagation();
@@ -218,7 +386,14 @@ function crearCardProducto(p) {
       <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img">
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
+      <p class="producto-stock ${agot ? 'agotado' : 'disponible'}">
+        ${agot ? 'AGOTADO' : `Stock: ${disp} disponible${disp !== 1 ? 's' : ''}`}
+      </p>
       <div class="card-acciones">
+        <div class="cantidad-controls ${agot ? 'disabled' : ''}">
+          <label for="cantidad-${p.id}" class="cantidad-label" style="font-size:12px;">Cantidad:</label>
+          <input type="number" id="cantidad-${p.id}" class="cantidad-input" value="1" min="1" max="${disp}" ${agot ? 'disabled' : ''}>
+        </div>
         <button class="boton-agregar${agot ? ' agotado' : ''}" ${agot ? 'disabled' : ''}>
           ${agot ? 'Agotado' : 'Agregar'}
         </button>
@@ -252,26 +427,67 @@ function actualizarCategorias() {
 }
 
 // ========== AGREGAR AL CARRITO ==========
-function agregarAlCarrito(id, cantidad = 1) {
+async function agregarAlCarrito(id, cantidad = 1) {
   const prod = productos.find(p => p.id === id);
-  if (!prod || prod.stock < cantidad) {
+  if (!prod) {
+    mostrarNotificacion("❌ Producto no encontrado", "error");
+    return;
+  }
+
+  // Validación inicial de stock
+  const itemEnCarrito = carrito.find(i => i.id === id);
+  const cantidadActualEnCarrito = itemEnCarrito ? itemEnCarrito.cantidad : 0;
+  const cantidadTotal = cantidadActualEnCarrito + cantidad;
+  
+  if (cantidadTotal > prod.stock) {
     mostrarNotificacion("❌ Stock insuficiente", "error");
     return;
   }
-  const item = carrito.find(i => i.id === id);
-  if (item) {
-    if (item.cantidad + cantidad > prod.stock) {
-      mostrarNotificacion("❌ Stock insuficiente", "error");
-      return;
+
+  // Usar transacción para validar y descontar stock atómicamente
+  const productoRef = ref(db, `productos/${prod.id}`);
+  
+  try {
+    await runTransaction(productoRef, (currentData) => {
+      if (currentData === null) {
+        throw new Error("Producto no encontrado");
+      }
+      
+      const stockActual = currentData.stock || 0;
+      
+      // Validar stock real contra cantidad solicitada
+      if (stockActual < cantidad) {
+        throw new Error("Stock insuficiente");
+      }
+      
+      // Descontar stock
+      return {
+        ...currentData,
+        stock: stockActual - cantidad
+      };
+    });
+
+    // Si llegamos aquí, la transacción fue exitosa
+    const item = carrito.find(i => i.id === id);
+    if (item) {
+      item.cantidad += cantidad;
+    } else {
+      carrito.push({ ...prod, cantidad });
     }
-    item.cantidad += cantidad;
-  } else {
-    carrito.push({ ...prod, cantidad });
+    
+    guardarCarrito();
+    renderizarCarrito();
+    renderizarProductos();
+    mostrarNotificacion("✅ Producto agregado al carrito", "exito");
+    
+  } catch (error) {
+    console.error("Error al agregar al carrito:", error);
+    if (error.message === "Stock insuficiente") {
+      mostrarNotificacion("❌ Stock insuficiente - Otro usuario compró este producto", "error");
+    } else {
+      mostrarNotificacion("❌ Error al agregar al carrito", "error");
+    }
   }
-  guardarCarrito();
-  renderizarCarrito();
-  renderizarProductos();
-  mostrarNotificacion("✅ Producto agregado al carrito", "exito");
 }
 window.agregarAlCarrito = agregarAlCarrito;
 
@@ -307,12 +523,19 @@ function mostrarModalProducto(prod) {
         </div>
         <div class="modal-info">
           <h1>${prod.nombre}</h1>
-          <p>$U ${prod.precio.toLocaleString('es-UY')}</p>
-          <p class="${agotado ? 'agotado' : 'disponible'}">${agotado ? 'AGOTADO' : `Disponible: ${disp}`}</p>
+          <p class="modal-precio">$U ${prod.precio.toLocaleString('es-UY')}</p>
+          <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">
+            ${agotado ? '❌ AGOTADO' : `✅ Stock disponible: ${disp} unidad${disp !== 1 ? 'es' : ''}`}
+          </p>
           <div class="modal-descripcion">${prod.descripcion || ''}</div>
           <div class="modal-acciones">
-            <input type="number" value="1" min="1" max="${disp}" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
-            <button class="boton-agregar-modal${agotado ? ' agotado' : ''}" ${agotado ? 'disabled' : ''}>Agregar al carrito</button>
+            <div class="cantidad-modal-container">
+              <label for="cantidad-modal-input">Cantidad:</label>
+              <input type="number" value="1" min="1" max="${disp}" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
+            </div>
+            <button class="boton-agregar-modal${agotado ? ' agotado' : ''}" ${agotado ? 'disabled' : ''}>
+              ${agotado ? 'Agotado' : 'Agregar al carrito'}
+            </button>
           </div>
         </div>
       </div>
@@ -405,7 +628,13 @@ function inicializarEventos() {
 
 // ========== INICIO ==========
 document.addEventListener('DOMContentLoaded', () => {
-  escucharProductosFirebase();
+  // Try Firebase first, fallback to mock data
+  try {
+    escucharProductosFirebase();
+  } catch (error) {
+    console.log("Firebase no disponible, usando datos mock");
+    loadMockProducts();
+  }
   cargarCarrito();
   renderizarCarrito();
   inicializarEventos();
