@@ -548,12 +548,11 @@ function crearCardProducto(p) {
     </div>
   `;
 }
-
 function renderizarProductos() {
   const productosFiltrados = filtrarProductos();
   const inicio = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
   const paginados = productosFiltrados.slice(inicio, inicio + PRODUCTOS_POR_PAGINA);
-  
+
   if (!elementos.galeriaProductos) return;
 
   if (paginados.length === 0) {
@@ -564,7 +563,7 @@ function renderizarProductos() {
 
   renderizarPaginacion(productosFiltrados.length);
 
-  // Añadir eventos delegados (clic en producto)
+  // Agregar eventos para ver detalle o agregar al carrito
   elementos.galeriaProductos.querySelectorAll('.producto-card').forEach(card => {
     card.addEventListener('click', manejarEventosGaleria);
   });
