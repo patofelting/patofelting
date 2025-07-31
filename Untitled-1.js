@@ -115,9 +115,14 @@ function init() {
 }
 
 function configurarEventListeners() {
+  console.log('🔧 Configurando event listeners...');
+  
   // Cart events
   if (elementos.carritoBtnMain) {
     elementos.carritoBtnMain.addEventListener('click', abrirCarrito);
+    console.log('✅ Event listener para carrito configurado');
+  } else {
+    console.error('❌ Botón carrito no encontrado');
   }
   
   if (elementos.btnCerrarCarrito) {
@@ -613,10 +618,17 @@ function renderizarCarrito() {
 // CARRITO: UI FUNCTIONS
 // ===============================
 function abrirCarrito() {
+  console.log('🛒 Intentando abrir carrito...');
+  console.log('Panel:', elementos.carritoPanel);
+  console.log('Overlay:', elementos.carritoOverlay);
+  
   if (elementos.carritoPanel && elementos.carritoOverlay) {
     elementos.carritoPanel.classList.add('abierto');
     elementos.carritoOverlay.classList.add('activo');
     renderizarCarrito();
+    console.log('✅ Carrito abierto correctamente');
+  } else {
+    console.error('❌ Elementos del carrito no encontrados');
   }
 }
 
@@ -886,7 +898,13 @@ function actualizarCategorias() {
 // MODAL FUNCTIONS
 // ===============================
 function abrirModal(producto) {
-  if (!producto || !elementos.productoModal) return;
+  console.log('🔍 Intentando abrir modal para producto:', producto);
+  console.log('Modal element:', elementos.productoModal);
+  
+  if (!producto || !elementos.productoModal) {
+    console.error('❌ Producto o modal no disponible');
+    return;
+  }
 
   productoModalActual = producto;
   imagenModalActual = 0;
@@ -921,6 +939,7 @@ function abrirModal(producto) {
 
   // Show modal
   elementos.productoModal.classList.add('active');
+  console.log('✅ Modal abierto correctamente');
 }
 
 function cerrarModal() {
