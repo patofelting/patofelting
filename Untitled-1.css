@@ -1274,6 +1274,215 @@ blockquote {
   font-size: 1.3rem;
 }
 
+/* Purchase Confirmation Modal */
+.modal-confirmacion {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.modal-confirmacion[hidden] {
+  display: none;
+}
+
+.modal-confirmacion.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-confirmacion-contenido {
+  background-color: white;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 0;
+  position: relative;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+  transform: translateY(20px) scale(0.9);
+  transition: transform 0.3s ease;
+  text-align: center;
+}
+
+.modal-confirmacion.visible .modal-confirmacion-contenido {
+  transform: translateY(0) scale(1);
+}
+
+.modal-confirmacion-header {
+  background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+  color: white;
+  padding: 30px 25px 20px;
+  border-radius: 20px 20px 0 0;
+  position: relative;
+}
+
+.confirmacion-icono {
+  font-size: 3rem;
+  margin-bottom: 15px;
+  animation: bounceIn 0.6s ease;
+}
+
+.modal-confirmacion-header h3 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.modal-confirmacion-body {
+  padding: 30px 25px;
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+.modal-confirmacion-body p {
+  margin-bottom: 15px;
+  font-size: 1.1rem;
+}
+
+.modal-confirmacion-body p:first-child {
+  font-size: 1.2rem;
+  color: var(--primary-color);
+}
+
+.confirmacion-detalle {
+  background-color: var(--light-gray);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.confirmacion-detalle p {
+  font-weight: 600;
+  color: var(--primary-color);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.confirmacion-detalle ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.confirmacion-detalle li {
+  padding: 8px 0;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-confirmacion-footer {
+  padding: 20px 25px 30px;
+  background-color: #fafafa;
+  border-radius: 0 0 20px 20px;
+}
+
+.boton-cerrar-confirmacion {
+  background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 15px 30px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 auto;
+  transition: all 0.3s ease;
+  min-width: 200px;
+}
+
+.boton-cerrar-confirmacion:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(76, 175, 80, 0.3);
+}
+
+.boton-cerrar-confirmacion:active {
+  transform: translateY(0);
+}
+
+.boton-cerrar-confirmacion i {
+  font-size: 1.2rem;
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Mobile responsiveness for confirmation modal */
+@media (max-width: 768px) {
+  .modal-confirmacion-contenido {
+    width: 95%;
+    border-radius: 16px;
+  }
+  
+  .modal-confirmacion-header {
+    padding: 25px 20px 15px;
+    border-radius: 16px 16px 0 0;
+  }
+  
+  .modal-confirmacion-header h3 {
+    font-size: 1.5rem;
+  }
+  
+  .confirmacion-icono {
+    font-size: 2.5rem;
+  }
+  
+  .modal-confirmacion-body {
+    padding: 25px 20px;
+  }
+  
+  .modal-confirmacion-body p {
+    font-size: 1rem;
+  }
+  
+  .confirmacion-detalle {
+    padding: 15px;
+  }
+  
+  .modal-confirmacion-footer {
+    padding: 15px 20px 25px;
+    border-radius: 0 0 16px 16px;
+  }
+  
+  .boton-cerrar-confirmacion {
+    padding: 12px 25px;
+    font-size: 1rem;
+    min-width: 180px;
+  }
+}
+
 /* Contact Section */
 .contact {
   padding: 80px 20px;

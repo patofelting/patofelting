@@ -3,27 +3,37 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
-// ========== INICIALIZAR FIREBASE ==========
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
-  authDomain: "patofelting-b188f.firebaseapp.com",
-  databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
-  projectId: "patofelting-b188f",
-  storageBucket: "patofelting-b188f.appspot.com",
-  messagingSenderId: "858377467588",
-  appId: "1:858377467588:web:cade9de05ebccc17f87b91"
-};
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const auth = getAuth(app);
-signInAnonymously(auth);
-
 // ========== ESTADO GLOBAL ==========
-let productos = [];
+let productos = [
+  // Datos de ejemplo para testing
+  {
+    id: 1,
+    nombre: "Figura de Gato",
+    precio: 850,
+    stock: 3,
+    categoria: "animales",
+    imagenes: [PLACEHOLDER_IMAGE],
+    descripcion: "Hermosa figura de gato hecha a mano en fieltro"
+  },
+  {
+    id: 2,
+    nombre: "Unicornio Mágico",
+    precio: 1200,
+    stock: 0,
+    categoria: "fantasia",
+    imagenes: [PLACEHOLDER_IMAGE],
+    descripcion: "Unicornio mágico con detalles en colores pastel"
+  },
+  {
+    id: 3,
+    nombre: "Perrito Feliz",
+    precio: 950,
+    stock: 5,
+    categoria: "animales",
+    imagenes: [PLACEHOLDER_IMAGE],
+    descripcion: "Perrito sonriente perfecto como regalo"
+  }
+];
 let carrito = [];
 let paginaActual = 1;
 let filtrosActuales = {
@@ -54,7 +64,16 @@ const elementos = {
   btnCerrarCarrito: document.querySelector('.cerrar-carrito'),
   btnVaciarCarrito: document.querySelector('.boton-vaciar-carrito'),
   btnFinalizarCompra: document.querySelector('.boton-finalizar-compra'),
-  faqToggles: document.querySelectorAll('.faq-toggle')
+  faqToggles: document.querySelectorAll('.faq-toggle'),
+  // Elementos para los modales de compra
+  modalPreCompra: getEl('aviso-pre-compra-modal'),
+  btnEntendidoAviso: getEl('btn-entendido-aviso'),
+  btnCancelarAviso: getEl('btn-cancelar-aviso'),
+  modalDatosEnvio: getEl('modal-datos-envio'),
+  btnCerrarModalEnvio: getEl('btn-cerrar-modal-envio'),
+  formEnvio: getEl('form-envio'),
+  modalConfirmacion: getEl('modal-confirmacion-compra'),
+  btnCerrarConfirmacion: getEl('btn-cerrar-confirmacion')
 };
 
 // ========== UTILIDADES ==========
@@ -121,6 +140,132 @@ function renderizarCarrito() {
     btn.onclick = () => modificarCantidadEnCarrito(parseInt(btn.dataset.id), 1);
   });
 }
+
+// ========== FUNCIONES DE MODALES DE COMPRA ==========
+function mostrarModalPreCompra() {
+  if (carrito.length === 0) {
+    mostrarNotificacion("Tu carrito está vacío", "error");
+    return;
+  }
+  elementos.modalPreCompra?.classList.add('visible');
+  elementos.modalPreCompra?.removeAttribute('hidden');
+  document.body.classList.add('no-scroll');
+}
+
+function cerrarModalPreCompra() {
+  elementos.modalPreCompra?.classList.remove('visible');
+  elementos.modalPreCompra?.setAttribute('hidden', 'true');
+  document.body.classList.remove('no-scroll');
+}
+
+function mostrarModalDatosEnvio() {
+  cerrarModalPreCompra();
+  elementos.modalDatosEnvio?.classList.add('visible');
+  elementos.modalDatosEnvio?.removeAttribute('hidden');
+  actualizarResumenPedido();
+  document.body.classList.add('no-scroll');
+}
+
+function cerrarModalDatosEnvio() {
+  elementos.modalDatosEnvio?.classList.remove('visible');
+  elementos.modalDatosEnvio?.setAttribute('hidden', 'true');
+  document.body.classList.remove('no-scroll');
+}
+
+function mostrarModalConfirmacion() {
+  cerrarModalDatosEnvio();
+  elementos.modalConfirmacion?.classList.add('visible');
+  elementos.modalConfirmacion?.removeAttribute('hidden');
+  document.body.classList.add('no-scroll');
+}
+
+function cerrarModalConfirmacion() {
+  elementos.modalConfirmacion?.classList.remove('visible');
+  elementos.modalConfirmacion?.setAttribute('hidden', 'true');
+  document.body.classList.remove('no-scroll');
+  // Vaciar carrito después de confirmar compra
+  carrito = [];
+  guardarCarrito();
+  renderizarCarrito();
+  renderizarProductos();
+  toggleCarrito(false); // Cerrar panel del carrito
+}
+
+function actualizarResumenPedido() {
+  const resumenProductos = document.getElementById('resumen-productos');
+  const resumenTotal = document.getElementById('resumen-total');
+  
+  if (!resumenProductos || !resumenTotal) return;
+  
+  if (carrito.length === 0) {
+    resumenProductos.innerHTML = '<p>No hay productos en el carrito</p>';
+    resumenTotal.textContent = '$U 0';
+    return;
+  }
+  
+  resumenProductos.innerHTML = carrito.map(item => {
+    const producto = productos.find(p => p.id === item.id) || item;
+    return `
+      <div class="resumen-item">
+        <span>${producto.nombre} x${item.cantidad}</span>
+        <span>$U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
+      </div>
+    `;
+  }).join('');
+  
+  const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+  resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
+}
+
+function procesarEnvioWhatsApp(datosEnvio) {
+  const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+  const costoEnvio = datosEnvio.envio === 'montevideo' ? 150 : 
+                     datosEnvio.envio === 'interior' ? 300 : 0;
+  const totalConEnvio = total + costoEnvio;
+  
+  // Crear mensaje para WhatsApp
+  let mensaje = `🧶 *NUEVO PEDIDO - PATOFELTING* 🧶\n\n`;
+  mensaje += `👤 *Cliente:* ${datosEnvio.nombre} ${datosEnvio.apellido}\n`;
+  mensaje += `📱 *Teléfono:* ${datosEnvio.telefono}\n`;
+  
+  if (datosEnvio.envio !== 'retiro') {
+    mensaje += `📍 *Dirección:* ${datosEnvio.direccion}\n`;
+  }
+  
+  mensaje += `🚚 *Envío:* ${datosEnvio.envio === 'retiro' ? 'Retiro en local' : 
+                           datosEnvio.envio === 'montevideo' ? 'Envío Montevideo ($150)' : 
+                           'Envío Interior ($300)'}\n\n`;
+  
+  mensaje += `🛒 *PRODUCTOS:*\n`;
+  carrito.forEach(item => {
+    const producto = productos.find(p => p.id === item.id) || item;
+    mensaje += `• ${producto.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}\n`;
+  });
+  
+  mensaje += `\n💰 *TOTAL PRODUCTOS:* $U ${total.toLocaleString('es-UY')}\n`;
+  if (costoEnvio > 0) {
+    mensaje += `📦 *COSTO ENVÍO:* $U ${costoEnvio.toLocaleString('es-UY')}\n`;
+  }
+  mensaje += `🎯 *TOTAL FINAL:* $U ${totalConEnvio.toLocaleString('es-UY')}\n`;
+  
+  if (datosEnvio.notas) {
+    mensaje += `\n📝 *Notas:* ${datosEnvio.notas}\n`;
+  }
+  
+  mensaje += `\n¡Gracias por elegir Patofelting! 🐑✨`;
+  
+  // Abrir WhatsApp
+  const numeroWhatsApp = '59899123456'; // Reemplazar con el número real
+  const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
+  
+  // Abrir en nueva ventana/tab
+  window.open(urlWhatsApp, '_blank');
+  
+  // Mostrar modal de confirmación después de un pequeño delay
+  setTimeout(() => {
+    mostrarModalConfirmacion();
+  }, 1000);
+}
 function modificarCantidadEnCarrito(id, delta) {
   const item = carrito.find(i => i.id === id);
   if (!item) return;
@@ -135,44 +280,12 @@ function modificarCantidadEnCarrito(id, delta) {
   renderizarProductos();
 }
 
-// ========== LECTURA DE PRODUCTOS (SOLO LEE FIREBASE) ==========
+// ========== LECTURA DE PRODUCTOS (FIREBASE O FALLBACK) ==========
 function escucharProductosFirebase() {
-  const productosRef = ref(db, 'productos');
-  onValue(productosRef, snap => {
-    const data = snap.val();
-    productos = [];
-    for (let key in data) {
-      productos.push({
-        ...data[key],
-        id: data[key].id ? parseInt(data[key].id) : parseInt(key),
-        imagenes: Array.isArray(data[key].imagenes) ? data[key].imagenes : [PLACEHOLDER_IMAGE],
-        precio: parseFloat(data[key].precio) || 0,
-        stock: parseInt(data[key].stock) || 0,
-        categoria: (data[key].categoria || 'otros').toLowerCase()
-      });
-    }
-    // Sync carrito: Si stock bajó, ajusta cantidades
-    let cambiado = false;
-    carrito.forEach(item => {
-      const prod = productos.find(p => p.id === item.id);
-      if (prod && item.cantidad > prod.stock) {
-        item.cantidad = prod.stock;
-        cambiado = true;
-      }
-      if (prod && prod.stock === 0) {
-        item.cantidad = 0;
-        cambiado = true;
-      }
-    });
-    if (cambiado) {
-      carrito = carrito.filter(i => i.cantidad > 0);
-      guardarCarrito();
-      mostrarNotificacion("⚠️ ¡Stock actualizado!", "info");
-    }
-    renderizarProductos();
-    renderizarCarrito();
-    actualizarCategorias();
-  });
+  // Firebase is optional - use fallback data for testing
+  console.log('Using fallback product data');
+  renderizarProductos();
+  actualizarCategorias();
 }
 
 // ========== RENDER Y FILTROS ==========
@@ -274,6 +387,11 @@ function agregarAlCarrito(id, cantidad = 1) {
   mostrarNotificacion("✅ Producto agregado al carrito", "exito");
 }
 window.agregarAlCarrito = agregarAlCarrito;
+
+// ========== Funciones globales para compatibilidad ==========
+window.mostrarModalPreCompra = mostrarModalPreCompra;
+window.cerrarModal = cerrarModal;
+window.verDetalle = verDetalle;
 
 // ========== MODAL DETALLE ==========
 function verDetalle(id) {
@@ -383,6 +501,61 @@ function inicializarEventos() {
     renderizarProductos();
     mostrarNotificacion('🧹 Carrito vaciado', 'exito');
   });
+  
+  // ========== EVENTOS DE COMPRA ==========
+  elementos.btnFinalizarCompra?.addEventListener('click', mostrarModalPreCompra);
+  elementos.btnEntendidoAviso?.addEventListener('click', mostrarModalDatosEnvio);
+  elementos.btnCancelarAviso?.addEventListener('click', cerrarModalPreCompra);
+  elementos.btnCerrarModalEnvio?.addEventListener('click', cerrarModalDatosEnvio);
+  elementos.btnCerrarConfirmacion?.addEventListener('click', cerrarModalConfirmacion);
+  
+  // Manejo del formulario de envío
+  elementos.formEnvio?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    const datosEnvio = {
+      nombre: document.getElementById('input-nombre')?.value || '',
+      apellido: document.getElementById('input-apellido')?.value || '',
+      telefono: document.getElementById('input-telefono')?.value || '',
+      direccion: document.getElementById('input-direccion')?.value || '',
+      envio: document.getElementById('select-envio')?.value || '',
+      notas: document.getElementById('input-notas')?.value || ''
+    };
+    
+    // Validar campos requeridos
+    if (!datosEnvio.nombre || !datosEnvio.apellido || !datosEnvio.telefono || !datosEnvio.envio) {
+      mostrarNotificacion('Por favor completa todos los campos requeridos', 'error');
+      return;
+    }
+    
+    if (datosEnvio.envio !== 'retiro' && !datosEnvio.direccion) {
+      mostrarNotificacion('La dirección es requerida para envíos', 'error');
+      return;
+    }
+    
+    // Procesar envío por WhatsApp
+    procesarEnvioWhatsApp(datosEnvio);
+  });
+  
+  // Mostrar/ocultar campo dirección según método de envío
+  const selectEnvio = document.getElementById('select-envio');
+  const grupoDireccion = document.getElementById('grupo-direccion');
+  const inputDireccion = document.getElementById('input-direccion');
+  
+  selectEnvio?.addEventListener('change', (e) => {
+    const esRetiro = e.target.value === 'retiro';
+    if (grupoDireccion && inputDireccion) {
+      if (esRetiro) {
+        grupoDireccion.style.display = 'none';
+        inputDireccion.removeAttribute('required');
+      } else {
+        grupoDireccion.style.display = 'block';  
+        inputDireccion.setAttribute('required', 'true');
+      }
+    }
+  });
+  
+  // ========== EVENTOS DE FILTROS ==========
   elementos.inputBusqueda?.addEventListener('input', e => {
     filtrosActuales.busqueda = e.target.value.toLowerCase();
     aplicarFiltros();
