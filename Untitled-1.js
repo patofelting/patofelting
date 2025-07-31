@@ -523,6 +523,29 @@ function renderizarProductos() {
     card.addEventListener('click', manejarEventosGaleria);
   });
 }
+function renderizarPaginacion(totalProductos) {
+  const totalPages = Math.ceil(totalProductos / PRODUCTOS_POR_PAGINA);
+  const paginacionContainer = elementos.paginacion;
+
+  if (!paginacionContainer) return;
+
+  if (totalPages <= 1) {
+    paginacionContainer.innerHTML = '';
+    return;
+  }
+
+  paginacionContainer.innerHTML = '';
+  for (let i = 1; i <= totalPages; i++) {
+    const pageButton = document.createElement('button');
+    pageButton.textContent = i;
+    pageButton.className = i === paginaActual ? 'active' : '';
+    pageButton.addEventListener('click', () => {
+      paginaActual = i;
+      renderizarProductos();
+    });
+    paginacionContainer.appendChild(pageButton);
+  }
+}
 
 // ===============================
 // MODAL DE PRODUCTO
