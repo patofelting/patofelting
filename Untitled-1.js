@@ -436,31 +436,44 @@ function actualizarCategorias() {
 // ===============================
 function crearCardProducto(p) {
   const enCarrito = carrito.find(i => i.id === p.id);
-  const disp = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
-  const agot = disp <= 0;
-  const imagenPrincipal = p.imagenes && p.imagenes.length > 0 ? p.imagenes[0] : PLACEHOLDER_IMAGE;
+  const disponibles = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
+  const agotado = disponibles <= 0;
+  const imagenPrincipal = p.imagenes?.[0] || PLACEHOLDER_IMAGE;
 
   return `
-    <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}">
+    <div class="producto-card ${agotado ? 'agotado' : ''}" data-id="${p.id}">
       <img src="${imagenPrincipal}" alt="${p.nombre}" class="producto-img" loading="lazy">
+      
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
+
       <p class="producto-stock">
-        ${agot ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${disp}`}
+        ${agotado ? '<span class="texto-agotado">Agotado</span>' : `Stock: ${disponibles}`}
       </p>
+
       <div class="card-acciones">
-        <button class="boton-agregar${agot ? ' agotado' : ''}" data-id="${p.id}" ${agot ? 'disabled' : ''}>
-          ${agot ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
+        <button 
+          class="boton-agregar${agotado ? ' agotado' : ''}" 
+          data-id="${p.id}" 
+          ${agotado ? 'disabled' : ''}>
+          ${agotado ? '❌ Agotado' : '🛒 Agregar'}
         </button>
-        ${agot ? `
-        <button class="boton-aviso-stock" onclick="preguntarStock('${p.nombre.replace(/'/g, "\\'")}', ${p.id})">
-          📩 Avisame cuando haya stock
-        </button>` : ''}
+
+        ${agotado ? `
+          <button 
+            class="boton-aviso-stock" 
+            data-id="${p.id}" 
+            data-nombre="${p.nombre.replace(/"/g, '&quot;')}">
+            📩 Avisame cuando haya stock
+          </button>` : ''
+        }
       </div>
+
       <button class="boton-detalles" data-id="${p.id}">🔍 Ver Detalle</button>
     </div>
   `;
 }
+
 
 function manejarEventosGaleria(e) {
   const boton = e.target.closest('button');
