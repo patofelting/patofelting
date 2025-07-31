@@ -3,24 +3,41 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
-// ========== INICIALIZAR FIREBASE ==========
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+// ========== INICIALIZAR FIREBASE (CON MANEJO DE ERRORES) ==========
+let db = null;
+let auth = null;
 
-const firebaseConfig = {
-  apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
-  authDomain: "patofelting-b188f.firebaseapp.com",
-  databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
-  projectId: "patofelting-b188f",
-  storageBucket: "patofelting-b188f.appspot.com",
-  messagingSenderId: "858377467588",
-  appId: "1:858377467588:web:cade9de05ebccc17f87b91"
-};
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const auth = getAuth(app);
-signInAnonymously(auth);
+async function inicializarFirebase() {
+  try {
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
+    const { getAuth, signInAnonymously } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
+    const { getDatabase, ref, onValue } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js");
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
+      authDomain: "patofelting-b188f.firebaseapp.com",
+      databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
+      projectId: "patofelting-b188f",
+      storageBucket: "patofelting-b188f.appspot.com",
+      messagingSenderId: "858377467588",
+      appId: "1:858377467588:web:cade9de05ebccc17f87b91"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    db = getDatabase(app);
+    auth = getAuth(app);
+    await signInAnonymously(auth);
+    
+    // ✅ Hacerlo accesible en todo el sitio:
+    window.firebaseDatabase = db;
+    
+    console.log('Firebase initialized successfully');
+    return { db, auth, ref, onValue };
+  } catch (error) {
+    console.warn('Firebase initialization failed:', error);
+    return null;
+  }
+}
 
 // ========== ESTADO GLOBAL ==========
 let productos = [];
@@ -30,7 +47,8 @@ let filtrosActuales = {
   precioMin: null,
   precioMax: null,
   categoria: 'todos',
-  busqueda: ''
+  busqueda: '',
+  stock: 'todos'  // Nueva opción de filtrado por stock
 };
 
 // ========== REFERENCIAS DOM ==========
@@ -48,6 +66,7 @@ const elementos = {
   contadorCarrito: getEl('contador-carrito'),
   inputBusqueda: document.querySelector('.input-busqueda'),
   selectCategoria: getEl('filtro-categoria'),
+  selectStock: getEl('filtro-stock'),
   minSlider: getEl('min-slider'),
   maxSlider: getEl('max-slider'),
   resetFiltros: document.querySelector('.boton-resetear-filtros'),
@@ -135,9 +154,22 @@ function modificarCantidadEnCarrito(id, delta) {
   renderizarProductos();
 }
 
-// ========== LECTURA DE PRODUCTOS (SOLO LEE FIREBASE) ==========
-function escucharProductosFirebase() {
+// ========== LECTURA DE PRODUCTOS (MANEJA FIREBASE OPCIONAL) ==========
+async function escucharProductosFirebase() {
+  const firebase = await inicializarFirebase();
+  
+  if (!firebase) {
+    console.log('Firebase not available, loading without real-time data');
+    // Continuar sin Firebase - la página funciona sin productos en vivo
+    renderizarProductos();
+    renderizarCarrito();
+    actualizarCategorias();
+    return;
+  }
+
+  const { db, ref, onValue } = firebase;
   const productosRef = ref(db, 'productos');
+  
   onValue(productosRef, snap => {
     const data = snap.val();
     productos = [];
@@ -177,13 +209,21 @@ function escucharProductosFirebase() {
 
 // ========== RENDER Y FILTROS ==========
 function filtrarProductos() {
-  const { precioMin, precioMax, categoria, busqueda } = filtrosActuales;
+  const { precioMin, precioMax, categoria, busqueda, stock } = filtrosActuales;
   return productos.filter(p => {
+    // Calcular disponibilidad
+    const enCarrito = carrito.find(i => i.id === p.id);
+    const disponible = Math.max(0, p.stock - (enCarrito?.cantidad || 0)) > 0;
+    
     return (
       (precioMin == null || p.precio >= precioMin) &&
       (precioMax == null || p.precio <= precioMax) &&
       (categoria === 'todos' || p.categoria === categoria) &&
-      (!busqueda || p.nombre.toLowerCase().includes(busqueda))
+      (!busqueda || p.nombre.toLowerCase().includes(busqueda)) &&
+      // IMPORTANTE: Solo filtrar por stock si explícitamente se selecciona, sino mostrar todos
+      (stock === 'todos' || 
+       (stock === 'disponible' && disponible) || 
+       (stock === 'agotado' && !disponible))
     );
   });
 }
@@ -337,6 +377,62 @@ function cerrarModal() {
   elementos.modal?.classList.remove('visible');
 }
 
+// ========== MODAL CONFIRMACION COMPRA ==========
+function mostrarModalConfirmacionCompra() {
+  const modal = document.getElementById('modal-confirmacion-compra');
+  if (!modal) return;
+  
+  modal.classList.remove('hidden');
+  modal.classList.add('visible');
+  
+  // Agregar event listeners para cerrar el modal
+  const btnCerrar = modal.querySelector('.cerrar-modal');
+  const btnCerrarConfirmacion = modal.querySelector('.boton-cerrar-confirmacion');
+  
+  const cerrarModalConfirmacion = () => {
+    modal.classList.remove('visible');
+    modal.classList.add('hidden');
+  };
+  
+  btnCerrar?.addEventListener('click', cerrarModalConfirmacion);
+  btnCerrarConfirmacion?.addEventListener('click', cerrarModalConfirmacion);
+  
+  // Cerrar con Escape
+  const handleEscape = (e) => {
+    if (e.key === 'Escape') {
+      cerrarModalConfirmacion();
+      document.removeEventListener('keydown', handleEscape);
+    }
+  };
+  document.addEventListener('keydown', handleEscape);
+  
+  // Cerrar haciendo click fuera del modal
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      cerrarModalConfirmacion();
+    }
+  });
+}
+
+function finalizarCompra() {
+  if (carrito.length === 0) {
+    mostrarNotificacion('❌ Tu carrito está vacío', 'error');
+    return;
+  }
+  
+  // Cerrar el carrito
+  toggleCarrito(false);
+  
+  // Mostrar modal de confirmación
+  mostrarModalConfirmacionCompra();
+  
+  // Vaciar carrito después de la compra
+  carrito = [];
+  guardarCarrito();
+  renderizarCarrito();
+  renderizarProductos();
+}
+
 // ========== CARRITO UI ==========
 function toggleCarrito(forceState) {
   if (!elementos.carritoPanel || !elementos.carritoOverlay) return;
@@ -355,9 +451,10 @@ function aplicarFiltros() {
   renderizarProductos();
 }
 function resetearFiltros() {
-  filtrosActuales = { precioMin: null, precioMax: null, categoria: 'todos', busqueda: '' };
+  filtrosActuales = { precioMin: null, precioMax: null, categoria: 'todos', busqueda: '', stock: 'todos' };
   if (elementos.inputBusqueda) elementos.inputBusqueda.value = '';
   if (elementos.selectCategoria) elementos.selectCategoria.value = 'todos';
+  if (elementos.selectStock) elementos.selectStock.value = 'todos';
   if (elementos.minSlider) elementos.minSlider.value = '';
   if (elementos.maxSlider) elementos.maxSlider.value = '';
   aplicarFiltros();
@@ -383,12 +480,17 @@ function inicializarEventos() {
     renderizarProductos();
     mostrarNotificacion('🧹 Carrito vaciado', 'exito');
   });
+  elementos.btnFinalizarCompra?.addEventListener('click', finalizarCompra);
   elementos.inputBusqueda?.addEventListener('input', e => {
     filtrosActuales.busqueda = e.target.value.toLowerCase();
     aplicarFiltros();
   });
   elementos.selectCategoria?.addEventListener('change', e => {
     filtrosActuales.categoria = e.target.value;
+    aplicarFiltros();
+  });
+  elementos.selectStock?.addEventListener('change', e => {
+    filtrosActuales.stock = e.target.value;
     aplicarFiltros();
   });
   elementos.minSlider?.addEventListener('input', e => {

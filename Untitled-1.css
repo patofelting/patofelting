@@ -1274,6 +1274,91 @@ blockquote {
   font-size: 1.3rem;
 }
 
+/* Purchase Confirmation Modal */
+#modal-confirmacion-compra {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+#modal-confirmacion-compra.visible {
+  display: flex;
+  opacity: 1;
+}
+
+#modal-confirmacion-compra .modal-contenido {
+  background-color: white;
+  border-radius: var(--border-radius);
+  width: 90%;
+  max-width: 500px;
+  padding: 30px;
+  position: relative;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  transform: translateY(20px);
+  transition: transform 0.3s ease;
+  text-align: center;
+}
+
+#modal-confirmacion-compra.visible .modal-contenido {
+  transform: translateY(0);
+}
+
+.modal-confirmacion-contenido {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.confirmacion-header h3 {
+  color: var(--primary-color);
+  font-size: 1.8rem;
+  margin: 0;
+  margin-bottom: 10px;
+}
+
+.confirmacion-mensaje {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.confirmacion-mensaje p {
+  color: var(--text-color);
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.confirmacion-acciones {
+  margin-top: 10px;
+}
+
+.boton-cerrar-confirmacion {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  padding: 12px 30px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.boton-cerrar-confirmacion:hover {
+  background-color: var(--accent-color);
+  transform: translateY(-2px);
+}
+
 /* Contact Section */
 .contact {
   padding: 80px 20px;
@@ -2183,19 +2268,21 @@ body.no-scroll {
   align-items: flex-start;
 }
 
-/* Contenedor de filtro categoría y precio */
+/* Contenedor de filtro categoría, stock y precio */
 .filtro-categoria,
+.filtro-stock,
 .price-filter {
   padding: 15px;
   background: #f5f5f5;
-  border-radius: 8px;
+  border-radius: 8px;  
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   flex: 1;
   min-width: 260px;
 }
 
-/* Select categorías */
-.filtro-categoria select {
+/* Select categorías y stock */
+.filtro-categoria select,
+.filtro-stock select {
   width: 100%;
   padding: 8px;
   border: 1px solid #ddd;

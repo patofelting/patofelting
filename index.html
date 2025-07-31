@@ -149,6 +149,15 @@
     </select>
   </div>
 
+  <div class="filtro-stock">
+    <label for="filtro-stock">Disponibilidad:</label>
+    <select id="filtro-stock">
+      <option value="todos">Todos los productos</option>
+      <option value="disponible">Solo disponibles</option>
+      <option value="agotado">Solo agotados</option>
+    </select>
+  </div>
+
 
        <div class="price-filter">
     <div class="price-header">
@@ -265,6 +274,25 @@
           <i class="fab fa-whatsapp"></i> Enviar pedido por WhatsApp
         </button>
       </form>
+    </div>
+  </div>
+
+  <!-- Purchase Confirmation Modal -->
+  <div id="modal-confirmacion-compra" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+    <div class="modal-contenido">
+      <button class="cerrar-modal" aria-label="Cerrar modal">&times;</button>
+      <div class="modal-confirmacion-contenido">
+        <div class="confirmacion-header">
+          <h3>🎉 ¡Gracias por tu compra!</h3>
+        </div>
+        <div class="confirmacion-mensaje">
+          <p>Tu pedido ha sido procesado correctamente. Nos pondremos en contacto contigo muy pronto para coordinar los detalles de tu compra.</p>
+          <p>✨ Cada pieza es única y hecha con mucho amor. ¡Esperamos que disfrutes tu nueva figura de fieltro!</p>
+        </div>
+        <div class="confirmacion-acciones">
+          <button class="boton-cerrar-confirmacion">Cerrar</button>
+        </div>
+      </div>
     </div>
   </div>
 
