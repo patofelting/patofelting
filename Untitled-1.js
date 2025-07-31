@@ -669,7 +669,6 @@ function mostrarModalProducto(producto) {
   });
 }
 }
-
 // ===============================
 // ACTUALIZAR UI
 // ===============================
