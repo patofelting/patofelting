@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Stock Notification</title>
+    <link rel="stylesheet" href="Untitled-1.css">
+    <style>
+        body { padding: 20px; font-family: Arial, sans-serif; }
+        .test-container { max-width: 800px; margin: 0 auto; }
+        .demo-products { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0; }
+        .test-info { background: #f0f8ff; padding: 15px; border-radius: 8px; margin: 20px 0; }
+        .test-config { background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test: Funcionalidad "Avisame cuando haya stock"</h1>
+        
+        <div class="test-info">
+            <h3>ℹ️ Información del Test</h3>
+            <p>Esta página demuestra la funcionalidad de notificación de stock implementada:</p>
+            <ul>
+                <li>✅ Productos con stock: Muestran botón "Agregar"</li>
+                <li>🔔 Productos sin stock: Muestran botón "Avisame cuando haya stock"</li>
+                <li>📧 Modal de captura de email y nombre</li>
+                <li>⚠️ El envío a Formspree no funcionará hasta configurar el endpoint real</li>
+            </ul>
+        </div>
+
+        <div class="test-config">
+            <h3>⚙️ Configuración necesaria</h3>
+            <p><strong>Para que funcione completamente:</strong></p>
+            <ol>
+                <li>Crear cuenta en <a href="https://formspree.io" target="_blank">Formspree.io</a></li>
+                <li>Obtener el endpoint URL</li>
+                <li>Reemplazar <code>YOUR_FORM_ID</code> en <code>Untitled-1.js</code></li>
+            </ol>
+        </div>
+
+        <h2>🛍️ Productos de Prueba</h2>
+        <div id="galeria-productos" class="demo-products">
+            <!-- Los productos se cargarán aquí -->
+        </div>
+    </div>
+
+    <!-- Modal para notificación de stock -->
+    <div id="modal-stock-notificacion" class="modal-datos-envio" role="dialog" aria-modal="true" hidden>
+        <div class="modal-envio-contenido">
+            <button id="btn-cerrar-modal-stock" class="cerrar-modal-envio" aria-label="Cerrar modal">×</button>
+            <div class="modal-envio-header">
+                <h3>🔔 Avisame cuando haya stock</h3>
+                <p>Te notificaremos por email cuando este producto esté disponible nuevamente</p>
+            </div>
+            <form id="form-stock-notificacion" class="form-envio">
+                <div class="form-grupo">
+                    <label for="input-stock-email">Email*</label>
+                    <input type="email" id="input-stock-email" placeholder="tu@email.com" required>
+                </div>
+                <div class="form-grupo">
+                    <label for="input-stock-nombre">Nombre (opcional)</label>
+                    <input type="text" id="input-stock-nombre" placeholder="Ej: María">
+                </div>
+                <div class="producto-info-stock">
+                    <h4>Producto de interés:</h4>
+                    <div id="info-producto-stock"></div>
+                </div>
+                <button type="submit" class="boton-confirmar-envio">
+                    <i class="fas fa-bell"></i> Notificarme cuando haya stock
+                </button>
+            </form>
+            <div id="mensaje-stock-resultado" class="mensaje-resultado" hidden></div>
+        </div>
+    </div>
+
+    <script>
+        // Mock data for testing
+        const productos = [
+            {
+                id: 1,
+                nombre: "Perrito de Fieltro",
+                precio: 1500,
+                stock: 5,
+                imagenes: ["https://via.placeholder.com/300x300/7ed957/fff?text=Perrito+Stock+OK"],
+                categoria: "animales"
+            },
+            {
+                id: 2,
+                nombre: "Gatito Mágico",
+                precio: 1200,
+                stock: 0, // Sin stock - mostrará botón de notificación
+                imagenes: ["https://via.placeholder.com/300x300/FFA500/fff?text=Gatito+SIN+STOCK"],
+                categoria: "animales"
+            },
+            {
+                id: 3,
+                nombre: "Unicornio Fantasía",
+                precio: 2000,
+                stock: 0, // Sin stock - mostrará botón de notificación
+                imagenes: ["https://via.placeholder.com/300x300/FFA500/fff?text=Unicornio+SIN+STOCK"],
+                categoria: "fantasia"
+            }
+        ];
+
+        // Mock de configuración (simula la funcionalidad pero no envía realmente)
+        const STOCK_NOTIFICATION_ENDPOINT = 'https://formspree.io/f/YOUR_FORM_ID';
+
+        // Función para crear cards de productos (simplificada para test)
+        function crearCardProducto(p) {
+            const agot = p.stock <= 0;
+            return `
+                <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}">
+                    <img src="${p.imagenes[0]}" alt="${p.nombre}" class="producto-img">
+                    <h3 class="producto-nombre">${p.nombre}</h3>
+                    <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
+                    <div class="card-acciones">
+                        ${
+                            agot
+                                ? `<button class="boton-stock-naranja boton-avisar-stock" data-id="${p.id}" style="background:#FFA500;color:#fff;cursor:pointer;">🔔 Avisame cuando haya stock</button>`
+                                : `<button class="boton-agregar">Agregar (Stock: ${p.stock})</button>`
+                        }
+                        <button class="boton-detalles">Ver Detalle</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Función para abrir modal
+        function abrirModalStockNotificacion(id) {
+            const prod = productos.find(p => p.id === id);
+            if (!prod) return alert("Producto no encontrado");
+            
+            const modal = document.getElementById('modal-stock-notificacion');
+            const infoProducto = document.getElementById('info-producto-stock');
+            const emailInput = document.getElementById('input-stock-email');
+            const nombreInput = document.getElementById('input-stock-nombre');
+            
+            // Mostrar información del producto
+            infoProducto.innerHTML = `
+                <div class="producto-stock-info">
+                    <img src="${prod.imagenes[0]}" alt="${prod.nombre}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
+                    <div>
+                        <strong>${prod.nombre}</strong><br>
+                        <span style="color: #7ed957;">$U ${prod.precio.toLocaleString('es-UY')}</span>
+                    </div>
+                </div>
+            `;
+            
+            // Limpiar formulario
+            emailInput.value = '';
+            nombreInput.value = '';
+            
+            // Mostrar modal
+            modal.removeAttribute('hidden');
+            modal.classList.add('visible');
+            modal.dataset.productoId = id;
+        }
+
+        // Función para cerrar modal
+        function cerrarModalStockNotificacion() {
+            const modal = document.getElementById('modal-stock-notificacion');
+            modal.classList.remove('visible');
+            setTimeout(() => {
+                modal.setAttribute('hidden', true);
+            }, 300);
+        }
+
+        // Función simulada de envío (para demo)
+        async function enviarNotificacionStock(productoId, email, nombre) {
+            // Simular delay de red
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            // Simular éxito (en producción enviará a Formspree)
+            console.log('Datos que se enviarían:', {
+                productoId,
+                email,
+                nombre,
+                endpoint: STOCK_NOTIFICATION_ENDPOINT
+            });
+            
+            return true; // Simular éxito
+        }
+
+        function mostrarNotificacion(msg, tipo = 'exito') {
+            // Crear notificación temporal
+            const noti = document.createElement('div');
+            noti.className = `notificacion ${tipo} show`;
+            noti.textContent = msg;
+            noti.style.cssText = `
+                position: fixed; bottom: 20px; right: 20px; z-index: 9999;
+                padding: 15px 20px; border-radius: 8px; color: white;
+                background: ${tipo === 'exito' ? '#43b95a' : '#e74c3c'};
+                font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            `;
+            document.body.appendChild(noti);
+            
+            setTimeout(() => noti.remove(), 3000);
+        }
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            // Renderizar productos
+            const galeria = document.getElementById('galeria-productos');
+            galeria.innerHTML = productos.map(crearCardProducto).join('');
+            
+            // Event listeners para botones de stock
+            galeria.querySelectorAll('.boton-avisar-stock').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    abrirModalStockNotificacion(parseInt(btn.dataset.id));
+                });
+            });
+
+            // Event listeners para cerrar modal
+            document.getElementById('btn-cerrar-modal-stock').addEventListener('click', cerrarModalStockNotificacion);
+            
+            // Event listener para formulario
+            document.getElementById('form-stock-notificacion').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const email = document.getElementById('input-stock-email').value.trim();
+                const nombre = document.getElementById('input-stock-nombre').value.trim();
+                const productoId = parseInt(document.getElementById('modal-stock-notificacion').dataset.productoId);
+                
+                if (!email || !productoId) {
+                    mostrarNotificacion('Por favor completa el email', 'error');
+                    return;
+                }
+                
+                // Mostrar estado de carga
+                const submitBtn = e.target.querySelector('button[type="submit"]');
+                const textoOriginal = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+                submitBtn.disabled = true;
+                
+                try {
+                    const exito = await enviarNotificacionStock(productoId, email, nombre);
+                    
+                    if (exito) {
+                        mostrarNotificacion('✅ Te notificaremos cuando haya stock disponible', 'exito');
+                        setTimeout(() => {
+                            cerrarModalStockNotificacion();
+                        }, 1500);
+                    } else {
+                        mostrarNotificacion('❌ Error al enviar la notificación. Por favor intenta de nuevo.', 'error');
+                    }
+                } catch (error) {
+                    mostrarNotificacion('❌ Error de conexión. Por favor intenta de nuevo.', 'error');
+                } finally {
+                    submitBtn.innerHTML = textoOriginal;
+                    submitBtn.disabled = false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

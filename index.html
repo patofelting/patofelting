@@ -268,6 +268,35 @@
     </div>
   </div>
 
+  <!-- Modal para notificación de stock -->
+  <div id="modal-stock-notificacion" class="modal-datos-envio" role="dialog" aria-modal="true" hidden>
+    <div class="modal-envio-contenido">
+      <button id="btn-cerrar-modal-stock" class="cerrar-modal-envio" aria-label="Cerrar modal">×</button>
+      <div class="modal-envio-header">
+        <h3>🔔 Avisame cuando haya stock</h3>
+        <p>Te notificaremos por email cuando este producto esté disponible nuevamente</p>
+      </div>
+      <form id="form-stock-notificacion" class="form-envio">
+        <div class="form-grupo">
+          <label for="input-stock-email">Email*</label>
+          <input type="email" id="input-stock-email" placeholder="tu@email.com" required>
+        </div>
+        <div class="form-grupo">
+          <label for="input-stock-nombre">Nombre (opcional)</label>
+          <input type="text" id="input-stock-nombre" placeholder="Ej: María">
+        </div>
+        <div class="producto-info-stock">
+          <h4>Producto de interés:</h4>
+          <div id="info-producto-stock"></div>
+        </div>
+        <button type="submit" class="boton-confirmar-envio">
+          <i class="fas fa-bell"></i> Notificarme cuando haya stock
+        </button>
+      </form>
+      <div id="mensaje-stock-resultado" class="mensaje-resultado" hidden></div>
+    </div>
+  </div>
+
   <section id="contacto" class="contact">
     <div class="container">
       <h2>Contáctame</h2>

@@ -3,6 +3,31 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
+/**
+ * CONFIGURACIÓN DE NOTIFICACIONES DE STOCK
+ * 
+ * Para configurar las notificaciones de stock con Formspree:
+ * 
+ * 1. Ir a https://formspree.io y crear una cuenta gratuita
+ * 2. Crear un nuevo formulario en tu dashboard
+ * 3. Copiar el endpoint URL que te proporciona Formspree
+ *    (tiene el formato: https://formspree.io/f/YOUR_FORM_ID)
+ * 4. Reemplazar 'YOUR_FORM_ID' en la línea siguiente con tu ID real
+ * 
+ * Los emails se enviarán automáticamente a la dirección configurada
+ * en tu cuenta de Formspree (patofelting@gmail.com)
+ * 
+ * Campos que se incluyen en el email:
+ * - Email del usuario
+ * - Nombre del usuario (opcional)
+ * - Nombre del producto
+ * - ID del producto
+ * - Precio del producto
+ * - Fecha y hora de la solicitud
+ * - Mensaje: "Avisame cuando haya stock"
+ */
+const STOCK_NOTIFICATION_ENDPOINT = 'https://formspree.io/f/YOUR_FORM_ID';
+
 // ========== INICIALIZAR FIREBASE ==========
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -54,7 +79,15 @@ const elementos = {
   btnCerrarCarrito: document.querySelector('.cerrar-carrito'),
   btnVaciarCarrito: document.querySelector('.boton-vaciar-carrito'),
   btnFinalizarCompra: document.querySelector('.boton-finalizar-compra'),
-  faqToggles: document.querySelectorAll('.faq-toggle')
+  faqToggles: document.querySelectorAll('.faq-toggle'),
+  // Elementos para notificación de stock
+  modalStockNotificacion: getEl('modal-stock-notificacion'),
+  btnCerrarModalStock: getEl('btn-cerrar-modal-stock'),
+  formStockNotificacion: getEl('form-stock-notificacion'),
+  inputStockEmail: getEl('input-stock-email'),
+  inputStockNombre: getEl('input-stock-nombre'),
+  infoProductoStock: getEl('info-producto-stock'),
+  mensajeStockResultado: getEl('mensaje-stock-resultado')
 };
 
 // ========== UTILIDADES ==========
@@ -210,6 +243,10 @@ function renderizarProductos() {
       e.stopPropagation();
       verDetalle(parseInt(card.dataset.id));
     });
+    card.querySelector('.boton-avisar-stock')?.addEventListener('click', e => {
+      e.stopPropagation();
+      abrirModalStockNotificacion(parseInt(card.dataset.id));
+    });
   });
 }
 function crearCardProducto(p) {
@@ -224,7 +261,7 @@ function crearCardProducto(p) {
       <div class="card-acciones">
         ${
           agot
-            ? `<button class="boton-stock-naranja" style="background:#FFA500;color:#fff;cursor:not-allowed;" disabled>🟠 Avisame cuando haya stock</button>`
+            ? `<button class="boton-stock-naranja boton-avisar-stock" data-id="${p.id}" style="background:#FFA500;color:#fff;cursor:pointer;">🔔 Avisame cuando haya stock</button>`
             : `<button class="boton-agregar">Agregar</button>`
         }
         <button class="boton-detalles">Ver Detalle</button>
@@ -340,6 +377,76 @@ function mostrarModalProducto(prod) {
 }
 function cerrarModal() {
   elementos.modal?.classList.remove('visible');
+}
+
+// ========== MODAL NOTIFICACION DE STOCK ==========
+function abrirModalStockNotificacion(id) {
+  const prod = productos.find(p => p.id === id);
+  if (!prod) return mostrarNotificacion("Producto no encontrado", "error");
+  
+  if (!elementos.modalStockNotificacion || !elementos.infoProductoStock) return;
+  
+  // Mostrar información del producto
+  elementos.infoProductoStock.innerHTML = `
+    <div class="producto-stock-info">
+      <img src="${prod.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${prod.nombre}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
+      <div>
+        <strong>${prod.nombre}</strong><br>
+        <span style="color: #7ed957;">$U ${prod.precio.toLocaleString('es-UY')}</span>
+      </div>
+    </div>
+  `;
+  
+  // Limpiar formulario
+  if (elementos.inputStockEmail) elementos.inputStockEmail.value = '';
+  if (elementos.inputStockNombre) elementos.inputStockNombre.value = '';
+  if (elementos.mensajeStockResultado) elementos.mensajeStockResultado.hidden = true;
+  
+  // Mostrar modal
+  elementos.modalStockNotificacion.removeAttribute('hidden');
+  elementos.modalStockNotificacion.classList.add('visible');
+  
+  // Guardar ID del producto para el envío
+  elementos.modalStockNotificacion.dataset.productoId = id;
+}
+
+function cerrarModalStockNotificacion() {
+  if (!elementos.modalStockNotificacion) return;
+  elementos.modalStockNotificacion.classList.remove('visible');
+  setTimeout(() => {
+    elementos.modalStockNotificacion.setAttribute('hidden', true);
+  }, 300);
+}
+
+async function enviarNotificacionStock(productoId, email, nombre) {
+  const prod = productos.find(p => p.id === productoId);
+  if (!prod) return false;
+  
+  const data = {
+    email: email,
+    nombre: nombre || 'No especificado',
+    producto: prod.nombre,
+    productoId: productoId,
+    precio: prod.precio,
+    mensaje: 'Avisame cuando haya stock',
+    fecha: new Date().toLocaleString('es-UY'),
+    _subject: `[Patofelting] Notificación de stock - ${prod.nombre}`
+  };
+  
+  try {
+    const response = await fetch(STOCK_NOTIFICATION_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Error enviando notificación:', error);
+    return false;
+  }
 }
 
 // ========== MODALES DE PRECOMPRA Y ENVÍO ==========
@@ -576,6 +683,46 @@ function inicializarEventos() {
     aplicarFiltros();
   });
   elementos.resetFiltros?.addEventListener('click', resetearFiltros);
+  
+  // Eventos para modal de notificación de stock
+  elementos.btnCerrarModalStock?.addEventListener('click', cerrarModalStockNotificacion);
+  elementos.formStockNotificacion?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const email = elementos.inputStockEmail?.value.trim();
+    const nombre = elementos.inputStockNombre?.value.trim();
+    const productoId = parseInt(elementos.modalStockNotificacion?.dataset.productoId);
+    
+    if (!email || !productoId) {
+      mostrarNotificacion('Por favor completa el email', 'error');
+      return;
+    }
+    
+    // Mostrar estado de carga
+    const submitBtn = elementos.formStockNotificacion.querySelector('button[type="submit"]');
+    const textoOriginal = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+    submitBtn.disabled = true;
+    
+    try {
+      const exito = await enviarNotificacionStock(productoId, email, nombre);
+      
+      if (exito) {
+        mostrarNotificacion('✅ Te notificaremos cuando haya stock disponible', 'exito');
+        setTimeout(() => {
+          cerrarModalStockNotificacion();
+        }, 1500);
+      } else {
+        mostrarNotificacion('❌ Error al enviar la notificación. Por favor intenta de nuevo.', 'error');
+      }
+    } catch (error) {
+      mostrarNotificacion('❌ Error de conexión. Por favor intenta de nuevo.', 'error');
+    } finally {
+      submitBtn.innerHTML = textoOriginal;
+      submitBtn.disabled = false;
+    }
+  });
+  
   inicializarFAQ();
 }
 
