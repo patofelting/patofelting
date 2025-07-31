@@ -159,16 +159,17 @@ async function vaciarCarrito() {
   }
 
   try {
-    await Promise.all(
-      carrito.map(async (item) => {
-        const productoRef = ref(db, `productos/${item.id}/stock`);
-        await runTransaction(productoRef, (stockActual) => {
-          const cantidadADevolver = typeof item.cantidad === 'number' && item.cantidad > 0 ? item.cantidad : 0;
-          if (typeof stockActual !== 'number') return cantidadADevolver;
-          return stockActual + cantidadADevolver;
-        });
-      })
-    );
+ await Promise.all(
+  carrito.map(async (item) => {
+    const productoRef = ref(db, `productos/${item.id}/stock`);
+    await runTransaction(productoRef, (stockActual) => {
+      const cantidadADevolver = typeof item.cantidad === 'number' && item.cantidad > 0 ? item.cantidad : 0;
+      if (typeof stockActual !== 'number') return cantidadADevolver;
+      return stockActual + cantidadADevolver;
+    });
+  })
+);
+
 
     // Vaciar carrito en memoria, localStorage y Firebase
     carrito = [];
@@ -453,10 +454,11 @@ async function agregarAlCarrito(id, cantidadAgregar = 1, boton = null) {
     const cantidadEnCarrito = enCarrito ? enCarrito.cantidad : 0;
     const disponibles = stockFirebase - cantidadEnCarrito;
 
-    if (disponibles < cantidadAgregar) {
-      mostrarNotificacion("❌ Stock insuficiente", "error");
-      return;
-    }
+ if (disponibles < cantidadAgregar) {
+  mostrarNotificacion("❌ Stock insuficiente", "error");
+  return;
+}
+
 
     if (boton) {
       boton.disabled = true;
@@ -631,91 +633,105 @@ function mostrarModalProducto(producto) {
   const agotado = disponibles <= 0;
   let currentIndex = 0;
 
- function renderCarrusel() {
-  contenido.innerHTML = `
-    <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
-    <div class="modal-flex">
-      <div class="modal-carrusel">
-        <img src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
-        ${
-          producto.imagenes.length > 1
-            ? `
-        <div class="modal-controls">
-          <button class="modal-prev" aria-label="Imagen anterior" ${currentIndex === 0 ? 'disabled' : ''}>
-            <svg width="26" height="26" viewBox="0 0 26 26"><polyline points="17 22 9 13 17 4" fill="none" stroke="#2e7d32" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-          <button class="modal-next" aria-label="Siguiente imagen" ${currentIndex === producto.imagenes.length - 1 ? 'disabled' : ''}>
-            <svg width="26" height="26" viewBox="0 0 26 26"><polyline points="9 4 17 13 9 22" fill="none" stroke="#2e7d32" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-        </div>
-        `
-            : ''
-        }
-        <div class="modal-thumbnails">
-          ${producto.imagenes
-            .map(
-              (img, i) =>
-                `<img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}">`
-            )
-            .join('')}
-        </div>
-      </div>
-      <div class="modal-info">
-        <h1 class="modal-nombre">${producto.nombre}</h1>
-        <p class="modal-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
-        <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">
-          ${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}
-        </p>
-        <div class="modal-descripcion">
-          ${producto.descripcion || ''}
-          <br>
-          ${producto.adicionales ? `<small><b>Adicionales:</b> ${producto.adicionales}</small><br>` : ''}
+  function renderCarrusel() {
+    contenido.innerHTML = `
+      <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
+      <div class="modal-flex">
+        <div class="modal-carrusel">
+          <img src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
           ${
-            producto.alto || producto.ancho || producto.profundidad
-              ? `<small><b>Medidas:</b> ${producto.alto ? producto.alto + ' cm (alto)' : ''}${producto.ancho ? ' x ' + producto.ancho + ' cm (ancho)' : ''}${producto.profundidad ? ' x ' + producto.profundidad + ' cm (prof.)' : ''}</small>`
+            producto.imagenes.length > 1
+              ? `
+          <div class="modal-controls">
+            <button class="modal-prev" aria-label="Imagen anterior" ${currentIndex === 0 ? 'disabled' : ''}>
+              <svg width="26" height="26" viewBox="0 0 26 26"><polyline points="17 22 9 13 17 4" fill="none" stroke="#2e7d32" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="modal-next" aria-label="Siguiente imagen" ${currentIndex === producto.imagenes.length - 1 ? 'disabled' : ''}>
+              <svg width="26" height="26" viewBox="0 0 26 26"><polyline points="9 4 17 13 9 22" fill="none" stroke="#2e7d32" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          `
               : ''
           }
+          <div class="modal-thumbnails">
+            ${producto.imagenes
+              .map(
+                (img, i) =>
+                  `<img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}">`
+              )
+              .join('')}
+          </div>
         </div>
-        <div class="modal-acciones">
-          <input type="number" value="1" min="1" max="${disponibles}" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
-          <button class="boton-agregar-modal ${agotado ? 'agotado' : ''}" data-id="${producto.id}" ${agotado ? 'disabled' : ''}>
-            ${agotado ? 'Agotado' : 'Agregar al carrito'}
-          </button>
+        <div class="modal-info">
+          <h1 class="modal-nombre">${producto.nombre}</h1>
+          <p class="modal-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
+          <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">
+            ${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}
+          </p>
+          <div class="modal-descripcion">
+            ${producto.descripcion || ''}
+            <br>
+            ${producto.adicionales ? `<small><b>Adicionales:</b> ${producto.adicionales}</small><br>` : ''}
+            ${
+              producto.alto || producto.ancho || producto.profundidad
+                ? `<small><b>Medidas:</b> ${producto.alto ? producto.alto + ' cm (alto)' : ''}${producto.ancho ? ' x ' + producto.ancho + ' cm (ancho)' : ''}${producto.profundidad ? ' x ' + producto.profundidad + ' cm (prof.)' : ''}</small>`
+                : ''
+            }
+          </div>
+          <div class="modal-acciones">
+            <input type="number" value="1" min="1" max="${disponibles}" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
+            <button class="boton-agregar-modal ${agotado ? 'agotado' : ''}" data-id="${producto.id}" ${agotado ? 'disabled' : ''}>
+              ${agotado ? 'Agotado' : 'Agregar al carrito'}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  `;
+    `;
 
-  // Cierre modal
-  contenido.querySelector('.cerrar-modal').onclick = () => cerrarModal();
+  contenido.querySelector('.boton-agregar-modal')?.addEventListener('click', async () => {
+  const inputCantidad = contenido.querySelector('.cantidad-modal-input');
+  const cantidadAgregar = parseInt(inputCantidad?.value, 10) || 1;
 
+  const stockRef = ref(firebaseDatabase, `productos/${producto.id}/stock`);
+  try {
+    const snapshot = await get(stockRef);
+    const stockActual = snapshot.exists() ? parseInt(snapshot.val(), 10) : 0;
 
-  const btnPrev = contenido.querySelector('.modal-prev');
-  const btnNext = contenido.querySelector('.modal-next');
-  const thumbnails = contenido.querySelectorAll('.thumbnail');
+    const enCarrito = carrito.find(item => item.id === producto.id);
+    const enCarritoCantidad = enCarrito?.cantidad || 0;
+    const disponibles = stockActual - enCarritoCantidad;
 
-  btnPrev?.addEventListener('click', () => {
-    if (currentIndex > 0) {
-      currentIndex--;
-      renderCarrusel();
+    if (cantidadAgregar > disponibles) {
+      mostrarNotificacion("❌ No hay suficiente stock disponible", "error");
+      return;
     }
-  });
 
-  btnNext?.addEventListener('click', () => {
-    if (currentIndex < producto.imagenes.length - 1) {
-      currentIndex++;
-      renderCarrusel();
+    // Agregar al carrito
+    if (enCarrito) {
+      enCarrito.cantidad += cantidadAgregar;
+    } else {
+      carrito.push({ ...producto, cantidad: cantidadAgregar });
     }
-  });
 
-  thumbnails.forEach(th => {
-    th.addEventListener('click', () => {
-      currentIndex = parseInt(th.dataset.index);
-      renderCarrusel();
+    await runTransaction(stockRef, (currentStock) => {
+      if (typeof currentStock !== 'number') return cantidadAgregar;
+      return currentStock - cantidadAgregar;
     });
-  });
+
+    guardarCarrito();
+    renderizarCarrito();
+    renderizarProductos();
+    cerrarModal();
+    mostrarNotificacion("✅ Producto agregado al carrito", "exito");
+
+  } catch (error) {
+    console.error("Error al agregar producto desde modal:", error);
+    mostrarNotificacion("⚠️ Error al agregar al carrito", "error");
+  }
+});
+  }
 }
-}
+
 // ===============================
 // ACTUALIZAR UI
 // ===============================
