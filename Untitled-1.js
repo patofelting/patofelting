@@ -6,7 +6,9 @@ const LS_CARRITO_KEY = 'carrito';
 const CSV_URL = window.SHEET_CSV_URL;
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
-// Import Firebase core module for initializeApp (Already done in index.html, so removed here)
+// Import Firebase core module for initializeApp
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
 // Import Authentication functions
 import {
   getAuth,
@@ -22,10 +24,28 @@ import {
   get
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-// We assume Firebase is already initialized in index.html and its instances are available globally
-// const app = initializeApp(firebaseConfig); // REMOVED: Already initialized in index.html
-const db = window.firebaseDatabase; // Use the globally exposed database instance
-const auth = getAuth(window.firebaseApp); // Assuming firebaseApp is also exposed globally or derive from `db`
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
+  authDomain: "patofelting-b188f.firebaseapp.com",
+  databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
+  projectId: "patofelting-b188f",
+  storageBucket: "patofelting-b188f.appspot.com",
+  messagingSenderId: "858377467588",
+  appId: "1:858377467588:web:cade9de05ebccc17f87b91"
+};
+
+// Initialize Firebase App
+const app = initializeApp(firebaseConfig);
+
+// Obtain service instances
+const db = getDatabase(app);
+const auth = getAuth(app);
+
+// Anonymous authentication
+signInAnonymously(auth)
+  .then(() => console.log("✅ Signed in anonymously"))
+  .catch(error => console.error("❌ Error signing in:", error));
 
 // ===============================
 // ESTADO GLOBAL
@@ -35,22 +55,30 @@ let carrito = [];
 let paginaActual = 1;
 
 let filtrosActuales = {
-  precioMin: 0, // Default to 0 for min price
-  precioMax: 3000, // Default to 3000 for max price, based on slider max
+  precioMin: null,
+  precioMax: null,
   categoria: 'todos',
   busqueda: ''
 };
-
 // ===============================
 // LOAD PRODUCTS ON PAGE LOAD
 // ===============================
 document.addEventListener('DOMContentLoaded', async () => {
-  // It's generally better to load from Firebase as it's real-time and should be the source of truth for stock.
-  // CSV can be used for initial data import if needed, but Firebase should override.
+  try {
+    // Si estás cargando desde un CSV y luego fusionando con Firebase,
+    // asegúrate de que Papa Parse esté disponible globalmente o importarlo.
+    // Por ahora, lo dejaré comentado si no lo usas activamente o Papa Parse no está incluido en tu HTML.
+    // await cargarProductosDesdeCSV();
+  } catch (e) {
+    console.warn("No se pudo cargar productos desde CSV (posiblemente Papa Parse no está cargado o CSV_URL es nulo):", e);
+  }
+
   try {
     await signInAnonymously(auth);
     console.log('✅ Signed in anonymously to Firebase.');
-    cargarProductosDesdeFirebase();
+    cargarProductosDesdeFirebase(); // Ahora cargarProductosDesdeFirebase se encarga de la fusión si CSV se carga primero
+    cargarCarrito(); // Load cart from localStorage
+    init(); // Initialize other UI elements and event listeners
   } catch (error) {
     console.error('❌ Error signing in to Firebase:', error);
     let errorMessage = 'Error de autenticación con Firebase.';
@@ -61,9 +89,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     mostrarNotificacion(errorMessage, 'error');
   }
-
-  cargarCarrito(); // Load cart from localStorage
-  init(); // Initialize other UI elements and event listeners
 });
 
 
@@ -83,7 +108,7 @@ const elementos = {
   selectCategoria: getElement('filtro-categoria'),
   precioMinInput: getElement('min-slider'),
   precioMaxInput: getElement('max-slider'),
-  // botonResetearFiltros: document.querySelector('.boton-resetear-filtros'), // This button does not exist in HTML
+  botonResetearFiltros: document.querySelector('.boton-resetear-filtros'),
   carritoBtnMain: getElement('carrito-btn-main'),
   carritoPanel: getElement('carrito-panel'),
   carritoOverlay: document.querySelector('.carrito-overlay'),
@@ -173,6 +198,57 @@ function actualizarContadorCarrito() {
   }
 }
 
+// Cargar datos de productos desde Google Sheets (CSV)
+async function cargarProductosDesdeCSV() {
+  if (!CSV_URL || typeof Papa === 'undefined') {
+    // console.warn("CSV_URL no definida o Papa Parse no cargado. Saltando carga de CSV.");
+    return Promise.resolve(); // Resuelve inmediatamente si no hay CSV_URL o Papa Parse
+  }
+  return new Promise((resolve, reject) => {
+    Papa.parse(CSV_URL, {
+      download: true,
+      header: true,
+      dynamicTyping: true,
+      complete: (result) => {
+        try {
+          // Cargar productos desde CSV inicialmente
+          productos = result.data
+            .filter(row => row && row.id)
+            .map(row => ({
+              id: parseInt(row.id),
+              nombre: row.nombre ? String(row.nombre).trim() : 'Sin nombre',
+              descripcion: row.descripcion ? String(row.descripcion).trim() : '',
+              precio: !isNaN(parseFloat(row.precio)) ? parseFloat(row.precio) : 0,
+              stock: !isNaN(parseInt(row.stock)) ? parseInt(row.stock) : 0,
+              imagenes: row.imagenes
+                ? String(row.imagenes)
+                    .split('|')
+                    .map(u => u.trim())
+                    .filter(Boolean)
+                : [PLACEHOLDER_IMAGE],
+              categoria: row.categoria
+                ? String(row.categoria).toLowerCase().trim()
+                : 'otros',
+              estado: row.estado ? String(row.estado).trim() : ''
+            }));
+          // console.log("Productos cargados desde CSV:", productos.length);
+          resolve();
+        } catch (err) {
+          console.error("Error al procesar datos CSV:", err);
+          reject(err);
+        }
+      },
+      error: (err) => {
+        console.error("Error al descargar CSV:", err);
+        reject(err);
+      }
+    });
+  }).catch(err => {
+    console.error('Error al cargar CSV:', err);
+    mostrarNotificacion('Error al cargar hoja de productos desde CSV', 'error');
+  });
+}
+
 // Cargar datos de productos desde Firebase
 async function cargarProductosDesdeFirebase() {
   const productosRef = ref(db, 'productos');
@@ -187,12 +263,15 @@ async function cargarProductosDesdeFirebase() {
     const snapshot = await get(productosRef);
 
     if (!snapshot.exists()) {
-      elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles.</p>';
+      // Si no hay productos en Firebase, y no se cargaron desde CSV, mostrar mensaje.
+      if (productos.length === 0) {
+        elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles.</p>';
+      }
       return;
     }
 
-    // Process initial data
-    procesarDatosProductos(snapshot.val());
+    // Process initial data, merging with existing 'productos' if loaded from CSV
+    mergeProductosConFirebase(snapshot.val());
 
     // Set up real-time listener for subsequent changes
     onValue(productosRef, (snapshot) => {
@@ -203,7 +282,7 @@ async function cargarProductosDesdeFirebase() {
         actualizarUI();
         return;
       }
-      procesarDatosProductos(snapshot.val());
+      mergeProductosConFirebase(snapshot.val());
     }, (error) => {
       console.error('Error en listener de productos Firebase:', error);
       mostrarNotificacion('Error al recibir actualizaciones de productos', 'error');
@@ -223,18 +302,16 @@ async function cargarProductosDesdeFirebase() {
   }
 }
 
-// Auxiliary function to process product data from Firebase
-function procesarDatosProductos(data) {
-  // Clear existing products to avoid duplicates when onValue is triggered
-  productos = [];
-  Object.keys(data).forEach(key => {
-    const p = data[key];
+// Auxiliary function to process and merge product data from Firebase
+function mergeProductosConFirebase(firebaseData) {
+  const firebaseProducts = [];
+  Object.keys(firebaseData).forEach(key => {
+    const p = firebaseData[key];
     if (!p || typeof p !== 'object') {
-      console.warn(`Producto ${key} tiene datos inválidos o faltantes`, p);
+      console.warn(`Producto ${key} tiene datos inválidos o faltantes en Firebase`, p);
       return; // Skip invalid product entries
     }
-
-    productos.push({
+    firebaseProducts.push({
       id: p.id && !isNaN(p.id) ? parseInt(p.id) : parseInt(key), // Use key as ID if p.id is missing/invalid
       nombre: typeof p.nombre === 'string' ? p.nombre.trim() : 'Sin nombre',
       descripcion: typeof p.descripcion === 'string' ? p.descripcion.trim() : '',
@@ -243,12 +320,23 @@ function procesarDatosProductos(data) {
       imagenes: Array.isArray(p.imagenes) ? p.imagenes.filter(img => typeof img === 'string' && img.trim() !== '') : [PLACEHOLDER_IMAGE],
       categoria: typeof p.categoria === 'string' ? p.categoria.toLowerCase().trim() : 'otros',
       estado: typeof p.estado === 'string' ? p.estado.trim() : '',
-      // Add other properties if they exist in your Firebase data
       adicionales: typeof p.adicionales === 'string' ? p.adicionales.trim() : '',
       alto: !isNaN(parseFloat(p.alto)) ? parseFloat(p.alto) : null,
       ancho: !isNaN(parseFloat(p.ancho)) ? parseFloat(p.ancho) : null,
       profundidad: !isNaN(parseFloat(p.profundidad)) ? parseFloat(p.profundidad) : null,
     });
+  });
+
+  // Merge firebaseProducts into 'productos' array
+  firebaseProducts.forEach(fp => {
+    const existingIndex = productos.findIndex(p => p.id === fp.id);
+    if (existingIndex !== -1) {
+      // Update existing product with Firebase data (Firebase takes precedence for stock/price)
+      productos[existingIndex] = { ...productos[existingIndex], ...fp };
+    } else {
+      // Add new product from Firebase
+      productos.push(fp);
+    }
   });
 
   renderizarProductos();
@@ -269,8 +357,7 @@ function renderizarCarrito() {
   elementos.listaCarrito.innerHTML = carrito.map(item => {
     const producto = productos.find(p => p.id === item.id);
     // Calculate available stock based on current product stock minus what's already in the cart for this item
-    const stockRealProducto = producto ? producto.stock : 0;
-    const disponiblesParaAgregar = Math.max(0, stockRealProducto - item.cantidad);
+    const disponiblesParaAgregar = producto ? obtenerStockDisponible(producto) : 0;
 
     return `
     <li class="carrito-item" data-id="${item.id}">
@@ -351,6 +438,16 @@ function toggleCarrito(forceState) {
 // PRODUCTOS, FILTROS Y PAGINACIÓN
 // ===============================
 
+/**
+ * Calcula el stock disponible de un producto, restando la cantidad que ya está en el carrito.
+ * @param {object} producto - El objeto producto.
+ * @returns {number} El stock disponible para agregar al carrito.
+ */
+function obtenerStockDisponible(producto) {
+  const enCarrito = carrito.find(i => i.id === producto.id);
+  return Math.max(0, producto.stock - (enCarrito?.cantidad || 0));
+}
+
 function agregarAlCarrito(id, cantidad = 1, boton = null) {
   if (isNaN(id) || id === null) {
     mostrarNotificacion("ID de producto inválido", "error");
@@ -430,7 +527,9 @@ function agregarAlCarrito(id, cantidad = 1, boton = null) {
   }).finally(() => {
     if (boton) {
       boton.disabled = false;
-      boton.innerHTML = textoOriginal;
+      if (textoOriginal !== null) {
+        boton.innerHTML = textoOriginal;
+      }
     }
   });
 }
@@ -471,21 +570,23 @@ function actualizarCategorias() {
 // ===============================
 
 function crearCardProducto(p) {
-  const enCarrito = carrito.find(i => i.id === p.id);
-  const disp = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
-  const agot = disp <= 0;
+  const disponibles = obtenerStockDisponible(p); // Usar la nueva función
+  const agotado = disponibles <= 0;
   const imagenPrincipal = p.imagenes && p.imagenes.length > 0 ? p.imagenes[0] : PLACEHOLDER_IMAGE;
 
   return `
-    <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}">
+    <div class="producto-card ${agotado ? 'agotado' : ''}" data-id="${p.id}">
       <img src="${imagenPrincipal}" alt="${p.nombre}" class="producto-img" loading="lazy">
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
+      <p class="producto-stock-info">
+        ${agotado ? 'AGOTADO' : `Stock: ${disponibles} unidades`}
+      </p>
       <div class="card-acciones">
-        <button class="boton-agregar${agot ? ' agotado' : ''}" data-id="${p.id}" ${agot ? 'disabled' : ''}>
-          ${agot ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
+        <button class="boton-agregar${agotado ? ' agotado' : ''}" data-id="${p.id}" ${agotado ? 'disabled' : ''}>
+          ${agotado ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
         </button>
-        ${agot ? `
+        ${agotado ? `
         <button class="boton-aviso-stock" data-nombre="${p.nombre.replace(/'/g, "\\'")}" style="background-color: #ffd93b; color: #333; font-weight: bold;">
           📩 Avisame cuando haya stock
         </button>` : ''}
@@ -496,6 +597,27 @@ function crearCardProducto(p) {
 }
 
 
+function manejarEventosGaleria(e) {
+  const boton = e.target.closest('button');
+  const tarjeta = e.target.closest('.producto-card');
+
+  if (!tarjeta || !boton) return;
+
+  const id = parseInt(tarjeta.dataset.id);
+  const producto = productos.find(p => p.id === id);
+  if (!producto || isNaN(id)) return;
+
+  e.stopPropagation(); // Prevent duplicate clicks from propagating
+
+  if (boton.classList.contains('boton-detalles')) {
+    verDetalle(id);
+  } else if (boton.classList.contains('boton-agregar')) {
+    agregarAlCarrito(id, 1, boton);
+  } else if (boton.classList.contains('boton-aviso-stock')) {
+    preguntarStock(boton.dataset.nombre || producto.nombre);
+  }
+}
+
 function renderizarProductos() {
   const productosFiltrados = filtrarProductos();
   const inicio = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
@@ -503,8 +625,10 @@ function renderizarProductos() {
 
   if (!elementos.galeriaProductos) return;
 
-  // Clear existing products and re-render
-  elementos.galeriaProductos.innerHTML = ''; // Clear content first
+  // Eliminar los escuchadores de eventos existentes de todas las tarjetas de producto antes de volver a renderizar
+  elementos.galeriaProductos.querySelectorAll('.producto-card').forEach(card => {
+    card.removeEventListener('click', manejarEventosGaleria);
+  });
 
   if (paginados.length === 0) {
     elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No se encontraron productos que coincidan con los filtros.</p>';
@@ -513,6 +637,11 @@ function renderizarProductos() {
   }
 
   renderizarPaginacion(productosFiltrados.length);
+
+  // Añadir escuchadores de eventos a las tarjetas de producto recién renderizadas o actualizadas
+  elementos.galeriaProductos.querySelectorAll('.producto-card').forEach(card => {
+    card.addEventListener('click', manejarEventosGaleria);
+  });
 }
 
 
@@ -552,10 +681,7 @@ function mostrarModalProducto(producto) {
   const contenido = elementos.modalContenido;
   if (!modal || !contenido) return;
 
-  const enCarrito = carrito.find(item => item.id === producto.id) || {
-    cantidad: 0
-  };
-  const disponibles = Math.max(0, producto.stock - enCarrito.cantidad);
+  const disponibles = obtenerStockDisponible(producto); // Usar la nueva función
   const agotado = disponibles <= 0;
   let currentIndex = 0; // Reset index each time modal opens
 
@@ -592,7 +718,7 @@ function mostrarModalProducto(producto) {
           <h1 class="modal-nombre">${producto.nombre}</h1>
           <p class="modal-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
           <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">
-            ${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}
+            ${agotado ? 'AGOTADO' : `Stock disponible: ${disponibles} unidades`}
           </p>
           <div class="modal-descripcion">
             ${producto.descripcion || ''}
@@ -615,7 +741,8 @@ function mostrarModalProducto(producto) {
     `;
 
     // Event listeners for modal elements
-    contenido.querySelector('.cerrar-modal').onclick = () => cerrarModal();
+    // Ya no es necesario setear el onclick en el HTML si lo hacemos aquí
+    // contenido.querySelector('.cerrar-modal').onclick = () => cerrarModal();
 
     const btnPrev = contenido.querySelector('.modal-prev');
     const btnNext = contenido.querySelector('.modal-next');
@@ -748,7 +875,7 @@ function setupContactForm() {
 
   if (formContacto && window.emailjs) { // Ensure emailjs library is loaded
     // Initialize EmailJS with your user ID
-    emailjs.init("YOUR_EMAILJS_USER_ID"); // Replace with your actual EmailJS User ID
+    emailjs.init("YOUR_EMAILJS_USER_ID"); // Reemplazar con tu ID de usuario real de EmailJS. No lo he puesto en el código ya que no lo proporcionaste.
 
     formContacto.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -766,7 +893,8 @@ function setupContactForm() {
       const email = document.getElementById('email').value;
       const mensaje = document.getElementById('mensaje').value;
 
-      emailjs.send('service_89by24g', 'template_8mn7hdp', { // Replace with your Service ID and Template ID
+      // Reemplaza 'service_89by24g' y 'template_8mn7hdp' con tu Service ID y Template ID reales de EmailJS.
+      emailjs.send('service_89by24g', 'template_8mn7hdp', {
           from_name: nombre,
           from_email: email,
           message: mensaje
@@ -815,6 +943,7 @@ function inicializarEventos() {
   elementos.btnCerrarCarrito?.addEventListener('click', () => toggleCarrito(false));
 
   document.getElementById('select-envio')?.addEventListener('change', actualizarResumenPedido);
+  // Se ha quitado la doble llamada a vaciarCarrito
   elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
   elementos.btnFinalizarCompra?.addEventListener('click', () => {
     if (carrito.length === 0) {
@@ -855,11 +984,13 @@ function inicializarEventos() {
 
   // Update filters immediately when sliders are moved
   elementos.precioMinInput?.addEventListener('input', () => {
+    filtrosActuales.precioMin = parseFloat(elementos.precioMinInput.value); // Asegúrate de actualizar el filtro
     updateRange();
     aplicarFiltros(); // Apply filters immediately on slider change
   });
 
   elementos.precioMaxInput?.addEventListener('input', () => {
+    filtrosActuales.precioMax = parseFloat(elementos.precioMaxInput.value); // Asegúrate de actualizar el filtro
     updateRange();
     aplicarFiltros(); // Apply filters immediately on slider change
   });
