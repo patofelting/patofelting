@@ -222,9 +222,11 @@ function crearCardProducto(p) {
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
       <div class="card-acciones">
-        <button class="boton-agregar${agot ? ' agotado' : ''}" ${agot ? 'disabled' : ''}>
-          ${agot ? 'Agotado' : 'Agregar'}
-        </button>
+        ${
+          agot
+            ? `<button class="boton-stock-naranja" style="background:#FFA500;color:#fff;cursor:not-allowed;" disabled>🟠 Avisame cuando haya stock</button>`
+            : `<button class="boton-agregar">Agregar</button>`
+        }
         <button class="boton-detalles">Ver Detalle</button>
       </div>
     </div>
@@ -408,8 +410,8 @@ btnCerrarModalEnvio?.addEventListener('click', () => {
   setTimeout(() => { modalDatosEnvio?.setAttribute('hidden', true); }, 300);
 });
 
-// ========== ENVIAR PEDIDO POR WHATSAPP ==========
-formEnvio?.addEventListener('submit', function(e) {
+// ========== ENVIAR PEDIDO POR WHATSAPP Y ACTUALIZAR STOCK EN TIEMPO REAL ==========
+formEnvio?.addEventListener('submit', async function(e) {
   e.preventDefault();
 
   const nombre = document.getElementById('input-nombre').value.trim();
@@ -462,6 +464,32 @@ formEnvio?.addEventListener('submit', function(e) {
     mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
   }
 
+  // 1. ACTUALIZA EL STOCK EN FIREBASE ANTES DE SEGUIR
+  try {
+    // Vuelve a chequear el stock en tiempo real por seguridad
+    let todoOk = true;
+    let updates = {};
+    for (let item of carrito) {
+      // Busca el producto actual en la lista de productos
+      const prodActual = productos.find(p => p.id === item.id);
+      if (!prodActual || prodActual.stock < item.cantidad) {
+        todoOk = false;
+        break;
+      }
+      updates[`productos/${item.id}/stock`] = prodActual.stock - item.cantidad;
+    }
+    if (!todoOk) {
+      mostrarNotificacion('¡El stock cambió! Revisa tu carrito.', 'error');
+      return;
+    }
+    // Actualiza el stock en Firebase
+    await update(ref(db), updates);
+  } catch (err) {
+    mostrarNotificacion('Error al actualizar stock en tiempo real.', 'error');
+    return;
+  }
+
+  // 2. SIGUE CON EL ENVÍO POR WHATSAPP
   const numeroWhatsApp = '59893566283';
   sessionStorage.setItem('ultimoPedidoWhatsApp', mensaje);
   const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
