@@ -6,7 +6,7 @@ const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/400x400/7ed957/fff?text=S
 // ========== INICIALIZAR FIREBASE ==========
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
@@ -67,7 +67,15 @@ function mostrarNotificacion(msg, tipo = 'exito') {
   setTimeout(() => {
     noti.classList.remove('show');
     setTimeout(() => noti.remove(), 300);
-  }, 2200);
+  }, tipo === 'error' ? 4000 : 2200); // Mostrar errores más tiempo
+}
+
+// ========== PREVENCIÓN DE CONFLICTOS ==========
+function mostrarConflictoStock(productoNombre, stockDisponible) {
+  mostrarNotificacion(
+    `⚠️ ${productoNombre}: Otro usuario puede haber reservado este stock. Disponible: ${stockDisponible}`,
+    "error"
+  );
 }
 
 // ========== CARRITO (SOLO FRONTEND) ==========
@@ -121,18 +129,40 @@ function renderizarCarrito() {
     btn.onclick = () => modificarCantidadEnCarrito(parseInt(btn.dataset.id), 1);
   });
 }
-function modificarCantidadEnCarrito(id, delta) {
+async function modificarCantidadEnCarrito(id, delta) {
   const item = carrito.find(i => i.id === id);
   if (!item) return;
-  const prod = productos.find(p => p.id === id);
-  if (delta > 0 && item.cantidad < prod.stock) {
-    item.cantidad++;
-  } else if (delta < 0 && item.cantidad > 1) {
-    item.cantidad--;
+  
+  try {
+    // Si se intenta aumentar, validar contra Firebase
+    if (delta > 0) {
+      const productRef = ref(db, `productos/${id}`);
+      const snapshot = await get(productRef);
+      
+      if (snapshot.exists()) {
+        const stockActual = parseInt(snapshot.val().stock) || 0;
+        if (item.cantidad >= stockActual) {
+          mostrarNotificacion("❌ No hay más stock disponible", "error");
+          return;
+        }
+      }
+    }
+    
+    // Aplicar cambio
+    if (delta > 0) {
+      item.cantidad++;
+    } else if (delta < 0 && item.cantidad > 1) {
+      item.cantidad--;
+    }
+    
+    guardarCarrito();
+    renderizarCarrito();
+    renderizarProductos();
+    
+  } catch (error) {
+    console.error('Error al modificar cantidad:', error);
+    mostrarNotificacion("❌ Error al verificar stock", "error");
   }
-  guardarCarrito();
-  renderizarCarrito();
-  renderizarProductos();
 }
 
 // ========== LECTURA DE PRODUCTOS (SOLO LEE FIREBASE) ==========
@@ -151,23 +181,37 @@ function escucharProductosFirebase() {
         categoria: (data[key].categoria || 'otros').toLowerCase()
       });
     }
-    // Sync carrito: Si stock bajó, ajusta cantidades
+    // Sync carrito: Si stock bajó, ajusta cantidades automáticamente
     let cambiado = false;
+    let productosEliminados = [];
+    let productosReducidos = [];
+    
     carrito.forEach(item => {
       const prod = productos.find(p => p.id === item.id);
-      if (prod && item.cantidad > prod.stock) {
-        item.cantidad = prod.stock;
-        cambiado = true;
-      }
-      if (prod && prod.stock === 0) {
-        item.cantidad = 0;
-        cambiado = true;
+      if (prod) {
+        if (prod.stock === 0) {
+          productosEliminados.push(prod.nombre);
+          item.cantidad = 0;
+          cambiado = true;
+        } else if (item.cantidad > prod.stock) {
+          productosReducidos.push(`${prod.nombre} (de ${item.cantidad} a ${prod.stock})`);
+          item.cantidad = prod.stock;
+          cambiado = true;
+        }
       }
     });
+    
     if (cambiado) {
       carrito = carrito.filter(i => i.cantidad > 0);
       guardarCarrito();
-      mostrarNotificacion("⚠️ ¡Stock actualizado!", "info");
+      
+      // Notificaciones más específicas y claras
+      if (productosEliminados.length > 0) {
+        mostrarNotificacion(`🚫 Productos sin stock eliminados del carrito: ${productosEliminados.join(', ')}`, "error");
+      }
+      if (productosReducidos.length > 0) {
+        mostrarNotificacion(`⚠️ Cantidades ajustadas: ${productosReducidos.join(', ')}`, "info");
+      }
     }
     renderizarProductos();
     renderizarCarrito();
@@ -252,26 +296,64 @@ function actualizarCategorias() {
 }
 
 // ========== AGREGAR AL CARRITO ==========
-function agregarAlCarrito(id, cantidad = 1) {
-  const prod = productos.find(p => p.id === id);
-  if (!prod || prod.stock < cantidad) {
-    mostrarNotificacion("❌ Stock insuficiente", "error");
-    return;
-  }
-  const item = carrito.find(i => i.id === id);
-  if (item) {
-    if (item.cantidad + cantidad > prod.stock) {
-      mostrarNotificacion("❌ Stock insuficiente", "error");
+async function agregarAlCarrito(id, cantidad = 1) {
+  try {
+    // Validar siempre contra Firebase en tiempo real
+    const productRef = ref(db, `productos/${id}`);
+    const snapshot = await get(productRef);
+    
+    if (!snapshot.exists()) {
+      mostrarNotificacion("❌ Producto no encontrado", "error");
       return;
     }
-    item.cantidad += cantidad;
-  } else {
-    carrito.push({ ...prod, cantidad });
+    
+    const prodFirebase = snapshot.val();
+    const stockActual = parseInt(prodFirebase.stock) || 0;
+    
+    // Verificar stock disponible considerando lo que ya está en el carrito
+    const item = carrito.find(i => i.id === id);
+    const cantidadEnCarrito = item ? item.cantidad : 0;
+    const stockDisponible = stockActual - cantidadEnCarrito;
+    
+    // Verificar si el stock local difiere del stock de Firebase (posible conflicto)
+    const prodLocal = productos.find(p => p.id === id);
+    if (prodLocal && prodLocal.stock !== stockActual) {
+      mostrarConflictoStock(prodFirebase.nombre, stockDisponible);
+      // Actualizar stock local
+      prodLocal.stock = stockActual;
+      renderizarProductos();
+    }
+    
+    if (stockDisponible < cantidad) {
+      if (stockDisponible <= 0) {
+        mostrarNotificacion("❌ No hay stock disponible", "error");
+      } else {
+        mostrarNotificacion(`❌ Solo hay ${stockDisponible} unidades disponibles`, "error");
+      }
+      return;
+    }
+    
+    // Agregar al carrito
+    if (item) {
+      item.cantidad += cantidad;
+    } else {
+      carrito.push({ 
+        ...prodFirebase,
+        id: parseInt(id),
+        cantidad,
+        precio: parseFloat(prodFirebase.precio) || 0
+      });
+    }
+    
+    guardarCarrito();
+    renderizarCarrito();
+    renderizarProductos();
+    mostrarNotificacion("✅ Producto agregado al carrito", "exito");
+    
+  } catch (error) {
+    console.error('Error al agregar al carrito:', error);
+    mostrarNotificacion("❌ Error al verificar stock", "error");
   }
-  guardarCarrito();
-  renderizarCarrito();
-  renderizarProductos();
-  mostrarNotificacion("✅ Producto agregado al carrito", "exito");
 }
 window.agregarAlCarrito = agregarAlCarrito;
 
@@ -337,7 +419,157 @@ function cerrarModal() {
   elementos.modal?.classList.remove('visible');
 }
 
-// ========== CARRITO UI ==========
+// ========== STOCK UPDATE IN FIREBASE ==========
+async function actualizarStockEnFirebase(compraItems) {
+  try {
+    const updates = {};
+    
+    for (const item of compraItems) {
+      const productRef = ref(db, `productos/${item.id}`);
+      const snapshot = await get(productRef);
+      
+      if (snapshot.exists()) {
+        const stockActual = parseInt(snapshot.val().stock) || 0;
+        const nuevoStock = Math.max(0, stockActual - item.cantidad);
+        updates[`productos/${item.id}/stock`] = nuevoStock;
+      }
+    }
+    
+    if (Object.keys(updates).length > 0) {
+      await update(ref(db), updates);
+      mostrarNotificacion("✅ Stock actualizado correctamente", "exito");
+    }
+    
+  } catch (error) {
+    console.error('Error al actualizar stock:', error);
+    mostrarNotificacion("⚠️ Error al actualizar stock", "error");
+  }
+}
+
+// ========== FINALIZAR COMPRA ==========
+function iniciarProcesoPedido() {
+  if (carrito.length === 0) {
+    mostrarNotificacion("❌ Tu carrito está vacío", "error");
+    return;
+  }
+  
+  // Mostrar modal de aviso previo
+  const modalAviso = document.getElementById('aviso-pre-compra-modal');
+  if (modalAviso) {
+    modalAviso.hidden = false;
+    modalAviso.style.display = 'flex';
+  }
+}
+
+function mostrarModalDatosEnvio() {
+  const modalEnvio = document.getElementById('modal-datos-envio');
+  if (modalEnvio) {
+    modalEnvio.hidden = false;
+    modalEnvio.style.display = 'flex';
+    
+    // Actualizar resumen del pedido
+    actualizarResumenPedido();
+    
+    // Cerrar carrito
+    toggleCarrito(false);
+  }
+}
+
+function actualizarResumenPedido() {
+  const resumenProductos = document.getElementById('resumen-productos');
+  const resumenTotal = document.getElementById('resumen-total');
+  
+  if (resumenProductos && resumenTotal) {
+    resumenProductos.innerHTML = carrito.map(item => 
+      `<div class="resumen-item">
+        <span>${item.nombre} x${item.cantidad}</span>
+        <span>$U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
+      </div>`
+    ).join('');
+    
+    const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+    resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
+  }
+}
+
+async function procesarPedidoFinal(datosEnvio) {
+  try {
+    // Validar stock una vez más antes de finalizar
+    for (const item of carrito) {
+      const productRef = ref(db, `productos/${item.id}`);
+      const snapshot = await get(productRef);
+      
+      if (!snapshot.exists()) {
+        throw new Error(`Producto ${item.nombre} ya no está disponible`);
+      }
+      
+      const stockActual = parseInt(snapshot.val().stock) || 0;
+      if (stockActual < item.cantidad) {
+        throw new Error(`Stock insuficiente para ${item.nombre}. Disponible: ${stockActual}`);
+      }
+    }
+    
+    // Actualizar stock en Firebase
+    await actualizarStockEnFirebase([...carrito]);
+    
+    // Generar mensaje de WhatsApp
+    const mensaje = generarMensajeWhatsApp(datosEnvio);
+    const numeroWhatsApp = "59898765432"; // TODO: Reemplazar con número real de Patofelting
+    const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
+    
+    // Abrir WhatsApp
+    window.open(urlWhatsApp, '_blank');
+    
+    // Limpiar carrito
+    carrito = [];
+    guardarCarrito();
+    renderizarCarrito();
+    renderizarProductos();
+    
+    // Cerrar modal
+    const modalEnvio = document.getElementById('modal-datos-envio');
+    if (modalEnvio) {
+      modalEnvio.hidden = true;
+      modalEnvio.style.display = 'none';
+    }
+    
+    mostrarNotificacion("🎉 ¡Pedido enviado! Te contactaremos pronto", "exito");
+    
+  } catch (error) {
+    console.error('Error al procesar pedido:', error);
+    mostrarNotificacion(`❌ ${error.message}`, "error");
+    
+    // Actualizar carrito por si cambió el stock
+    escucharProductosFirebase();
+  }
+}
+
+function generarMensajeWhatsApp(datos) {
+  const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+  
+  let mensaje = `🧶 *Nuevo Pedido - Patofelting*\n\n`;
+  mensaje += `👤 *Cliente:* ${datos.nombre} ${datos.apellido}\n`;
+  mensaje += `📞 *Teléfono:* ${datos.telefono}\n`;
+  
+  if (datos.envio !== 'retiro') {
+    mensaje += `📍 *Dirección:* ${datos.direccion}\n`;
+  }
+  
+  mensaje += `🚚 *Envío:* ${datos.envio === 'retiro' ? 'Retiro en local' : datos.envio === 'montevideo' ? 'Envío Montevideo' : 'Envío Interior'}\n\n`;
+  
+  mensaje += `🛍️ *Productos:*\n`;
+  carrito.forEach(item => {
+    mensaje += `• ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}\n`;
+  });
+  
+  mensaje += `\n💰 *Total: $U ${total.toLocaleString('es-UY')}*\n`;
+  
+  if (datos.notas) {
+    mensaje += `\n📝 *Notas:* ${datos.notas}`;
+  }
+  
+  return mensaje;
+}
 function toggleCarrito(forceState) {
   if (!elementos.carritoPanel || !elementos.carritoOverlay) return;
   let isOpen = typeof forceState === 'boolean'
@@ -383,6 +615,78 @@ function inicializarEventos() {
     renderizarProductos();
     mostrarNotificacion('🧹 Carrito vaciado', 'exito');
   });
+  
+  // Evento para iniciar proceso de pedido
+  elementos.btnFinalizarCompra?.addEventListener('click', iniciarProcesoPedido);
+  
+  // Eventos para modal de aviso pre-compra
+  document.getElementById('btn-entendido-aviso')?.addEventListener('click', () => {
+    const modalAviso = document.getElementById('aviso-pre-compra-modal');
+    if (modalAviso) {
+      modalAviso.hidden = true;
+      modalAviso.style.display = 'none';
+    }
+    mostrarModalDatosEnvio();
+  });
+  
+  document.getElementById('btn-cancelar-aviso')?.addEventListener('click', () => {
+    const modalAviso = document.getElementById('aviso-pre-compra-modal');
+    if (modalAviso) {
+      modalAviso.hidden = true;
+      modalAviso.style.display = 'none';
+    }
+  });
+  
+  // Eventos para modal de datos de envío
+  document.getElementById('btn-cerrar-modal-envio')?.addEventListener('click', () => {
+    const modalEnvio = document.getElementById('modal-datos-envio');
+    if (modalEnvio) {
+      modalEnvio.hidden = true;
+      modalEnvio.style.display = 'none';
+    }
+  });
+  
+  // Evento para procesar pedido final
+  document.getElementById('form-envio')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const datosEnvio = {
+      nombre: document.getElementById('input-nombre').value.trim(),
+      apellido: document.getElementById('input-apellido').value.trim(),
+      telefono: document.getElementById('input-telefono').value.trim(),
+      direccion: document.getElementById('input-direccion').value.trim(),
+      envio: document.getElementById('select-envio').value,
+      notas: document.getElementById('input-notas').value.trim()
+    };
+    
+    // Validar campos requeridos
+    if (!datosEnvio.nombre || !datosEnvio.apellido || !datosEnvio.telefono || !datosEnvio.envio) {
+      mostrarNotificacion("❌ Por favor completa todos los campos requeridos", "error");
+      return;
+    }
+    
+    if (datosEnvio.envio !== 'retiro' && !datosEnvio.direccion) {
+      mostrarNotificacion("❌ La dirección es requerida para envíos", "error");
+      return;
+    }
+    
+    await procesarPedidoFinal(datosEnvio);
+  });
+  
+  // Mostrar/ocultar campo dirección según método de envío
+  document.getElementById('select-envio')?.addEventListener('change', (e) => {
+    const grupoDireccion = document.getElementById('grupo-direccion');
+    const inputDireccion = document.getElementById('input-direccion');
+    
+    if (e.target.value === 'retiro') {
+      grupoDireccion.style.display = 'none';
+      inputDireccion.required = false;
+    } else {
+      grupoDireccion.style.display = 'block';
+      inputDireccion.required = true;
+    }
+  });
+  
   elementos.inputBusqueda?.addEventListener('input', e => {
     filtrosActuales.busqueda = e.target.value.toLowerCase();
     aplicarFiltros();
