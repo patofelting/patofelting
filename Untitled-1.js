@@ -164,7 +164,8 @@ async function vaciarCarrito() {
       carrito.map(async (item) => {
         const productoRef = ref(db, `productos/${item.id}/stock`);
         await runTransaction(productoRef, (stockActual) => {
-          const cantidadADevolver = typeof item.cantidad === 'number' && item.cantidad > 0 ? item.cantidad : 0;
+          const cantidadADevolver =
+            typeof item.cantidad === 'number' && item.cantidad > 0 ? item.cantidad : 0;
           if (typeof stockActual !== 'number') return cantidadADevolver;
           return stockActual + cantidadADevolver;
         });
@@ -173,6 +174,8 @@ async function vaciarCarrito() {
 
     carrito = [];
     guardarCarrito();
+
+    const USER_ID = localStorage.getItem('uid') || 'anonimo';
     await set(ref(db, `carritos/${USER_ID}`), []);
 
     renderizarCarrito();
@@ -183,6 +186,7 @@ async function vaciarCarrito() {
     mostrarNotificacion('Ocurrió un error al vaciar el carrito', 'error');
   }
 }
+
 
 
 
@@ -1183,34 +1187,7 @@ async function obtenerStockActual(idProducto) {
 
 
 
-async function vaciarCarrito() {
-  if (carrito.length === 0) {
-    mostrarNotificacion("El carrito ya está vacío", "info");
-    return;
-  }
 
-  try {
-    await Promise.all(
-      carrito.map(async (item) => {
-        const stockRef = ref(db, `productos/${item.id}/stock`);
-        await runTransaction(stockRef, (currentStock) => {
-          return typeof currentStock === 'number'
-            ? currentStock + item.cantidad
-            : item.cantidad;
-        });
-      })
-    );
-
-    carrito = [];
-    guardarCarrito();
-    renderizarCarrito();
-    renderizarProductos();
-    mostrarNotificacion("Carrito vaciado correctamente", "exito");
-  } catch (error) {
-    console.error("Error al vaciar carrito:", error);
-    mostrarNotificacion("Error al vaciar el carrito", "error");
-  }
-}
 
 // Vincula el botón AGREGAR (Ejemplo)
 document.body.addEventListener("click", async (e) => {
