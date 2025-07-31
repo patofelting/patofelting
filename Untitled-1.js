@@ -269,8 +269,8 @@ function configurarFiltros() {
 function configurarPriceSlider() {
   if (elementos.precioMinInput && elementos.precioMaxInput) {
     const updateSliderVisuals = () => {
-      const min = parseInt(elements.precioMinInput.value);
-      const max = parseInt(elements.precioMaxInput.value);
+      const min = parseInt(elementos.precioMinInput.value);
+      const max = parseInt(elementos.precioMaxInput.value);
       
       // Update price display
       if (document.getElementById('min-price')) {
