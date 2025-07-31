@@ -6,7 +6,7 @@ const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/400x400/7ed957/fff?text=S
 // ========== INICIALIZAR FIREBASE ==========
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, onValue, update, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
@@ -426,93 +426,91 @@ formEnvio?.addEventListener('submit', async function(e) {
     return;
   }
 
-  // --- ARMA EL MENSAJE Y LOS TOTALES IGUAL AL RESUMEN ---
-  let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n`;
-  mensaje += `*📋 Detalles del pedido:*\n`;
-
-  let subtotal = 0;
-  carrito.forEach(item => {
-    const subtotalItem = item.precio * item.cantidad;
-    subtotal += subtotalItem;
-    mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${subtotalItem.toLocaleString('es-UY')}\n`;
-  });
-
-  let costoEnvio = 0;
-  let textoEnvio = 'Retiro en local (Gratis)';
-  if (envio === 'montevideo') {
-    costoEnvio = 150;
-    textoEnvio = 'Envío Montevideo ($150)';
-  } else if (envio === 'interior') {
-    costoEnvio = 300;
-    textoEnvio = 'Envío Interior ($300)';
-  }
-  const total = subtotal + costoEnvio;
-
-  mensaje += `\n*💰 Total:*\n`;
-  mensaje += `Subtotal: $U ${subtotal.toLocaleString('es-UY')}\n`;
-  mensaje += `Envío: $U ${costoEnvio.toLocaleString('es-UY')}\n`;
-  mensaje += `*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
-
-  mensaje += `*👤 Datos del cliente:*\n`;
-  mensaje += `Nombre: ${nombre} ${apellido}\n`;
-  mensaje += `Teléfono: ${telefono}\n`;
-  mensaje += `Método de envío: ${textoEnvio}\n`;
-  if (envio !== 'retiro') {
-    mensaje += `Dirección: ${direccion}\n`;
-  }
-  if (notas) {
-    mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
-  }
-
-  // 1. ACTUALIZA EL STOCK EN FIREBASE ANTES DE SEGUIR
+  // ----------- TRANSACCIÓN DE STOCK -----------
   try {
-    // Vuelve a chequear el stock en tiempo real por seguridad
-    let todoOk = true;
-    let updates = {};
-    for (let item of carrito) {
-      // Busca el producto actual en la lista de productos
-      const prodActual = productos.find(p => p.id === item.id);
-      if (!prodActual || prodActual.stock < item.cantidad) {
-        todoOk = false;
-        break;
+    // Intentar descontar el stock con una transacción atómica por cada producto
+    for (const item of carrito) {
+      const stockRef = ref(db, `productos/${item.id}/stock`);
+      const txResult = await runTransaction(stockRef, currentStock => {
+        if (currentStock === null || currentStock < item.cantidad) {
+          return; // aborta la transacción
+        }
+        return currentStock - item.cantidad;
+      });
+      if (!txResult.committed) {
+        mostrarNotificacion(`Stock insuficiente para ${item.nombre}. Actualiza la página.`, 'error');
+        return;
       }
-      updates[`productos/${item.id}/stock`] = prodActual.stock - item.cantidad;
     }
-    if (!todoOk) {
-      mostrarNotificacion('¡El stock cambió! Revisa tu carrito.', 'error');
-      return;
+
+    // Si llegamos aquí, el stock fue descontado con éxito para todos los productos
+
+    // ---- ARMADO DEL MENSAJE Y LOS TOTALES ----
+    let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n`;
+    mensaje += `*📋 Detalles del pedido:*\n`;
+
+    let subtotal = 0;
+    carrito.forEach(item => {
+      const subtotalItem = item.precio * item.cantidad;
+      subtotal += subtotalItem;
+      mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${subtotalItem.toLocaleString('es-UY')}\n`;
+    });
+
+    let costoEnvio = 0;
+    let textoEnvio = 'Retiro en local (Gratis)';
+    if (envio === 'montevideo') {
+      costoEnvio = 150;
+      textoEnvio = 'Envío Montevideo ($150)';
+    } else if (envio === 'interior') {
+      costoEnvio = 300;
+      textoEnvio = 'Envío Interior ($300)';
     }
-    // Actualiza el stock en Firebase
-    await update(ref(db), updates);
+    const total = subtotal + costoEnvio;
+
+    mensaje += `\n*💰 Total:*\n`;
+    mensaje += `Subtotal: $U ${subtotal.toLocaleString('es-UY')}\n`;
+    mensaje += `Envío: $U ${costoEnvio.toLocaleString('es-UY')}\n`;
+    mensaje += `*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
+
+    mensaje += `*👤 Datos del cliente:*\n`;
+    mensaje += `Nombre: ${nombre} ${apellido}\n`;
+    mensaje += `Teléfono: ${telefono}\n`;
+    mensaje += `Método de envío: ${textoEnvio}\n`;
+    if (envio !== 'retiro') {
+      mensaje += `Dirección: ${direccion}\n`;
+    }
+    if (notas) {
+      mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
+    }
+
+    const numeroWhatsApp = '59893566283';
+    sessionStorage.setItem('ultimoPedidoWhatsApp', mensaje);
+    const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
+    const nuevaPestaña = window.open(urlWhatsApp, '_blank');
+    setTimeout(() => {
+      if (!nuevaPestaña || nuevaPestaña.closed) {
+        window.location.href = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${encodeURIComponent(mensaje)}`;
+      }
+    }, 500);
+
+    setTimeout(() => {
+      modalDatosEnvio.classList.remove('visible');
+      setTimeout(() => {
+        modalDatosEnvio.setAttribute('hidden', true);
+        carrito = [];
+        guardarCarrito();
+        renderizarCarrito();
+        renderizarProductos();
+        mostrarNotificacion('Pedido listo para enviar por WhatsApp', 'exito');
+        formEnvio.reset();
+        renderizarResumenPedidoEnvio();
+      }, 300);
+    }, 1000);
+
   } catch (err) {
     mostrarNotificacion('Error al actualizar stock en tiempo real.', 'error');
     return;
   }
-
-  // 2. SIGUE CON EL ENVÍO POR WHATSAPP
-  const numeroWhatsApp = '59893566283';
-  sessionStorage.setItem('ultimoPedidoWhatsApp', mensaje);
-  const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
-  const nuevaPestaña = window.open(urlWhatsApp, '_blank');
-  setTimeout(() => {
-    if (!nuevaPestaña || nuevaPestaña.closed) {
-      window.location.href = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${encodeURIComponent(mensaje)}`;
-    }
-  }, 500);
-
-  setTimeout(() => {
-    modalDatosEnvio.classList.remove('visible');
-    setTimeout(() => {
-      modalDatosEnvio.setAttribute('hidden', true);
-      carrito = [];
-      guardarCarrito();
-      renderizarCarrito();
-      renderizarProductos();
-      mostrarNotificacion('Pedido listo para enviar por WhatsApp', 'exito');
-      formEnvio.reset();
-      renderizarResumenPedidoEnvio();
-    }, 300);
-  }, 1000);
 });
 
 // ========== CARRITO UI ==========
