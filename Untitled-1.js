@@ -437,83 +437,52 @@ function toggleCarrito(forceState) {
 
 
 // Función para manejar eventos delegados
- async function agregarAlCarrito(id, cantidad = 1, boton = null) {
-  if (isNaN(id) || id === null) {
-    mostrarNotificacion("ID de producto inválido", "error");
-    return;
-  }
-
-  const producto = productos.find(p => p.id === id);
-  if (!producto) {
-    mostrarNotificacion("Producto no encontrado", "error");
-    return;
-  }
-
-  const cantidadAgregar = Math.max(1, parseInt(cantidad));
-  if (isNaN(cantidadAgregar)) {
-    mostrarNotificacion("Cantidad inválida", "error");
-    return;
-  }
-
-  const enCarrito = carrito.find(item => item.id === id);
-
-  const stockRef = ref(db, `productos/${id}/stock`);
-const snapshot = await get(stockRef);
-const stockActual = snapshot.exists() ? parseInt(snapshot.val()) : 0;
-const disponibles = stockActual - (enCarrito?.cantidad || 0);
-if (disponibles < cantidadAgregar) {
-  mostrarNotificacion("Stock insuficiente", "error");
-  return;
-}
-
-  let textoOriginal = null;
-  if (boton) {
-    boton.disabled = true;
-    textoOriginal = boton.innerHTML;
-    boton.innerHTML = `Agregando <span class="spinner"></span>`;
-  }
-
-  const productRef = ref(db, `productos/${id}/stock`);
-  runTransaction(productRef, (currentStock) => {
-    if (typeof currentStock !== 'number' || isNaN(currentStock)) {
-      currentStock = 0;
+async function agregarAlCarrito(id, cantidadAgregar = 1, boton = null) {
+  try {
+    const producto = productos.find(p => p.id === id);
+    if (!producto) {
+      mostrarNotificacion("Producto no encontrado", "error");
+      return;
     }
 
-    if (currentStock < cantidadAgregar) return;
-    return currentStock - cantidadAgregar;
-  }).then((res) => {
-    if (!res.committed) {
-      mostrarNotificacion('❌ Stock insuficiente', 'error');
+    const stockRef = ref(db, `productos/${id}/stock`);
+    const snapshot = await get(stockRef);
+    const stockFirebase = snapshot.exists() ? parseInt(snapshot.val()) : 0;
+
+    const enCarrito = carrito.find(item => item.id === id);
+    const cantidadEnCarrito = enCarrito ? enCarrito.cantidad : 0;
+    const disponibles = stockFirebase - cantidadEnCarrito;
+
+    if (disponibles < cantidadAgregar) {
+      mostrarNotificacion("❌ Stock insuficiente", "error");
       return;
+    }
+
+    if (boton) {
+      boton.disabled = true;
+      const original = boton.innerHTML;
+      boton.innerHTML = 'Agregando...';
+      setTimeout(() => {
+        boton.innerHTML = original;
+        boton.disabled = false;
+      }, 1000);
     }
 
     if (enCarrito) {
       enCarrito.cantidad += cantidadAgregar;
     } else {
-      carrito.push({
-        id: producto.id,
-        nombre: producto.nombre,
-        precio: producto.precio,
-        cantidad: cantidadAgregar,
-        imagen: producto.imagenes?.[0] || PLACEHOLDER_IMAGE
-      });
+      carrito.push({ ...producto, cantidad: cantidadAgregar });
     }
 
     guardarCarrito();
     renderizarCarrito();
-    renderizarProductos();
-    mostrarNotificacion("✅ Producto agregado al carrito", "exito");
-
-  }).catch((error) => {
-    console.error("Error al agregar al carrito:", error);
-    mostrarNotificacion("⚠️ Error inesperado al agregar al carrito", "error");
-  }).finally(() => {
-    if (boton) {
-      boton.disabled = false;
-      boton.innerHTML = textoOriginal;
-    }
-  });
+    mostrarNotificacion("✅ Producto agregado", "exito");
+  } catch (err) {
+    console.error("Error al agregar producto:", err);
+    mostrarNotificacion("Error al agregar producto", "error");
+  }
 }
+
 
 
 
