@@ -152,30 +152,36 @@ function cargarCarrito() {
 }
 
 async function vaciarCarrito() {
-  if (carrito.length === 0) return;
+  if (carrito.length === 0) {
+    mostrarNotificacion('El carrito ya está vacío', 'info');
+    return;
+  }
 
   try {
-    await Promise.all(carrito.map(async item => {
-      const productRef = ref(db, `productos/${item.id}/stock`);
-      await runTransaction(productRef, (currentStock) => {
-        // Initialize to 0 if stock doesn't exist
-        if (currentStock === null || typeof currentStock !== 'number') {
-          return item.cantidad;
-        }
-        return currentStock + item.cantidad;
-      });
-    }));
+    await Promise.all(
+      carrito.map(async (item) => {
+        const productRef = ref(db, `productos/${item.id}/stock`);
+        await runTransaction(productRef, (currentStock) => {
+          if (typeof currentStock !== 'number') {
+            console.warn(`Stock inválido para producto ID: ${item.id}. Inicializando en ${item.cantidad}`);
+            return item.cantidad;
+          }
+          return currentStock + item.cantidad;
+        });
+      })
+    );
 
     carrito = [];
     guardarCarrito();
     renderizarCarrito();
     renderizarProductos();
-    mostrarNotificacion('Carrito vaciado y stock restaurado', 'exito');
+    mostrarNotificacion('Carrito vaciado y stock restaurado correctamente', 'exito');
   } catch (error) {
-    console.error("Error al restaurar stock:", error);
-    mostrarNotificacion('Error al restaurar stock', 'error');
+    console.error("Error al vaciar el carrito y restaurar el stock:", error);
+    mostrarNotificacion('Ocurrió un error al vaciar el carrito', 'error');
   }
 }
+
 
 elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
 
@@ -431,22 +437,58 @@ function toggleCarrito(forceState) {
 
 
 // Función para manejar eventos delegados
-function manejarEventosGaleria(e) {
-  const target = e.target.closest('[data-id]');
-  if (!target) return;
-
-  const id = parseInt(target.dataset.id);
+function agregarAlCarrito(id, cantidad = 1, boton = null) {
   const producto = productos.find(p => p.id === id);
-  if (!producto) return;
-
-  if (target.classList.contains('boton-detalles')) {
-    verDetalle(id);
-  } else if (target.classList.contains('boton-agregar')) {
-    agregarAlCarrito(id, 1);
-  } else if (target.classList.contains('boton-aviso-stock')) {
-    preguntarStock(target.dataset.nombre || producto.nombre);
+  if (!producto) {
+    mostrarNotificacion("Producto no encontrado", "error");
+    return;
   }
+
+  const cantidadAgregar = Math.max(1, parseInt(cantidad));
+  if (isNaN(cantidadAgregar)) {
+    mostrarNotificacion("Cantidad inválida", "error");
+    return;
+  }
+
+  const enCarrito = carrito.find(item => item.id === id);
+
+  if (boton) boton.disabled = true;
+
+  const productRef = ref(db, `productos/${id}/stock`);
+  runTransaction(productRef, (currentStock) => {
+    if (typeof currentStock !== 'number') return currentStock;
+    if (currentStock < cantidadAgregar) return; // cancela transacción
+    return currentStock - cantidadAgregar;
+  }).then((res) => {
+    if (!res.committed) {
+      mostrarNotificacion('❌ Stock insuficiente', 'error');
+      return;
+    }
+
+    if (enCarrito) {
+      enCarrito.cantidad += cantidadAgregar;
+    } else {
+      carrito.push({
+        id: producto.id,
+        nombre: producto.nombre,
+        precio: producto.precio,
+        cantidad: cantidadAgregar,
+        imagen: producto.imagenes?.[0] || PLACEHOLDER_IMAGE
+      });
+    }
+
+    guardarCarrito();
+    renderizarCarrito();
+    renderizarProductos();
+    mostrarNotificacion("✅ Producto agregado al carrito", "exito");
+  }).catch((error) => {
+    console.error("Error al agregar al carrito:", error);
+    mostrarNotificacion("Error inesperado al agregar al carrito", "error");
+  }).finally(() => {
+    if (boton) boton.disabled = false;
+  });
 }
+
 
 function filtrarProductos() {
   return productos.filter(p => {
@@ -1038,28 +1080,35 @@ function verDetalle(id) {
     mostrarNotificacion("Producto no encontrado", "error");
   }
 }
-
-function agregarAlCarrito(id, cantidad = 1) {
-  console.log("Adding to cart:", id, cantidad); // Debug log
+function agregarAlCarrito(id, cantidad = 1, boton = null) {
   const producto = productos.find(p => p.id === id);
   if (!producto) {
     mostrarNotificacion("Producto no encontrado", "error");
     return;
   }
 
-  const enCarrito = carrito.find(item => item.id === id);
   const cantidadAgregar = Math.max(1, parseInt(cantidad));
+  if (isNaN(cantidadAgregar)) {
+    mostrarNotificacion("Cantidad inválida", "error");
+    return;
+  }
+
+  const enCarrito = carrito.find(item => item.id === id);
+
+  // Desactivar el botón mientras se procesa
+  if (boton) boton.disabled = true;
 
   const productRef = ref(db, `productos/${id}/stock`);
   runTransaction(productRef, (currentStock) => {
-    if (currentStock === null) return currentStock;
-    if (currentStock < cantidadAgregar) return;
+    if (typeof currentStock !== 'number') return currentStock;
+    if (currentStock < cantidadAgregar) return; // cancela transacción
     return currentStock - cantidadAgregar;
   }).then((res) => {
     if (!res.committed) {
-      mostrarNotificacion('Stock insuficiente', 'error');
+      mostrarNotificacion('❌ Stock insuficiente', 'error');
       return;
     }
+
     if (enCarrito) {
       enCarrito.cantidad += cantidadAgregar;
     } else {
@@ -1071,15 +1120,19 @@ function agregarAlCarrito(id, cantidad = 1) {
         imagen: producto.imagenes?.[0] || PLACEHOLDER_IMAGE
       });
     }
+
     guardarCarrito();
-    renderizarProductos();
     renderizarCarrito();
-    mostrarNotificacion("Producto agregado al carrito", "exito");
+    renderizarProductos();
+    mostrarNotificacion("✅ Producto agregado al carrito", "exito");
   }).catch((error) => {
     console.error("Error al agregar al carrito:", error);
-    mostrarNotificacion("No se pudo agregar al carrito", "error");
+    mostrarNotificacion("Error inesperado al agregar al carrito", "error");
+  }).finally(() => {
+    if (boton) boton.disabled = false;
   });
 }
+
 
 
 function actualizarCarritoUI() {
