@@ -347,8 +347,35 @@ function mergeProductosConFirebase(data) {
     };
   }).filter(Boolean);
 
-  // 💥 Reemplazamos en lugar de fusionar
+  // 💥 Reemplazamos la lista global de productos
   productos = nuevos;
+
+  // 🆕 AJUSTAMOS CANTIDADES EN CARRITO si stock cambió
+  let cambiosHechos = false;
+  carrito.forEach(item => {
+    const productoActual = productos.find(p => p.id === item.id);
+    if (!productoActual) return;
+
+    const maxDisponible = productoActual.stock;
+    if (item.cantidad > maxDisponible) {
+      item.cantidad = maxDisponible;
+      cambiosHechos = true;
+    }
+
+    // Si ya no hay stock y está en carrito, lo sacamos
+    if (productoActual.stock <= 0) {
+      item.cantidad = 0;
+      cambiosHechos = true;
+    }
+  });
+
+  // Si hubo cambios, actualizamos UI y guardamos
+  if (cambiosHechos) {
+    carrito = carrito.filter(item => item.cantidad > 0);
+    guardarCarrito();
+    renderizarCarrito();
+    mostrarNotificacion("⚠️ Stock actualizado según compras recientes", "info");
+  }
 
   renderizarProductos();
   actualizarCategorias();
