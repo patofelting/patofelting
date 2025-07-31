@@ -189,7 +189,13 @@ function configurarEventListeners() {
 
   // Event delegation for dynamically generated product cards
   if (elementos.galeriaProductos) {
-    elementos.galeriaProductos.addEventListener('click', (e) => {
+    elementos.galeriaProductos.addEventListener('click', async (e) => {
+      // Prevent rapid double clicks
+      if (e.target.dataset.processing === 'true') {
+        console.log('🚫 Clic ignorado - procesando anterior...');
+        return;
+      }
+
       const productCard = e.target.closest('.producto-card');
       if (!productCard) return;
 
@@ -199,11 +205,34 @@ function configurarEventListeners() {
 
       // Handle different button clicks
       if (e.target.classList.contains('boton-agregar') || e.target.closest('.boton-agregar')) {
+        e.preventDefault();
         e.stopPropagation();
-        const cantidadInput = productCard.querySelector('.cantidad-input');
-        const cantidad = cantidadInput ? parseInt(cantidadInput.value) || 1 : 1;
-        agregarAlCarrito(productId, cantidad);
+        
+        // Mark button as processing
+        const button = e.target.classList.contains('boton-agregar') ? e.target : e.target.closest('.boton-agregar');
+        if (button.dataset.processing === 'true') {
+          console.log('🚫 Botón ya procesando, ignorando...');
+          return;
+        }
+        
+        button.dataset.processing = 'true';
+        button.disabled = true;
+        
+        try {
+          const cantidadInput = productCard.querySelector('.cantidad-input');
+          const cantidad = cantidadInput ? parseInt(cantidadInput.value) || 1 : 1;
+          console.log(`🎯 Clic en agregar - Producto: ${productId}, Cantidad: ${cantidad}`);
+          await agregarAlCarrito(productId, cantidad);
+        } finally {
+          // Always re-enable the button after processing
+          setTimeout(() => {
+            button.dataset.processing = 'false';
+            button.disabled = producto.stock <= 0;
+          }, 1000);
+        }
+        
       } else if (e.target.classList.contains('boton-detalles') || e.target.closest('.boton-detalles')) {
+        e.preventDefault();
         e.stopPropagation();
         abrirModal(producto);
       } else {
@@ -373,17 +402,22 @@ function actualizarContadorCarrito() {
 }
 
 async function agregarAlCarrito(id, cantidad = 1) {
+  console.log(`🔄 Iniciando agregar al carrito - ID: ${id}, Cantidad: ${cantidad}`);
+  
   // Prevent adding items with invalid quantity
   if (cantidad <= 0) {
     mostrarNotificacion('La cantidad debe ser mayor a 0', 'error');
     return;
   }
 
-  const producto = productos.find(p => p.id === id);
+  const producto = productos.find(p => p.id === parseInt(id));
   if (!producto) {
     mostrarNotificacion('Producto no encontrado', 'error');
+    console.error(`❌ Producto no encontrado con ID: ${id}`);
     return;
   }
+
+  console.log(`📦 Producto encontrado: ${producto.nombre}, Stock actual: ${producto.stock}`);
 
   // Check if product is out of stock
   if (producto.stock <= 0) {
@@ -391,30 +425,45 @@ async function agregarAlCarrito(id, cantidad = 1) {
     return;
   }
 
-  // Check if requesting more than available stock
-  const itemEnCarrito = carrito.find(item => item.id === id);
+  // Find existing item in cart BEFORE any Firebase operations
+  const itemEnCarrito = carrito.find(item => item.id === parseInt(id));
   const cantidadEnCarrito = itemEnCarrito ? itemEnCarrito.cantidad : 0;
   const stockDisponible = producto.stock - cantidadEnCarrito;
+  
+  console.log(`🛒 Cantidad en carrito: ${cantidadEnCarrito}, Stock disponible: ${stockDisponible}`);
   
   if (cantidad > stockDisponible) {
     mostrarNotificacion(`Solo hay ${stockDisponible} unidades disponibles`, 'error');
     return;
   }
 
+  // Prevent multiple simultaneous additions
+  if (producto._agregando) {
+    console.log('⚠️ Ya se está agregando este producto, saltando...');
+    return;
+  }
+  
+  producto._agregando = true;
+
   try {
     // Update stock in Firebase using transaction
     const productRef = ref(db, `productos/${id}/stock`);
+    console.log(`🔥 Iniciando transacción Firebase para producto ${id}`);
     
     const transactionResult = await runTransaction(productRef, (currentStock) => {
+      console.log(`📊 Stock actual en Firebase: ${currentStock}`);
       // Ensure we have a valid number for stock
       const validStock = (typeof currentStock === 'number' && !isNaN(currentStock)) ? currentStock : 0;
       
       // Check if we still have enough stock
       if (validStock < cantidad) {
+        console.log(`❌ No hay suficiente stock. Requerido: ${cantidad}, Disponible: ${validStock}`);
         return; // Abort transaction if not enough stock
       }
       
-      return validStock - cantidad;
+      const newStock = validStock - cantidad;
+      console.log(`✅ Reduciendo stock de ${validStock} a ${newStock}`);
+      return newStock;
     });
 
     if (!transactionResult.committed) {
@@ -422,12 +471,16 @@ async function agregarAlCarrito(id, cantidad = 1) {
       return;
     }
 
-    // Add or update item in local cart
+    console.log(`✅ Transacción exitosa. Nuevo stock: ${transactionResult.snapshot.val()}`);
+
+    // Update local cart ONLY after successful Firebase transaction
     if (itemEnCarrito) {
+      console.log(`🔄 Actualizando cantidad existente de ${itemEnCarrito.cantidad} a ${itemEnCarrito.cantidad + cantidad}`);
       itemEnCarrito.cantidad += cantidad;
     } else {
+      console.log(`➕ Agregando nuevo item al carrito`);
       carrito.push({
-        id: producto.id,
+        id: parseInt(producto.id),
         nombre: producto.nombre,
         precio: producto.precio,
         imagen: producto.imagenes[0],
@@ -435,13 +488,21 @@ async function agregarAlCarrito(id, cantidad = 1) {
       });
     }
 
+    // Update local product stock to reflect Firebase change
+    producto.stock = transactionResult.snapshot.val();
+
     guardarCarrito();
     renderizarCarrito();
+    renderizarProductos(); // Re-render to show updated stock
     mostrarNotificacion(`${producto.nombre} agregado al carrito`, 'exito');
     
   } catch (error) {
-    console.error('Error al agregar producto al carrito:', error);
+    console.error('❌ Error al agregar producto al carrito:', error);
     mostrarNotificacion('Error al agregar el producto. Inténtalo de nuevo.', 'error');
+  } finally {
+    // Always clear the flag
+    delete producto._agregando;
+    console.log(`🏁 Finalizando proceso para producto ${id}`);
   }
 }
 
