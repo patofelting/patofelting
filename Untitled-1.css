@@ -2351,3 +2351,234 @@ body.no-scroll {
     transform: rotate(360deg);
   }
 }
+
+/* ===============================
+   ESTILOS PARA GESTIÓN DE STOCK EN TIEMPO REAL
+   =============================== */
+
+/* Stock information in product cards */
+.producto-stock-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 15px;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+
+.stock-disponible {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background-color: var(--success-color);
+  color: white;
+}
+
+.stock-disponible.sin-stock {
+  background-color: var(--error-color);
+}
+
+.en-carrito {
+  font-size: 0.8rem;
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+/* Product card overlay for out of stock */
+.producto-imagen-container {
+  position: relative;
+  cursor: pointer;
+}
+
+.overlay-agotado {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+  border-radius: 12px;
+}
+
+/* Enhanced product card styles */
+.producto-card.agotado {
+  opacity: 0.7;
+  filter: grayscale(30%);
+}
+
+.producto-card.agotado .boton-agregar {
+  background-color: var(--medium-gray);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.producto-card.agotado .boton-agregar:hover {
+  background-color: var(--medium-gray);
+  transform: none;
+}
+
+/* Modal stock information */
+.modal-stock-info {
+  margin: 15px 0;
+  padding: 12px;
+  background-color: var(--light-gray);
+  border-radius: 8px;
+  border-left: 4px solid var(--primary-color);
+}
+
+.stock-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.stock-status.sin-stock {
+  border-left-color: var(--error-color);
+}
+
+.stock-status.sin-stock .stock-cantidad {
+  color: var(--error-color);
+  font-weight: bold;
+}
+
+.stock-status.con-stock .stock-cantidad {
+  color: var(--success-color);
+  font-weight: bold;
+}
+
+.en-carrito-info {
+  font-size: 0.9rem;
+  color: var(--primary-color);
+  font-style: italic;
+}
+
+.boton-modal-agregar {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 15px;
+  width: 100%;
+}
+
+.boton-modal-agregar:hover {
+  background-color: var(--accent-color);
+  transform: translateY(-2px);
+}
+
+.boton-modal-agregar:disabled {
+  background-color: var(--medium-gray);
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Enhanced cart item styles */
+.carrito-item-stock-info {
+  font-size: 0.8rem;
+  color: var(--dark-gray);
+  margin-bottom: 5px;
+}
+
+.carrito-item-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: var(--medium-gray) !important;
+}
+
+/* Enhanced notifications for stock changes */
+.notificacion.warning {
+  background: var(--warning-color) !important;
+}
+
+/* Real-time sync indicator */
+.sync-indicator {
+  position: fixed;
+  top: 90px;
+  right: 20px;
+  background-color: var(--primary-color);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.sync-indicator.active {
+  opacity: 1;
+}
+
+/* Loading states for buttons */
+.boton-agregar.procesando {
+  position: relative;
+  color: transparent;
+}
+
+.boton-agregar.procesando::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid white;
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Enhanced product info layout */
+.producto-info {
+  display: flex;
+  flex-direction: column;
+  padding: 15px;
+  flex-grow: 1;
+}
+
+.producto-nombre {
+  margin-bottom: 8px;
+}
+
+.producto-precio {
+  margin-bottom: 10px;
+}
+
+/* Responsive adjustments for stock info */
+@media (max-width: 768px) {
+  .producto-stock-info {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 5px;
+  }
+  
+  .stock-disponible,
+  .en-carrito {
+    text-align: center;
+  }
+  
+  .modal-stock-info {
+    margin: 10px 0;
+    padding: 10px;
+  }
+  
+  .stock-status {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 5px;
+  }
+}
