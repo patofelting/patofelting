@@ -6,7 +6,7 @@ const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/400x400/7ed957/fff?text=S
 // ========== INICIALIZAR FIREBASE ==========
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, onValue, runTransaction, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
@@ -130,6 +130,11 @@ function modificarCantidadEnCarrito(id, delta) {
   } else if (delta < 0 && item.cantidad > 1) {
     item.cantidad--;
   }
+  // Validar que nunca supere stock real
+  if (item.cantidad > prod.stock) {
+    item.cantidad = prod.stock;
+    mostrarNotificacion('⚠️ Stock ajustado por actualización en otro dispositivo', 'info');
+  }
   guardarCarrito();
   renderizarCarrito();
   renderizarProductos();
@@ -167,7 +172,7 @@ function escucharProductosFirebase() {
     if (cambiado) {
       carrito = carrito.filter(i => i.cantidad > 0);
       guardarCarrito();
-      mostrarNotificacion("⚠️ ¡Stock actualizado!", "info");
+      mostrarNotificacion("⚠️ ¡Stock actualizado por cambios en otro dispositivo!", "info");
     }
     renderizarProductos();
     renderizarCarrito();
@@ -274,6 +279,41 @@ function agregarAlCarrito(id, cantidad = 1) {
   mostrarNotificacion("✅ Producto agregado al carrito", "exito");
 }
 window.agregarAlCarrito = agregarAlCarrito;
+
+// ========== FINALIZAR COMPRA Y ACTUALIZAR STOCK EN FIREBASE ==========
+async function finalizarCompra() {
+  if (carrito.length === 0) {
+    mostrarNotificacion("El carrito está vacío.", "error");
+    return;
+  }
+  const updates = {};
+  let puedeComprar = true;
+  carrito.forEach(item => {
+    const prod = productos.find(p => p.id === item.id);
+    if (!prod || prod.stock < item.cantidad) {
+      puedeComprar = false;
+    } else {
+      updates[`productos/${item.id}/stock`] = prod.stock - item.cantidad;
+    }
+  });
+  if (!puedeComprar) {
+    mostrarNotificacion("Stock insuficiente para completar la compra.", "error");
+    return;
+  }
+  try {
+    await update(ref(db), updates);
+    carrito = [];
+    guardarCarrito();
+    renderizarCarrito();
+    renderizarProductos();
+    mostrarNotificacion("✅ ¡Compra finalizada! Gracias.", "exito");
+  } catch (e) {
+    mostrarNotificacion("Ocurrió un error al finalizar la compra.", "error");
+  }
+}
+if (elementos.btnFinalizarCompra) {
+  elementos.btnFinalizarCompra.onclick = finalizarCompra;
+}
 
 // ========== MODAL DETALLE ==========
 function verDetalle(id) {
