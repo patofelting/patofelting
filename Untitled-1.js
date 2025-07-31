@@ -112,19 +112,15 @@ function inicializarListenersStock() {
     
     productos = productosActualizados;
     
-    // Actualizar todas las vistas si hay cambios
+    // Solo actualizar UI si hay cambios reales
     if (cambiosDetectados.length > 0) {
       console.log(`📊 Stock actualizado para ${cambiosDetectados.length} productos:`, cambiosDetectados);
-      actualizarTodasLasVistas();
       
-      // Notificar cambios críticos (productos agotados)
-      cambiosDetectados.forEach(cambio => {
-        if (cambio.stockAnterior > 0 && cambio.stockNuevo === 0) {
-          mostrarNotificacion(`⚠️ ${cambio.nombre} se ha agotado`, 'warning');
-        } else if (cambio.stockAnterior === 0 && cambio.stockNuevo > 0) {
-          mostrarNotificacion(`✅ ${cambio.nombre} ya está disponible`, 'exito');
-        }
-      });
+      // Actualizar vistas de forma optimizada
+      actualizarTodasLasVistasOptimizado(cambiosDetectados);
+      
+      // Notificar cambios críticos (productos agotados/disponibles)
+      notificarCambiosCriticos(cambiosDetectados);
     }
   }, (error) => {
     console.error("❌ Error en listener global de stock:", error);
@@ -163,6 +159,113 @@ function actualizarTodasLasVistas() {
   if (modalProductoActual) {
     actualizarModalStock(modalProductoActual);
   }
+}
+
+// ===============================
+// ACTUALIZACIONES OPTIMIZADAS DE UI
+// ===============================
+function actualizarTodasLasVistasOptimizado(cambios) {
+  // Actualización optimizada: solo re-renderizar elementos afectados
+  cambios.forEach(cambio => {
+    // Actualizar tarjeta de producto específica
+    actualizarTarjetaProducto(cambio.id);
+    
+    // Actualizar item en carrito si existe
+    actualizarItemCarrito(cambio.id);
+    
+    // Actualizar modal si es el producto actual
+    if (modalProductoActual === cambio.id) {
+      actualizarModalStock(cambio.id, cambio.stockNuevo);
+    }
+  });
+  
+  // Actualizar contador de carrito
+  actualizarContadorCarrito();
+}
+
+function actualizarTarjetaProducto(productoId) {
+  const producto = productos.find(p => p.id === productoId);
+  if (!producto) return;
+  
+  const tarjeta = document.querySelector(`.producto-card[data-id="${productoId}"]`);
+  if (!tarjeta) return;
+  
+  const enCarrito = carrito.find(item => item.id === productoId);
+  const stockDisponible = producto.stock;
+  const agotado = stockDisponible <= 0;
+  const cantidadEnCarrito = enCarrito?.cantidad || 0;
+  
+  // Actualizar clase de agotado
+  tarjeta.classList.toggle('agotado', agotado);
+  
+  // Actualizar información de stock
+  const stockInfo = tarjeta.querySelector('.producto-stock-info');
+  if (stockInfo) {
+    stockInfo.innerHTML = `
+      <span class="stock-disponible ${agotado ? 'sin-stock' : ''}">
+        ${agotado ? 'Sin stock' : `Stock: ${stockDisponible}`}
+      </span>
+      ${cantidadEnCarrito > 0 ? `<span class="en-carrito">En carrito: ${cantidadEnCarrito}</span>` : ''}
+    `;
+  }
+  
+  // Actualizar botón
+  const boton = tarjeta.querySelector('.boton-agregar');
+  if (boton) {
+    boton.disabled = agotado;
+    boton.textContent = agotado ? 'Agotado' : 'Agregar al carrito';
+  }
+  
+  // Actualizar overlay de agotado
+  const overlay = tarjeta.querySelector('.overlay-agotado');
+  if (agotado && !overlay) {
+    const imagenContainer = tarjeta.querySelector('.producto-imagen-container');
+    if (imagenContainer) {
+      const nuevoOverlay = document.createElement('div');
+      nuevoOverlay.className = 'overlay-agotado';
+      nuevoOverlay.textContent = 'AGOTADO';
+      imagenContainer.appendChild(nuevoOverlay);
+    }
+  } else if (!agotado && overlay) {
+    overlay.remove();
+  }
+}
+
+function actualizarItemCarrito(productoId) {
+  const itemCarrito = carrito.find(item => item.id === productoId);
+  if (!itemCarrito) return;
+  
+  const elemento = document.querySelector(`.carrito-item[data-id="${productoId}"]`);
+  if (!elemento) return;
+  
+  const producto = productos.find(p => p.id === productoId);
+  if (!producto) return;
+  
+  const stockDisponible = producto.stock;
+  const puedeAumentar = stockDisponible > 0;
+  
+  // Actualizar información de stock disponible
+  const stockInfo = elemento.querySelector('.carrito-item-stock-info');
+  if (stockInfo) {
+    stockInfo.innerHTML = `<small>Stock disponible: ${stockDisponible}</small>`;
+  }
+  
+  // Actualizar botón de aumentar
+  const botonAumentar = elemento.querySelector('.aumentar-cantidad');
+  if (botonAumentar) {
+    botonAumentar.disabled = !puedeAumentar;
+    botonAumentar.title = puedeAumentar ? 'Aumentar cantidad' : 'Sin stock disponible';
+  }
+}
+
+function notificarCambiosCriticos(cambios) {
+  cambios.forEach(cambio => {
+    if (cambio.stockAnterior > 0 && cambio.stockNuevo === 0) {
+      mostrarNotificacion(`⚠️ ${cambio.nombre} se ha agotado`, 'warning');
+    } else if (cambio.stockAnterior === 0 && cambio.stockNuevo > 0) {
+      mostrarNotificacion(`✅ ${cambio.nombre} ya está disponible`, 'exito');
+    }
+  });
 }
 
 // ===============================
