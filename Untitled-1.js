@@ -104,10 +104,16 @@ function cargarCarrito() {
       localStorage.setItem(LS_CARRITO_KEY, JSON.stringify(carrito));
       actualizarContadorCarrito();
       renderizarCarrito();
+    } else {
+      carrito = [];
+      guardarCarrito();
     }
   }, (error) => {
     console.error("Error al escuchar carrito:", error);
-    mostrarNotificacion("Error al cargar el carrito", "error");
+    mostrarNotificacion("Error al cargar el carrito, usando datos locales", "warning");
+    carrito = JSON.parse(localStorage.getItem(LS_CARRITO_KEY)) || [];
+    actualizarContadorCarrito();
+    renderizarCarrito();
   });
 }
 
@@ -260,12 +266,18 @@ function aplicarFiltros() {
   filtrosActuales.precioMin = parseInt(minSlider?.value) || null;
   filtrosActuales.precioMax = parseInt(maxSlider?.value) || null;
 
-  renderizarProductos();
+  return [...productos].filter(producto => {
+    if (filtrosActuales.categoria !== 'todos' && producto.categoria !== filtrosActuales.categoria) return false;
+    if (filtrosActuales.precioMin !== null && producto.precio < filtrosActuales.precioMin) return false;
+    if (filtrosActuales.precioMax !== null && producto.precio > filtrosActuales.precioMax) return false;
+    if (filtrosActuales.busqueda && !producto.nombre.toLowerCase().includes(filtrosActuales.busqueda)) return false;
+    return true;
+  });
 }
 
 minSlider?.addEventListener('input', updateRange);
 maxSlider?.addEventListener('input', updateRange);
-elementos.aplicarRangoBtn?.addEventListener('click', aplicarFiltros);
+elementos.aplicarRangoBtn?.addEventListener('click', () => renderizarProductos());
 if (minSlider && maxSlider) updateRange();
 
 // ===============================
@@ -405,7 +417,7 @@ function cerrarModal() {
 }
 
 function cambiarPagina(nuevaPagina) {
-  if (nuevaPagina > 0) {
+  if (nuevaPagina > 0 && nuevaPagina <= Math.ceil(aplicarFiltros().length / PRODUCTOS_POR_PAGINA)) {
     paginaActual = nuevaPagina;
     renderizarProductos();
   }
