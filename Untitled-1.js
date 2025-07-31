@@ -23,7 +23,8 @@ import {
   ref,
   runTransaction,
   onValue,
-  get
+  get,
+  set
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // Firebase configuration
@@ -159,19 +160,17 @@ async function vaciarCarrito() {
   }
 
   try {
- await Promise.all(
-  carrito.map(async (item) => {
-    const productoRef = ref(db, `productos/${item.id}/stock`);
-    await runTransaction(productoRef, (stockActual) => {
-      const cantidadADevolver = typeof item.cantidad === 'number' && item.cantidad > 0 ? item.cantidad : 0;
-      if (typeof stockActual !== 'number') return cantidadADevolver;
-      return stockActual + cantidadADevolver;
-    });
-  })
-);
+    await Promise.all(
+      carrito.map(async (item) => {
+        const productoRef = ref(db, `productos/${item.id}/stock`);
+        await runTransaction(productoRef, (stockActual) => {
+          const cantidadADevolver = typeof item.cantidad === 'number' && item.cantidad > 0 ? item.cantidad : 0;
+          if (typeof stockActual !== 'number') return cantidadADevolver;
+          return stockActual + cantidadADevolver;
+        });
+      })
+    );
 
-
-    // Vaciar carrito en memoria, localStorage y Firebase
     carrito = [];
     guardarCarrito();
     await set(ref(db, `carritos/${USER_ID}`), []);
@@ -186,7 +185,7 @@ async function vaciarCarrito() {
 }
 
 
-elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
+
 
 elementos.btnVaciarCarrito?.addEventListener('click', async () => {
   if (carrito.length === 0) {
@@ -446,19 +445,21 @@ async function agregarAlCarrito(id, cantidadAgregar = 1, boton = null) {
       return;
     }
 
+    // Ya en carrito
+    const enCarrito = carrito.find(item => item.id === id);
+    if (enCarrito) {
+      mostrarNotificacion("⚠️ Ya tienes este producto en el carrito", "info");
+      return;
+    }
+
     const stockRef = ref(db, `productos/${id}/stock`);
     const snapshot = await get(stockRef);
     const stockFirebase = snapshot.exists() ? parseInt(snapshot.val()) : 0;
 
-    const enCarrito = carrito.find(item => item.id === id);
-    const cantidadEnCarrito = enCarrito ? enCarrito.cantidad : 0;
-    const disponibles = stockFirebase - cantidadEnCarrito;
-
- if (disponibles < cantidadAgregar) {
-  mostrarNotificacion("❌ Stock insuficiente", "error");
-  return;
-}
-
+    if (stockFirebase < 1) {
+      mostrarNotificacion("❌ Stock insuficiente", "error");
+      return;
+    }
 
     if (boton) {
       boton.disabled = true;
@@ -470,12 +471,7 @@ async function agregarAlCarrito(id, cantidadAgregar = 1, boton = null) {
       }, 1000);
     }
 
-    if (enCarrito) {
-      enCarrito.cantidad += cantidadAgregar;
-    } else {
-      carrito.push({ ...producto, cantidad: cantidadAgregar });
-    }
-
+    carrito.push({ ...producto, cantidad: 1 });
     guardarCarrito();
     renderizarCarrito();
     mostrarNotificacion("✅ Producto agregado", "exito");
@@ -484,6 +480,7 @@ async function agregarAlCarrito(id, cantidadAgregar = 1, boton = null) {
     mostrarNotificacion("Error al agregar producto", "error");
   }
 }
+
 
 
 
