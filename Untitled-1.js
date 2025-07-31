@@ -161,24 +161,25 @@ async function vaciarCarrito() {
   try {
     await Promise.all(
       carrito.map(async (item) => {
-        const productRef = ref(db, `productos/${item.id}/stock`);
-        await runTransaction(productRef, (currentStock) => {
-          if (typeof currentStock !== 'number') {
-            console.warn(`Stock inválido para producto ID: ${item.id}. Inicializando en ${item.cantidad}`);
-            return item.cantidad;
-          }
-          return currentStock + item.cantidad;
+        const productoRef = ref(db, `productos/${item.id}/stock`);
+        await runTransaction(productoRef, (stockActual) => {
+          const cantidadADevolver = typeof item.cantidad === 'number' && item.cantidad > 0 ? item.cantidad : 0;
+          if (typeof stockActual !== 'number') return cantidadADevolver;
+          return stockActual + cantidadADevolver;
         });
       })
     );
 
+    // Vaciar carrito en memoria, localStorage y Firebase
     carrito = [];
     guardarCarrito();
+    await set(ref(db, `carritos/${USER_ID}`), []);
+
     renderizarCarrito();
     renderizarProductos();
-    mostrarNotificacion('Carrito vaciado y stock restaurado correctamente', 'exito');
+    mostrarNotificacion('🧹 Carrito vaciado y stock restaurado correctamente', 'exito');
   } catch (error) {
-    console.error("Error al vaciar el carrito y restaurar el stock:", error);
+    console.error("❌ Error al vaciar el carrito:", error);
     mostrarNotificacion('Ocurrió un error al vaciar el carrito', 'error');
   }
 }
@@ -346,19 +347,17 @@ function mergeProductosConFirebase(data) {
     };
   }).filter(Boolean);
 
-  nuevos.forEach(n => {
-    const idx = productos.findIndex(pr => pr.id === n.id);
-    if (idx !== -1) {
-      productos[idx] = { ...productos[idx], ...n };
-    } else {
-      productos.push(n);
-    }
-  });
+  // 💥 Reemplazamos en lugar de fusionar
+  productos = nuevos;
 
   renderizarProductos();
   actualizarCategorias();
   actualizarUI();
 }
+
+
+
+
 function renderizarCarrito() {
   if (!elementos.listaCarrito || !elementos.totalCarrito) return;
   
@@ -438,7 +437,7 @@ function toggleCarrito(forceState) {
 
 
 // Función para manejar eventos delegados
-function agregarAlCarrito(id, cantidad = 1, boton = null) {
+ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
   if (isNaN(id) || id === null) {
     mostrarNotificacion("ID de producto inválido", "error");
     return;
@@ -458,11 +457,14 @@ function agregarAlCarrito(id, cantidad = 1, boton = null) {
 
   const enCarrito = carrito.find(item => item.id === id);
 
-  const disponibles = producto.stock - (enCarrito?.cantidad || 0);
-  if (disponibles < cantidadAgregar) {
-    mostrarNotificacion("Stock insuficiente", "error");
-    return;
-  }
+  const stockRef = ref(db, `productos/${id}/stock`);
+const snapshot = await get(stockRef);
+const stockActual = snapshot.exists() ? parseInt(snapshot.val()) : 0;
+const disponibles = stockActual - (enCarrito?.cantidad || 0);
+if (disponibles < cantidadAgregar) {
+  mostrarNotificacion("Stock insuficiente", "error");
+  return;
+}
 
   let textoOriginal = null;
   if (boton) {
