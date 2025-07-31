@@ -155,11 +155,13 @@ elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
 // Aquí seguirías con el resto de tu archivo JS: renderizado, filtros, modal, etc.
 // =============================
 
-// Carga inicial
-document.addEventListener('DOMContentLoaded', () => {
+function init() {
   cargarCarrito();
-  cargarProductosDesdeFirebase(); // tu función actual
-});
+  cargarProductosDesdeFirebase();
+  setupContactForm();
+  inicializarMenuHamburguesa();
+  updateRange();
+}
 
 
 // ===============================
