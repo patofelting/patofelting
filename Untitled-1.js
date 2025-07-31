@@ -154,28 +154,30 @@ function cargarCarrito() {
 }
 
 async function vaciarCarrito() {
+  const USER_ID = localStorage.getItem('uid') || 'anonimo';
+
   if (carrito.length === 0) {
     mostrarNotificacion('El carrito ya está vacío', 'info');
     return;
   }
 
   try {
+    // Restaurar stock en Firebase
     await Promise.all(
       carrito.map(async (item) => {
         const productoRef = ref(db, `productos/${item.id}/stock`);
         await runTransaction(productoRef, (stockActual) => {
-          const cantidadADevolver =
-            typeof item.cantidad === 'number' && item.cantidad > 0 ? item.cantidad : 0;
-          if (typeof stockActual !== 'number') return cantidadADevolver;
-          return stockActual + cantidadADevolver;
+          const cantidadADevolver = typeof item.cantidad === 'number' && item.cantidad > 0 ? item.cantidad : 0;
+          return typeof stockActual === 'number'
+            ? stockActual + cantidadADevolver
+            : cantidadADevolver;
         });
       })
     );
 
+    // Vaciar local y remoto
     carrito = [];
     guardarCarrito();
-
-    const USER_ID = localStorage.getItem('uid') || 'anonimo';
     await set(ref(db, `carritos/${USER_ID}`), []);
 
     renderizarCarrito();
@@ -186,6 +188,7 @@ async function vaciarCarrito() {
     mostrarNotificacion('Ocurrió un error al vaciar el carrito', 'error');
   }
 }
+
 
 
 
