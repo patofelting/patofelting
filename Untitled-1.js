@@ -6,7 +6,7 @@ const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/400x400/7ed957/fff?text=S
 // ========== INICIALIZAR FIREBASE ==========
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getDatabase, ref, onValue, runTransaction, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
@@ -130,7 +130,6 @@ function modificarCantidadEnCarrito(id, delta) {
   } else if (delta < 0 && item.cantidad > 1) {
     item.cantidad--;
   }
-  // Validar que nunca supere stock real
   if (item.cantidad > prod.stock) {
     item.cantidad = prod.stock;
     mostrarNotificacion('⚠️ Stock ajustado por actualización en otro dispositivo', 'info');
@@ -156,7 +155,6 @@ function escucharProductosFirebase() {
         categoria: (data[key].categoria || 'otros').toLowerCase()
       });
     }
-    // Sync carrito: Si stock bajó, ajusta cantidades
     let cambiado = false;
     carrito.forEach(item => {
       const prod = productos.find(p => p.id === item.id);
@@ -280,41 +278,6 @@ function agregarAlCarrito(id, cantidad = 1) {
 }
 window.agregarAlCarrito = agregarAlCarrito;
 
-// ========== FINALIZAR COMPRA Y ACTUALIZAR STOCK EN FIREBASE ==========
-async function finalizarCompra() {
-  if (carrito.length === 0) {
-    mostrarNotificacion("El carrito está vacío.", "error");
-    return;
-  }
-  const updates = {};
-  let puedeComprar = true;
-  carrito.forEach(item => {
-    const prod = productos.find(p => p.id === item.id);
-    if (!prod || prod.stock < item.cantidad) {
-      puedeComprar = false;
-    } else {
-      updates[`productos/${item.id}/stock`] = prod.stock - item.cantidad;
-    }
-  });
-  if (!puedeComprar) {
-    mostrarNotificacion("Stock insuficiente para completar la compra.", "error");
-    return;
-  }
-  try {
-    await update(ref(db), updates);
-    carrito = [];
-    guardarCarrito();
-    renderizarCarrito();
-    renderizarProductos();
-    mostrarNotificacion("✅ ¡Compra finalizada! Gracias.", "exito");
-  } catch (e) {
-    mostrarNotificacion("Ocurrió un error al finalizar la compra.", "error");
-  }
-}
-if (elementos.btnFinalizarCompra) {
-  elementos.btnFinalizarCompra.onclick = finalizarCompra;
-}
-
 // ========== MODAL DETALLE ==========
 function verDetalle(id) {
   const prod = productos.find(p => p.id === id);
@@ -376,6 +339,97 @@ function mostrarModalProducto(prod) {
 function cerrarModal() {
   elementos.modal?.classList.remove('visible');
 }
+
+// ========== MODALES DE PRECOMPRA Y ENVÍO ==========
+const avisoPreCompraModal = document.getElementById('aviso-pre-compra-modal');
+const btnEntendidoAviso = document.getElementById('btn-entendido-aviso');
+const btnCancelarAviso = document.getElementById('btn-cancelar-aviso');
+const modalDatosEnvio = document.getElementById('modal-datos-envio');
+const btnCerrarModalEnvio = document.getElementById('btn-cerrar-modal-envio');
+const formEnvio = document.getElementById('form-envio');
+
+elementos.btnFinalizarCompra?.addEventListener('click', (e) => {
+  e.preventDefault();
+  avisoPreCompraModal?.removeAttribute('hidden');
+  avisoPreCompraModal?.classList.add('visible');
+});
+
+btnEntendidoAviso?.addEventListener('click', () => {
+  avisoPreCompraModal?.setAttribute('hidden', true);
+  avisoPreCompraModal?.classList.remove('visible');
+  modalDatosEnvio?.removeAttribute('hidden');
+  modalDatosEnvio?.classList.add('visible');
+});
+
+btnCancelarAviso?.addEventListener('click', () => {
+  avisoPreCompraModal?.setAttribute('hidden', true);
+  avisoPreCompraModal?.classList.remove('visible');
+});
+
+btnCerrarModalEnvio?.addEventListener('click', () => {
+  modalDatosEnvio?.classList.remove('visible');
+  setTimeout(() => { modalDatosEnvio?.setAttribute('hidden', true); }, 300);
+});
+
+// ========== ENVIAR PEDIDO POR WHATSAPP ==========
+formEnvio?.addEventListener('submit', function(e) {
+  e.preventDefault();
+  const nombre = document.getElementById('input-nombre').value.trim();
+  const apellido = document.getElementById('input-apellido').value.trim();
+  const telefono = document.getElementById('input-telefono').value.trim();
+  const envio = document.getElementById('select-envio').value;
+  const direccion = envio !== 'retiro' ? document.getElementById('input-direccion').value.trim() : '';
+  const notas = document.getElementById('input-notas').value.trim();
+
+  if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
+    mostrarNotificacion('Por favor complete todos los campos obligatorios', 'error');
+    return;
+  }
+
+  let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n`;
+  mensaje += `*📋 Detalles del pedido:*\n`;
+  carrito.forEach(item => {
+    mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}\n`;
+  });
+  const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+  const costoEnvio = envio === 'montevideo' ? 150 : envio === 'interior' ? 300 : 0;
+  const total = subtotal + costoEnvio;
+  mensaje += `\n*💰 Total:*\n`;
+  mensaje += `Subtotal: $U ${subtotal.toLocaleString('es-UY')}\n`;
+  mensaje += `Envío: $U ${costoEnvio.toLocaleString('es-UY')}\n`;
+  mensaje += `*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
+  mensaje += `*👤 Datos del cliente:*\n`;
+  mensaje += `Nombre: ${nombre} ${apellido}\n`;
+  mensaje += `Teléfono: ${telefono}\n`;
+  mensaje += `Método de envío: ${envio === 'montevideo' ? 'Envío Montevideo ($150)' : envio === 'interior' ? 'Envío Interior ($300)' : 'Retiro en local (Gratis)'}\n`;
+  if (envio !== 'retiro') {
+    mensaje += `Dirección: ${direccion}\n`;
+  }
+  if (notas) {
+    mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
+  }
+  const numeroWhatsApp = '59893566283';
+  sessionStorage.setItem('ultimoPedidoWhatsApp', mensaje);
+  const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
+  const nuevaPestaña = window.open(urlWhatsApp, '_blank');
+  setTimeout(() => {
+    if (!nuevaPestaña || nuevaPestaña.closed) {
+      window.location.href = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${encodeURIComponent(mensaje)}`;
+    }
+  }, 500);
+  setTimeout(() => {
+    modalDatosEnvio.classList.remove('visible');
+    setTimeout(() => {
+      modalDatosEnvio.setAttribute('hidden', true);
+      carrito = [];
+      guardarCarrito();
+      renderizarCarrito();
+      renderizarProductos();
+      mostrarNotificacion('Pedido listo para enviar por WhatsApp', 'exito');
+      formEnvio.reset();
+    }, 300);
+  }, 1000);
+});
 
 // ========== CARRITO UI ==========
 function toggleCarrito(forceState) {
