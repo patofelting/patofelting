@@ -453,7 +453,7 @@ function crearCardProducto(p) {
           ${agot ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
         </button>
         ${agot ? `
-        <button class="boton-aviso-stock" onclick="preguntarStock('${p.nombre}', ${p.id})">
+        <button class="boton-aviso-stock" onclick="preguntarStock('${p.nombre.replace(/'/g, "\\'")}', ${p.id})">
           📩 Avisame cuando haya stock
         </button>` : ''}
       </div>
@@ -476,7 +476,7 @@ function manejarEventosGaleria(e) {
   if (boton.classList.contains('boton-detalles')) {
     verDetalle(id);
   } else if (boton.classList.contains('boton-agregar')) {
-    agregarAlCarrito(id, 1, boton); // Ensure this call works
+    agregarAlCarrito(id, 1, boton);
   } else if (boton.classList.contains('boton-aviso-stock')) {
     preguntarStock(boton.dataset.nombre || producto.nombre);
   }
@@ -497,7 +497,6 @@ function renderizarProductos() {
 
   renderizarPaginacion(productosFiltrados.length);
 
-  // Use delegated event listener
   elementos.galeriaProductos.removeEventListener('click', manejarEventosGaleria);
   elementos.galeriaProductos.addEventListener('click', manejarEventosGaleria);
 }
