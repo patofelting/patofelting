@@ -46,15 +46,30 @@ const elementos = {
   listaCarrito: getEl('lista-carrito'),
   totalCarrito: getEl('total'),
   contadorCarrito: getEl('contador-carrito'),
-  inputBusqueda: document.querySelector('.input-busqueda'),
+  inputBusqueda: getEl('input-busqueda'), // Updated ID
   selectCategoria: getEl('filtro-categoria'),
   minSlider: getEl('min-slider'),
   maxSlider: getEl('max-slider'),
-  resetFiltros: document.querySelector('.boton-resetear-filtros'),
+  minPriceDisplay: getEl('min-price-display'),
+  maxPriceDisplay: getEl('max-price-display'),
+  resetFiltros: getEl('reset-filtros'), // Updated ID
   btnCerrarCarrito: document.querySelector('.cerrar-carrito'),
   btnVaciarCarrito: document.querySelector('.boton-vaciar-carrito'),
   btnFinalizarCompra: document.querySelector('.boton-finalizar-compra'),
-  faqToggles: document.querySelectorAll('.faq-toggle')
+  faqToggles: document.querySelectorAll('.faq-toggle'),
+  // Stock notification modal elements
+  modalAvisoStock: getEl('modal-aviso-stock'),
+  formAvisoStock: getEl('form-aviso-stock'),
+  inputEmailStock: getEl('input-email-stock'),
+  btnCerrarModalStock: getEl('btn-cerrar-modal-stock'),
+  grupoEmailStock: getEl('grupo-email-stock'),
+  grupoConfirmacionStock: getEl('grupo-confirmacion-stock'),
+  emailGuardadoDisplay: getEl('email-guardado-display'),
+  btnCambiarEmail: getEl('btn-cambiar-email'),
+  modalStockProducto: getEl('modal-stock-producto'),
+  modalStockTitle: getEl('modal-stock-title'),
+  textoBoton: document.querySelector('.texto-boton'),
+  spinnerStock: document.querySelector('.spinner-stock')
 };
 
 // ========== UTILIDADES ==========
@@ -68,6 +83,174 @@ function mostrarNotificacion(msg, tipo = 'exito') {
     noti.classList.remove('show');
     setTimeout(() => noti.remove(), 300);
   }, 2200);
+}
+
+// ========== STOCK NOTIFICATION FUNCTIONALITY ==========
+const STOCK_EMAIL_KEY = 'patofelting_stock_email';
+
+/**
+ * Gets saved email from localStorage for stock notifications
+ */
+function obtenerEmailGuardado() {
+  return localStorage.getItem(STOCK_EMAIL_KEY);
+}
+
+/**
+ * Saves email to localStorage for future stock notifications
+ */
+function guardarEmailStock(email) {
+  localStorage.setItem(STOCK_EMAIL_KEY, email);
+}
+
+/**
+ * Shows the stock notification modal for a specific product
+ */
+function mostrarModalAvisoStock(productoNombre, productoId) {
+  if (!elementos.modalAvisoStock) return;
+  
+  // Update modal content with product info
+  if (elementos.modalStockProducto) {
+    elementos.modalStockProducto.textContent = productoNombre;
+  }
+  
+  const emailGuardado = obtenerEmailGuardado();
+  
+  if (emailGuardado) {
+    // User has used this feature before - show confirmation mode
+    elementos.grupoEmailStock.hidden = true;
+    elementos.grupoConfirmacionStock.hidden = false;
+    elementos.btnCambiarEmail.hidden = false;
+    elementos.emailGuardadoDisplay.textContent = emailGuardado;
+    elementos.inputEmailStock.value = emailGuardado;
+  } else {
+    // First time user - show email input mode
+    elementos.grupoEmailStock.hidden = false;
+    elementos.grupoConfirmacionStock.hidden = true;
+    elementos.btnCambiarEmail.hidden = true;
+    elementos.inputEmailStock.value = '';
+  }
+  
+  // Store product info for submission
+  elementos.modalAvisoStock.dataset.productoId = productoId;
+  elementos.modalAvisoStock.dataset.productoNombre = productoNombre;
+  
+  // Show modal with smooth animation
+  elementos.modalAvisoStock.removeAttribute('hidden');
+  setTimeout(() => elementos.modalAvisoStock.classList.add('visible'), 10);
+  
+  // Focus appropriate element for accessibility
+  if (emailGuardado) {
+    document.querySelector('.boton-confirmar-stock').focus();
+  } else {
+    elementos.inputEmailStock.focus();
+  }
+}
+
+/**
+ * Closes the stock notification modal
+ */
+function cerrarModalAvisoStock() {
+  if (!elementos.modalAvisoStock) return;
+  
+  elementos.modalAvisoStock.classList.remove('visible');
+  setTimeout(() => {
+    elementos.modalAvisoStock.setAttribute('hidden', true);
+    // Reset form state
+    elementos.formAvisoStock.reset();
+    elementos.textoBoton.textContent = 'Avisarme';
+    elementos.spinnerStock.hidden = true;
+  }, 250);
+}
+
+/**
+ * Switches to email input mode when user wants to change email
+ */
+function cambiarEmailStock() {
+  elementos.grupoEmailStock.hidden = false;
+  elementos.grupoConfirmacionStock.hidden = true;
+  elementos.btnCambiarEmail.hidden = true;
+  elementos.inputEmailStock.focus();
+}
+
+/**
+ * Sends stock notification request via EmailJS
+ */
+async function enviarAvisoStock(email, productoNombre, productoId) {
+  try {
+    // Show loading state
+    elementos.textoBoton.textContent = '';
+    elementos.spinnerStock.hidden = false;
+    
+    // Send email via EmailJS
+    await emailjs.send('service_89by24g', 'template_8mn7hdp', {
+      to_email: email,
+      from_name: 'Patofelting',
+      subject: `Aviso de Stock - ${productoNombre}`,
+      message: `¡Hola! Te contactamos para avisarte que tenemos stock disponible del producto "${productoNombre}" que habías solicitado. ¡No te lo pierdas!
+      
+Visita nuestra tienda para hacer tu pedido: ${window.location.origin}
+
+¡Gracias por tu interés en nuestros productos!
+
+Patofelting 🧶`,
+      product_name: productoNombre,
+      product_id: productoId,
+      user_email: email
+    });
+    
+    // Save email for future use
+    guardarEmailStock(email);
+    
+    // Show success message
+    mostrarNotificacion(`✅ ¡Listo! Te avisaremos cuando "${productoNombre}" esté disponible`, 'exito');
+    
+    // Close modal
+    cerrarModalAvisoStock();
+    
+  } catch (error) {
+    console.error('Error sending stock notification:', error);
+    mostrarNotificacion('❌ Error al enviar solicitud. Intenta nuevamente', 'error');
+    
+    // Reset button state
+    elementos.textoBoton.textContent = 'Avisarme';
+    elementos.spinnerStock.hidden = true;
+  }
+}
+
+// ========== IMPROVED FILTERS WITH AUTO-APPLY ==========
+/**
+ * Updates the visual price display when sliders change
+ */
+function actualizarDisplayPrecios() {
+  if (!elementos.minPriceDisplay || !elementos.maxPriceDisplay) return;
+  
+  const minVal = parseInt(elementos.minSlider.value);
+  const maxVal = parseInt(elementos.maxSlider.value);
+  
+  elementos.minPriceDisplay.textContent = `$U ${minVal.toLocaleString('es-UY')}`;
+  elementos.maxPriceDisplay.textContent = `$U ${maxVal.toLocaleString('es-UY')}`;
+  
+  // Update visual range bar
+  actualizarBarraRango();
+}
+
+/**
+ * Updates the visual range bar between the sliders
+ */
+function actualizarBarraRango() {
+  const rangeBar = document.querySelector('.range');
+  if (!rangeBar || !elementos.minSlider || !elementos.maxSlider) return;
+  
+  const minVal = parseInt(elementos.minSlider.value);
+  const maxVal = parseInt(elementos.maxSlider.value);
+  const min = parseInt(elementos.minSlider.min);
+  const max = parseInt(elementos.minSlider.max);
+  
+  const leftPercent = ((minVal - min) / (max - min)) * 100;
+  const rightPercent = ((maxVal - min) / (max - min)) * 100;
+  
+  rangeBar.style.left = `${leftPercent}%`;
+  rangeBar.style.width = `${rightPercent - leftPercent}%`;
 }
 
 // ========== CARRITO (SOLO FRONTEND) ==========
@@ -201,14 +384,28 @@ function renderizarProductos() {
   }
   elementos.galeria.innerHTML = paginados.map(crearCardProducto).join('');
   renderizarPaginacion(productosFiltrados.length);
+  
+  // Add event listeners to product cards
   elementos.galeria.querySelectorAll('.producto-card').forEach(card => {
+    const productId = parseInt(card.dataset.id);
+    
+    // Add to cart button
     card.querySelector('.boton-agregar')?.addEventListener('click', e => {
       e.stopPropagation();
-      agregarAlCarrito(parseInt(card.dataset.id), 1);
+      agregarAlCarrito(productId, 1);
     });
+    
+    // Details button
     card.querySelector('.boton-detalles')?.addEventListener('click', e => {
       e.stopPropagation();
-      verDetalle(parseInt(card.dataset.id));
+      verDetalle(productId);
+    });
+    
+    // Stock notification button - NEW FUNCTIONALITY
+    card.querySelector('.boton-stock-naranja')?.addEventListener('click', e => {
+      e.stopPropagation();
+      const productoNombre = decodeURIComponent(e.target.dataset.producto);
+      mostrarModalAvisoStock(productoNombre, productId);
     });
   });
 }
@@ -531,14 +728,23 @@ function aplicarFiltros() {
   paginaActual = 1;
   renderizarProductos();
 }
+
 function resetearFiltros() {
   filtrosActuales = { precioMin: null, precioMax: null, categoria: 'todos', busqueda: '' };
   if (elementos.inputBusqueda) elementos.inputBusqueda.value = '';
   if (elementos.selectCategoria) elementos.selectCategoria.value = 'todos';
-  if (elementos.minSlider) elementos.minSlider.value = '';
-  if (elementos.maxSlider) elementos.maxSlider.value = '';
+  if (elementos.minSlider) {
+    elementos.minSlider.value = '0';
+    filtrosActuales.precioMin = null;
+  }
+  if (elementos.maxSlider) {
+    elementos.maxSlider.value = '3000'; 
+    filtrosActuales.precioMax = null;
+  }
+  actualizarDisplayPrecios();
   aplicarFiltros();
 }
+
 function inicializarFAQ() {
   document.querySelectorAll('.faq-toggle').forEach(toggle => {
     toggle.addEventListener('click', function () {
@@ -549,7 +755,9 @@ function inicializarFAQ() {
     });
   });
 }
+
 function inicializarEventos() {
+  // Cart functionality
   elementos.carritoBtn?.addEventListener('click', () => toggleCarrito(true));
   elementos.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
   elementos.btnCerrarCarrito?.addEventListener('click', () => toggleCarrito(false));
@@ -560,32 +768,98 @@ function inicializarEventos() {
     renderizarProductos();
     mostrarNotificacion('🧹 Carrito vaciado', 'exito');
   });
+  
+  // Improved filters with auto-apply - NO MORE "APLICAR" BUTTON
   elementos.inputBusqueda?.addEventListener('input', e => {
     filtrosActuales.busqueda = e.target.value.toLowerCase();
     aplicarFiltros();
   });
+  
   elementos.selectCategoria?.addEventListener('change', e => {
     filtrosActuales.categoria = e.target.value;
     aplicarFiltros();
   });
+  
+  // Auto-apply price filters with visual feedback
   elementos.minSlider?.addEventListener('input', e => {
-    filtrosActuales.precioMin = e.target.value ? parseFloat(e.target.value) : null;
+    const minVal = parseInt(e.target.value);
+    const maxVal = parseInt(elementos.maxSlider.value);
+    
+    // Ensure min doesn't exceed max
+    if (minVal >= maxVal) {
+      e.target.value = maxVal - 100;
+      filtrosActuales.precioMin = maxVal - 100;
+    } else {
+      filtrosActuales.precioMin = minVal;
+    }
+    
+    actualizarDisplayPrecios();
     aplicarFiltros();
   });
+  
   elementos.maxSlider?.addEventListener('input', e => {
-    filtrosActuales.precioMax = e.target.value ? parseFloat(e.target.value) : null;
+    const maxVal = parseInt(e.target.value);
+    const minVal = parseInt(elementos.minSlider.value);
+    
+    // Ensure max doesn't go below min
+    if (maxVal <= minVal) {
+      e.target.value = minVal + 100;
+      filtrosActuales.precioMax = minVal + 100;
+    } else {
+      filtrosActuales.precioMax = maxVal;
+    }
+    
+    actualizarDisplayPrecios();
     aplicarFiltros();
   });
+  
   elementos.resetFiltros?.addEventListener('click', resetearFiltros);
+  
+  // Stock notification modal events
+  elementos.btnCerrarModalStock?.addEventListener('click', cerrarModalAvisoStock);
+  elementos.btnCambiarEmail?.addEventListener('click', cambiarEmailStock);
+  
+  // Stock notification form submission  
+  elementos.formAvisoStock?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const email = elementos.inputEmailStock.value.trim();
+    const productoNombre = elementos.modalAvisoStock.dataset.productoNombre;
+    const productoId = elementos.modalAvisoStock.dataset.productoId;
+    
+    if (!email || !productoNombre) {
+      mostrarNotificacion('❌ Por favor completa todos los campos', 'error');
+      return;
+    }
+    
+    await enviarAvisoStock(email, productoNombre, productoId);
+  });
+  
+  // Keyboard accessibility for modal
+  elementos.modalAvisoStock?.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      cerrarModalAvisoStock();
+    }
+  });
+  
+  // Initialize price display
+  actualizarDisplayPrecios();
+  
   inicializarFAQ();
 }
 
 // ========== INICIO ==========
 document.addEventListener('DOMContentLoaded', () => {
+  // Initialize EmailJS for stock notifications and contact form
+  if (typeof emailjs !== 'undefined') {
+    emailjs.init('XhJEfqMQGzKB3GN5S'); // Initialize with your EmailJS user ID
+  }
+  
   escucharProductosFirebase();
   cargarCarrito();
   renderizarCarrito();
   inicializarEventos();
+  setupContactForm(); // Initialize contact form
 });
 
 
