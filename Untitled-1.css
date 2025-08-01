@@ -1711,6 +1711,337 @@ button:active {
   background: #1976d2 !important;
 }
 
+/* ===============================================
+   MODAL AVISO DE STOCK - Responsive Design
+   =============================================== */
+
+/* Modal overlay para el aviso de stock */
+.modal-aviso-stock {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.modal-aviso-stock.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Contenido principal del modal */
+.modal-stock-contenido {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes modalSlideIn {
+  from {
+    transform: scale(0.8) translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Header del modal */
+.modal-stock-header {
+  padding: 24px 24px 16px;
+  text-align: center;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.modal-stock-header h3 {
+  font-size: 1.5rem;
+  color: var(--primary-color);
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.modal-stock-header p {
+  color: var(--text-color);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Formulario del modal */
+.form-aviso-stock {
+  padding: 16px 24px;
+  flex: 1;
+}
+
+.form-aviso-stock .form-grupo {
+  margin-bottom: 20px;
+}
+
+.form-aviso-stock label {
+  display: block;
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+
+.form-aviso-stock input,
+.form-aviso-stock textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.form-aviso-stock input:focus,
+.form-aviso-stock textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(67, 193, 96, 0.1);
+}
+
+.form-aviso-stock .ayuda-texto {
+  display: block;
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+/* Información del producto */
+.info-producto-stock {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-top: 16px;
+}
+
+.info-producto-stock p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-color);
+}
+
+/* Contenedores de botones - DESKTOP por defecto */
+.modal-stock-botones-top,
+.modal-stock-botones-bottom {
+  display: none; /* Ocultos en desktop por defecto */
+}
+
+/* Botones base - estilos comunes */
+.modal-stock-contenido button {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px; /* Tamaño mínimo para móvil */
+}
+
+/* Estilos específicos para cada tipo de botón - PERSONALIZABLES */
+.boton-stock-enviar {
+  background: var(--primary-color);
+  color: white;
+}
+
+.boton-stock-enviar:hover {
+  background: var(--accent-color);
+  transform: translateY(-2px);
+}
+
+.boton-stock-cerrar {
+  background: #6c757d;
+  color: white;
+}
+
+.boton-stock-cerrar:hover {
+  background: #5a6268;
+  transform: translateY(-2px);
+}
+
+.boton-stock-cancelar {
+  background: #dc3545;
+  color: white;
+}
+
+.boton-stock-cancelar:hover {
+  background: #c82333;
+  transform: translateY(-2px);
+}
+
+.boton-stock-ayuda {
+  background: var(--warning-color);
+  color: white;
+}
+
+.boton-stock-ayuda:hover {
+  background: #f57c00;
+  transform: translateY(-2px);
+}
+
+/* ===============================================
+   RESPONSIVE DESIGN - MOBILE FIRST
+   =============================================== */
+
+/* MOBILE: max-width 600px - Layout específico requerido */
+@media (max-width: 600px) {
+  
+  /* Mostrar contenedores de botones en mobile */
+  .modal-stock-botones-top,
+  .modal-stock-botones-bottom {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    padding: 16px 24px;
+  }
+  
+  /* Contenedor de botones superiores */
+  .modal-stock-botones-top {
+    border-bottom: 1px solid #f0f0f0;
+    order: -2; /* Asegurar que esté arriba */
+  }
+  
+  /* Contenedor de botones inferiores */
+  .modal-stock-botones-bottom {
+    border-top: 1px solid #f0f0f0;
+    background: #f8f9fa;
+    border-radius: 0 0 16px 16px;
+    order: 2; /* Asegurar que esté abajo */
+  }
+  
+  /* Header reorganizado */
+  .modal-stock-header {
+    order: -1;
+    padding: 16px 24px;
+  }
+  
+  /* Formulario reorganizado */
+  .form-aviso-stock {
+    order: 1; /* Entre los botones top y bottom */
+    padding: 16px 24px;
+  }
+  
+  /* Botones más pequeños en mobile */
+  .modal-stock-contenido button {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    flex: 1; /* Botones del mismo tamaño */
+    max-width: 140px; /* Limitar ancho máximo */
+  }
+  
+  /* Modal más compacto en mobile */
+  .modal-stock-contenido {
+    margin: 10px;
+    max-height: 95vh;
+  }
+  
+  .modal-stock-header h3 {
+    font-size: 1.3rem;
+  }
+  
+  .modal-stock-header p {
+    font-size: 0.9rem;
+  }
+}
+
+/* TABLET: 601px - 768px */
+@media (min-width: 601px) and (max-width: 768px) {
+  .modal-stock-contenido {
+    max-width: 600px;
+  }
+  
+  /* En tablet, mantener layout desktop pero botones más grandes */
+  .modal-stock-contenido button {
+    min-height: 48px;
+    padding: 14px 24px;
+  }
+}
+
+/* DESKTOP: mayor a 768px - Layout tradicional sin botones top/bottom */
+@media (min-width: 769px) {
+  
+  /* En desktop, agregar botones tradicionales al final del formulario */
+  .form-aviso-stock::after {
+    content: '';
+    display: block;
+    margin-top: 24px;
+  }
+  
+  /* Agregar botones inline en desktop */
+  .form-aviso-stock {
+    position: relative;
+  }
+  
+  /* Contenedor de botones desktop (se agrega via JS) */
+  .modal-stock-botones-desktop {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #f0f0f0;
+  }
+  
+  .modal-stock-botones-desktop button {
+    flex: 1;
+    max-width: 200px;
+  }
+}
+
+/* ===============================================
+   COMENTARIOS PARA PERSONALIZACIÓN
+   =============================================== */
+
+/*
+PERSONALIZACIÓN DE TEXTOS DE BOTONES:
+1. Botones superiores (mobile): Editar en HTML líneas con clases:
+   - .boton-stock-enviar (Texto: "📧 Enviar")
+   - .boton-stock-cerrar (Texto: "✖️ Cerrar")
+
+2. Botones inferiores (mobile): Editar en HTML líneas con clases:
+   - .boton-stock-cancelar (Texto: "❌ Cancelar") 
+   - .boton-stock-ayuda (Texto: "❓ Ayuda")
+
+3. Colores de botones: Modificar variables CSS arriba:
+   - .boton-stock-enviar: background y hover
+   - .boton-stock-cerrar: background y hover
+   - etc.
+
+4. Responsive breakpoints:
+   - Mobile: max-width: 600px
+   - Tablet: 601px - 768px  
+   - Desktop: min-width: 769px
+*/
+
 /* Filters */
 .filtros-container {
   display: grid;

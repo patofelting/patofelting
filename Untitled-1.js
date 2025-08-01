@@ -210,6 +210,13 @@ function renderizarProductos() {
       e.stopPropagation();
       verDetalle(parseInt(card.dataset.id));
     });
+    // Event listener para el botón "Avisame cuando haya stock"
+    card.querySelector('.boton-stock-naranja')?.addEventListener('click', e => {
+      e.stopPropagation();
+      const productId = parseInt(card.dataset.id);
+      const productName = decodeURIComponent(e.target.dataset.producto);
+      mostrarModalAvisoStock(productId, productName);
+    });
   });
 }
 
@@ -341,6 +348,167 @@ function mostrarModalProducto(prod) {
 }
 function cerrarModal() {
   elementos.modal?.classList.remove('visible');
+}
+
+// ========== MODAL AVISO DE STOCK ==========
+/**
+ * Muestra el modal de aviso de stock para un producto específico
+ * @param {number} productId - ID del producto  
+ * @param {string} productName - Nombre del producto
+ */
+function mostrarModalAvisoStock(productId, productName) {
+  const modal = document.getElementById('modal-aviso-stock');
+  const productoNombre = document.getElementById('modal-stock-producto-nombre');
+  const productoInfo = document.getElementById('stock-producto-info');
+  const formStock = document.getElementById('form-aviso-stock');
+  
+  if (!modal || !productoNombre || !productoInfo || !formStock) {
+    console.error('Elementos del modal de stock no encontrados');
+    return;
+  }
+  
+  // Actualizar información del producto en el modal
+  const producto = productos.find(p => p.id === productId);
+  if (producto) {
+    productoNombre.textContent = `Te notificaremos cuando "${productName}" esté disponible.`;
+    productoInfo.textContent = `${productName} - $U ${producto.precio.toLocaleString('es-UY')}`;
+  }
+  
+  // Limpiar formulario
+  formStock.reset();
+  
+  // Almacenar ID del producto para el envío
+  formStock.dataset.productId = productId;
+  formStock.dataset.productName = productName;
+  
+  // Mostrar modal
+  modal.removeAttribute('hidden');
+  modal.classList.add('visible');
+  
+  // Focus en el campo email
+  setTimeout(() => {
+    document.getElementById('input-email-stock')?.focus();
+  }, 300);
+}
+
+/**
+ * Cierra el modal de aviso de stock
+ */
+function cerrarModalAvisoStock() {
+  const modal = document.getElementById('modal-aviso-stock');
+  if (modal) {
+    modal.classList.remove('visible');
+    setTimeout(() => {
+      modal.setAttribute('hidden', true);
+    }, 300);
+  }
+}
+
+/**
+ * Maneja el envío del formulario de aviso de stock
+ * @param {Event} e - Evento del formulario
+ */
+async function enviarAvisoStock(e) {
+  e.preventDefault();
+  
+  const form = e.target;
+  const email = document.getElementById('input-email-stock').value.trim();
+  const mensaje = document.getElementById('input-mensaje-stock').value.trim();
+  const productId = form.dataset.productId;
+  const productName = form.dataset.productName;
+  
+  if (!email) {
+    mostrarNotificacion('Por favor ingresa tu email', 'error');
+    return;
+  }
+  
+  // Validar email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    mostrarNotificacion('Por favor ingresa un email válido', 'error');
+    return;
+  }
+  
+  try {
+    // Enviar notificación usando EmailJS (reutilizando la configuración existente)
+    const templateParams = {
+      to_email: 'patofelting@gmail.com', // Email de destino (Patofelting)
+      from_email: email,
+      from_name: email,
+      subject: `🔔 Aviso de Stock: ${productName}`,
+      message: `
+      📦 SOLICITUD DE AVISO DE STOCK
+      
+      Producto: ${productName}
+      ID: ${productId}
+      Email del cliente: ${email}
+      
+      ${mensaje ? `Mensaje adicional: ${mensaje}` : ''}
+      
+      El cliente desea ser notificado cuando este producto esté disponible.
+      `,
+      reply_to: email
+    };
+    
+    // Enviar email usando EmailJS
+    await emailjs.send('service_89by24g', 'template_8mn7hdp', templateParams);
+    
+    // Mostrar mensaje de éxito
+    mostrarNotificacion('✅ ¡Listo! Te avisaremos cuando tengamos stock disponible', 'exito');
+    
+    // Cerrar modal
+    cerrarModalAvisoStock();
+    
+    // Opcional: Guardar la solicitud localmente para seguimiento
+    guardarSolicitudStock(productId, productName, email, mensaje);
+    
+  } catch (error) {
+    console.error('Error al enviar aviso de stock:', error);
+    mostrarNotificacion('❌ Error al enviar la solicitud. Por favor intenta de nuevo.', 'error');
+  }
+}
+
+/**
+ * Guarda la solicitud de stock localmente (opcional)
+ * @param {number} productId - ID del producto
+ * @param {string} productName - Nombre del producto  
+ * @param {string} email - Email del usuario
+ * @param {string} mensaje - Mensaje adicional
+ */
+function guardarSolicitudStock(productId, productName, email, mensaje) {
+  try {
+    const solicitudes = JSON.parse(localStorage.getItem('solicitudesStock') || '[]');
+    solicitudes.push({
+      productId,
+      productName,
+      email,
+      mensaje,
+      fecha: new Date().toISOString()
+    });
+    localStorage.setItem('solicitudesStock', JSON.stringify(solicitudes));
+  } catch (error) {
+    console.warn('No se pudo guardar la solicitud localmente:', error);
+  }
+}
+
+/**
+ * Muestra información de ayuda sobre el aviso de stock
+ */
+function mostrarAyudaStock() {
+  const mensaje = `
+📋 INFORMACIÓN SOBRE AVISOS DE STOCK:
+
+• Te enviaremos un email cuando el producto esté disponible
+• No hay compromiso de compra
+• Solo notificamos una vez por solicitud
+• Puedes cancelar tu solicitud contactándonos
+
+¿Necesitas ayuda? Contáctanos:
+📧 patofelting@gmail.com
+📱 Instagram: @pato_felting
+  `;
+  
+  mostrarNotificacion(mensaje, 'info');
 }
 
 // ========== MODALES DE PRECOMPRA Y ENVÍO ==========
@@ -577,6 +745,35 @@ function inicializarEventos() {
     aplicarFiltros();
   });
   elementos.resetFiltros?.addEventListener('click', resetearFiltros);
+  
+  // ========== EVENT LISTENERS PARA MODAL DE STOCK ==========
+  // Botones de cerrar modal
+  document.getElementById('btn-cerrar-stock')?.addEventListener('click', cerrarModalAvisoStock);
+  document.getElementById('btn-cancelar-stock')?.addEventListener('click', cerrarModalAvisoStock);
+  
+  // Botón de ayuda
+  document.getElementById('btn-ayuda-stock')?.addEventListener('click', mostrarAyudaStock);
+  
+  // Formulario de aviso de stock
+  document.getElementById('form-aviso-stock')?.addEventListener('submit', enviarAvisoStock);
+  
+  // Cerrar modal al hacer click fuera del contenido
+  document.getElementById('modal-aviso-stock')?.addEventListener('click', (e) => {
+    if (e.target.id === 'modal-aviso-stock') {
+      cerrarModalAvisoStock();
+    }
+  });
+  
+  // Cerrar modal con tecla Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const modalStock = document.getElementById('modal-aviso-stock');
+      if (modalStock && modalStock.classList.contains('visible')) {
+        cerrarModalAvisoStock();
+      }
+    }
+  });
+  
   inicializarFAQ();
 }
 

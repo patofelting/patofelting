@@ -215,6 +215,48 @@
     </div>
   </div>
 
+  <!-- Modal para notificación de stock -->
+  <!-- Estructura HTML del modal "Avisame cuando haya stock" con layout responsive -->
+  <div id="modal-aviso-stock" class="modal-aviso-stock" role="dialog" aria-modal="true" hidden>
+    <div class="modal-stock-contenido">
+      <!-- Botones superiores para mobile - Personalizables editando los textos aquí -->
+      <div class="modal-stock-botones-top">
+        <button id="btn-enviar-stock" class="boton-stock-enviar" type="submit" form="form-aviso-stock">📧 Enviar</button>
+        <button id="btn-cerrar-stock" class="boton-stock-cerrar">✖️ Cerrar</button>
+      </div>
+      
+      <!-- Contenido central del modal -->
+      <div class="modal-stock-header">
+        <h3>🔔 Te avisamos cuando haya stock</h3>
+        <p id="modal-stock-producto-nombre">Te notificaremos por email cuando tengamos disponible este producto.</p>
+      </div>
+      
+      <form id="form-aviso-stock" class="form-aviso-stock">
+        <div class="form-grupo">
+          <label for="input-email-stock">Tu email*</label>
+          <input type="email" id="input-email-stock" placeholder="Ej: maria@email.com" required>
+          <small class="ayuda-texto">Te enviaremos una notificación cuando el producto esté disponible</small>
+        </div>
+        
+        <div class="form-grupo">
+          <label for="input-mensaje-stock">Mensaje adicional (opcional)</label>
+          <textarea id="input-mensaje-stock" placeholder="¿Alguna preferencia de color, tamaño o detalle especial?" rows="3"></textarea>
+        </div>
+        
+        <!-- Información del producto -->
+        <div class="info-producto-stock">
+          <p><strong>Producto:</strong> <span id="stock-producto-info"></span></p>
+        </div>
+      </form>
+      
+      <!-- Botones inferiores para mobile - Personalizables editando los textos aquí -->
+      <div class="modal-stock-botones-bottom">
+        <button id="btn-cancelar-stock" class="boton-stock-cancelar">❌ Cancelar</button>
+        <button id="btn-ayuda-stock" class="boton-stock-ayuda">❓ Ayuda</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modal-datos-envio" class="modal-datos-envio" role="dialog" aria-modal="true" hidden>
     <div class="modal-envio-contenido">
       <button id="btn-cerrar-modal-envio" class="cerrar-modal-envio" aria-label="Cerrar modal">×</button>
