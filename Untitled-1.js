@@ -623,3 +623,87 @@ function setupContactForm() {
     });
   }
 }
+
+
+
+
+// --- Modal ultra discreto para "Avísame cuando haya stock" ---
+(function() {
+  // Utiliza el mismo key para todas las peticiones, puedes cambiarlo si lo prefieres
+  const EMAIL_LS_KEY = 'patofelting_stock_email';
+
+  // Referencias
+  const stockModal = document.getElementById('stock-modal');
+  const stockForm = document.getElementById('stock-form');
+  const stockInput = document.getElementById('stock-email');
+  const stockFeedback = document.getElementById('stock-modal-feedback');
+  const stockClose = stockModal?.querySelector('.modal-stock-close');
+
+  // Abrir modal con email guardado si existe
+  function openStockModal(productoId, productoNombre) {
+    if (!stockModal) return;
+    stockModal.setAttribute('data-producto', productoNombre || '');
+    stockModal.setAttribute('data-producto-id', productoId || '');
+    stockFeedback.hidden = true;
+    stockForm.hidden = false;
+    stockInput.value = localStorage.getItem(EMAIL_LS_KEY) || '';
+    stockModal.classList.add('visible');
+    stockModal.removeAttribute('hidden');
+    setTimeout(() => { stockInput.focus(); }, 120);
+  }
+
+  // Cerrar modal
+  function closeStockModal() {
+    if (!stockModal) return;
+    stockModal.classList.remove('visible');
+    setTimeout(() => stockModal.setAttribute('hidden', true), 180);
+  }
+
+  // UX: Cerrar con click fuera
+  stockModal?.addEventListener('click', e => {
+    if (e.target === stockModal) closeStockModal();
+  });
+  stockClose?.addEventListener('click', closeStockModal);
+  document.addEventListener('keydown', e => {
+    if (stockModal && stockModal.classList.contains('visible') && e.key === 'Escape') closeStockModal();
+  });
+
+  // Interceptar envíos del formulario
+  stockForm?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const email = stockInput.value.trim();
+    if (!email) return;
+
+    // Guarda el email para la próxima vez
+    localStorage.setItem(EMAIL_LS_KEY, email);
+
+    // Integra con tu lógica de EmailJS (usa tu código ya existente, solo cambia el modal y UX)
+    const producto = stockModal.getAttribute('data-producto') || '';
+    const productoId = stockModal.getAttribute('data-producto-id') || '';
+    // --- Tu código de EmailJS aquí ---
+    emailjs.send('service_89by24g', 'template_8mn7hdp', {
+      to_email: email,
+      producto: producto,
+      producto_id: productoId
+    }).then(() => {
+      stockForm.hidden = true;
+      stockFeedback.textContent = '¡Listo! Te avisaremos apenas haya stock.';
+      stockFeedback.style.color = '#43c160';
+      stockFeedback.hidden = false;
+      setTimeout(closeStockModal, 2000);
+    }, () => {
+      stockFeedback.textContent = 'Ocurrió un error, intenta de nuevo.';
+      stockFeedback.style.color = '#d32f2f';
+      stockFeedback.hidden = false;
+    });
+  });
+
+  // Delegar click en "Avísame cuando haya stock"
+  document.body.addEventListener('click', function(e) {
+    const btn = e.target.closest('.boton-stock-naranja');
+    if (btn) {
+      e.preventDefault();
+      openStockModal(btn.dataset.productoid, btn.dataset.producto);
+    }
+  });
+})();
