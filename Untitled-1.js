@@ -586,6 +586,7 @@ document.addEventListener('DOMContentLoaded', () => {
   cargarCarrito();
   renderizarCarrito();
   inicializarEventos();
+  setupContactForm(); // Configurar formulario de contacto existente
 });
 
 

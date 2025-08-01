@@ -2357,3 +2357,198 @@ body.no-scroll {
     transform: rotate(360deg);
   }
 }
+
+/* ========== MODAL AVISO DE STOCK ========== */
+/* Modal para notificar cuando haya stock disponible */
+.modal-aviso-stock {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.modal-aviso-stock[hidden] {
+  display: none;
+}
+
+.modal-aviso-stock.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Contenido del modal de stock */
+.modal-aviso-stock-contenido {
+  background-color: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 480px;
+  padding: 30px;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  transform: translateY(20px);
+  transition: transform 0.3s ease;
+}
+
+.modal-aviso-stock.visible .modal-aviso-stock-contenido {
+  transform: translateY(0);
+}
+
+/* Botón cerrar modal de stock */
+.cerrar-modal-stock {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  color: var(--dark-gray);
+  cursor: pointer;
+  transition: color 0.2s;
+  z-index: 10;
+}
+
+.cerrar-modal-stock:hover {
+  color: var(--primary-color);
+}
+
+/* Header del modal de stock */
+.modal-stock-header {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.modal-stock-header h3 {
+  font-size: 1.6rem;
+  color: var(--primary-color);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.modal-stock-header p {
+  color: var(--dark-gray);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* Formulario de aviso de stock */
+.form-aviso-stock {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-grupo-stock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-grupo-stock label {
+  font-weight: 600;
+  color: var(--text-color);
+  font-size: 0.95rem;
+}
+
+.form-grupo-stock input {
+  padding: 12px 15px;
+  border: 1px solid var(--medium-gray);
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.form-grupo-stock input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+/* Botón de enviar aviso */
+.boton-enviar-aviso {
+  background: linear-gradient(135deg, var(--warning-color) 0%, #e59400 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 14px 20px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+  min-height: 50px;
+}
+
+.boton-enviar-aviso:hover {
+  background: linear-gradient(135deg, #e59400 0%, #cc8400 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 160, 0, 0.3);
+}
+
+.boton-enviar-aviso:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.boton-enviar-aviso .spinner-boton {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 0.8s linear infinite;
+  margin-left: 8px;
+}
+
+/* Mensaje de resultado */
+.mensaje-resultado {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  text-align: center;
+  margin-top: 15px;
+  transition: all 0.3s ease;
+}
+
+.mensaje-resultado.exito {
+  background-color: rgba(76, 175, 80, 0.1);
+  color: var(--primary-color);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.mensaje-resultado.error {
+  background-color: rgba(244, 67, 54, 0.1);
+  color: var(--error-color);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+/* Responsive para el modal de stock */
+@media (max-width: 576px) {
+  .modal-aviso-stock-contenido {
+    padding: 25px 20px;
+    width: 95%;
+  }
+  
+  .modal-stock-header h3 {
+    font-size: 1.4rem;
+  }
+  
+  .boton-enviar-aviso {
+    font-size: 1rem;
+    padding: 12px 18px;
+  }
+}
