@@ -568,14 +568,10 @@ function inicializarEventos() {
     filtrosActuales.categoria = e.target.value;
     aplicarFiltros();
   });
-  elementos.minSlider?.addEventListener('input', e => {
-    filtrosActuales.precioMin = e.target.value ? parseFloat(e.target.value) : null;
-    aplicarFiltros();
-  });
-  elementos.maxSlider?.addEventListener('input', e => {
-    filtrosActuales.precioMax = e.target.value ? parseFloat(e.target.value) : null;
-    aplicarFiltros();
-  });
+  
+  // Los event listeners de los sliders ahora los maneja mejorarSlidersAutomaticos()
+  // elementos.minSlider y elementos.maxSlider se configuran allí
+  
   elementos.resetFiltros?.addEventListener('click', resetearFiltros);
   inicializarFAQ();
 }
@@ -623,3 +619,277 @@ function setupContactForm() {
     });
   }
 }
+
+// =======================================
+// MODAL AVISO DE STOCK - FUNCIONALIDAD MODERNA
+// =======================================
+
+/**
+ * Sistema de notificación de stock con diseño moderno y accesibilidad completa
+ * Integrado con EmailJS existente y localStorage para autocompletado
+ */
+
+const LS_EMAIL_KEY = 'user_email_stock_notifications';
+
+// Referencias del modal de stock
+const modalAvisoStock = document.getElementById('modal-aviso-stock');
+const btnCerrarStockModal = document.getElementById('btn-cerrar-stock-modal');
+const btnCancelarStock = document.getElementById('btn-cancelar-stock');
+const formAvisoStock = document.getElementById('form-aviso-stock');
+const emailStockInput = document.getElementById('email-stock-input');
+const btnConfirmarStock = document.getElementById('btn-confirmar-stock');
+const productoNombreStock = document.getElementById('producto-nombre-stock');
+
+let currentProductoParaStock = null;
+
+/**
+ * Abre el modal de aviso de stock para un producto específico
+ */
+function abrirModalAvisoStock(nombreProducto, idProducto) {
+  currentProductoParaStock = { nombre: nombreProducto, id: idProducto };
+  
+  // Actualizar el nombre del producto en el modal
+  if (productoNombreStock) {
+    productoNombreStock.textContent = nombreProducto;
+  }
+  
+  // Autocompletar email si existe en localStorage
+  const emailGuardado = localStorage.getItem(LS_EMAIL_KEY);
+  if (emailGuardado && emailStockInput) {
+    emailStockInput.value = emailGuardado;
+    // Hacer focus en el botón de confirmar si ya hay email
+    setTimeout(() => btnConfirmarStock?.focus(), 100);
+  } else {
+    // Hacer focus en el input de email si no hay email guardado
+    setTimeout(() => emailStockInput?.focus(), 100);
+  }
+  
+  // Mostrar modal con animación
+  if (modalAvisoStock) {
+    modalAvisoStock.removeAttribute('hidden');
+    modalAvisoStock.classList.add('visible');
+    
+    // Prevenir scroll del body
+    document.body.classList.add('no-scroll');
+  }
+}
+
+/**
+ * Cierra el modal de aviso de stock
+ */
+function cerrarModalAvisoStock() {
+  if (modalAvisoStock) {
+    modalAvisoStock.classList.remove('visible');
+    document.body.classList.remove('no-scroll');
+    
+    setTimeout(() => {
+      modalAvisoStock.setAttribute('hidden', true);
+      currentProductoParaStock = null;
+      
+      // Reset form
+      if (formAvisoStock) {
+        formAvisoStock.reset();
+      }
+      
+      // Remover estado de loading del botón
+      if (btnConfirmarStock) {
+        btnConfirmarStock.classList.remove('loading');
+        btnConfirmarStock.disabled = false;
+      }
+    }, 300);
+  }
+}
+
+/**
+ * Envía la notificación de stock usando EmailJS
+ */
+async function enviarNotificacionStock(email, nombreProducto, idProducto) {
+  if (!window.emailjs) {
+    mostrarNotificacion('❌ Error: EmailJS no está disponible', 'error');
+    return false;
+  }
+  
+  try {
+    // Usar la misma configuración de EmailJS que el formulario de contacto
+    await emailjs.send('service_89by24g', 'template_8mn7hdp', {
+      from_name: 'Usuario de Patofelting',
+      from_email: email,
+      message: `Solicitud de aviso de stock para: ${nombreProducto} (ID: ${idProducto}). Por favor notificar cuando esté disponible.`,
+      subject: `Aviso de Stock - ${nombreProducto}`,
+      to_email: 'patofelting@gmail.com'
+    });
+    
+    // Guardar email en localStorage para futuras notificaciones
+    localStorage.setItem(LS_EMAIL_KEY, email);
+    
+    return true;
+  } catch (error) {
+    console.error('Error al enviar notificación de stock:', error);
+    return false;
+  }
+}
+
+// Event listeners para el modal de stock
+if (btnCerrarStockModal) {
+  btnCerrarStockModal.addEventListener('click', cerrarModalAvisoStock);
+}
+
+if (btnCancelarStock) {
+  btnCancelarStock.addEventListener('click', cerrarModalAvisoStock);
+}
+
+// Cerrar modal al hacer click en el backdrop
+if (modalAvisoStock) {
+  modalAvisoStock.addEventListener('click', (e) => {
+    if (e.target === modalAvisoStock || e.target.classList.contains('modal-stock-backdrop')) {
+      cerrarModalAvisoStock();
+    }
+  });
+}
+
+// Cerrar modal con tecla Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && modalAvisoStock && modalAvisoStock.classList.contains('visible')) {
+    cerrarModalAvisoStock();
+  }
+});
+
+// Manejar envío del formulario de stock
+if (formAvisoStock) {
+  formAvisoStock.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    if (!currentProductoParaStock || !emailStockInput || !btnConfirmarStock) {
+      return;
+    }
+    
+    const email = emailStockInput.value.trim();
+    if (!email) {
+      mostrarNotificacion('❌ Por favor ingresa tu email', 'error');
+      emailStockInput.focus();
+      return;
+    }
+    
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      mostrarNotificacion('❌ Por favor ingresa un email válido', 'error');
+      emailStockInput.focus();
+      return;
+    }
+    
+    // Mostrar estado de carga
+    btnConfirmarStock.classList.add('loading');
+    btnConfirmarStock.disabled = true;
+    
+    // Enviar notificación
+    const exito = await enviarNotificacionStock(
+      email, 
+      currentProductoParaStock.nombre, 
+      currentProductoParaStock.id
+    );
+    
+    if (exito) {
+      mostrarNotificacion(`✅ Te avisaremos cuando ${currentProductoParaStock.nombre} esté disponible`, 'exito');
+      cerrarModalAvisoStock();
+    } else {
+      mostrarNotificacion('❌ Error al enviar la solicitud. Intenta nuevamente.', 'error');
+      // Remover estado de loading
+      btnConfirmarStock.classList.remove('loading');
+      btnConfirmarStock.disabled = false;
+    }
+  });
+}
+
+// =======================================
+// MEJORAS EN FILTROS - AUTO-APLICACIÓN 
+// =======================================
+
+/**
+ * Mejora la funcionalidad de los sliders de precio para auto-aplicación
+ * Elimina la necesidad del botón "Aplicar"
+ */
+function mejorarSlidersAutomaticos() {
+  const minPriceDisplay = document.getElementById('min-price');
+  const maxPriceDisplay = document.getElementById('max-price');
+  
+  // Función para actualizar los displays de precio en tiempo real
+  function actualizarDisplaysPrecio() {
+    if (minPriceDisplay && elementos.minSlider) {
+      minPriceDisplay.textContent = `$U${parseInt(elementos.minSlider.value)}`;
+    }
+    if (maxPriceDisplay && elementos.maxSlider) {
+      maxPriceDisplay.textContent = `$U${parseInt(elementos.maxSlider.value)}`;
+    }
+  }
+  
+  // Aplicar filtros con debounce para mejor rendimiento
+  let timeoutId = null;
+  function aplicarFiltrosConDebounce() {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      filtrosActuales.precioMin = elementos.minSlider?.value ? parseFloat(elementos.minSlider.value) : null;
+      filtrosActuales.precioMax = elementos.maxSlider?.value ? parseFloat(elementos.maxSlider.value) : null;
+      aplicarFiltros();
+    }, 300); // 300ms de debounce
+  }
+  
+  // Event listeners mejorados para los sliders
+  if (elementos.minSlider) {
+    elementos.minSlider.addEventListener('input', () => {
+      actualizarDisplaysPrecio();
+      aplicarFiltrosConDebounce();
+    });
+  }
+  
+  if (elementos.maxSlider) {
+    elementos.maxSlider.addEventListener('input', () => {
+      actualizarDisplaysPrecio();
+      aplicarFiltrosConDebounce();
+    });
+  }
+  
+  // Inicializar displays
+  actualizarDisplaysPrecio();
+  
+  console.log('✅ Sliders de precio mejorados con auto-aplicación activada');
+}
+
+// =======================================
+// CONECTAR BOTONES DE STOCK EXISTENTES
+// =======================================
+
+/**
+ * Conecta la funcionalidad a los botones de stock existentes
+ */
+function conectarBotonesStock() {
+  // Usar delegación de eventos para manejar botones dinámicos
+  document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('boton-stock-naranja')) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const nombreProducto = decodeURIComponent(e.target.dataset.producto || 'Producto');
+      const idProducto = e.target.dataset.productoid || '';
+      
+      abrirModalAvisoStock(nombreProducto, idProducto);
+    }
+  });
+  
+  console.log('✅ Botones de stock conectados al modal');
+}
+
+// =======================================
+// INICIALIZACIÓN DE MEJORAS
+// =======================================
+
+// Ejecutar mejoras cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+  // Pequeño delay para asegurar que otros scripts hayan cargado
+  setTimeout(() => {
+    mejorarSlidersAutomaticos();
+    conectarBotonesStock();
+    
+    console.log('✅ Mejoras de UX inicializadas correctamente');
+  }, 100);
+});

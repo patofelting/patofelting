@@ -161,7 +161,7 @@
       <div class="track"></div>
       <div class="range"></div>
     </div>
-    <button class="aplicar-rango-btn" onclick="aplicarRango()">Aplicar</button>
+    <!-- Botón "Aplicar" eliminado - Los filtros ahora se aplican automáticamente -->
   </div>
 
   <div class="filtro-busqueda">
@@ -211,6 +211,62 @@
       <div class="modal-aviso-botones">
         <button id="btn-entendido-aviso" class="boton-aviso-entendido">Sí, he leído y deseo continuar 🐑</button>
         <button id="btn-cancelar-aviso" class="boton-aviso-cancelar">Cancelar compra</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para avisos de stock - Diseño minimalista moderno -->
+  <div id="modal-aviso-stock" class="modal-aviso-stock" role="dialog" aria-modal="true" hidden>
+    <div class="modal-stock-backdrop" aria-hidden="true"></div>
+    <div class="modal-stock-contenido">
+      <div class="modal-stock-header">
+        <button id="btn-cerrar-stock-modal" class="cerrar-stock-modal" aria-label="Cerrar modal de aviso de stock">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-stock-body">
+        <div class="stock-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 2v20M14 2v20M4 7l4-4 4 4M20 17l-4 4-4-4"></path>
+          </svg>
+        </div>
+        <h3 id="stock-modal-title">Te avisamos cuando esté disponible</h3>
+        <p id="stock-modal-subtitle">Te enviaremos un email cuando <span id="producto-nombre-stock"></span> vuelva a estar en stock.</p>
+        
+        <form id="form-aviso-stock" class="form-stock">
+          <div class="input-group">
+            <label for="email-stock-input" class="sr-only">Correo electrónico</label>
+            <input 
+              type="email" 
+              id="email-stock-input" 
+              placeholder="tu@email.com"
+              required
+              autocomplete="email"
+              aria-describedby="email-help"
+            >
+            <div class="input-underline"></div>
+          </div>
+          <div id="email-help" class="form-help">
+            <small>Solo te contactaremos para avisar sobre este producto</small>
+          </div>
+          
+          <div class="modal-stock-actions">
+            <button type="button" class="btn-secondary" id="btn-cancelar-stock">
+              <span>Cancelar</span>
+            </button>
+            <button type="submit" class="btn-primary" id="btn-confirmar-stock">
+              <span class="btn-text">Avisarme</span>
+              <span class="btn-spinner" hidden>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                </svg>
+              </span>
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

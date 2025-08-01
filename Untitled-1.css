@@ -1662,6 +1662,342 @@ button:active {
   z-index: 2;
 }
 
+/* ========== MODAL AVISO DE STOCK - DISEÑO MODERNO MINIMALISTA ========== */
+
+/* Contenedor principal del modal */
+.modal-aviso-stock {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+              visibility 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.modal-aviso-stock.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Backdrop con blur sutil */
+.modal-stock-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Contenido del modal - Inspirado en Apple/Material Design 2025 */
+.modal-stock-contenido {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
+  box-shadow: 
+    0 32px 64px rgba(0, 0, 0, 0.12),
+    0 0 0 1px rgba(255, 255, 255, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  transform: translateY(20px) scale(0.95);
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  overflow: hidden;
+}
+
+.modal-aviso-stock.visible .modal-stock-contenido {
+  transform: translateY(0) scale(1);
+}
+
+/* Header del modal */
+.modal-stock-header {
+  position: relative;
+  padding: 16px 20px 0 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cerrar-stock-modal {
+  background: rgba(128, 128, 128, 0.1);
+  border: none;
+  border-radius: 12px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.cerrar-stock-modal:hover,
+.cerrar-stock-modal:focus-visible {
+  background: rgba(128, 128, 128, 0.2);
+  color: #333;
+  transform: scale(1.05);
+}
+
+.cerrar-stock-modal:focus-visible {
+  box-shadow: 0 0 0 3px rgba(67, 193, 96, 0.3);
+}
+
+/* Body del modal */
+.modal-stock-body {
+  padding: 0 32px 32px 32px;
+  text-align: center;
+}
+
+/* Icono principal */
+.stock-icon {
+  margin: 0 auto 24px auto;
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #67c160 0%, #43c160 100%);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 8px 24px rgba(67, 193, 96, 0.3);
+}
+
+/* Títulos */
+#stock-modal-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 8px 0;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+#stock-modal-subtitle {
+  font-size: 16px;
+  color: #666;
+  margin: 0 0 32px 0;
+  line-height: 1.5;
+}
+
+#producto-nombre-stock {
+  font-weight: 600;
+  color: #43c160;
+}
+
+/* Formulario */
+.form-stock {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.input-group {
+  position: relative;
+}
+
+#email-stock-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid #e5e5e7;
+  padding: 16px 0 16px 0;
+  font-size: 17px;
+  color: #1a1a1a;
+  outline: none;
+  transition: border-color 0.3s ease;
+  font-family: inherit;
+}
+
+#email-stock-input:focus {
+  border-bottom-color: #43c160;
+}
+
+#email-stock-input::placeholder {
+  color: #999;
+  font-weight: 400;
+}
+
+.input-underline {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #67c160, #43c160);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.3s ease;
+}
+
+#email-stock-input:focus + .input-underline {
+  transform: scaleX(1);
+}
+
+/* Texto de ayuda */
+.form-help {
+  margin-top: -16px;
+}
+
+.form-help small {
+  color: #888;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* Botones de acción */
+.modal-stock-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.btn-secondary,
+.btn-primary {
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 14px 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+  position: relative;
+  overflow: hidden;
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-secondary {
+  background: rgba(128, 128, 128, 0.1);
+  color: #666;
+  flex: 1;
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus-visible {
+  background: rgba(128, 128, 128, 0.2);
+  color: #333;
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #67c160 0%, #43c160 100%);
+  color: white;
+  flex: 1.5;
+  box-shadow: 0 4px 16px rgba(67, 193, 96, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(67, 193, 96, 0.4);
+}
+
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible {
+  box-shadow: 0 0 0 3px rgba(67, 193, 96, 0.3);
+}
+
+/* Estados de carga */
+.btn-primary.loading .btn-text {
+  opacity: 0;
+}
+
+.btn-primary.loading .btn-spinner {
+  position: absolute;
+  display: block !important;
+}
+
+.btn-spinner svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Clase para screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .modal-aviso-stock {
+    padding: 16px;
+  }
+  
+  .modal-stock-contenido {
+    max-width: 100%;
+    border-radius: 20px;
+  }
+  
+  .modal-stock-body {
+    padding: 0 24px 24px 24px;
+  }
+  
+  #stock-modal-title {
+    font-size: 20px;
+  }
+  
+  #stock-modal-subtitle {
+    font-size: 15px;
+  }
+  
+  .modal-stock-actions {
+    flex-direction: column;
+  }
+  
+  .btn-secondary,
+  .btn-primary {
+    flex: 1;
+    min-width: auto;
+  }
+}
+
+/* Animación de entrada suave */
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-aviso-stock.visible .modal-stock-contenido {
+  animation: modalFadeIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ========== FIN MODAL AVISO DE STOCK ========== */
+
 /* Notifications */
 .notificacion {
   position: fixed !important;
@@ -2288,24 +2624,26 @@ body.no-scroll {
 }
 
 /* Botón de reset */
-.reset-btn,
-.aplicar-rango-btn {
-  background-color: #2E7D32;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-  width: 100%;
-  margin-top: 10px;
-  transition: background-color 0.2s;
-}
-
-.reset-btn:hover,
-.aplicar-rango-btn:hover {
-  background-color: #1B5E20;
-}
+/* 
+  Botón "Aplicar" eliminado - Los filtros de precio ahora se aplican automáticamente
+  
+  .aplicar-rango-btn {
+    background-color: #2E7D32;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    width: 100%;
+    margin-top: 10px;
+    transition: background-color 0.2s;
+  }
+  
+  .aplicar-rango-btn:hover {
+    background-color: #1B5E20;
+  }
+*/
 
 /* Campo de búsqueda */
 .filtro-busqueda {
