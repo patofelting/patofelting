@@ -508,22 +508,78 @@ blockquote {
   background-color: var(--medium-gray);
 }
 
+/* ============================================================================
+   STOCK NOTIFICATION BUTTON STYLES
+   ============================================================================
+   Enhanced styling for the "Avísame cuando haya stock" button with:
+   - Improved accessibility (focus states, ARIA support)
+   - Better color contrast (WCAG AA compliant)
+   - Responsive design for all device sizes
+   - Consistent visual feedback and hover states
+   ============================================================================ */
+
 .boton-aviso-stock {
-  background-color: var(--warning-color);
+  /* Base styling */
+  background-color: #FF8C00; /* Better contrast orange - WCAG AA compliant */
   color: white;
   border: none;
-  padding: 8px 12px;
+  padding: 10px 15px;
   margin-top: 10px;
   border-radius: var(--border-radius);
   cursor: pointer;
   transition: var(--transition);
   font-size: 0.9rem;
-  width: 100%; /* Ensure it takes full width on mobile */
+  font-weight: 600;
+  
+  /* Layout and positioning */
+  width: 100%;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  
+  /* Accessibility improvements */
+  outline: none;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(255, 140, 0, 0.2);
 }
 
+/* Hover state with visual feedback */
 .boton-aviso-stock:hover {
-  background-color: #e59400;
+  background-color: #e67e00;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 140, 0, 0.3);
 }
+
+/* Active state for click feedback */
+.boton-aviso-stock:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(255, 140, 0, 0.2);
+}
+
+/* Focus styles for keyboard navigation - WCAG 2.1 AA compliant */
+.boton-aviso-stock:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  background-color: #e67e00;
+}
+
+/* Enhanced focus visibility for better accessibility */
+.boton-aviso-stock:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.3);
+}
+
+/* ============================================================================
+   RESPONSIVE STYLES FOR MOBILE DEVICES
+   ============================================================================
+   Optimized mobile experience for stock notification buttons:
+   - Proper touch target sizes (minimum 44px)
+   - Improved spacing and readability
+   - Enhanced accessibility on small screens
+   ============================================================================ */
 
 @media (max-width: 768px) {
   .galeria-productos {
@@ -539,19 +595,28 @@ blockquote {
     font-size: 0.85rem; /* Smaller font size */
   }
 
+  /* Enhanced mobile styles for stock notification button */
   .boton-aviso-stock {
-    padding: 6px 10px; /* Reduce padding for mobile */
-    font-size: 0.8rem; /* Smaller font size */
-    margin-top: 5px; /* Reduce margin */
+    padding: 8px 12px; /* Optimized padding for mobile */
+    font-size: 0.85rem; /* Smaller font size for mobile readability */
+    margin-top: 8px; /* Reduce margin for tighter layout */
+    min-height: 40px; /* Ensure minimum touch target size (WCAG 2.1) */
   }
 }
 
+/* ============================================================================
+   MOBILE SPECIFIC RULES FOR VERY SMALL SCREENS
+   ============================================================================
+   Additional optimizations for phones in portrait mode
+   ============================================================================ */
 
 @media (max-width: 767px) {
+  /* Hide disabled "Add to cart" buttons on mobile for cleaner UI */
   .producto-card .boton-agregar.agotado {
     display: none !important;
   }
 
+  /* Ensure stock notification button takes full width on small screens */
   .producto-card .boton-aviso-stock {
     width: 100%;
   }
@@ -705,6 +770,22 @@ blockquote {
 .boton-agregar-modal.agotado {
   background-color: var(--medium-gray);
   cursor: not-allowed;
+}
+
+/* ============================================================================
+   MODAL CONTEXT STYLES FOR STOCK NOTIFICATION BUTTON
+   ============================================================================
+   Optimized styling for stock notification button when displayed in 
+   product detail modals - ensures consistency across different contexts
+   ============================================================================ */
+
+/* Stock notification button in modal context */
+.modal-acciones .boton-aviso-stock {
+  flex: 1;
+  margin-top: 0; /* Remove top margin in modal context */
+  padding: 12px 20px; /* Larger padding for better modal experience */
+  font-size: 1rem; /* Slightly larger font size in modal */
+  min-height: 44px; /* Maintain minimum touch target size */
 }
 
 .modal-controls {

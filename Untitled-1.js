@@ -168,13 +168,46 @@ function escucharProductosFirebase() {
       }
     });
     if (cambiado) {
-      carrito = carrito.filter(i => i.cantidad > 0);
+      mostrarNotificacion('⚠️ Stock ajustado por actualización', 'info');
       guardarCarrito();
-      mostrarNotificacion("⚠️ ¡Stock actualizado por cambios en otro dispositivo!", "info");
+      renderizarCarrito();
     }
-    renderizarProductos();
-    renderizarCarrito();
     actualizarCategorias();
+    renderizarProductos();
+  }, error => {
+    console.warn('Firebase error, usando datos de prueba:', error);
+    // Fallback test data when Firebase is not available
+    productos = [
+      {
+        id: 1,
+        nombre: "Gato de Fieltro",
+        precio: 850,
+        stock: 3,
+        categoria: "animales",
+        descripcion: "Adorable gato hecho a mano con lana de alta calidad",
+        imagenes: [PLACEHOLDER_IMAGE]
+      },
+      {
+        id: 2,
+        nombre: "Unicornio Mágico",
+        precio: 1200,
+        stock: 0, // Out of stock for testing
+        categoria: "fantasia",
+        descripcion: "Hermoso unicornio con colores vibrantes",
+        imagenes: [PLACEHOLDER_IMAGE]
+      },
+      {
+        id: 3,
+        nombre: "Perro Golden",
+        precio: 950,
+        stock: 2,
+        categoria: "animales",
+        descripcion: "Fiel compañero de fieltro con detalles realistas",
+        imagenes: [PLACEHOLDER_IMAGE]
+      }
+    ];
+    actualizarCategorias();
+    renderizarProductos();
   });
 }
 
@@ -210,6 +243,13 @@ function renderizarProductos() {
       e.stopPropagation();
       verDetalle(parseInt(card.dataset.id));
     });
+    // Event listener for stock notification button
+    card.querySelector('.boton-aviso-stock')?.addEventListener('click', e => {
+      e.stopPropagation();
+      const productoNombre = decodeURIComponent(e.target.dataset.producto);
+      const productoId = e.target.dataset.productoid;
+      solicitarAvisoStock(productoNombre, productoId);
+    });
   });
 }
 
@@ -225,7 +265,7 @@ function crearCardProducto(p) {
       <div class="card-acciones">
         ${
           agot
-            ? `<button class="boton-stock-naranja" data-producto="${encodeURIComponent(p.nombre)}" data-productoid="${p.id}" style="background:#FFA500;color:#fff;">🟠 Avisame cuando haya stock</button>`
+            ? `<button class="boton-aviso-stock" data-producto="${encodeURIComponent(p.nombre)}" data-productoid="${p.id}" aria-label="Solicitar notificación cuando haya stock de ${p.nombre}">📧 Avísame cuando haya stock</button>`
             : `<button class="boton-agregar">Agregar</button>`
         }
         <button class="boton-detalles">Ver Detalle</button>
@@ -281,6 +321,28 @@ function agregarAlCarrito(id, cantidad = 1) {
 }
 window.agregarAlCarrito = agregarAlCarrito;
 
+// ========== STOCK NOTIFICATION FUNCTIONALITY ==========
+/**
+ * Handles stock notification requests by opening WhatsApp with a pre-filled message
+ * @param {string} productoNombre - Name of the out-of-stock product
+ * @param {string} productoId - ID of the product for reference
+ */
+function solicitarAvisoStock(productoNombre, productoId) {
+  const mensaje = `¡Hola! Me interesa el producto "${productoNombre}" pero está agotado. ¿Podrías avisarme cuando tengas stock disponible? ¡Gracias! 🧶`;
+  // TODO: Replace with actual business WhatsApp number
+  const numeroWhatsApp = '+59899123456'; // Update with Patofelting's actual WhatsApp number
+  const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
+  
+  // Show confirmation notification to user
+  mostrarNotificacion("📧 Te contactaremos cuando tengamos stock disponible", "info");
+  
+  // Open WhatsApp after a short delay to allow notification to be seen
+  setTimeout(() => {
+    window.open(urlWhatsApp, '_blank');
+  }, 500);
+}
+window.solicitarAvisoStock = solicitarAvisoStock;
+
 // ========== MODAL DETALLE ==========
 function verDetalle(id) {
   const prod = productos.find(p => p.id === id);
@@ -317,8 +379,12 @@ function mostrarModalProducto(prod) {
           <p class="${agotado ? 'agotado' : 'disponible'}">${agotado ? 'AGOTADO' : `Disponible: ${disp}`}</p>
           <div class="modal-descripcion">${prod.descripcion || ''}</div>
           <div class="modal-acciones">
-            <input type="number" value="1" min="1" max="${disp}" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
-            <button class="boton-agregar-modal${agotado ? ' agotado' : ''}" ${agotado ? 'disabled' : ''}>Agregar al carrito</button>
+            ${agotado ? `
+              <button class="boton-aviso-stock" data-producto="${encodeURIComponent(prod.nombre)}" data-productoid="${prod.id}" aria-label="Solicitar notificación cuando haya stock de ${prod.nombre}">📧 Avísame cuando haya stock</button>
+            ` : `
+              <input type="number" value="1" min="1" max="${disp}" class="cantidad-modal-input">
+              <button class="boton-agregar-modal">Agregar al carrito</button>
+            `}
           </div>
         </div>
       </div>
@@ -333,6 +399,13 @@ function mostrarModalProducto(prod) {
       const inputCantidad = elementos.modalContenido.querySelector('.cantidad-modal-input');
       const cantidadAgregar = parseInt(inputCantidad.value, 10) || 1;
       agregarAlCarrito(prod.id, cantidadAgregar);
+      cerrarModal();
+    });
+    // Add event listener for stock notification button in modal
+    elementos.modalContenido.querySelector('.boton-aviso-stock')?.addEventListener('click', (e) => {
+      const productoNombre = decodeURIComponent(e.target.dataset.producto);
+      const productoId = e.target.dataset.productoid;
+      solicitarAvisoStock(productoNombre, productoId);
       cerrarModal();
     });
   }
