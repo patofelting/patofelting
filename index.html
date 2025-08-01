@@ -268,6 +268,18 @@
     </div>
   </div>
 
+  <div id="stock-modal" class="modal-stock" hidden>
+  <div class="modal-stock-content" role="dialog" aria-modal="true" aria-labelledby="stock-modal-title">
+    <button class="modal-stock-close" aria-label="Cerrar aviso">&times;</button>
+    <h2 id="stock-modal-title" class="modal-stock-title">¿Te avisamos cuando haya stock?</h2>
+    <form id="stock-form" autocomplete="on">
+      <input type="email" id="stock-email" name="stock-email" class="modal-stock-input" placeholder="Tu email" required>
+      <button type="submit" class="modal-stock-confirm">Confirmar</button>
+    </form>
+    <div id="stock-modal-feedback" class="modal-stock-feedback" hidden></div>
+  </div>
+</div>
+
   <section id="contacto" class="contact">
     <div class="container">
       <h2>Contáctame</h2>
