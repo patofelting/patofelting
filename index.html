@@ -140,34 +140,45 @@
     <h2>Nuestros Productos</h2>
     
     <div class="filtros-container">
-  <div class="filtro-categoria">
-    <label for="filtro-categoria">Categorías:</label>
-    <select id="filtro-categoria">
-      <option value="todos"></option>
-      <option value="animales"></option>
-      <option value="fantasia"></option>
-    </select>
-  </div>
+      <div class="filtro-busqueda-principal">
+        <label for="input-busqueda">Buscar productos</label>
+        <div class="input-busqueda-wrapper">
+          <input type="text" id="input-busqueda" class="input-busqueda" placeholder="Buscar por nombre o descripción..." aria-label="Buscar productos">
+          <i class="fas fa-search search-icon" aria-hidden="true"></i>
+        </div>
+      </div>
+      
+      <div class="filtros-secundarios">
+        <div class="filtro-categoria">
+          <label for="filtro-categoria">Categoría</label>
+          <select id="filtro-categoria" aria-label="Filtrar por categoría">
+            <option value="todos">Todas las categorías</option>
+            <option value="animales">Animales</option>
+            <option value="fantasia">Fantasía</option>
+          </select>
+        </div>
 
-
-       <div class="price-filter">
-    <div class="price-header">
-      <span id="min-price">$U0</span>
-      <span id="max-price">$U3000</span>
+        <div class="filtro-precio">
+          <label>Rango de precio</label>
+          <div class="price-display">
+            <span id="min-price-display">$U 0</span>
+            <span class="precio-separador">—</span>
+            <span id="max-price-display">$U 3000</span>
+          </div>
+          <div class="range-slider">
+            <input type="range" id="min-slider" min="0" max="3000" value="0" class="slider" aria-label="Precio mínimo">
+            <input type="range" id="max-slider" min="0" max="3000" value="3000" class="slider" aria-label="Precio máximo">
+            <div class="track"></div>
+            <div class="range"></div>
+          </div>
+        </div>
+      </div>
+      
+      <button id="reset-filtros" class="boton-reset-filtros" aria-label="Restablecer todos los filtros">
+        <i class="fas fa-undo" aria-hidden="true"></i>
+        <span>Limpiar filtros</span>
+      </button>
     </div>
-    <div class="range-slider">
-      <input type="range" id="min-slider" min="0" max="3000" value="0" class="slider">
-      <input type="range" id="max-slider" min="0" max="3000" value="3000" class="slider">
-      <div class="track"></div>
-      <div class="range"></div>
-    </div>
-    <button class="aplicar-rango-btn" onclick="aplicarRango()">Aplicar</button>
-  </div>
-
-  <div class="filtro-busqueda">
-    <input type="text" class="input-busqueda" placeholder="Buscar por nombre o descripción...">
-  </div>
-</section>        </div>
       <div id="galeria-productos" class="galeria-productos"></div>
       <div id="product-loader" class="loader" hidden aria-live="polite">
         <svg class="spinner" viewBox="0 0 50 50">
@@ -212,6 +223,36 @@
         <button id="btn-entendido-aviso" class="boton-aviso-entendido">Sí, he leído y deseo continuar 🐑</button>
         <button id="btn-cancelar-aviso" class="boton-aviso-cancelar">Cancelar compra</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Stock Notification Modal -->
+  <div id="modal-aviso-stock" class="modal-aviso-stock" role="dialog" aria-modal="true" aria-labelledby="modal-stock-title" hidden>
+    <div class="modal-stock-contenido">
+      <button id="btn-cerrar-modal-stock" class="cerrar-modal-stock" aria-label="Cerrar modal">×</button>
+      <div class="modal-stock-header">
+        <h3 id="modal-stock-title">🔔 Te avisamos cuando llegue</h3>
+        <p id="modal-stock-producto">Producto</p>
+      </div>
+      <form id="form-aviso-stock" class="form-aviso-stock">
+        <div class="form-grupo-stock" id="grupo-email-stock">
+          <label for="input-email-stock">Tu email</label>
+          <input type="email" id="input-email-stock" placeholder="tu-email@ejemplo.com" required>
+          <small class="ayuda-texto-stock">Te contactaremos apenas tengamos stock disponible</small>
+        </div>
+        <div class="form-grupo-stock" id="grupo-confirmacion-stock" hidden>
+          <p class="texto-confirmacion">¿Usar el email guardado?</p>
+          <p class="email-guardado" id="email-guardado-display"></p>
+          <small class="ayuda-texto-stock">Puedes cambiarlo si prefieres usar otro email</small>
+        </div>
+        <div class="modal-stock-botones">
+          <button type="button" id="btn-cambiar-email" class="boton-cambiar-email" hidden>Cambiar email</button>
+          <button type="submit" class="boton-confirmar-stock">
+            <span class="texto-boton">Avisarme</span>
+            <span class="spinner-stock" hidden></span>
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 
