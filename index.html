@@ -282,6 +282,7 @@
 
 <section class="contact">
   <div class="contact-container">
+    
     <div class="contact-text">
       <h2>Contáctame</h2>
       <p>¿Tienes alguna pregunta, una idea para una figura personalizada o simplemente quieres saludar? ¡No dudes en contactarme!</p>
@@ -289,21 +290,23 @@
 
     <form id="formulario-contacto">
       <label for="nombre">Nombre:</label>
-      <input type="text" id="nombre" name="nombre" required />
+      <input type="text" id="nombre" name="nombre" required>
 
       <label for="email">Email:</label>
-      <input type="email" id="email" name="email" required />
+      <input type="email" id="email" name="email" required>
 
       <label for="mensaje">Mensaje:</label>
-      <textarea id="mensaje" name="mensaje" rows="4" required></textarea>
+      <textarea id="mensaje" name="mensaje" required></textarea>
 
       <button type="submit">Enviar</button>
 
-      <div id="successMessage" class="hidden">Mensaje enviado con éxito.</div>
-      <div id="errorMessage" class="hidden">Hubo un error al enviar el mensaje.</div>
+      <div id="successMessage" class="hidden">¡Mensaje enviado con éxito!</div>
+      <div id="errorMessage" class="hidden">Error al enviar el mensaje. Intenta de nuevo.</div>
     </form>
+
   </div>
 </section>
+
 
 
 
