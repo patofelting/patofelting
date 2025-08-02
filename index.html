@@ -48,24 +48,28 @@
 <body oncontextmenu="return true;">
   
   
-<nav class="nav">
+<<nav class="nav">
   <div class="nav-container">
+    <!-- LOGO -->
     <div class="logo-container">
       <img src="img/patofelting.jpg" alt="Logo Patofelting" class="logo-img" />
       <h2 class="logo-text">Patofelting</h2>
     </div>
 
-    <button class="hamburguesa" aria-label="Menú de navegación" aria-expanded="false">
+    <!-- BOTÓN HAMBURGUESA -->
+    <button class="hamburguesa" id="hamburguesa-btn" aria-label="Menú de navegación" aria-expanded="false">
       <span></span>
       <span></span>
       <span></span>
     </button>
 
+    <!-- BOTÓN CARRITO -->
     <button class="carrito-btn" id="carrito-btn-main" aria-label="Abrir carrito de compras">
       <i class="fas fa-shopping-cart"></i> Carrito (<span id="contador-carrito">0</span>)
     </button>
 
-    <ul class="menu">
+    <!-- MENÚ PRINCIPAL -->
+    <ul class="menu" id="menu">
       <li><a href="#inicio">Inicio</a></li>
       <li><a href="#sobre">Sobre mí</a></li>
       <li><a href="#productos">Productos</a></li>
