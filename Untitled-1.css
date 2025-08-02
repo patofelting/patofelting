@@ -198,14 +198,16 @@ input[type="submit"]:hover,
   position: relative;
 }
 
+/* Líneas del icono */
 .hamburguesa span {
   display: block;
-  width: 24px;
+  width: 28px;
   height: 3px;
-  background-color: var(--text-color, #222);
+  background-color: var(--text-color); /* o usa #222 si lo prefieres */
   border-radius: 2px;
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, opacity 0.3s ease;
 }
+
 
 /* Estilo transformado (X) */
 .hamburguesa.activo span:nth-child(1) {
