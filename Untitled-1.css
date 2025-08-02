@@ -2521,3 +2521,51 @@ blockquote {
   color: var(--primary-color);
   transition: left 0.3s ease;
 }
+
+
+/* Añade esto al final del archivo CSS */
+@media (max-width: 768px) {
+  .modal-flex {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .modal-carrusel {
+    width: 100%;
+    margin-bottom: 20px;
+  }
+
+  .modal-info {
+    width: 100%;
+    padding: 0 15px;
+  }
+
+  .modal-img {
+    max-height: 300px;
+  }
+
+  .modal-thumbnails {
+    justify-content: center;
+    margin-top: 10px;
+  }
+
+  .modal-acciones {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .cantidad-modal-input {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  .boton-agregar-modal {
+    width: 100%;
+  }
+}@media (max-width: 768px) {
+  #modal-contenido {
+    width: 95%;
+    max-height: 90vh;
+    padding: 15px;
+  }
+}
