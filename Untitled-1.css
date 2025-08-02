@@ -2354,5 +2354,26 @@ blockquote {
     transform: translateY(0);
   }
 }
+@media (max-width: 768px) {
+  .about-content {
+    flex-direction: column;
+    gap: 24px;
+    align-items: center;
+    text-align: center;
+  }
+  .about-image {
+    margin-top: 20px;
+  }
+  .about-text h2 {
+    font-size: 1.4rem;
+  }
+  .about-text ul {
+    text-align: left;
+    padding-left: 16px;
+  }
+  .logo-patofelting {
+    max-width: 250px;
+  }
+}
 
 
