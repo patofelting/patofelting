@@ -1447,28 +1447,25 @@ blockquote {
 }
 
 
-/* FAQ Section */
 .faq-section {
-  padding: 80px 0;
+  padding: 80px 15px;
   background-color: var(--light-gray);
   text-align: center;
 }
 
 .faq-section h2 {
-  text-align: center;
-  font-size: 2.5rem;
+  font-size: 2.6rem;
   color: var(--primary-color);
   margin-bottom: 40px;
 }
 
 .faq-item {
-  margin-bottom: 20px;
+  margin: 0 auto 16px;
   border: 1px solid var(--medium-gray);
   border-radius: var(--border-radius);
   overflow: hidden;
-  transition: var(--transition);
   max-width: 800px;
-  margin: 0 auto 10px;
+  transition: var(--transition);
 }
 
 .faq-item:hover {
@@ -1477,49 +1474,65 @@ blockquote {
 
 .faq-toggle {
   width: 100%;
-  padding: 15px 20px;
-  text-align: left;
+  padding: 18px 24px;
+  font-size: 1.1rem; /* ✅ Aumentado */
   font-weight: var(--font-weight-bold);
+  text-align: left;
   background-color: white;
-  color: var(--text-color); /* 🔧 color negro por defecto */
+  color: var(--text-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: var(--transition);
-  cursor: pointer;
   border: none;
+  cursor: pointer;
+  transition: var(--transition);
 }
 
 .faq-toggle:hover {
-  background-color: white; /* ✅ el fondo sigue blanco */
-  color: var(--primary-color); /* ✅ el texto cambia a verde */
+  background-color: #f0f0f0;
+  color: var(--primary-color);
 }
 
 .faq-toggle[aria-expanded="true"]::after {
   content: '-';
 }
 
-.faq-toggle:hover {
-  background-color: var(--light-gray);
-}
-
 .faq-content {
-  padding: 0 20px;
+  padding: 0 24px;
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.3s ease;
+  font-size: 1rem; /* ✅ Aumentado */
+  line-height: 1.6;
+  color: var(--text-color);
   background-color: white;
+  transition: max-height 0.3s ease;
 }
 
 .faq-toggle[aria-expanded="true"] + .faq-content {
-  padding: 15px 20px;
-  max-height: 500px;
+  padding: 16px 24px;
+  max-height: 600px;
 }
 
 .faq-more {
   color: var(--primary-color);
   font-weight: var(--font-weight-bold);
+  font-size: 1rem;
   text-decoration: underline;
+}
+@media (max-width: 576px) {
+  .faq-toggle {
+    font-size: 1rem;
+    padding: 16px 20px;
+  }
+
+  .faq-content {
+    font-size: 0.95rem;
+    padding: 14px 20px;
+  }
+
+  .faq-section h2 {
+    font-size: 2.1rem;
+  }
 }
 
 /* Footer */
