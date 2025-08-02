@@ -372,60 +372,66 @@ blockquote {
   }
 }
 
-
-.producto-card {
-  background: #ffffff; /* blanco sólido */
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  padding: 15px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.producto-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-}
-
 @media (max-width: 768px) {
   .galeria-productos {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
     gap: 1rem;
-    max-width: 100%;
     padding: 0.5rem;
+    justify-content: center;
   }
 }
 
-.producto-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+@media (max-width: 480px) {
+  .galeria-productos {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.8rem;
+  }
 }
 
+/* ==== PRODUCT CARD ==== */
+.producto-card {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.4s ease, box-shadow 0.4s ease, background-color 0.4s ease;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* Halo verde artesanal al pasar cursor */
 .producto-card::before {
-  content: attr(data-page);
+  content: "";
   position: absolute;
-  top: 10px;
-  right: 10px;
-  background-color: var(--primary-color);
-  color: white;
-  padding: 5px 10px;
-  border-radius: var(--border-radius);
-  font-size: 0.8rem;
-  font-weight: var(--font-weight-bold);
-  opacity: 0.8;
-  transition: opacity 0.3s;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(67, 193, 96, 0.1), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.producto-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(67, 193, 96, 0.25);
+  background-color: #f0fff5;
 }
 
 .producto-card:hover::before {
   opacity: 1;
 }
 
+.producto-card * {
+  position: relative;
+  z-index: 1;
+}
+
 .producto-img {
   width: 100%;
-  aspect-ratio: 1 / 1;           
-  object-fit: cover;             
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
   object-position: center center;
-  border-radius: 12px;           
-  background: #f5f5f5;           
+  border-radius: 12px;
+  background: #f5f5f5;
   display: block;
 }
 
@@ -519,7 +525,7 @@ blockquote {
   cursor: pointer;
   transition: var(--transition);
   font-size: 0.9rem;
-  width: 100%; /* Ensure it takes full width on mobile */
+  width: 100%;
 }
 
 .boton-aviso-stock:hover {
@@ -527,26 +533,21 @@ blockquote {
 }
 
 @media (max-width: 768px) {
-  .galeria-productos {
-    grid-template-columns: repeat(2, minmax(180px, 1fr));
-  }
-
   .card-acciones {
-    padding: 0 5px 5px; /* Further reduce padding on mobile */
+    padding: 0 5px 5px;
   }
 
   .boton-agregar {
-    padding: 5px 8px; /* Reduce padding for mobile */
-    font-size: 0.85rem; /* Smaller font size */
+    padding: 5px 8px;
+    font-size: 0.85rem;
   }
 
   .boton-aviso-stock {
-    padding: 6px 10px; /* Reduce padding for mobile */
-    font-size: 0.8rem; /* Smaller font size */
-    margin-top: 5px; /* Reduce margin */
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    margin-top: 5px;
   }
 }
-
 
 @media (max-width: 767px) {
   .producto-card .boton-agregar.agotado {
@@ -557,6 +558,7 @@ blockquote {
     width: 100%;
   }
 }
+
 /* Product Modal */
 #producto-modal {
   position: fixed;
