@@ -636,7 +636,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const stockFeedback = document.getElementById('stock-modal-feedback');
   const stockClose = stockModal?.querySelector('.modal-stock-close');
 
-  // Abrir modal
   function openStockModal(productoId, productoNombre) {
     if (!stockModal) return;
     stockModal.setAttribute('data-producto', productoNombre || '');
@@ -649,14 +648,19 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => { stockInput.focus(); }, 120);
   }
 
-  // Cerrar modal
   function closeStockModal() {
     if (!stockModal) return;
     stockModal.classList.remove('visible');
     setTimeout(() => stockModal.setAttribute('hidden', true), 180);
   }
 
-  // UX: Cerrar con click fuera y otros
+  // Feedback helper
+  function showFeedback(msg, color='#43c160') {
+    stockFeedback.textContent = msg;
+    stockFeedback.style.color = color;
+    stockFeedback.hidden = false;
+  }
+
   stockModal?.addEventListener('click', e => {
     if (e.target === stockModal) closeStockModal();
   });
@@ -665,14 +669,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (stockModal && stockModal.classList.contains('visible') && e.key === 'Escape') closeStockModal();
   });
 
-  // Evento submit del formulario
   stockForm?.addEventListener('submit', function(e) {
     e.preventDefault();
     const email = stockInput.value.trim();
     if (!email) {
-      stockFeedback.textContent = 'Por favor ingresa tu correo.';
-      stockFeedback.style.color = '#d32f2f';
-      stockFeedback.hidden = false;
+      showFeedback('Por favor ingresa tu correo electrónico.', '#d32f2f');
       return;
     }
     localStorage.setItem(EMAIL_LS_KEY, email);
@@ -681,29 +682,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const producto = stockModal.getAttribute('data-producto') || '';
     const productoId = stockModal.getAttribute('data-producto-id') || '';
 
-    stockForm.querySelector('button[type="submit"]').disabled = true; // evita doble click
+    const mensaje = `Hola Patofelting, quería saber por el producto ${producto} (ID: ${productoId}) cuando haya stock. Email del interesado: ${email}`;
+
+    stockForm.querySelector('button[type="submit"]').disabled = true;
 
     emailjs.send('service_89by24g', 'template_8mn7hdp', {
       to_email: email,
       producto: producto,
-      producto_id: productoId
+      producto_id: productoId,
+      message: mensaje // <-- este campo puedes usarlo en tu plantilla
     }).then(() => {
       stockForm.hidden = true;
-      stockFeedback.textContent = '¡Gracias por tu interés! Te avisaremos a la brevedad posible cuando tengamos stock.';
-      stockFeedback.style.color = '#43c160';
-      stockFeedback.hidden = false;
+      showFeedback('¡Gracias por tu interés! Te avisaremos apenas haya stock.');
       setTimeout(closeStockModal, 2000);
       stockForm.querySelector('button[type="submit"]').disabled = false;
     }, (err) => {
       console.error('Error al enviar:', err);
-      stockFeedback.textContent = 'Ocurrió un error, intenta de nuevo.';
-      stockFeedback.style.color = '#d32f2f';
-      stockFeedback.hidden = false;
+      showFeedback('Ocurrió un error, intenta de nuevo.', '#d32f2f');
       stockForm.querySelector('button[type="submit"]').disabled = false;
     });
   });
 
-  // Delegar click en "Avísame cuando haya stock"
   document.body.addEventListener('click', function(e) {
     const btn = e.target.closest('.boton-stock-naranja');
     if (btn) {
