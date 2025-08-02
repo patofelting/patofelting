@@ -46,26 +46,37 @@
 
 </head>
 <body oncontextmenu="return true;">
-  <nav class="nav">
-    <div class="nav-container">
-      <div class="logo-container">
-        <img src="img/patofelting.jpg" alt="Logo Patofelting" class="logo-img" />
-        <h2 class="logo-text">Patofelting</h2>
-      </div>
-      <button class="hamburguesa" aria-label="Menú de navegación" aria-expanded="false">☰</button>
-      <button class="carrito-btn" id="carrito-btn-main" aria-label="Abrir carrito de compras">
-        <i class="fas fa-shopping-cart"></i> Carrito (<span id="contador-carrito">0</span>)
-      </button>
-      <ul id="menu" class="menu">
-        <li><a href="#inicio">Inicio</a></li>
-        <li><a href="#sobre">Sobre mí</a></li>
-        <li><a href="#productos">Productos</a></li>
-        <li><a href="#contacto">Contacto</a></li>
-        <li><a href="#preguntas">Preguntas</a></li>
-      </ul>
+  
+  
+<nav class="nav">
+  <div class="nav-container">
+    <div class="logo-container">
+      <img src="img/patofelting.jpg" alt="Logo Patofelting" class="logo-img" />
+      <h2 class="logo-text">Patofelting</h2>
     </div>
-  </nav>
 
+    <button class="hamburguesa" aria-label="Menú de navegación" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <button class="carrito-btn" id="carrito-btn-main" aria-label="Abrir carrito de compras">
+      <i class="fas fa-shopping-cart"></i> Carrito (<span id="contador-carrito">0</span>)
+    </button>
+
+    <ul class="menu">
+      <li><a href="#inicio">Inicio</a></li>
+      <li><a href="#sobre">Sobre mí</a></li>
+      <li><a href="#productos">Productos</a></li>
+      <li><a href="#contacto">Contacto</a></li>
+      <li><a href="#preguntas">Preguntas</a></li>
+    </ul>
+  </div>
+</nav>
+
+
+  
   <div id="carrito-panel" class="carrito-panel">
     <div class="carrito-header">
       <h2>Tu Carrito</h2>
