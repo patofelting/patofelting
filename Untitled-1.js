@@ -825,3 +825,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+
+const btnHamburguesa = document.getElementById("hamburguesa-btn");
+const menu = document.getElementById("menu");
+
+btnHamburguesa.addEventListener("click", () => {
+  btnHamburguesa.classList.toggle("activo");
+  menu.classList.toggle("menu-activo");
+});
+
