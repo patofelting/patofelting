@@ -1576,12 +1576,12 @@ button:active {
 
 /* Ícono Instagram como imagen */
 .footer-nav a img.icono-instagram {
-  width: 26px;
-  height: 26px;
-  margin-right: 6px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   vertical-align: middle;
   transition: transform 0.3s ease, filter 0.3s ease;
+  margin-right: 8px;
 }
 
 .footer-nav a:hover img.icono-instagram {
@@ -1589,6 +1589,12 @@ button:active {
   filter: brightness(1.1);
 }
 
+.footer-nav a span {
+  font-size: 1rem;
+  vertical-align: middle;
+  display: inline-block;
+  transition: color 0.3s ease;
+}
 .footer-bottom {
   text-align: center;
   font-size: 0.95rem;
@@ -2475,6 +2481,7 @@ body.no-scroll {
   color: #43c160;
   text-align: center;
 }
+
 
 
 
