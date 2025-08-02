@@ -759,3 +759,46 @@ emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
 
 // Llamar a la función para configurar el formulario de contacto
 setupContactForm();
+
+
+function updateRange() {
+  const minSlider = document.getElementById('min-slider');
+  const maxSlider = document.getElementById('max-slider');
+  const thumbMin = document.getElementById('thumb-label-min');
+  const thumbMax = document.getElementById('thumb-label-max');
+  const minPrice = document.getElementById('min-price');
+  const maxPrice = document.getElementById('max-price');
+  const range = document.querySelector('.range');
+
+  const min = parseInt(minSlider.value);
+  const max = parseInt(maxSlider.value);
+
+  const porcentajeMin = (min / 3000) * 100;
+  const porcentajeMax = (max / 3000) * 100;
+
+  minPrice.textContent = `$U${min}`;
+  maxPrice.textContent = `$U${max}`;
+  thumbMin.textContent = `$U${min}`;
+  thumbMax.textContent = `$U${max}`;
+  thumbMin.style.left = `calc(${porcentajeMin}% - 10px)`;
+  thumbMax.style.left = `calc(${porcentajeMax}% - 10px)`;
+
+  range.style.left = porcentajeMin + '%';
+  range.style.width = (porcentajeMax - porcentajeMin) + '%';
+
+  filtrosActuales.precioMin = min;
+  filtrosActuales.precioMax = max;
+  renderizarProductos();
+}
+
+// Mostrar / ocultar burbujas mientras arrastra
+['min-slider', 'max-slider'].forEach(id => {
+  const slider = document.getElementById(id);
+  const label = document.getElementById(id === 'min-slider' ? 'thumb-label-min' : 'thumb-label-max');
+
+  slider.addEventListener('input', updateRange);
+  slider.addEventListener('mousedown', () => label.classList.add('visible'));
+  slider.addEventListener('touchstart', () => label.classList.add('visible'));
+  slider.addEventListener('mouseup', () => label.classList.remove('visible'));
+  slider.addEventListener('touchend', () => label.classList.remove('visible'));
+});
