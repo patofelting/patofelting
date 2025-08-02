@@ -189,43 +189,44 @@ input[type="submit"]:hover,
   justify-content: center;
   align-items: center;
   gap: 6px;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   background: none;
   border: none;
   cursor: pointer;
   z-index: 2000;
   position: relative;
+  padding: 0;
 }
 
-/* Líneas del icono */
+/* Líneas del ícono */
 .hamburguesa span {
   display: block;
-  width: 28px;
-  height: 3px;
-  background-color: var(--text-color); /* o usa #222 si lo prefieres */
-  border-radius: 2px;
+  width: 24px;
+  height: 2px;
+  background-color: #222; /* o var(--text-color) si tenés buen contraste */
+  border-radius: 1px;
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
-
-/* Estilo transformado (X) */
+/* Estilo transformado a "X" */
 .hamburguesa.activo span:nth-child(1) {
-  transform: rotate(45deg) translate(5px, 5px);
+  transform: rotate(45deg) translate(3px, 3px);
 }
 .hamburguesa.activo span:nth-child(2) {
   opacity: 0;
 }
 .hamburguesa.activo span:nth-child(3) {
-  transform: rotate(-45deg) translate(6px, -6px);
+  transform: rotate(-45deg) translate(3px, -3px);
 }
 
-/* Mostrar solo en pantallas chicas */
+/* Ocultar en escritorio */
 @media (min-width: 768px) {
   .hamburguesa {
     display: none;
   }
 }
+
 
 .hamburguesa.activo span:nth-child(1) {
   transform: rotate(45deg) translateY(8px);
