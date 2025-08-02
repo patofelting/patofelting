@@ -138,46 +138,48 @@
 <section id="productos" class="productos">
   <div class="container">
     <h2>Nuestros Productos</h2>
-    
+
     <div class="filtros-container">
-  <div class="filtro-categoria">
-    <label for="filtro-categoria">Categorías:</label>
-    <select id="filtro-categoria">
-      <option value="todos"></option>
-      <option value="animales"></option>
-      <option value="fantasia"></option>
-    </select>
-  </div>
-
-
-       <div class="price-filter">
-    <div class="price-header">
-      <span id="min-price">$U0</span>
-      <span id="max-price">$U3000</span>
-    </div>
-    <div class="range-slider">
-      <input type="range" id="min-slider" min="0" max="3000" value="0" class="slider">
-      <input type="range" id="max-slider" min="0" max="3000" value="3000" class="slider">
-      <div class="track"></div>
-      <div class="range"></div>
-    </div>
-    <button class="aplicar-rango-btn" onclick="aplicarRango()">Aplicar</button>
-  </div>
-
-  <div class="filtro-busqueda">
-    <input type="text" class="input-busqueda" placeholder="Buscar por nombre o descripción...">
-  </div>
-</section>        </div>
-      <div id="galeria-productos" class="galeria-productos"></div>
-      <div id="product-loader" class="loader" hidden aria-live="polite">
-        <svg class="spinner" viewBox="0 0 50 50">
-          <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"/>
-        </svg>
-        <p>Cargando productos...</p>
+      <div class="filtro-categoria">
+        <label for="filtro-categoria">Categorías:</label>
+        <select id="filtro-categoria">
+          <option value="todos"></option>
+          <option value="animales"></option>
+          <option value="fantasia"></option>
+        </select>
       </div>
-      <div id="paginacion" class="paginacion"></div>
+
+      <div class="price-filter">
+        <div class="price-header">
+          <span id="min-price">$U0</span>
+          <span id="max-price">$U3000</span>
+        </div>
+        <div class="range-slider">
+          <input type="range" id="min-slider" min="0" max="3000" value="0" class="slider">
+          <input type="range" id="max-slider" min="0" max="3000" value="3000" class="slider">
+          <div class="track"></div>
+          <div class="range"></div>
+        </div>
+        <button class="aplicar-rango-btn" onclick="aplicarRango()">Aplicar</button>
+      </div>
+
+      <div class="filtro-busqueda">
+        <input type="text" class="input-busqueda" placeholder="Buscar por nombre o descripción...">
+      </div>
     </div>
-  </section>
+
+    <!-- MOVER ESTOS ADENTRO -->
+    <div id="galeria-productos" class="galeria-productos"></div>
+    <div id="product-loader" class="loader" hidden aria-live="polite">
+      <svg class="spinner" viewBox="0 0 50 50">
+        <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"/>
+      </svg>
+      <p>Cargando productos...</p>
+    </div>
+    <div id="paginacion" class="paginacion"></div>
+
+  </div>
+</section>
 
 <div id="producto-modal" class="modal-overlay">
   <div id="modal-contenido" class="modal-contenido-producto">
@@ -306,6 +308,7 @@
 
   </div>
 </section>
+
 
 
 
