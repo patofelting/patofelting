@@ -412,7 +412,9 @@ btnCerrarModalEnvio?.addEventListener('click', () => {
 });
 
 // ========== ENVIAR PEDIDO POR WHATSAPP Y ACTUALIZAR STOCK EN TIEMPO REAL ==========
-formEnvio?.addEventListener('submit', async function(e) {
+// Cambiado de submit event a click event para mejor compatibilidad móvil
+const btnEnviarWhatsapp = document.getElementById('btn-enviar-whatsapp');
+btnEnviarWhatsapp?.addEventListener('click', async function(e) {
   e.preventDefault();
 
   const nombre = document.getElementById('input-nombre').value.trim();
@@ -485,13 +487,21 @@ formEnvio?.addEventListener('submit', async function(e) {
     const numeroWhatsApp = '59893566283';
     sessionStorage.setItem('ultimoPedidoWhatsApp', mensaje);
 
-    // Abre WhatsApp en una pestaña nueva
+    // Usar window.location.href para mejor compatibilidad móvil
     const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
-    const nuevaPestaña = window.open(urlWhatsApp, '_blank');
-    if (!nuevaPestaña) {
-      mostrarNotificacion('Por favor, permite las ventanas emergentes para enviar el pedido por WhatsApp.', 'error');
-    } else {
+    
+    try {
+      // Intenta abrir en nueva ventana primero (escritorio)
+      const nuevaPestaña = window.open(urlWhatsApp, '_blank');
+      if (!nuevaPestaña) {
+        // Si falla, usar window.location.href (mejor para móviles)
+        window.location.href = urlWhatsApp;
+      }
       mostrarNotificacion('Pedido listo para enviar por WhatsApp', 'exito');
+    } catch (error) {
+      // Fallback para dispositivos móviles
+      window.location.href = urlWhatsApp;
+      mostrarNotificacion('Redirigiendo a WhatsApp...', 'exito');
     }
 
     // Limpia el formulario y la UI
@@ -589,7 +599,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 function setupContactForm() {
-  const formContacto = document.getElementById('formContacto');
+  // Corregido: el id en HTML es 'formulario-contacto', no 'formContacto'
+  const formContacto = document.getElementById('formulario-contacto');
   const successMessage = document.getElementById('successMessage');
   const errorMessage = document.getElementById('errorMessage');
 
