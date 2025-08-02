@@ -194,14 +194,26 @@ function renderizarProductos() {
   const productosFiltrados = filtrarProductos();
   const inicio = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
   const paginados = productosFiltrados.slice(inicio, inicio + PRODUCTOS_POR_PAGINA);
+
   if (!elementos.galeria) return;
+
   if (paginados.length === 0) {
     elementos.galeria.innerHTML = '<p class="sin-productos">No se encontraron productos.</p>';
     return;
   }
-  elementos.galeria.innerHTML = paginados.map(crearCardProducto).join('');
-  renderizarPaginacion(productosFiltrados.length);
-  elementos.galeria.querySelectorAll('.producto-card').forEach(card => {
+
+  elementos.galeria.innerHTML = ''; // limpiamos antes de renderizar
+
+  paginados.forEach((producto, index) => {
+    const html = crearCardProducto(producto);
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = html;
+    const card = wrapper.firstElementChild;
+    
+    // ✨ Animación en cascada: delay para cada tarjeta
+    card.style.animationDelay = `${index * 100}ms`;
+
+    // Agregamos eventos (igual que antes)
     card.querySelector('.boton-agregar')?.addEventListener('click', e => {
       e.stopPropagation();
       agregarAlCarrito(parseInt(card.dataset.id), 1);
@@ -210,8 +222,13 @@ function renderizarProductos() {
       e.stopPropagation();
       verDetalle(parseInt(card.dataset.id));
     });
+
+    elementos.galeria.appendChild(card);
   });
+
+  renderizarPaginacion(productosFiltrados.length);
 }
+
 
 function crearCardProducto(p) {
   const enCarrito = carrito.find(i => i.id === p.id);
