@@ -625,21 +625,15 @@ function setupContactForm() {
 }
 
 
-
-
-// --- Modal ultra discreto para "Avísame cuando haya stock" ---
-(function() {
-  // Utiliza el mismo key para todas las peticiones, puedes cambiarlo si lo prefieres
+document.addEventListener('DOMContentLoaded', function() {
   const EMAIL_LS_KEY = 'patofelting_stock_email';
-
-  // Referencias
   const stockModal = document.getElementById('stock-modal');
   const stockForm = document.getElementById('stock-form');
   const stockInput = document.getElementById('stock-email');
   const stockFeedback = document.getElementById('stock-modal-feedback');
   const stockClose = stockModal?.querySelector('.modal-stock-close');
 
-  // Abrir modal con email guardado si existe
+  // Abrir modal
   function openStockModal(productoId, productoNombre) {
     if (!stockModal) return;
     stockModal.setAttribute('data-producto', productoNombre || '');
@@ -659,7 +653,7 @@ function setupContactForm() {
     setTimeout(() => stockModal.setAttribute('hidden', true), 180);
   }
 
-  // UX: Cerrar con click fuera
+  // UX: Cerrar con click fuera y otros
   stockModal?.addEventListener('click', e => {
     if (e.target === stockModal) closeStockModal();
   });
@@ -668,33 +662,41 @@ function setupContactForm() {
     if (stockModal && stockModal.classList.contains('visible') && e.key === 'Escape') closeStockModal();
   });
 
-  // Interceptar envíos del formulario
+  // Evento submit del formulario
   stockForm?.addEventListener('submit', function(e) {
     e.preventDefault();
     const email = stockInput.value.trim();
-    if (!email) return;
-
-    // Guarda el email para la próxima vez
+    if (!email) {
+      stockFeedback.textContent = 'Por favor ingresa tu correo.';
+      stockFeedback.style.color = '#d32f2f';
+      stockFeedback.hidden = false;
+      return;
+    }
     localStorage.setItem(EMAIL_LS_KEY, email);
 
-    // Integra con tu lógica de EmailJS (usa tu código ya existente, solo cambia el modal y UX)
+    // Datos del producto
     const producto = stockModal.getAttribute('data-producto') || '';
     const productoId = stockModal.getAttribute('data-producto-id') || '';
-    // --- Tu código de EmailJS aquí ---
+
+    stockForm.querySelector('button[type="submit"]').disabled = true; // evita doble click
+
     emailjs.send('service_89by24g', 'template_8mn7hdp', {
       to_email: email,
       producto: producto,
       producto_id: productoId
     }).then(() => {
       stockForm.hidden = true;
-      stockFeedback.textContent = '¡Listo! Te avisaremos apenas haya stock.';
+      stockFeedback.textContent = '¡Gracias por tu interés! Te avisaremos a la brevedad posible cuando tengamos stock.';
       stockFeedback.style.color = '#43c160';
       stockFeedback.hidden = false;
       setTimeout(closeStockModal, 2000);
-    }, () => {
+      stockForm.querySelector('button[type="submit"]').disabled = false;
+    }, (err) => {
+      console.error('Error al enviar:', err);
       stockFeedback.textContent = 'Ocurrió un error, intenta de nuevo.';
       stockFeedback.style.color = '#d32f2f';
       stockFeedback.hidden = false;
+      stockForm.querySelector('button[type="submit"]').disabled = false;
     });
   });
 
@@ -706,4 +708,4 @@ function setupContactForm() {
       openStockModal(btn.dataset.productoid, btn.dataset.producto);
     }
   });
-})();
+});
