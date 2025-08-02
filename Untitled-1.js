@@ -308,20 +308,16 @@ window.verDetalle = verDetalle;
 function mostrarModalProducto(prod) {
   if (!elementos.modal || !elementos.modalContenido) return;
   let currentIndex = 0;
+
   function renderCarrusel() {
     const disp = Math.max(0, prod.stock - (carrito.find(i => i.id === prod.id)?.cantidad || 0));
     const agotado = disp <= 0;
+
     elementos.modalContenido.innerHTML = `
       <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
       <div class="modal-flex">
         <div class="modal-carrusel">
           <img src="${prod.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${prod.nombre}">
-          ${prod.imagenes.length > 1 ? `
-            <div class="modal-controls">
-              <button class="modal-prev" ${currentIndex === 0 ? 'disabled' : ''}>←</button>
-              <button class="modal-next" ${currentIndex === prod.imagenes.length - 1 ? 'disabled' : ''}>→</button>
-            </div>
-          ` : ''}
           <div class="modal-thumbnails">
             ${prod.imagenes.map((img, i) =>
               `<img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}">`
@@ -340,12 +336,17 @@ function mostrarModalProducto(prod) {
         </div>
       </div>
     `;
+
+    // Eventos
     elementos.modalContenido.querySelector('.cerrar-modal').onclick = cerrarModal;
-    elementos.modalContenido.querySelector('.modal-prev')?.addEventListener('click', () => { currentIndex--; renderCarrusel(); });
-    elementos.modalContenido.querySelector('.modal-next')?.addEventListener('click', () => { currentIndex++; renderCarrusel(); });
+
     elementos.modalContenido.querySelectorAll('.thumbnail').forEach(th => {
-      th.addEventListener('click', () => { currentIndex = parseInt(th.dataset.index); renderCarrusel(); });
+      th.addEventListener('click', () => {
+        currentIndex = parseInt(th.dataset.index);
+        renderCarrusel(); // Re-renderiza con nueva imagen
+      });
     });
+
     elementos.modalContenido.querySelector('.boton-agregar-modal')?.addEventListener('click', () => {
       const inputCantidad = elementos.modalContenido.querySelector('.cantidad-modal-input');
       const cantidadAgregar = parseInt(inputCantidad.value, 10) || 1;
@@ -353,12 +354,15 @@ function mostrarModalProducto(prod) {
       cerrarModal();
     });
   }
+
   elementos.modal.classList.add('visible');
   renderCarrusel();
 }
+
 function cerrarModal() {
   elementos.modal?.classList.remove('visible');
 }
+
 
 // ========== MODALES DE PRECOMPRA Y ENVÍO ==========
 const avisoPreCompraModal = document.getElementById('aviso-pre-compra-modal');
