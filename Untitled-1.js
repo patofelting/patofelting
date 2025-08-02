@@ -802,3 +802,16 @@ function updateRange() {
   slider.addEventListener('mouseup', () => label.classList.remove('visible'));
   slider.addEventListener('touchend', () => label.classList.remove('visible'));
 });
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btnHamburguesa = document.querySelector('.hamburguesa');
+  const menu = document.querySelector('.menu');
+
+  btnHamburguesa?.addEventListener('click', () => {
+    const expanded = btnHamburguesa.getAttribute('aria-expanded') === 'true' || false;
+    btnHamburguesa.setAttribute('aria-expanded', !expanded);
+    menu.classList.toggle('menu-activo');
+    btnHamburguesa.classList.toggle('activo');
+  });
+});
