@@ -186,27 +186,44 @@ input[type="submit"]:hover,
 .hamburguesa {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  width: 26px;
-  height: 20px;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  width: 40px;
+  height: 40px;
   background: none;
   border: none;
   cursor: pointer;
-  z-index: 1001;
+  z-index: 2000;
+  position: relative;
 }
 
 .hamburguesa span {
-  background-color: var(--primary-color);
   display: block;
-  width: 26px;
-  height: 2px;
-  margin: 5px 0;
- 
-  border-radius: 5px;
-  transition: 0.3s ease-in-out;
+  width: 24px;
+  height: 3px;
+  background-color: var(--text-color, #222);
+  border-radius: 2px;
+  transition: all 0.3s ease;
 }
 
+/* Estilo transformado (X) */
+.hamburguesa.activo span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+.hamburguesa.activo span:nth-child(2) {
+  opacity: 0;
+}
+.hamburguesa.activo span:nth-child(3) {
+  transform: rotate(-45deg) translate(6px, -6px);
+}
 
+/* Mostrar solo en pantallas chicas */
+@media (min-width: 768px) {
+  .hamburguesa {
+    display: none;
+  }
+}
 
 .hamburguesa.activo span:nth-child(1) {
   transform: rotate(45deg) translateY(8px);
