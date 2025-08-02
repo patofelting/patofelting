@@ -280,23 +280,32 @@
   </div>
 </div>
 
-  <section id="contacto" class="contact">
-    <div class="container">
+<section class="contact">
+  <div class="contact-container">
+    <div class="contact-text">
       <h2>Contáctame</h2>
       <p>¿Tienes alguna pregunta, una idea para una figura personalizada o simplemente quieres saludar? ¡No dudes en contactarme!</p>
-      <form id="formContacto">
-        <label for="nombre">Nombre:</label>
-        <input type="text" id="nombre" name="nombre" required>
-        <label for="email">Email:</label>
-        <input type="email" id="email" name="email" required>
-        <label for="mensaje">Mensaje:</label>
-        <textarea id="mensaje" name="mensaje" required></textarea>
-        <button type="submit">Enviar</button>
-      </form>
-      <div id="successMessage" class="hidden">¡Mensaje enviado con éxito!</div>
-      <div id="errorMessage" class="hidden">Error al enviar el mensaje. Intenta de nuevo.</div>
     </div>
-  </section>
+
+    <form id="formulario-contacto">
+      <label for="nombre">Nombre:</label>
+      <input type="text" id="nombre" name="nombre" required />
+
+      <label for="email">Email:</label>
+      <input type="email" id="email" name="email" required />
+
+      <label for="mensaje">Mensaje:</label>
+      <textarea id="mensaje" name="mensaje" rows="4" required></textarea>
+
+      <button type="submit">Enviar</button>
+
+      <div id="successMessage" class="hidden">Mensaje enviado con éxito.</div>
+      <div id="errorMessage" class="hidden">Hubo un error al enviar el mensaje.</div>
+    </form>
+  </div>
+</section>
+
+
 
   <section class="faq-section" id="preguntas">
     <h2>Preguntas Frecuentes</h2>
@@ -371,13 +380,12 @@
   <img src="img/instagram.png" alt="Instagram" class="icono-instagram" />
   <span>Instagram</span>
 </a>
-     <a href="mailto:patofelting@gmail.com" class="footer-mail" aria-label="Correo electrónico">
-  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none">
-    <rect x="2" y="5" width="20" height="14" rx="3" fill="#388e3c"/>
-    <polyline points="4,7 12,13 20,7" stroke="#fff" stroke-width="2" fill="none"/>
-  </svg>
-  <span>Correo</span>
-</a>
+      <a href="mailto:patofelting@gmail.com" class="footer-mail" aria-label="Mail">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="5" width="20" height="14" rx="3" fill="#388e3c"/>
+          <polyline points="4,7 12,13 20,7" stroke="#fff" stroke-width="2" fill="none"/>
+        </svg>
+      </a>
     </nav>
   </div>
   <div class="footer-bottom">
