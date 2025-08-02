@@ -724,3 +724,13 @@ function inicializarMenuHamburguesa() {
     hamburguesa.setAttribute('aria-expanded', !expanded);
   });
 }
+document.addEventListener('DOMContentLoaded', function() {
+  const hamburguesa = document.querySelector('.hamburguesa');
+  const menu = document.querySelector('.menu');
+
+  hamburguesa.addEventListener('click', function() {
+    menu.classList.toggle('active');
+    
+    hamburguesa.setAttribute('aria-expanded', menu.classList.contains('active'));
+  });
+});
