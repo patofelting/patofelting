@@ -710,3 +710,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 });
+
+
+function inicializarMenuHamburguesa() {
+  const hamburguesa = document.querySelector('.hamburguesa');
+  const menu = document.querySelector('.menu');
+
+  if (!hamburguesa || !menu) return;
+
+  hamburguesa.addEventListener('click', () => {
+    menu.classList.toggle('active');
+    const expanded = hamburguesa.getAttribute('aria-expanded') === 'true';
+    hamburguesa.setAttribute('aria-expanded', !expanded);
+  });
+}
