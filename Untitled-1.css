@@ -88,6 +88,7 @@ input[type="submit"]:hover,
 }
 
 /* Navigation */
+/* ===================== NAV ===================== */
 .nav {
   background-color: var(--background-color);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -125,52 +126,9 @@ input[type="submit"]:hover,
 
 .menu {
   list-style: none;
-  gap: 20px;
   transition: all 0.3s ease;
-}
-
-/* Versión móvil (oculto hasta que se activa) */
-@media (max-width: 767px) {
-  .menu {
-    display: none;
-    flex-direction: column;
-    position: absolute;
-    top: 60px;
-    right: 20px;
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: var(--box-shadow);
-    z-index: 1000;
-  }
-.menu.menu-activo {
-  backdrop-filter: blur(8px);
-  background: rgba(255, 255, 255, 0.9);
-  animation: fadeInSlide 0.3s ease-out both;
-}
-
-@keyframes fadeInSlide {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-}
-
-/* Versión escritorio */
-@media (min-width: 768px) {
-  .menu {
-    display: flex;
-    flex-direction: row;
-    position: static;
-    padding: 0;
-    box-shadow: none;
-    gap: 32px;
-  }
+  padding: 0;
+  margin: 0;
 }
 
 .menu li a {
@@ -183,6 +141,7 @@ input[type="submit"]:hover,
   color: var(--primary-color);
 }
 
+/* ========== Estilos hamburguesa ========== */
 .hamburguesa {
   display: flex;
   flex-direction: column;
@@ -199,17 +158,15 @@ input[type="submit"]:hover,
   padding: 0;
 }
 
-/* Líneas del ícono */
 .hamburguesa span {
   display: block;
   width: 24px;
   height: 2px;
-  background-color: #222; /* o var(--text-color) si tenés buen contraste */
+  background-color: var(--text-color);
   border-radius: 1px;
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
-/* Estilo transformado a "X" */
 .hamburguesa.activo span:nth-child(1) {
   transform: rotate(45deg) translate(3px, 3px);
 }
@@ -220,25 +177,50 @@ input[type="submit"]:hover,
   transform: rotate(-45deg) translate(3px, -3px);
 }
 
-/* Ocultar en escritorio */
-@media (min-width: 768px) {
-  .hamburguesa {
+/* ========== Versión móvil ========== */
+@media (max-width: 767px) {
+  .menu {
     display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 60px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: var(--box-shadow);
+    z-index: 1500;
+  }
+
+  .menu.menu-activo {
+    display: flex;
+    backdrop-filter: blur(8px);
+    animation: fadeInSlide 0.3s ease-out both;
+  }
+
+  @keyframes fadeInSlide {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
 
-
-.hamburguesa.activo span:nth-child(1) {
-  transform: rotate(45deg) translateY(8px);
-}
-.hamburguesa.activo span:nth-child(2) {
-  opacity: 0;
-}
-.hamburguesa.activo span:nth-child(3) {
-  transform: rotate(-45deg) translateY(-8px);
-}
-
+/* ========== Versión escritorio ========== */
 @media (min-width: 768px) {
+  .menu {
+    display: flex;
+    flex-direction: row;
+    position: static;
+    gap: 32px;
+    box-shadow: none;
+    background: none;
+  }
+
   .hamburguesa {
     display: none;
   }
