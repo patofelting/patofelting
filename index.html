@@ -151,6 +151,7 @@
     <h2>Nuestros Productos</h2>
 
     <div class="filtros-container">
+      <!-- CATEGORÍAS -->
       <div class="filtro-categoria">
         <label for="filtro-categoria">Categorías:</label>
         <select id="filtro-categoria">
@@ -160,24 +161,34 @@
         </select>
       </div>
 
+      <!-- RANGO DE PRECIO -->
       <div class="price-filter">
         <div class="price-header">
           <span id="min-price">$U0</span>
           <span id="max-price">$U3000</span>
         </div>
-        <div class="range-slider">
+
+        <div class="range-slider slider-container">
+          <!-- BURBUJAS FLOTANTES -->
+          <div id="thumb-label-min" class="thumb-label">$U0</div>
+          <div id="thumb-label-max" class="thumb-label">$U3000</div>
+
+          <!-- SLIDERS -->
           <input type="range" id="min-slider" min="0" max="3000" value="0" class="slider">
           <input type="range" id="max-slider" min="0" max="3000" value="3000" class="slider">
+
+          <!-- TRACK VISUAL -->
           <div class="track"></div>
           <div class="range"></div>
         </div>
-        
       </div>
 
+      <!-- BÚSQUEDA -->
       <div class="filtro-busqueda">
         <input type="text" class="input-busqueda" placeholder="Buscar por nombre o descripción...">
       </div>
     </div>
+
 
     <!-- MOVER ESTOS ADENTRO -->
     <div id="galeria-productos" class="galeria-productos"></div>
