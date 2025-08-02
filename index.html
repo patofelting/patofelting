@@ -420,12 +420,77 @@
     </nav>
   </div>
   <div class="footer-bottom">
-    <p>© 2025 Patofelting. Hecho con ♥ en Uruguay.</p>
+    <p>© 2025 Patofelting. Hecho con ♥ en Uruguay. Contáctanos por <a href="mailto:patofelting@gmail.com" class="footer-correo-link">correo</a>.</p>
   </div>
 </footer>
 
 
 
   <script src="Untitled-1.js" defer type="module"></script>
+  
+  <!-- Standalone hamburger menu script (fallback for when modules fail) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const hamburguesa = document.querySelector('.hamburguesa');
+      const menu = document.querySelector('.menu');
+      const menuLinks = document.querySelectorAll('.menu a');
+      
+      if (!hamburguesa || !menu) return;
+
+      // Toggle menu function
+      function toggleMenu(force) {
+        const isActive = typeof force === 'boolean' ? force : !menu.classList.contains('menu-activo');
+        
+        menu.classList.toggle('menu-activo', isActive);
+        hamburguesa.classList.toggle('activo', isActive);
+        hamburguesa.setAttribute('aria-expanded', isActive);
+        
+        // Prevent body scroll when menu is open
+        document.body.style.overflow = isActive ? 'hidden' : '';
+        
+        // Focus management for accessibility
+        if (isActive) {
+          menu.focus();
+        }
+      }
+
+      // Click handler for hamburger button
+      hamburguesa.addEventListener('click', function(e) {
+        e.preventDefault();
+        toggleMenu();
+      });
+
+      // Close menu when clicking on links
+      menuLinks.forEach(function(link) {
+        link.addEventListener('click', function() {
+          toggleMenu(false);
+        });
+      });
+
+      // Close menu when clicking outside (for mobile)
+      document.addEventListener('click', function(e) {
+        if (menu.classList.contains('menu-activo') && 
+            !menu.contains(e.target) && 
+            !hamburguesa.contains(e.target)) {
+          toggleMenu(false);
+        }
+      });
+
+      // Close menu with Escape key
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && menu.classList.contains('menu-activo')) {
+          toggleMenu(false);
+          hamburguesa.focus();
+        }
+      });
+
+      // Handle window resize
+      window.addEventListener('resize', function() {
+        if (window.innerWidth >= 768 && menu.classList.contains('menu-activo')) {
+          toggleMenu(false);
+        }
+      });
+    });
+  </script>
 </body>
 </html>
