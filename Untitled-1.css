@@ -813,6 +813,21 @@ blockquote {
   display: flex;
   flex-direction: column;
 }
+.carrito-btn {
+  background-color: var(--primary-color, #43c160);
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.carrito-btn:hover {
+  background-color: var(--accent-color, #2d9241);
+}
 
 .carrito-panel.active {
   right: 0;
