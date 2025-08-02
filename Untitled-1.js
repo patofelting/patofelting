@@ -589,9 +589,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// ===============================
-// CONTACT FORM CON EMAILJS
-// ===============================
 function setupContactForm() {
   const formContacto = document.getElementById('formContacto');
   const successMessage = document.getElementById('successMessage');
@@ -623,6 +620,12 @@ function setupContactForm() {
     });
   }
 }
+
+// Inicializar EmailJS con tu clave pública
+emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
+
+// Llamar a la función para configurar el formulario de contacto
+setupContactForm();
 
 
 document.addEventListener('DOMContentLoaded', function() {
