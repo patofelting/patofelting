@@ -824,7 +824,7 @@ blockquote {
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--medium-gray, #e2e8f0);
-  background: var(--primary-color, #38b349);
+  background: var(--primary-color, #43c160);
 }
 
 .carrito-header h2 {
@@ -919,7 +919,7 @@ blockquote {
 }
 
 .carrito-item-subtotal {
-  color: var(--primary-color, #38b349);
+  color: var(--primary-color, #43c160);
   font-weight: 600;
   margin-bottom: 3px;
   font-size: 1rem;
@@ -939,7 +939,7 @@ blockquote {
   min-width: 54px !important;
   min-height: 54px !important;
   background: #fff !important;
-  color: #2e7d32 !important;
+  color: #43c160 !important;
   border-radius: 8px !important;
   padding: 0 !important;
   border: none !important;
@@ -952,7 +952,7 @@ blockquote {
 }
 
 .carrito-item-controls button:active {
-  background-color: var(--primary-color, #38b349);
+  background-color: var(--primary-color, #43c160);
   color: #fff;
 }
 
@@ -1042,7 +1042,7 @@ blockquote {
 }
 
 .boton-finalizar-compra {
-  background-color: var(--primary-color, #38b349);
+  background-color: var(--primary-color, #43c160);
   color: #fff;
 }
 
