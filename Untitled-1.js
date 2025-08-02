@@ -422,10 +422,21 @@ formEnvio?.addEventListener('submit', async function(e) {
   const direccion = envio !== 'retiro' ? document.getElementById('input-direccion').value.trim() : '';
   const notas = document.getElementById('input-notas').value.trim();
 
-  if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
+  // Validación de campos obligatorios
+  if (!nombre || !apellido || !telefono || !envio) {
     mostrarNotificacion('Por favor complete todos los campos obligatorios', 'error');
     return;
   }
+  
+  if (envio !== 'retiro' && !direccion) {
+    mostrarNotificacion('La dirección es obligatoria para envíos', 'error');
+    return;
+  }
+
+  const submitBtn = formEnvio.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Procesando pedido...';
 
   // ----------- TRANSACCIÓN DE STOCK -----------
   try {
@@ -485,32 +496,37 @@ formEnvio?.addEventListener('submit', async function(e) {
     const numeroWhatsApp = '59893566283';
     sessionStorage.setItem('ultimoPedidoWhatsApp', mensaje);
 
-    // Abre WhatsApp en una pestaña nueva
+    // Intentar abrir WhatsApp
     const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
     const nuevaPestaña = window.open(urlWhatsApp, '_blank');
+    
     if (!nuevaPestaña) {
       mostrarNotificacion('Por favor, permite las ventanas emergentes para enviar el pedido por WhatsApp.', 'error');
     } else {
-      mostrarNotificacion('Pedido listo para enviar por WhatsApp', 'exito');
+      mostrarNotificacion('✅ Pedido preparado y enviando por WhatsApp...', 'exito');
+      
+      // Limpiar el formulario y la UI después de un tiempo
+      setTimeout(() => {
+        modalDatosEnvio.classList.remove('visible');
+        setTimeout(() => {
+          modalDatosEnvio.setAttribute('hidden', true);
+          carrito = [];
+          guardarCarrito();
+          renderizarCarrito();
+          renderizarProductos();
+          formEnvio.reset();
+          renderizarResumenPedidoEnvio();
+          mostrarNotificacion('🎉 ¡Pedido enviado! Te responderemos pronto por WhatsApp.', 'exito');
+        }, 300);
+      }, 1500);
     }
 
-    // Limpia el formulario y la UI
-    setTimeout(() => {
-      modalDatosEnvio.classList.remove('visible');
-      setTimeout(() => {
-        modalDatosEnvio.setAttribute('hidden', true);
-        carrito = [];
-        guardarCarrito();
-        renderizarCarrito();
-        renderizarProductos();
-        formEnvio.reset();
-        renderizarResumenPedidoEnvio();
-      }, 300);
-    }, 1000);
-
   } catch (err) {
-    mostrarNotificacion('Error al preparar el pedido para WhatsApp.', 'error');
-    return;
+    console.error('Error al procesar pedido:', err);
+    mostrarNotificacion('Error al procesar el pedido. Por favor intenta de nuevo.', 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
   }
 });
 // ========== CARRITO UI ==========
@@ -589,39 +605,82 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 function setupContactForm() {
-  const formContacto = document.getElementById('formContacto');
+  const formContacto = document.getElementById('formulario-contacto');
   const successMessage = document.getElementById('successMessage');
   const errorMessage = document.getElementById('errorMessage');
 
   if (formContacto) {
     formContacto.addEventListener('submit', (e) => {
       e.preventDefault();
-      const nombre = document.getElementById('nombre').value;
-      const email = document.getElementById('email').value;
-      const mensaje = document.getElementById('mensaje').value;
+      
+      const nombre = document.getElementById('nombre').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const mensaje = document.getElementById('mensaje').value.trim();
 
+      // Validación básica de campos
+      if (!nombre || !email || !mensaje) {
+        errorMessage.textContent = 'Por favor completa todos los campos.';
+        errorMessage.classList.remove('hidden');
+        successMessage.classList.add('hidden');
+        setTimeout(() => errorMessage.classList.add('hidden'), 5000);
+        return;
+      }
+
+      // Deshabilitar el botón durante el envío
+      const submitBtn = formContacto.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Enviando...';
+
+      // Enviar email de contacto a la tienda con EmailJS
+      // El email se envía AL DUEÑO de la tienda con los datos del cliente
       emailjs.send('service_89by24g', 'template_8mn7hdp', {
-        from_name: nombre,
-        from_email: email,
-        message: mensaje
+        from_name: nombre,      // Nombre del cliente
+        from_email: email,      // Email del cliente (usar como Reply-To en plantilla)
+        reply_to: email,        // Email del cliente (campo adicional por compatibilidad)
+        message: mensaje        // Mensaje del cliente
       })
       .then(() => {
         successMessage.classList.remove('hidden');
         errorMessage.classList.add('hidden');
         formContacto.reset();
-        setTimeout(() => successMessage.classList.add('hidden'), 3000);
+        setTimeout(() => successMessage.classList.add('hidden'), 5000);
       }, (error) => {
-        console.error('Error al enviar el mensaje:', error);
+        console.error('Error al enviar el mensaje de contacto:', error);
+        errorMessage.textContent = 'Error al enviar el mensaje. Por favor intenta de nuevo.';
         errorMessage.classList.remove('hidden');
         successMessage.classList.add('hidden');
-        setTimeout(() => errorMessage.classList.add('hidden'), 3000);
+        setTimeout(() => errorMessage.classList.add('hidden'), 5000);
+      })
+      .finally(() => {
+        // Rehabilitar el botón
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
       });
     });
   }
 }
 
-// Inicializar EmailJS con tu clave pública
-emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
+// ========== CONFIGURACIÓN EMAILJS ==========
+// Inicializar EmailJS con la clave pública
+emailjs.init('o4IxJz0Zz-LQ8jYKG');
+
+// CONFIGURACIÓN DE PLANTILLAS EMAILJS:
+// Para que los formularios funcionen correctamente, la plantilla de EmailJS debe incluir estos campos:
+//
+// FORMULARIO DE CONTACTO (template_8mn7hdp):
+// - {{from_name}} : Nombre del remitente
+// - {{from_email}} : Email del remitente (usar como Reply-To)
+// - {{message}} : Mensaje del cliente
+//
+// FORMULARIO DE STOCK (template_8mn7hdp):
+// - {{reply_to}} : Email del cliente interesado (para responder)
+// - {{producto}} : Nombre del producto sin stock
+// - {{producto_id}} : ID del producto
+// - {{message}} : Mensaje completo sobre el producto
+//
+// IMPORTANTE: El email debe enviarse AL DUEÑO de la tienda, no al cliente.
+// El campo "reply_to" permite que el dueño responda directamente al cliente.
 
 // Llamar a la función para configurar el formulario de contacto
 setupContactForm();
@@ -671,10 +730,20 @@ document.addEventListener('DOMContentLoaded', function() {
   stockForm?.addEventListener('submit', function(e) {
     e.preventDefault();
     const email = stockInput.value.trim();
+    
+    // Validación del email
     if (!email) {
       showFeedback('Por favor ingresa tu correo electrónico.', '#d32f2f');
       return;
     }
+    
+    // Validación básica de formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      showFeedback('Por favor ingresa un email válido.', '#d32f2f');
+      return;
+    }
+    
     localStorage.setItem(EMAIL_LS_KEY, email);
 
     // Datos del producto
@@ -683,22 +752,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const mensaje = `Hola Patofelting, quería saber por el producto ${producto} (ID: ${productoId}) cuando haya stock. Email del interesado: ${email}`;
 
-    stockForm.querySelector('button[type="submit"]').disabled = true;
+    const submitBtn = stockForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Enviando...';
 
+    // Enviar notificación de stock a la tienda con EmailJS
+    // El email se envía AL DUEÑO de la tienda, con el email del cliente como reply_to
     emailjs.send('service_89by24g', 'template_8mn7hdp', {
-      to_email: email,
-      producto: producto,
-      producto_id: productoId,
-      message: mensaje // <-- este campo puedes usarlo en tu plantilla
+      reply_to: email,        // Email del cliente (para que el dueño pueda responder)
+      from_name: 'Cliente Interesado', // Nombre genérico del remitente
+      producto: producto,     // Nombre del producto
+      producto_id: productoId, // ID del producto
+      message: mensaje        // Mensaje completo formateado
     }).then(() => {
       stockForm.hidden = true;
       showFeedback('¡Gracias por tu interés! Te avisaremos apenas haya stock.');
-      setTimeout(closeStockModal, 2000);
-      stockForm.querySelector('button[type="submit"]').disabled = false;
+      setTimeout(closeStockModal, 2500);
     }, (err) => {
-      console.error('Error al enviar:', err);
-      showFeedback('Ocurrió un error, intenta de nuevo.', '#d32f2f');
-      stockForm.querySelector('button[type="submit"]').disabled = false;
+      console.error('Error al enviar notificación de stock:', err);
+      showFeedback('Ocurrió un error, intenta de nuevo. Verifica tu conexión.', '#d32f2f');
+    }).finally(() => {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
     });
   });
 
