@@ -196,11 +196,17 @@ input[type="submit"]:hover,
 }
 
 .hamburguesa span {
-  height: 3px;
-  background: var(--text-color);
-  border-radius: 3px;
-  transition: all 0.3s ease;
+  background-color: var(--primary-color);
+  display: block;
+  width: 26px;
+  height: 2px;
+  margin: 5px 0;
+ 
+  border-radius: 5px;
+  transition: 0.3s ease-in-out;
 }
+
+
 
 .hamburguesa.activo span:nth-child(1) {
   transform: rotate(45deg) translateY(8px);
