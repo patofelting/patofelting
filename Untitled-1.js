@@ -805,13 +805,23 @@ function updateRange() {
 
 
 document.addEventListener('DOMContentLoaded', () => {
-  const btnHamburguesa = document.querySelector('.hamburguesa');
-  const menu = document.querySelector('.menu');
+  const hamburguesa = document.getElementById('hamburguesa-btn');
+  const menu = document.getElementById('menu');
 
-  btnHamburguesa?.addEventListener('click', () => {
-    const expanded = btnHamburguesa.getAttribute('aria-expanded') === 'true' || false;
-    btnHamburguesa.setAttribute('aria-expanded', !expanded);
+  hamburguesa.addEventListener('click', () => {
+    hamburguesa.classList.toggle('activo');
     menu.classList.toggle('menu-activo');
-    btnHamburguesa.classList.toggle('activo');
+  });
+
+  // Cierra el menú si hacés clic en un enlace o fuera
+  document.addEventListener('click', (e) => {
+    if (!menu.contains(e.target) && !hamburguesa.contains(e.target)) {
+      menu.classList.remove('menu-activo');
+      hamburguesa.classList.remove('activo');
+    }
+    if (e.target.tagName === 'A' && menu.classList.contains('menu-activo')) {
+      menu.classList.remove('menu-activo');
+      hamburguesa.classList.remove('activo');
+    }
   });
 });
