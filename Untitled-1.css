@@ -124,9 +124,41 @@ input[type="submit"]:hover,
 }
 
 .menu {
-  display: flex;
   list-style: none;
   gap: 20px;
+  transition: all 0.3s ease;
+}
+
+/* Versión móvil (oculto hasta que se activa) */
+@media (max-width: 767px) {
+  .menu {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 60px;
+    right: 20px;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: var(--box-shadow);
+    z-index: 1000;
+  }
+
+  .menu.menu-activo {
+    display: flex;
+  }
+}
+
+/* Versión escritorio */
+@media (min-width: 768px) {
+  .menu {
+    display: flex;
+    flex-direction: row;
+    position: static;
+    padding: 0;
+    box-shadow: none;
+    gap: 32px;
+  }
 }
 
 .menu li a {
@@ -168,37 +200,12 @@ input[type="submit"]:hover,
   transform: rotate(-45deg) translateY(-8px);
 }
 
-.menu {
-  display: none;
-  flex-direction: column;
-  gap: 16px;
-  position: absolute;
-  top: 60px;
-  right: 20px;
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: var(--box-shadow);
-}
-
-.menu-activo {
-  display: flex;
-}
-
-/* Para pantallas grandes */
 @media (min-width: 768px) {
   .hamburguesa {
     display: none;
   }
-  .menu {
-    display: flex !important;
-    flex-direction: row;
-    position: static;
-    padding: 0;
-    box-shadow: none;
-    gap: 32px;
-  }
 }
+
 
 
 /* Hero Section */
