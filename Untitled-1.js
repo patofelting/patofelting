@@ -704,36 +704,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 function setupContactForm() {
-  const formContacto = document.getElementById('formContacto');
+  const form = document.getElementById('formulario-contacto');
   const successMessage = document.getElementById('successMessage');
   const errorMessage = document.getElementById('errorMessage');
 
-  if (formContacto) {
-    formContacto.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const nombre = document.getElementById('nombre').value;
-      const email = document.getElementById('email').value;
-      const mensaje = document.getElementById('mensaje').value;
+  if (!form) return;
 
-      emailjs.send('service_89by24g', 'template_8mn7hdp', {
-        from_name: nombre,
-        from_email: email,
-        message: mensaje
-      })
-      .then(() => {
-        successMessage.classList.remove('hidden');
-        errorMessage.classList.add('hidden');
-        formContacto.reset();
-        setTimeout(() => successMessage.classList.add('hidden'), 3000);
-      }, (error) => {
-        console.error('Error al enviar el mensaje:', error);
-        errorMessage.classList.remove('hidden');
-        successMessage.classList.add('hidden');
-        setTimeout(() => errorMessage.classList.add('hidden'), 3000);
-      });
+  emailjs.init('o4IxJz0Zz-LQ8jYKG');
+
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    const nombre = document.getElementById('nombre').value;
+    const email = document.getElementById('email').value;
+    const mensaje = document.getElementById('mensaje').value;
+
+    emailjs.send('service_89by24g', 'template_8mn7hdp', {
+      nombre,
+      email,
+      mensaje
+    })
+    .then(function () {
+      successMessage.classList.remove('hidden');
+      errorMessage.classList.add('hidden');
+      form.reset();
+    }, function (error) {
+      successMessage.classList.add('hidden');
+      errorMessage.classList.remove('hidden');
     });
-  }
+  });
 }
+
+setupContactForm();
 
 // Inicializar EmailJS con tu clave pública
 emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
