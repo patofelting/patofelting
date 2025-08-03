@@ -22,7 +22,7 @@ class BlogManager {
     try {
       console.log('🔄 Cargando entradas del blog desde Google Sheets...');
       
-      const respuesta = await fetch(CSV_URL);
+      const respuesta = await fetch(CSV_URL, {cache: "reload"});
       if (!respuesta.ok) {
         throw new Error(`HTTP error! status: ${respuesta.status}`);
       }
@@ -48,6 +48,7 @@ class BlogManager {
         .map(fila => ({
           id: fila.id || Date.now().toString(),
           fecha: this.formatearFecha(fila.fecha),
+          fechaRaw: fila.fecha,
           titulo: fila.titulo,
           contenido: fila.contenido || '',
           imagenPrincipal: fila.imagenPrincipal || '',
@@ -55,7 +56,12 @@ class BlogManager {
           orden: parseInt(fila.orden) || 0,
           categoria: fila.categoria || 'general'
         }))
-        .sort((a, b) => a.orden - b.orden);
+        .sort((a, b) => {
+          // Ordenar por fecha descendente (más reciente primero)
+          const dateA = new Date(a.fechaRaw);
+          const dateB = new Date(b.fechaRaw);
+          return dateB - dateA;
+        });
 
       console.log('✅ Entradas cargadas:', this.entradas.length);
       
@@ -170,7 +176,7 @@ class BlogManager {
   }
 
   renderEntradaBlog(entrada, index) {
-    const esDestacada = index === this.entradas.length - 1; // La última entrada es destacada
+    const esDestacada = index === 0; // La primera entrada (más nueva) es destacada
     
     return `
       <article class="blog-entry ${esDestacada ? 'featured' : ''}" data-entry-id="${entrada.id}">
@@ -677,7 +683,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     document.body.appendChild(timeElement);
   }, 2000);
-  
+
+  // Recarga automática del blog cada minuto
+  setInterval(() => {
+    if (blogManager) {
+      blogManager.recargar();
+    }
+  }, 60000);
+
   console.log('✨ Blog de Patofelting cargado correctamente');
 });
 
