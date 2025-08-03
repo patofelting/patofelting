@@ -755,7 +755,7 @@ function setupContactForm() {
   if (!form) return;
 
   // Inicializar EmailJS (REEMPLAZA CON TU USER ID)
-  emailjs.init('user_TuUserIdDeEmailJS'); // <-- IMPORTANTE: Cambia esto por tu User ID real
+   // <-- IMPORTANTE: Cambia esto por tu User ID real
 
   form.addEventListener('submit', function(event) {
     event.preventDefault();
