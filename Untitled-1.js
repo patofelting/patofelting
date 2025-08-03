@@ -234,22 +234,23 @@ function crearCardProducto(p) {
   const enCarrito = carrito.find(i => i.id === p.id);
   const disp = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
   const agot = disp <= 0;
-  return `
-    <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}">
-      <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img">
-      <h3 class="producto-nombre">${p.nombre}</h3>
-      <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
-      <div class="card-acciones">
-        ${
-          agot
-            ? `<button class="boton-stock-naranja" data-producto="${encodeURIComponent(p.nombre)}" data-productoid="${p.id}" style="background:#FFA500;color:#fff;">🟠 Avisame cuando haya stock</button>`
-            : `<button class="boton-agregar">Agregar</button>`
-        }
-        <button class="boton-detalles">Ver Detalle</button>
-      </div>
+return `
+  <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}">
+    <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img">
+    <h3 class="producto-nombre">${p.nombre}</h3>
+    <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
+    <div class="card-acciones">
+      ${
+        agot
+          ? `<button class="boton-stock-naranja" data-producto="${p.nombre}" data-productoid="${p.id}" style="background:#FFA500;color:#fff;">🟠 Avisame cuando haya stock</button>`
+          : `<button class="boton-agregar">Agregar</button>`
+      }
+      <button class="boton-detalles">Ver Detalle</button>
     </div>
-  `;
+  </div>
+`;
 }
+
 function renderizarPaginacion(total) {
   if (!elementos.paginacion) return;
   const totalPages = Math.ceil(total / PRODUCTOS_POR_PAGINA);
