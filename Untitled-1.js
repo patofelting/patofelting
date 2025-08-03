@@ -354,6 +354,8 @@ function mostrarModalProducto(prod) {
           ${prod.edad_recomendada ? `<p><strong>Edad recomendada:</strong> ${prod.edad_recomendada}</p>` : ''}
           ${prod.dificultad ? `<p><strong>Dificultad:</strong> ${prod.dificultad}</p>` : ''}
           ${prod.tiempo_elaboracion ? `<p><strong>Tiempo de elaboración:</strong> ${prod.tiempo_elaboracion}</p>` : ''}
+          ${prod.adicionales ? `<p><strong>Información adicional:</strong> ${prod.adicionales}</p>` : ''}
+          ${prod.cantidad ? `<p><strong>Cantidad incluida:</strong> ${prod.cantidad}</p>` : ''}
         </div>
         
         <div class="modal-acciones">
