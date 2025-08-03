@@ -891,44 +891,60 @@ btnHamburguesa.addEventListener("click", () => {
   menu.classList.toggle("menu-activo");
 });
 
-elementos.minSlider.addEventListener('input', actualizarRangoPrecio);
-elementos.maxSlider.addEventListener('input', actualizarRangoPrecio);
+const minSlider = document.getElementById('min-slider');
+const maxSlider = document.getElementById('max-slider');
+const thumbMin = document.getElementById('thumb-label-min');
+const thumbMax = document.getElementById('thumb-label-max');
+const minPrice = document.getElementById('min-price');
+const maxPrice = document.getElementById('max-price');
+const rangeBar = document.querySelector('.range');
 
-function actualizarRangoPrecio() {
-  const min = parseInt(elementos.minSlider.value, 10);
-  const max = parseInt(elementos.maxSlider.value, 10);
+function updateRange() {
+  let min = parseInt(minSlider.value, 10);
+  let max = parseInt(maxSlider.value, 10);
 
+  // Evita que se crucen
   if (min > max) {
-    elementos.minSlider.value = max;
-    elementos.maxSlider.value = min;
-  }
-  const nuevoMin = parseInt(elementos.minSlider.value, 10);
-  const nuevoMax = parseInt(elementos.maxSlider.value, 10);
-
-  // Actualizar texto de rango arriba del slider
-  const minPriceLabel = document.getElementById('min-price');
-  const maxPriceLabel = document.getElementById('max-price');
-  if (minPriceLabel) minPriceLabel.textContent = `$U${nuevoMin}`;
-  if (maxPriceLabel) maxPriceLabel.textContent = `$U${nuevoMax}`;
-
-  // Actualizar burbujas (globitos) si existen
-  const thumbMin = document.getElementById('thumb-label-min');
-  const thumbMax = document.getElementById('thumb-label-max');
-  if (thumbMin) {
-    const left = ((nuevoMin - elementos.minSlider.min) / (elementos.minSlider.max - elementos.minSlider.min)) * 100;
-    thumbMin.style.left = `${left}%`;
-    thumbMin.textContent = `$U${nuevoMin}`;
-    thumbMin.classList.add('visible');
-  }
-  if (thumbMax) {
-    const left = ((nuevoMax - elementos.maxSlider.min) / (elementos.maxSlider.max - elementos.maxSlider.min)) * 100;
-    thumbMax.style.left = `${left}%`;
-    thumbMax.textContent = `$U${nuevoMax}`;
-    thumbMax.classList.add('visible');
+    [min, max] = [max, min];
+    minSlider.value = min;
+    maxSlider.value = max;
   }
 
-  // Aplicar filtros
-  filtrosActuales.precioMin = nuevoMin;
-  filtrosActuales.precioMax = nuevoMax;
+  // Actualiza los textos
+  minPrice.textContent = `$U${min}`;
+  maxPrice.textContent = `$U${max}`;
+  thumbMin.textContent = `$U${min}`;
+  thumbMax.textContent = `$U${max}`;
+
+  // Calcula posiciones
+  const minPercent = ((min - minSlider.min) / (minSlider.max - minSlider.min)) * 100;
+  const maxPercent = ((max - maxSlider.min) / (maxSlider.max - maxSlider.min)) * 100;
+
+  thumbMin.style.left = `${minPercent}%`;
+  thumbMax.style.left = `${maxPercent}%`;
+
+  // Rango verde
+  rangeBar.style.left = minPercent + '%';
+  rangeBar.style.width = (maxPercent - minPercent) + '%';
+
+  // Guarda filtro y renderiza productos
+  filtrosActuales.precioMin = min;
+  filtrosActuales.precioMax = max;
   renderizarProductos();
 }
+
+// Mostrar burbuja solo al mover
+[minSlider, maxSlider].forEach((slider, i) => {
+  const label = i === 0 ? thumbMin : thumbMax;
+  slider.addEventListener('input', () => {
+    updateRange();
+    label.classList.add('visible');
+  });
+  slider.addEventListener('mousedown', () => label.classList.add('visible'));
+  slider.addEventListener('touchstart', () => label.classList.add('visible'));
+  slider.addEventListener('mouseup', () => label.classList.remove('visible'));
+  slider.addEventListener('touchend', () => label.classList.remove('visible'));
+});
+
+// Inicializa
+updateRange();
