@@ -299,11 +299,7 @@ function agregarAlCarrito(id, cantidad = 1) {
 window.agregarAlCarrito = agregarAlCarrito;
 
 // ========== MODAL DETALLE ==========
-function verDetalle(id) {
-  const prod = productos.find(p => p.id === id);
-  if (!prod) return mostrarNotificacion("Producto no encontrado", "error");
-  mostrarModalProducto(prod);
-}
+
 
 function verDetalle(id) {
   const prod = productos.find(p => p.id === id);
