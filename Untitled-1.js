@@ -753,30 +753,56 @@ function setupContactForm() {
 
   if (!form) return;
 
-
-
-  form.addEventListener('submit', function (event) {
+  form.addEventListener('submit', function(event) {
     event.preventDefault();
+
+    // Mostrar estado de carga (opcional)
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalButtonText = submitButton.textContent;
+    submitButton.textContent = 'Enviando...';
+    submitButton.disabled = true;
 
     const nombre = document.getElementById('nombre').value;
     const email = document.getElementById('email').value;
     const mensaje = document.getElementById('mensaje').value;
 
     emailjs.send('service_89by24g', 'template_8mn7hdp', {
-      nombre,
-      email,
-      mensaje
+      nombre: nombre,
+      email: email,
+      mensaje: mensaje
     })
-    .then(function () {
+    .then(function() {
+      // Éxito
       successMessage.classList.remove('hidden');
       errorMessage.classList.add('hidden');
       form.reset();
-    }, function (error) {
+      
+      // Ocultar mensaje después de 5 segundos
+      setTimeout(() => {
+        successMessage.classList.add('hidden');
+      }, 5000);
+    })
+    .catch(function(error) {
+      // Error
       successMessage.classList.add('hidden');
       errorMessage.classList.remove('hidden');
+      console.error('Error al enviar el formulario:', error);
+    })
+    .finally(function() {
+      // Restaurar botón
+      submitButton.textContent = originalButtonText;
+      submitButton.disabled = false;
     });
   });
+
+  // Inicializar EmailJS con tu User ID
+ 
 }
+
+// Llamar a la función cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+  setupContactForm();
+});
 
 setupContactForm();
 
