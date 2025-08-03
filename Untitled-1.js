@@ -334,15 +334,27 @@ function mostrarModalProducto(prod) {
           ${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}
         </p>
         
-        <!-- Campos adicionales -->
-   <div class="modal-especificaciones">
-  ${prod.alto ? `<p><strong>Alto:</strong> ${parseFloat(prod.alto).toFixed(1)} cm</p>` : ''}
-  ${prod.ancho ? `<p><strong>Ancho:</strong> ${parseFloat(prod.ancho).toFixed(1)} cm</p>` : ''}
-  ${prod.profundidad ? `<p><strong>Profundidad:</strong> ${parseFloat(prod.profundidad).toFixed(1)} cm</p>` : ''}
-  ${prod.categoria ? `<p><strong>Categoría:</strong> ${prod.categoria.charAt(0).toUpperCase() + prod.categoria.slice(1)}</p>` : ''}
-</div>
-        
+        <!-- Descripción primero -->
         <div class="modal-descripcion">${prod.descripcion || ''}</div>
+        
+        <!-- Especificaciones y campos adicionales -->
+        <div class="modal-especificaciones">
+          ${prod.alto ? `<p><strong>Alto:</strong> ${parseFloat(prod.alto).toFixed(1)} cm</p>` : ''}
+          ${prod.ancho ? `<p><strong>Ancho:</strong> ${parseFloat(prod.ancho).toFixed(1)} cm</p>` : ''}
+          ${prod.profundidad ? `<p><strong>Profundidad:</strong> ${parseFloat(prod.profundidad).toFixed(1)} cm</p>` : ''}
+          ${prod.peso ? `<p><strong>Peso:</strong> ${parseFloat(prod.peso).toFixed(1)} g</p>` : ''}
+          ${prod.material ? `<p><strong>Material:</strong> ${prod.material}</p>` : ''}
+          ${prod.color ? `<p><strong>Color:</strong> ${prod.color}</p>` : ''}
+          ${prod.categoria ? `<p><strong>Categoría:</strong> ${prod.categoria.charAt(0).toUpperCase() + prod.categoria.slice(1)}</p>` : ''}
+          ${prod.marca ? `<p><strong>Marca:</strong> ${prod.marca}</p>` : ''}
+          ${prod.modelo ? `<p><strong>Modelo:</strong> ${prod.modelo}</p>` : ''}
+          ${prod.origen ? `<p><strong>Origen:</strong> ${prod.origen}</p>` : ''}
+          ${prod.garantia ? `<p><strong>Garantía:</strong> ${prod.garantia}</p>` : ''}
+          ${prod.cuidados ? `<p><strong>Cuidados:</strong> ${prod.cuidados}</p>` : ''}
+          ${prod.edad_recomendada ? `<p><strong>Edad recomendada:</strong> ${prod.edad_recomendada}</p>` : ''}
+          ${prod.dificultad ? `<p><strong>Dificultad:</strong> ${prod.dificultad}</p>` : ''}
+          ${prod.tiempo_elaboracion ? `<p><strong>Tiempo de elaboración:</strong> ${prod.tiempo_elaboracion}</p>` : ''}
+        </div>
         
         <div class="modal-acciones">
           <input type="number" value="1" min="1" max="${disponibles}" 
