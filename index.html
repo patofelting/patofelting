@@ -153,15 +153,14 @@
 <section id="productos" class="productos">
   <div class="container">
     <h2>Nuestros Productos</h2>
-
     <div class="filtros-container">
       <!-- CATEGORÍAS -->
       <div class="filtro-categoria">
         <label for="filtro-categoria">Categorías:</label>
         <select id="filtro-categoria">
-          <option value="todos"></option>
-          <option value="animales"></option>
-          <option value="fantasia"></option>
+          <option value="todos">Todos</option>
+          <option value="animales">Animales</option>
+          <option value="fantasia">Fantasía</option>
         </select>
       </div>
 
@@ -171,25 +170,18 @@
           <span id="min-price">$U0</span>
           <span id="max-price">$U3000</span>
         </div>
-<div class="range-slider">
-  <!-- Texto del rango -->
-  <div class="range-values">
-    <span id="min-price">$U0</span> - <span id="max-price">$U3000</span>
-  </div>
-
-  <!-- Sliders -->
-  <input type="range" id="min-slider" class="slider" min="0" max="3000" step="10" value="0">
-  <input type="range" id="max-slider" class="slider" min="0" max="3000" step="10" value="3000">
-
-  <!-- Track visual -->
-  <div class="track"></div>
-  <div class="range"></div>
-
-  <!-- Burbujas (thumbs) -->
-  <span class="thumb-label" id="thumb-label-min">$U0</span>
-  <span class="thumb-label" id="thumb-label-max">$U3000</span>
-</div>
-
+        <div class="range-slider">
+          <div class="range-values">
+            <span id="min-price">$U0</span> - <span id="max-price">$U3000</span>
+          </div>
+          <input type="range" id="min-slider" class="slider" min="0" max="3000" step="10" value="0">
+          <input type="range" id="max-slider" class="slider" min="0" max="3000" step="10" value="3000">
+          <div class="track"></div>
+          <div class="range"></div>
+          <span class="thumb-label" id="thumb-label-min">$U0</span>
+          <span class="thumb-label" id="thumb-label-max">$U3000</span>
+        </div>
+      </div>
 
       <!-- BÚSQUEDA -->
       <div class="filtro-busqueda">
@@ -197,8 +189,6 @@
       </div>
     </div>
 
-
-    <!-- MOVER ESTOS ADENTRO -->
     <div id="galeria-productos" class="galeria-productos"></div>
     <div id="product-loader" class="loader" hidden aria-live="polite">
       <svg class="spinner" viewBox="0 0 50 50">
@@ -207,7 +197,6 @@
       <p>Cargando productos...</p>
     </div>
     <div id="paginacion" class="paginacion"></div>
-
   </div>
 </section>
 
