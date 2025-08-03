@@ -891,3 +891,28 @@ btnHamburguesa.addEventListener("click", () => {
   menu.classList.toggle("menu-activo");
 });
 
+elementos.minSlider.addEventListener('input', actualizarRangoPrecio);
+elementos.maxSlider.addEventListener('input', actualizarRangoPrecio);
+
+function actualizarRangoPrecio() {
+  const min = parseInt(elementos.minSlider.value, 10);
+  const max = parseInt(elementos.maxSlider.value, 10);
+
+  if (min > max) {
+    elementos.minSlider.value = max;
+    elementos.maxSlider.value = min;
+  }
+
+  elementos.minSlider.value = min;
+  elementos.maxSlider.value = max;
+
+  // Actualizar texto
+  document.getElementById('min-price').textContent = `$U${min}`;
+  document.getElementById('max-price').textContent = `$U${max}`;
+
+  // Actualizar filtro global
+  filtrosActuales.precioMin = min;
+  filtrosActuales.precioMax = max;
+
+  renderizarProductos();
+}
