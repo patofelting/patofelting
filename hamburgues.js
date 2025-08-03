@@ -1,3 +1,4 @@
+// Función principal para inicializar el menú hamburguesa
 function initMobileMenu() {
   const hamburguesa = document.getElementById('hamburguesa-btn');
   const menu = document.getElementById('menu');
@@ -7,14 +8,15 @@ function initMobileMenu() {
 
   // Función para alternar el estado del menú
   const toggleMenu = () => {
-    hamburguesa.classList.toggle('activo');
-    menu.classList.toggle('active'); // <-- CORREGIDO: antes era 'menu-activo'
-    document.body.classList.toggle('no-scroll');
+    const isActive = hamburguesa.classList.toggle('activo');
+    menu.classList.toggle('active', isActive);
+    document.body.classList.toggle('no-scroll', isActive);
+    hamburguesa.setAttribute('aria-expanded', isActive);
   };
 
   // Evento click en el botón hamburguesa
   hamburguesa.addEventListener('click', (e) => {
-    e.stopPropagation(); // Evita que el evento se propague
+    e.stopPropagation();
     toggleMenu();
   });
 
