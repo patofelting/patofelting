@@ -577,9 +577,15 @@ function resetearFiltros() {
   filtrosActuales = { precioMin: null, precioMax: null, categoria: 'todos', busqueda: '' };
   if (elementos.inputBusqueda) elementos.inputBusqueda.value = '';
   if (elementos.selectCategoria) elementos.selectCategoria.value = 'todos';
-  if (elementos.minSlider) elementos.minSlider.value = '';
-  if (elementos.maxSlider) elementos.maxSlider.value = '';
-  aplicarFiltros();
+  if (elementos.minSlider) elementos.minSlider.value = 0;
+  if (elementos.maxSlider) elementos.maxSlider.value = 3000;
+  
+  // Actualizar la visualización del rango de precios si la función está disponible
+  if (window.actualizarRangoPrecio) {
+    window.actualizarRangoPrecio();
+  } else {
+    aplicarFiltros();
+  }
 }
 function inicializarFAQ() {
   document.querySelectorAll('.faq-toggle').forEach(toggle => {
@@ -610,14 +616,7 @@ function inicializarEventos() {
     filtrosActuales.categoria = e.target.value;
     aplicarFiltros();
   });
-  elementos.minSlider?.addEventListener('input', e => {
-    filtrosActuales.precioMin = e.target.value ? parseFloat(e.target.value) : null;
-    aplicarFiltros();
-  });
-  elementos.maxSlider?.addEventListener('input', e => {
-    filtrosActuales.precioMax = e.target.value ? parseFloat(e.target.value) : null;
-    aplicarFiltros();
-  });
+  // Los event listeners de los sliders se manejan en la configuración del filtro de precio
   elementos.resetFiltros?.addEventListener('click', resetearFiltros);
   inicializarFAQ();
 }
@@ -819,169 +818,106 @@ setupContactForm();
 
 
 
-// Mostrar / ocultar burbujas mientras arrastra
-['min-slider', 'max-slider'].forEach(id => {
-  const slider = document.getElementById(id);
-  const label = document.getElementById(id === 'min-slider' ? 'thumb-label-min' : 'thumb-label-max');
-
-  slider.addEventListener('input', updateRange);
-  slider.addEventListener('mousedown', () => label.classList.add('visible'));
-  slider.addEventListener('touchstart', () => label.classList.add('visible'));
-  slider.addEventListener('mouseup', () => label.classList.remove('visible'));
-  slider.addEventListener('touchend', () => label.classList.remove('visible'));
-});
-
-
-document.addEventListener('DOMContentLoaded', () => {
-  const hamburguesa = document.getElementById('hamburguesa-btn');
-  const menu = document.getElementById('menu');
-
-  hamburguesa.addEventListener('click', () => {
-    hamburguesa.classList.toggle('activo');
-    menu.classList.toggle('menu-activo');
-  });
-
-  // Cierra el menú si hacés clic en un enlace o fuera
-  document.addEventListener('click', (e) => {
-    if (!menu.contains(e.target) && !hamburguesa.contains(e.target)) {
-      menu.classList.remove('menu-activo');
-      hamburguesa.classList.remove('activo');
-    }
-    if (e.target.tagName === 'A' && menu.classList.contains('menu-activo')) {
-      menu.classList.remove('menu-activo');
-      hamburguesa.classList.remove('activo');
-    }
-  });
-});
-
-
-const btnHamburguesa = document.getElementById("hamburguesa-btn");
-const menu = document.getElementById("menu");
-
-btnHamburguesa.addEventListener("click", () => {
-  btnHamburguesa.classList.toggle("activo");
-  menu.classList.toggle("menu-activo");
-});
-
-// ========== CONFIGURACIÓN DEL FILTRO DE PRECIO ==========
+/// ========== CONFIGURACIÓN DEL FILTRO DE PRECIO ==========
 document.addEventListener('DOMContentLoaded', function() {
-  // Selección de elementos del DOM
-  const elementos = {
-    minSlider: document.getElementById('min-slider'),
-    maxSlider: document.getElementById('max-slider'),
-    thumbMin: document.getElementById('thumb-label-min'),
-    thumbMax: document.getElementById('thumb-label-max'),
-    minPrice: document.getElementById('min-price'),
-    maxPrice: document.getElementById('max-price'),
-    range: document.querySelector('.range')
-  };
-
-  // Verificar que todos los elementos existen
-  if (!elementos.minSlider || !elementos.maxSlider) return;
-
-  // Función para actualizar el rango de precios
+  // Función única para actualizar el rango de precios
   function actualizarRangoPrecio() {
-    const min = parseInt(elementos.minSlider.value);
-    const max = parseInt(elementos.maxSlider.value);
+    if (!elementos.minSlider || !elementos.maxSlider) return;
+    
+    const min = parseInt(elementos.minSlider.value) || 0;
+    const max = parseInt(elementos.maxSlider.value) || 3000;
 
     // Prevenir que el mínimo sea mayor que el máximo
     if (min > max) {
-      elementos.minSlider.value = max;
-      elementos.maxSlider.value = min;
-      return actualizarRangoPrecio(); // Vuelve a calcular con valores corregidos
+      if (elementos.minSlider === document.activeElement) {
+        elementos.maxSlider.value = min;
+      } else {
+        elementos.minSlider.value = max;
+      }
+      return actualizarRangoPrecio();
     }
 
     // Actualizar texto de precios
-    elementos.minPrice.textContent = `$U${min}`;
-    elementos.maxPrice.textContent = `$U${max}`;
+    const minPriceEl = document.getElementById("min-price");
+    const maxPriceEl = document.getElementById("max-price");
+    if (minPriceEl) minPriceEl.textContent = `$U${min}`;
+    if (maxPriceEl) maxPriceEl.textContent = `$U${max}`;
 
     // Calcular porcentajes para posicionamiento
-    const rangoTotal = 3000; // Valor máximo del slider
+    const rangoTotal = 3000;
     const minPercent = (min / rangoTotal) * 100;
     const maxPercent = (max / rangoTotal) * 100;
 
     // Actualizar posición de las burbujas
-    elementos.thumbMin.style.left = `${minPercent}%`;
-    elementos.thumbMin.textContent = `$U${min}`;
-
-    elementos.thumbMax.style.left = `${maxPercent}%`;
-    elementos.thumbMax.textContent = `$U${max}`;
+    const thumbMin = document.getElementById("thumb-label-min");
+    const thumbMax = document.getElementById("thumb-label-max");
+    
+    if (thumbMin) {
+      thumbMin.style.left = `calc(${minPercent}% - 20px)`;
+      thumbMin.textContent = `$U${min}`;
+    }
+    
+    if (thumbMax) {
+      thumbMax.style.left = `calc(${maxPercent}% - 20px)`;
+      thumbMax.textContent = `$U${max}`;
+    }
 
     // Actualizar la barra de rango verde
-    elementos.range.style.left = `${minPercent}%`;
-    elementos.range.style.width = `${maxPercent - minPercent}%`;
+    const range = document.querySelector(".range");
+    if (range) {
+      range.style.left = `${minPercent}%`;
+      range.style.width = `${maxPercent - minPercent}%`;
+    }
 
-    // Aquí puedes agregar la lógica para filtrar productos si es necesario
-    // filtrosActuales.precioMin = min;
-    // filtrosActuales.precioMax = max;
-    // aplicarFiltros();
+    // Actualizar filtros y renderizar productos
+    filtrosActuales.precioMin = min === 0 ? null : min;
+    filtrosActuales.precioMax = max === 3000 ? null : max;
+    aplicarFiltros();
   }
 
   // Función para manejar la visibilidad de las burbujas
   function manejarVisibilidadBurbujas(slider, mostrar) {
-    const label = slider.id === 'min-slider' ? elementos.thumbMin : elementos.thumbMax;
-    if (mostrar) {
-      label.classList.add('visible');
-    } else {
-      setTimeout(() => label.classList.remove('visible'), 300);
+    const thumbMin = document.getElementById("thumb-label-min");
+    const thumbMax = document.getElementById("thumb-label-max");
+    const label = slider.id === 'min-slider' ? thumbMin : thumbMax;
+    
+    if (label) {
+      if (mostrar) {
+        label.classList.add('visible');
+      } else {
+        setTimeout(() => label.classList.remove('visible'), 300);
+      }
     }
   }
 
+  // Inicializar valores por defecto de los sliders
+  if (elementos.minSlider && !elementos.minSlider.value) {
+    elementos.minSlider.value = 0;
+  }
+  if (elementos.maxSlider && !elementos.maxSlider.value) {
+    elementos.maxSlider.value = 3000;
+  }
+
   // Eventos para los sliders
-  [elementos.minSlider, elementos.maxSlider].forEach(slider => {
-    // Actualizar al mover el slider
-    slider.addEventListener('input', function() {
-      actualizarRangoPrecio();
-      manejarVisibilidadBurbujas(slider, true);
+  if (elementos.minSlider && elementos.maxSlider) {
+    [elementos.minSlider, elementos.maxSlider].forEach(slider => {
+      // Actualizar al mover el slider
+      slider.addEventListener('input', function() {
+        actualizarRangoPrecio();
+        manejarVisibilidadBurbujas(slider, true);
+      });
+
+      // Mostrar/ocultar burbujas
+      slider.addEventListener('mousedown', () => manejarVisibilidadBurbujas(slider, true));
+      slider.addEventListener('touchstart', () => manejarVisibilidadBurbujas(slider, true));
+      slider.addEventListener('mouseup', () => manejarVisibilidadBurbujas(slider, false));
+      slider.addEventListener('touchend', () => manejarVisibilidadBurbujas(slider, false));
     });
+  }
 
-    // Mostrar/ocultar burbujas
-    slider.addEventListener('mousedown', () => manejarVisibilidadBurbujas(slider, true));
-    slider.addEventListener('touchstart', () => manejarVisibilidadBurbujas(slider, true));
-    slider.addEventListener('mouseup', () => manejarVisibilidadBurbujas(slider, false));
-    slider.addEventListener('touchend', () => manejarVisibilidadBurbujas(slider, false));
-  });
-
-  // Inicializar valores
+  // Inicializar la visualización
   actualizarRangoPrecio();
+
+  // Hacer la función global para uso en resetearFiltros
+  window.actualizarRangoPrecio = actualizarRangoPrecio;
 });
-
-function actualizarRangoPrecio() {
-  const min = parseInt(elementos.minSlider.value);
-  const max = parseInt(elementos.maxSlider.value);
-
-  // Asegurar que min no supere max y viceversa
-  if (min > max) {
-    elementos.minSlider.value = max;
-    elementos.maxSlider.value = min;
-  }
-
-  // Mostrar valores arriba
-  document.getElementById("min-price").textContent = `$U${elementos.minSlider.value}`;
-  document.getElementById("max-price").textContent = `$U${elementos.maxSlider.value}`;
-
-  // Posicionar burbujas
-  const rangeSlider = document.querySelector(".range-slider");
-  const sliderWidth = rangeSlider.offsetWidth;
-  const porcentajeMin = (elementos.minSlider.value / 3000) * 100;
-  const porcentajeMax = (elementos.maxSlider.value / 3000) * 100;
-  const thumbMin = document.getElementById("thumb-label-min");
-  const thumbMax = document.getElementById("thumb-label-max");
-  thumbMin.style.left = `calc(${porcentajeMin}% - 20px)`;
-  thumbMax.style.left = `calc(${porcentajeMax}% - 20px)`;
-
-  // Actualizar barra de rango
-  const range = document.querySelector(".range");
-  const track = document.querySelector(".track");
-  if (range && track) {
-    range.style.left = porcentajeMin + "%";
-    range.style.width = (porcentajeMax - porcentajeMin) + "%";
-  }
-
-  filtrosActuales.precioMin = parseInt(elementos.minSlider.value);
-  filtrosActuales.precioMax = parseInt(elementos.maxSlider.value);
-  renderizarProductos();
-}
-
-elementos.minSlider?.addEventListener("input", actualizarRangoPrecio);
-elementos.maxSlider?.addEventListener("input", actualizarRangoPrecio);
