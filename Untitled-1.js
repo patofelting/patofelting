@@ -748,83 +748,70 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Función para configurar el formulario de contacto
 
-function setupContactForm() {
+// JavaScript de contacto
+document.addEventListener('DOMContentLoaded', function () {
   const form = document.getElementById('formulario-contacto');
   const successMessage = document.getElementById('successMessage');
   const errorMessage = document.getElementById('errorMessage');
 
-  if (!form || form._formInitialized) return; // Evitar múltiples inicializaciones
-  form._formInitialized = true;
+  if (!form) return;
 
-  // Inicialización única de EmailJS
+  // Inicializar EmailJS solo una vez
   if (!window.emailjsInitialized) {
-    emailjs.init('user_TuUserIdDeEmailJS'); // REEMPLAZA con tu User ID real
+    emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Tu PUBLIC KEY de EmailJS
     window.emailjsInitialized = true;
   }
 
-  // Handler único para el submit
-  const handleSubmit = function(event) {
-    event.preventDefault();
-    event.stopImmediatePropagation(); // Detener otros handlers
+  let isSubmitting = false;
 
-    // Deshabilitar múltiples envíos
-    if (form._isSubmitting) return;
-    form._isSubmitting = true;
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    if (isSubmitting) return;
+    isSubmitting = true;
 
     const submitButton = form.querySelector('button[type="submit"]');
     const originalContent = submitButton.innerHTML;
+
     submitButton.disabled = true;
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
 
     const formData = {
-      from_name: document.getElementById('nombre').value,
-      from_email: document.getElementById('email').value,
-      message: document.getElementById('mensaje').value,
-      reply_to: document.getElementById('email').value
+      from_name: form.nombre.value,
+      from_email: form.email.value,
+      message: form.mensaje.value,
+      reply_to: form.email.value
     };
 
+    console.log('Enviando formulario...');
+
     emailjs.send('service_89by24g', 'template_8mn7hdp', formData)
-      .then(function(response) {
+      .then(function () {
         successMessage.classList.remove('hidden');
         errorMessage.classList.add('hidden');
         form.reset();
-        
-        setTimeout(() => {
-          successMessage.classList.add('hidden');
-        }, 5000);
+        setTimeout(() => successMessage.classList.add('hidden'), 5000);
       })
-      .catch(function(error) {
+      .catch(function (error) {
         errorMessage.classList.remove('hidden');
         successMessage.classList.add('hidden');
-        console.error('Error:', error);
+        console.error('Error al enviar:', error);
       })
-      .finally(function() {
+      .finally(function () {
         submitButton.disabled = false;
         submitButton.innerHTML = originalContent;
-        form._isSubmitting = false;
+        isSubmitting = false;
       });
-  };
-
-  // Remover listener previo si existe
-  form.removeEventListener('submit', handleSubmit);
-  form.addEventListener('submit', handleSubmit);
-}
-
-// Llamar solo una vez cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', function() {
-  // Verificar que no se haya inicializado ya
-  if (!window.formInitialized) {
-    setupContactForm();
-    window.formInitialized = true;
-  }
+  });
 });
+
 // Antes del emailjs.send, añade:
 console.log('Enviando formulario...');
 form.addEventListener('submit', _.debounce(handleSubmit, 1000)); // Debe aparecer solo una vez
 setupContactForm();
 
 // Inicializar EmailJS con tu clave pública
-emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Reemplaza con tu clave pública de EmailJS
+ // Reemplaza con tu clave pública de EmailJS
 
 // Llamar a la función para configurar el formulario de contacto
 setupContactForm();
