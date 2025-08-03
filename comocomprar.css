@@ -1,17 +1,16 @@
-/* Base Styles & Variables */
 :root {
-  --primary-color: #4CAF50; /* Verde principal */
-  --secondary-color: #8BC34A; /* Verde secundario */
-  --accent-color: #2E7D32; /* Verde oscuro para acentos */
+  --primary-color: #4CAF50;
+  --secondary-color: #8BC34A;
+  --accent-color: #2E7D32;
   --text-color: #333;
   --light-text: #f8f8f8;
   --background-color: #fff;
   --light-gray: #f5f5f5;
   --medium-gray: #e0e0e0;
   --dark-gray: #555;
-  --success-color: #388E3C; /* Verde más oscuro para éxito */
+  --success-color: #388E3C;
   --error-color: #f44336;
-  --warning-color: #FFA000; /* Ámbar para advertencias */
+  --warning-color: #FFA000;
   --border-radius: 8px;
   --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   --transition: all 0.3s ease;
@@ -60,25 +59,16 @@ button {
   font-family: inherit;
 }
 
-.container {
+.nav {
+  position: fixed;
+  top: 0;
   width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
+  z-index: 1000;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
-/* Navigation */
-.nav {
-      position: fixed;
-      top: 0;
-      width: 100%;
-      z-index: 1000;
-      backdrop-filter: blur(10px);
-      background: var(--blur-bg);
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    }
-
- .nav-container {
+.nav-container {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -86,30 +76,63 @@ button {
   gap: 12px;
 }
 
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
-    .logo-container {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+.logo-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
 
-    .logo-img {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-    }
+.logo-text {
+  font-weight: bold;
+  font-size: 1.2rem;
+  color: var(--primary-color);
+}
 
-    .logo-text {
-      font-weight: bold;
-      font-size: 1.2rem;
-      color: var(--primary-color);
-    }
-
-    .menu {
+/* Menú horizontal por defecto (desktop) */
+.menu {
   display: flex;
   gap: 2rem;
 }
 
+.hamburguesa {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.hamburguesa span {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background-color: var(--text-color);
+  border-radius: 1px;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.hamburguesa.activo span:nth-child(1) {
+  transform: rotate(45deg) translate(4px, 4px);
+}
+.hamburguesa.activo span:nth-child(2) {
+  opacity: 0;
+}
+.hamburguesa.activo span:nth-child(3) {
+  transform: rotate(-45deg) translate(4px, -4px);
+}
+
+/* Solo en móvil */
 @media (max-width: 768px) {
   .menu {
     display: none;
@@ -153,76 +176,10 @@ button {
   from { opacity: 0; transform: translateY(-15px); }
   to { opacity: 1; transform: translateY(0); }
 }
+    
 /* Estilos específicos para la página de política */
-body.policy-page {
-  padding-top: 80px;
-}
 
-.policy-container {
-  max-width: 800px;
-  margin: 2rem auto;
-  padding: 0 20px;
-}
 
-.policy-container h1 {
-  color: var(--primary-color);
-  margin-bottom: 1.5rem;
-  font-size: 2rem;
-}
-
-.policy-container h2 {
-  color: var(--accent-color);
-  margin: 1.5rem 0 1rem 0;
-  font-size: 1.5rem;
-}
-
-.policy-container h3 {
-  color: var(--primary-color);
-  margin: 1.2rem 0 0.8rem 0;
-}
-
-.policy-container p, 
-.policy-container li {
-  margin-bottom: 0.8rem;
-  line-height: 1.6;
-}
-
-.policy-container ul {
-  padding-left: 1.5rem;
-  margin-bottom: 1rem;
-}
-
-/* NOTIFICACIÓN */
-.notificacion {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  padding: 15px 20px;
-  border-radius: var(--border-radius);
-  color: white;
-  box-shadow: var(--box-shadow);
-  transform: translateY(100px);
-  opacity: 0;
-  transition: var(--transition);
-  z-index: 2100;
-}
-
-.notificacion.show {
-  transform: translateY(0);
-  opacity: 1;
-}
-
-.notificacion.exito {
-  background-color: var(--success-color);
-}
-
-.notificacion.error {
-  background-color: var(--error-color);
-}
-
-.notificacion.info {
-  background-color: #2196F3;
-}
 
 /* Footer */
 /* Footer */
