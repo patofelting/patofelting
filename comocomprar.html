@@ -1,73 +1,81 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cómo comprar | Patofelting</title>
-  <link rel="stylesheet" href="Untitled-1.css" />
-  <link rel="stylesheet" href="comocomprar.css" />
-  <script defer src="hamburgues.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cómo comprar | Patofelting</title>
+    <link rel="stylesheet" href="comocomprar.css"><!-- Usa tu CSS principal -->
 </head>
 <body>
-  <!-- NAV -->
-  <nav class="nav">
-    <div class="nav-container">
-      <div class="logo-container">
-        <img src="img/patofelting.jpg" alt="Logo Patofelting" class="logo-img" />
-        <h2 class="logo-text">Patofelting</h2>
-      </div>
-
-      <button class="hamburguesa" id="hamburguesa-btn" aria-label="Menú de navegación" aria-expanded="false">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-
-      <ul class="menu" id="menu">
-        <li><a href="index.html#inicio">Inicio</a></li>
-        <li><a href="index.html#sobre">Sobre mí</a></li>
-        <li><a href="index.html#productos">Productos</a></li>
-        <li><a href="index.html#contacto">Contacto</a></li>
-        <li><a href="index.html#preguntas">Preguntas</a></li>
-      </ul>
+<nav class="nav">
+  <div class="nav-container">
+    <!-- LOGO -->
+    <div class="logo-container">
+      <img src="img/patofelting.jpg" alt="Logo Patofelting" class="logo-img" />
+      <h2 class="logo-text">Patofelting</h2>
     </div>
-  </nav>
 
-  <!-- CÓMO COMPRAR -->
-  <main class="como-comprar-contenido">
-    <div class="card">
-      <h1>🛍️ ¿Cómo comprar en <strong>Patofelting</strong>?</h1>
-      <p>¡Comprar en <strong>Patofelting</strong> es muy fácil! Seguí estos pasos:</p>
-      <ul>
-        <li>📁 Elegí una <strong>categoría</strong> del menú o la galería.</li>
-        <li>👀 Explorá los productos y mirá sus <strong>fotos, medidas y detalles</strong>.</li>
-        <li>➕ Seleccioná la cantidad y hacé clic en <strong>“Agregar al carrito”</strong>.</li>
-        <li>🧶 Podés seguir navegando y agregando productos.</li>
-        <li>✅ Cuando termines, hacé clic en <strong>“Finalizar compra”</strong>.</li>
-        <li>📦 Completá tus datos y elegí <strong>envío o retiro en local</strong>.</li>
-        <li>💬 Enviá tu pedido por <strong>WhatsApp</strong> desde el resumen.</li>
-        <li>🎁 ¡Listo! Coordinamos y lo preparamos con amor.</li>
-      </ul>
-    </div>
-  </main>
+    <!-- BOTÓN HAMBURGUESA -->
+<button class="hamburguesa" id="hamburguesa-btn" aria-label="Menú de navegación" aria-expanded="false">
+  <span></span>
+  <span></span>
+  <span></span>
+</button>
 
-  <!-- FOOTER -->
-  <footer class="footer">
-    <div class="footer-container">
-      <div class="footer-logo">
-        <img src="img/patofelting.jpg" alt="Logo Patofelting" />
-        <h3>Patofelting</h3>
-        <p>Artesanía con amor desde Uruguay</p>
-      </div>
-      <div class="footer-links">
-        <a href="index.html#productos">🧸 Productos</a>
-        <a href="comocomprar.html">📍 ¿Cómo comprar?</a>
-        <a href="index.html#preguntas">📖 Preguntas frecuentes</a>
-        <a href="https://www.instagram.com/patofelting" target="_blank">📷 Instagram</a>
-        <a href="mailto:patofelting@gmail.com">📧 Correo</a>
-      </div>
+<ul class="menu" id="menu">
+  <li><a href="#inicio">Inicio</a></li>
+  <li><a href="#sobre">Sobre mí</a></li>
+  <li><a href="#productos">Productos</a></li>
+  <li><a href="#contacto">Contacto</a></li>
+  <li><a href="#preguntas">Preguntas</a></li>
+</ul>
+
+
+
+  <main class="como-comprar-bonito">
+  <h1>🛒 Cómo comprar</h1>
+  <p class="intro">¡Comprar en <strong>Patofelting</strong> es muy fácil! Seguí estos pasos:</p>
+  <ul class="pasos-compra">
+    <li>📂 Elegí una <strong>categoría</strong> del menú o la galería.</li>
+    <li>👀 Explorá los productos y mirá sus <strong>fotos, medidas y detalles</strong>.</li>
+    <li>➕ Seleccioná la cantidad y hacé clic en <span>“Agregar al carrito”</span>.</li>
+    <li>🛍️ Podés seguir navegando y agregando más productos.</li>
+    <li>✅ Cuando termines, hacé clic en <span>“Finalizar compra”</span>.</li>
+    <li>📦 Completá tus datos y elegí <strong>envío</strong> o <strong>retiro en local</strong>.</li>
+    <li>💬 Enviá tu pedido por <strong>WhatsApp</strong> desde el resumen.</li>
+    <li>🎁 ¡Listo! Coordinamos y lo preparamos con amor.</li>
+  </ul>
+</main>
+
+   <footer class="footer">
+  <div class="footer-container">
+    <div class="footer-brand">
+      <img src="img/patofeltinglogo.jpg" alt="Patofelting logo" class="footer-logo" />
+      <h2>Patofelting</h2>
+      <p>Artesanía con amor desde Uruguay</p>
     </div>
-    <p class="footer-copy">© 2025 Patofelting. Hecho con ♥ en Uruguay.</p>
-  </footer>
+    <nav class="footer-nav">
+      <a href="#productos">Productos</a>
+      <a href="#como-comprar">¿Cómo comprar?</a>
+      <a href="#faq">Preguntas frecuentes</a>
+      <a href="https://instagram.com/patofelting" target="_blank" rel="noopener" aria-label="Instagram">
+  <img src="img/instagram.png" alt="Instagram" class="icono-instagram" />
+  <span>Instagram</span>
+</a>
+      <a href="mailto:patofelting@gmail.com" class="footer-mail" aria-label="Correo electrónico">
+  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none">
+    <rect x="2" y="5" width="20" height="14" rx="3" fill="#388e3c"/>
+    <polyline points="4,7 12,13 20,7" stroke="#fff" stroke-width="2" fill="none"/>
+  </svg>
+  <span>Correo</span>
+</a>
+    </nav>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2025 Patofelting. Hecho con ♥ en Uruguay.</p>
+  </div>
+</footer>
+
+<script src="hamburgues.js"></script>
 </body>
 </html>
