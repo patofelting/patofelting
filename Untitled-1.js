@@ -62,12 +62,22 @@ function mostrarNotificacion(msg, tipo = 'exito') {
   const noti = document.createElement('div');
   noti.className = `notificacion ${tipo}`;
   noti.textContent = msg;
+  
+  // Mejoras de accesibilidad
+  noti.setAttribute('role', 'alert');
+  noti.setAttribute('aria-live', 'polite');
+  noti.setAttribute('aria-atomic', 'true');
+  noti.setAttribute('tabindex', '-1');
+  
   document.body.appendChild(noti);
   setTimeout(() => noti.classList.add('show'), 10);
+  
+  // Tiempo de interacción aumentado para lectura
+  const tiempoLectura = Math.max(3000, msg.length * 50); // Mínimo 3s, +50ms por carácter
   setTimeout(() => {
     noti.classList.remove('show');
     setTimeout(() => noti.remove(), 300);
-  }, 2200);
+  }, tiempoLectura);
 }
 
 // ========== CARRITO (SOLO FRONTEND) ==========
@@ -213,6 +223,14 @@ function renderizarProductos() {
     // ✨ Animación en cascada: delay para cada tarjeta
     card.style.animationDelay = `${index * 100}ms`;
 
+    // Navegación por teclado mejorada
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        verDetalle(parseInt(card.dataset.id));
+      }
+    });
+
     // Agregamos eventos (igual que antes)
     card.querySelector('.boton-agregar')?.addEventListener('click', e => {
       e.stopPropagation();
@@ -221,6 +239,16 @@ function renderizarProductos() {
     card.querySelector('.boton-detalles')?.addEventListener('click', e => {
       e.stopPropagation();
       verDetalle(parseInt(card.dataset.id));
+    });
+
+    // Navegación por teclado para botones
+    card.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          btn.click();
+        }
+      });
     });
 
     elementos.galeria.appendChild(card);
@@ -235,17 +263,20 @@ function crearCardProducto(p) {
   const disp = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
   const agot = disp <= 0;
 return `
-  <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}">
-    <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img">
+  <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}" role="article" tabindex="0" 
+       aria-label="Producto: ${p.nombre}, Precio: $U ${p.precio.toLocaleString('es-UY')}, ${agot ? 'Agotado' : `${disp} disponibles`}">
+    <img src="${p.imagenes[0] || PLACEHOLDER_IMAGE}" alt="${p.nombre}" class="producto-img" loading="lazy">
     <h3 class="producto-nombre">${p.nombre}</h3>
-    <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
-    <div class="card-acciones">
+    <p class="producto-precio" aria-label="Precio: ${p.precio.toLocaleString('es-UY')} pesos uruguayos">$U ${p.precio.toLocaleString('es-UY')}</p>
+    <div class="card-acciones" role="group" aria-label="Acciones del producto">
       ${
         agot
-          ? `<button class="boton-stock-naranja" data-producto="${p.nombre}" data-productoid="${p.id}" style="background:#FFA500;color:#fff;">🟠 Avisame cuando haya stock</button>`
-          : `<button class="boton-agregar">Agregar</button>`
+          ? `<button class="boton-stock-naranja" data-producto="${p.nombre}" data-productoid="${p.id}" 
+               style="background:#FFA500;color:#fff;" aria-label="Avisarme cuando ${p.nombre} tenga stock disponible">
+               🟠 Avisame cuando haya stock</button>`
+          : `<button class="boton-agregar" aria-label="Agregar ${p.nombre} al carrito">Agregar</button>`
       }
-      <button class="boton-detalles">Ver Detalle</button>
+      <button class="boton-detalles" aria-label="Ver detalles de ${p.nombre}">Ver Detalle</button>
     </div>
   </div>
 `;
@@ -255,15 +286,25 @@ function renderizarPaginacion(total) {
   if (!elementos.paginacion) return;
   const totalPages = Math.ceil(total / PRODUCTOS_POR_PAGINA);
   if (totalPages <= 1) return elementos.paginacion.innerHTML = '';
+  
   elementos.paginacion.innerHTML = '';
+  elementos.paginacion.setAttribute('role', 'navigation');
+  elementos.paginacion.setAttribute('aria-label', 'Paginación de productos');
+  
   for (let i = 1; i <= totalPages; i++) {
     const btn = document.createElement('button');
     btn.textContent = i;
     btn.className = i === paginaActual ? 'active' : '';
+    btn.setAttribute('aria-label', `Ir a página ${i} ${i === paginaActual ? '(página actual)' : ''}`);
+    btn.setAttribute('aria-current', i === paginaActual ? 'page' : 'false');
+    
     btn.onclick = () => {
       paginaActual = i;
       renderizarProductos();
+      // Anunciar cambio de página
+      mostrarNotificacion(`Página ${i} cargada`, 'info');
     };
+    
     elementos.paginacion.appendChild(btn);
   }
 }
@@ -317,28 +358,30 @@ function mostrarModalProducto(prod) {
   const agotado = disponibles <= 0;
 
   elementos.modalContenido.innerHTML = `
-    <button class="cerrar-modal" aria-label="Cerrar modal">×</button>
+    <button class="cerrar-modal" aria-label="Cerrar modal de producto">×</button>
     <div class="modal-flex">
-      <div class="modal-carrusel">
-        <img src="${prod.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${prod.nombre}">
-        <div class="modal-thumbnails">
+      <div class="modal-carrusel" role="img" aria-label="Galería de imágenes del producto">
+        <img src="${prod.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${prod.nombre}" tabindex="0">
+        <div class="modal-thumbnails" role="group" aria-label="Miniaturas de imágenes">
           ${prod.imagenes.map((img, i) =>
-            `<img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}">`
+            `<img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" 
+                  alt="Imagen ${i + 1} de ${prod.nombre}" tabindex="0" 
+                  aria-label="Ver imagen ${i + 1} de ${prod.imagenes.length}">`
           ).join('')}
         </div>
       </div>
       <div class="modal-info">
-        <h1>${prod.nombre}</h1>
-        <p class="producto-precio">$U ${prod.precio.toLocaleString('es-UY')}</p>
-        <p class="${agotado ? 'agotado' : 'disponible'}">
+        <h1 id="modal-title">${prod.nombre}</h1>
+        <p class="producto-precio" aria-label="Precio: ${prod.precio.toLocaleString('es-UY')} pesos uruguayos">$U ${prod.precio.toLocaleString('es-UY')}</p>
+        <p class="${agotado ? 'agotado' : 'disponible'}" role="status" aria-live="polite">
           ${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}
         </p>
         
         <!-- Descripción primero -->
-        <div class="modal-descripcion">${prod.descripcion || ''}</div>
+        <div class="modal-descripcion" role="region" aria-labelledby="modal-title">${prod.descripcion || ''}</div>
         
         <!-- Especificaciones y campos adicionales -->
-        <div class="modal-especificaciones">
+        <div class="modal-especificaciones" role="region" aria-label="Especificaciones del producto">
           ${prod.alto ? `<p><strong>Alto:</strong> ${parseFloat(prod.alto).toFixed(1)} cm</p>` : ''}
           ${prod.ancho ? `<p><strong>Ancho:</strong> ${parseFloat(prod.ancho).toFixed(1)} cm</p>` : ''}
           ${prod.profundidad ? `<p><strong>Profundidad:</strong> ${parseFloat(prod.profundidad).toFixed(1)} cm</p>` : ''}
@@ -358,11 +401,15 @@ function mostrarModalProducto(prod) {
           ${prod.cantidad ? `<p><strong>Cantidad incluida:</strong> ${prod.cantidad}</p>` : ''}
         </div>
         
-        <div class="modal-acciones">
-          <input type="number" value="1" min="1" max="${disponibles}" 
-                 class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
+        <div class="modal-acciones" role="group" aria-label="Acciones del producto">
+          <label for="cantidad-modal-input" class="sr-only">Cantidad a agregar</label>
+          <input type="number" value="1" min="1" max="${disponibles}" id="cantidad-modal-input"
+                 class="cantidad-modal-input" ${agotado ? 'disabled' : ''} 
+                 aria-label="Cantidad a agregar al carrito">
           <button class="boton-agregar-modal${agotado ? ' agotado' : ''}" 
-                  ${agotado ? 'disabled' : ''}>
+                  ${agotado ? 'disabled' : ''} 
+                  aria-describedby="modal-title"
+                  aria-label="${agotado ? 'Producto agotado, no disponible' : `Agregar ${prod.nombre} al carrito`}">
             ${agotado ? 'Producto agotado' : 'Agregar al carrito'}
           </button>
         </div>
@@ -370,16 +417,31 @@ function mostrarModalProducto(prod) {
     </div>
   `;
 
-  // Eventos
-  elementos.modalContenido.querySelector('.cerrar-modal').onclick = cerrarModal;
+  // Establecer modal como región principal y foco
+  elementos.modal.setAttribute('role', 'dialog');
+  elementos.modal.setAttribute('aria-modal', 'true');
+  elementos.modal.setAttribute('aria-labelledby', 'modal-title');
 
+  // Eventos
+  const cerrarBtn = elementos.modalContenido.querySelector('.cerrar-modal');
+  cerrarBtn.onclick = cerrarModal;
+
+  // Navegación por teclado para thumbnails
   elementos.modalContenido.querySelectorAll('.thumbnail').forEach(th => {
     th.addEventListener('click', () => {
       currentIndex = parseInt(th.dataset.index);
       const mainImg = elementos.modalContenido.querySelector('.modal-img');
       mainImg.src = th.src;
+      mainImg.alt = th.alt;
       elementos.modalContenido.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
       th.classList.add('active');
+    });
+
+    th.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        th.click();
+      }
     });
   });
 
@@ -390,7 +452,20 @@ function mostrarModalProducto(prod) {
     cerrarModal();
   });
 
+  // Gestión de foco y escape
   elementos.modal.classList.add('visible');
+  
+  // Foco en el botón cerrar después de un breve delay
+  setTimeout(() => {
+    cerrarBtn.focus();
+  }, 100);
+
+  // Navegación por teclado para cerrar
+  elementos.modal.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      cerrarModal();
+    }
+  });
 }
 window.verDetalle = verDetalle;
 
@@ -631,10 +706,29 @@ function toggleCarrito(forceState) {
   let isOpen = typeof forceState === 'boolean'
     ? forceState
     : !elementos.carritoPanel.classList.contains('active');
+  
   elementos.carritoPanel.classList.toggle('active', isOpen);
   elementos.carritoOverlay.classList.toggle('active', isOpen);
   document.body.classList.toggle('no-scroll', isOpen);
-  if (isOpen) renderizarCarrito();
+  
+  // Mejoras de accesibilidad
+  elementos.carritoPanel.setAttribute('aria-hidden', !isOpen);
+  elementos.carritoBtn.setAttribute('aria-expanded', isOpen);
+  
+  if (isOpen) {
+    renderizarCarrito();
+    // Foco en el primer elemento interactivo del carrito
+    setTimeout(() => {
+      const firstFocusable = elementos.carritoPanel.querySelector('button, input, [tabindex="0"]');
+      if (firstFocusable) firstFocusable.focus();
+    }, 100);
+    
+    // Anunciar apertura del carrito
+    mostrarNotificacion(`Carrito abierto. ${carrito.length} productos en el carrito`, 'info');
+  } else {
+    // Devolver foco al botón del carrito
+    if (elementos.carritoBtn) elementos.carritoBtn.focus();
+  }
 }
 
 // ========== FILTROS, FAQ, EVENTOS ==========
@@ -667,26 +761,81 @@ function inicializarFAQ() {
   });
 }
 function inicializarEventos() {
+  // Carrito
   elementos.carritoBtn?.addEventListener('click', () => toggleCarrito(true));
   elementos.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
   elementos.btnCerrarCarrito?.addEventListener('click', () => toggleCarrito(false));
+  
+  // Navegación por teclado para cerrar carrito
+  elementos.carritoPanel?.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      toggleCarrito(false);
+    }
+  });
+
   elementos.btnVaciarCarrito?.addEventListener('click', () => {
-    carrito = [];
-    guardarCarrito();
-    renderizarCarrito();
-    renderizarProductos();
-    mostrarNotificacion('🧹 Carrito vaciado', 'exito');
+    if (carrito.length === 0) return;
+    
+    // Confirmación accesible
+    const confirmar = confirm('¿Estás seguro de que quieres vaciar el carrito? Esta acción no se puede deshacer.');
+    if (confirmar) {
+      carrito = [];
+      guardarCarrito();
+      renderizarCarrito();
+      renderizarProductos();
+      mostrarNotificacion('🧹 Carrito vaciado correctamente', 'exito');
+    }
   });
+
+  // Filtros con debounce para mejor experiencia
+  let timeoutBusqueda;
   elementos.inputBusqueda?.addEventListener('input', e => {
-    filtrosActuales.busqueda = e.target.value.toLowerCase();
-    aplicarFiltros();
+    clearTimeout(timeoutBusqueda);
+    timeoutBusqueda = setTimeout(() => {
+      filtrosActuales.busqueda = e.target.value.toLowerCase();
+      aplicarFiltros();
+      
+      // Anunciar resultados de búsqueda
+      const resultados = filtrarProductos().length;
+      mostrarNotificacion(`${resultados} productos encontrados`, 'info');
+    }, 300); // Debounce de 300ms
   });
+
   elementos.selectCategoria?.addEventListener('change', e => {
     filtrosActuales.categoria = e.target.value;
     aplicarFiltros();
+    
+    const categoria = e.target.value === 'todos' ? 'todas las categorías' : e.target.value;
+    const resultados = filtrarProductos().length;
+    mostrarNotificacion(`Mostrando ${resultados} productos de ${categoria}`, 'info');
   });
-  // Los event listeners de los sliders se manejan en la configuración del filtro de precio
-  elementos.resetFiltros?.addEventListener('click', resetearFiltros);
+
+  elementos.resetFiltros?.addEventListener('click', () => {
+    resetearFiltros();
+    mostrarNotificacion('Filtros restablecidos', 'info');
+  });
+
+  // Navegación global por teclado
+  document.addEventListener('keydown', (e) => {
+    // Alt + C para abrir/cerrar carrito
+    if (e.altKey && e.key === 'c') {
+      e.preventDefault();
+      toggleCarrito();
+    }
+    
+    // Alt + S para enfocar búsqueda
+    if (e.altKey && e.key === 's') {
+      e.preventDefault();
+      elementos.inputBusqueda?.focus();
+    }
+    
+    // Escape para cerrar modales
+    if (e.key === 'Escape') {
+      cerrarModal();
+      toggleCarrito(false);
+    }
+  });
+
   inicializarFAQ();
 }
 
@@ -908,6 +1057,12 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
+    // Configurar atributos de accesibilidad
+    minSlider.setAttribute('aria-label', 'Precio mínimo');
+    maxSlider.setAttribute('aria-label', 'Precio máximo');
+    minSlider.setAttribute('role', 'slider');
+    maxSlider.setAttribute('role', 'slider');
+
     // Función única para actualizar el rango de precios
     function actualizarRangoPrecio() {
       console.log('Actualizando rango de precio...');
@@ -927,6 +1082,12 @@ document.addEventListener('DOMContentLoaded', function() {
         return actualizarRangoPrecio();
       }
 
+      // Actualizar atributos ARIA
+      minSlider.setAttribute('aria-valuenow', min);
+      minSlider.setAttribute('aria-valuetext', `${min} pesos uruguayos`);
+      maxSlider.setAttribute('aria-valuenow', max);
+      maxSlider.setAttribute('aria-valuetext', `${max} pesos uruguayos`);
+
       // Actualizar texto de precios
       if (minPriceEl) minPriceEl.textContent = `$U${min}`;
       if (maxPriceEl) maxPriceEl.textContent = `$U${max}`;
@@ -942,17 +1103,20 @@ document.addEventListener('DOMContentLoaded', function() {
       if (thumbMin) {
         thumbMin.style.left = `calc(${minPercent}% - 20px)`;
         thumbMin.textContent = `$U${min}`;
+        thumbMin.setAttribute('aria-live', 'polite');
       }
       
       if (thumbMax) {
         thumbMax.style.left = `calc(${maxPercent}% - 20px)`;
         thumbMax.textContent = `$U${max}`;
+        thumbMax.setAttribute('aria-live', 'polite');
       }
 
       // Actualizar la barra de rango verde
       if (range) {
         range.style.left = `${minPercent}%`;
         range.style.width = `${maxPercent - minPercent}%`;
+        range.setAttribute('aria-label', `Rango de precios seleccionado: ${min} a ${max} pesos uruguayos`);
       }
 
       // Actualizar filtros y renderizar productos
@@ -960,7 +1124,18 @@ document.addEventListener('DOMContentLoaded', function() {
       filtrosActuales.precioMax = max === 3000 ? null : max;
       
       console.log('Filtros actualizados:', filtrosActuales);
-      aplicarFiltros();
+      
+      // Aplicar filtros con debounce
+      clearTimeout(window.filtroTimeout);
+      window.filtroTimeout = setTimeout(() => {
+        aplicarFiltros();
+        
+        // Anunciar cambio de filtro
+        const resultados = filtrarProductos().length;
+        if (min > 0 || max < 3000) {
+          mostrarNotificacion(`Filtro de precio aplicado: $U${min} - $U${max}. ${resultados} productos encontrados`, 'info');
+        }
+      }, 300);
     }
 
     // Función para manejar la visibilidad de las burbujas
@@ -984,6 +1159,12 @@ document.addEventListener('DOMContentLoaded', function() {
       maxSlider.value = 3000;
     }
 
+    // Configurar rangos ARIA
+    minSlider.setAttribute('aria-valuemin', '0');
+    minSlider.setAttribute('aria-valuemax', '3000');
+    maxSlider.setAttribute('aria-valuemin', '0');
+    maxSlider.setAttribute('aria-valuemax', '3000');
+
     // Eventos para los sliders
     [minSlider, maxSlider].forEach(slider => {
       // Actualizar al mover el slider
@@ -998,6 +1179,39 @@ document.addEventListener('DOMContentLoaded', function() {
       slider.addEventListener('touchstart', () => manejarVisibilidadBurbujas(slider, true));
       slider.addEventListener('mouseup', () => manejarVisibilidadBurbujas(slider, false));
       slider.addEventListener('touchend', () => manejarVisibilidadBurbujas(slider, false));
+      
+      // Navegación por teclado mejorada
+      slider.addEventListener('keydown', (e) => {
+        const step = e.shiftKey ? 100 : 50; // Pasos más grandes con Shift
+        let newValue = parseInt(slider.value);
+        
+        switch(e.key) {
+          case 'ArrowUp':
+          case 'ArrowRight':
+            e.preventDefault();
+            newValue = Math.min(3000, newValue + step);
+            slider.value = newValue;
+            actualizarRangoPrecio();
+            break;
+          case 'ArrowDown':
+          case 'ArrowLeft':
+            e.preventDefault();
+            newValue = Math.max(0, newValue - step);
+            slider.value = newValue;
+            actualizarRangoPrecio();
+            break;
+          case 'Home':
+            e.preventDefault();
+            slider.value = 0;
+            actualizarRangoPrecio();
+            break;
+          case 'End':
+            e.preventDefault();
+            slider.value = 3000;
+            actualizarRangoPrecio();
+            break;
+        }
+      });
     });
 
     // Inicializar la visualización
