@@ -36,7 +36,13 @@ class BlogManager {
         const resultado = Papa.parse(texto, {
           header: true,
           skipEmptyLines: true,
-          transform: (value) => value.trim()
+          transform: (value) => {
+            // Corregir posible error en encabezado "imeganPrincipal"
+            if (value.includes('imeganPrincipal')) {
+              return value.replace('imeganPrincipal', 'imagenPrincipal');
+            }
+            return value.trim();
+          }
         });
         filas = resultado.data;
       } else {
@@ -51,7 +57,7 @@ class BlogManager {
           fechaRaw: fila.fecha,
           titulo: fila.titulo,
           contenido: fila.contenido || '',
-          imagenPrincipal: fila.imagenPrincipal || '',
+          imagenPrincipal: fila.imagenPrincipal || fila.imeganPrincipal || '', // Soporta ambos nombres
           videoURL: fila.videoURL || '',
           orden: parseInt(fila.orden) || 0,
           categoria: fila.categoria || 'general'
@@ -80,14 +86,21 @@ class BlogManager {
   // Parser CSV manual para casos donde PapaParse no esté disponible
   parseCSVManual(texto) {
     const lineas = texto.trim().split('\n');
-    const headers = lineas[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    const headers = lineas[0].split(',').map(h => {
+      const header = h.trim().replace(/"/g, '');
+      // Corregir "imeganPrincipal" si existe
+      return header === 'imeganPrincipal' ? 'imagenPrincipal' : header;
+    });
     
     return lineas.slice(1).map(linea => {
       const valores = this.parsearLineaCSV(linea);
       const objeto = {};
       
       headers.forEach((header, index) => {
-        objeto[header] = valores[index] || '';
+        // Solo asignar valores si el header existe y hay valor
+        if (header && valores[index]) {
+          objeto[header] = valores[index].trim();
+        }
       });
       
       return objeto;
@@ -125,21 +138,24 @@ class BlogManager {
     if (!fechaString) return new Date().toLocaleDateString('es-ES');
     
     try {
+      // Limpiar texto adicional en fechas
+      const fechaLimpia = fechaString.split(' ')[0];
+      
       // Intentar diferentes formatos
       let fecha;
       
-      if (fechaString.includes('/')) {
-        // Formato DD/MM/YYYY o MM/DD/YYYY
-        const partes = fechaString.split('/');
+      if (fechaLimpia.includes('/')) {
+        // Formato DD/MM/YYYY
+        const partes = fechaLimpia.split('/');
         if (partes.length === 3) {
           fecha = new Date(partes[2], partes[1] - 1, partes[0]);
         }
-      } else if (fechaString.includes('-')) {
+      } else if (fechaLimpia.includes('-')) {
         // Formato YYYY-MM-DD
-        fecha = new Date(fechaString);
+        fecha = new Date(fechaLimpia);
       } else {
         // Intentar parsing directo
-        fecha = new Date(fechaString);
+        fecha = new Date(fechaLimpia);
       }
       
       if (isNaN(fecha.getTime())) {
@@ -165,38 +181,41 @@ class BlogManager {
       return;
     }
 
-    contenedor.innerHTML = this.entradas.map((entrada, index) => 
-      this.renderEntradaBlog(entrada, index)
-    ).join('');
+    // Usar template para mejor rendimiento
+    const template = document.getElementById('entry-template');
+    if (!template) return;
+
+    contenedor.innerHTML = '';
+    
+    this.entradas.forEach((entrada, index) => {
+      const isFeatured = index === this.entradas.length - 1;
+      const clone = template.content.cloneNode(true);
+      
+      const article = clone.querySelector('.blog-entry');
+      article.dataset.entryId = entrada.id;
+      if (isFeatured) article.classList.add('featured');
+      
+      clone.querySelector('.entry-date').textContent = entrada.fecha;
+      clone.querySelector('.entry-title').textContent = entrada.titulo;
+      clone.querySelector('.entry-text').innerHTML = this.procesarContenido(entrada.contenido);
+      
+      if (entrada.imagenPrincipal || entrada.videoURL) {
+        const mediaGallery = clone.querySelector('.media-gallery');
+        mediaGallery.innerHTML = this.renderMediaContent(entrada);
+      }
+      
+      if (isFeatured) {
+        const entryContent = clone.querySelector('.entry-content');
+        entryContent.insertAdjacentHTML('beforeend', this.renderCallToAction());
+      }
+      
+      contenedor.appendChild(clone);
+    });
 
     // Aplicar efectos después del renderizado
     setTimeout(() => {
       this.aplicarEfectosPostRenderizado();
     }, 100);
-  }
-
-  renderEntradaBlog(entrada, index) {
-    const esDestacada = index === this.entradas.length - 1; // La más nueva es destacada (última)
-    
-    return `
-      <article class="blog-entry ${esDestacada ? 'featured' : ''}" data-entry-id="${entrada.id}">
-        <div class="notebook-page">
-          <div class="red-margin"></div>
-          <div class="entry-content">
-            <div class="entry-date">${entrada.fecha}</div>
-            <h2 class="entry-title">${entrada.titulo}</h2>
-            
-            <div class="entry-text">
-              ${this.procesarContenido(entrada.contenido)}
-            </div>
-            
-            ${this.renderMediaContent(entrada)}
-            
-            ${esDestacada ? this.renderCallToAction() : ''}
-          </div>
-        </div>
-      </article>
-    `;
   }
 
   // Procesar contenido HTML y añadir elementos interactivos
@@ -228,21 +247,35 @@ class BlogManager {
         imagenes.forEach(url => {
           mediaHTML += `
             <div class="photo-polaroid">
-              <img src="${url}" 
+              <img src="img/placeholder.jpg" 
+                   data-src="${url}" 
                    alt="${entrada.titulo}" 
                    class="entrada-imagen"
-                   loading="lazy">
+                   width="500" height="300"
+                   loading="lazy"
+                   onerror="this.src='img/placeholder-fallback.jpg';this.classList.add('error')">
               <div class="polaroid-caption">Momento especial de Patofelting ✨</div>
             </div>
           `;
         });
       }
       
+      // Soporta múltiples videos separados por coma
       if (entrada.videoURL) {
+        const videoUrls = entrada.videoURL.split(',').map(url => url.trim()).filter(url => url !== "");
+        const videoSources = videoUrls.map(url => {
+          const extension = url.split('.').pop().toLowerCase();
+          const type = extension === 'webm' ? 'video/webm' : 
+                       extension === 'ogg' ? 'video/ogg' : 'video/mp4';
+          return `<source src="${url}" type="${type}">`;
+        }).join('');
+        
         mediaHTML += `
           <div class="video-container">
-            <video controls class="entrada-video" preload="metadata">
-              <source src="${entrada.videoURL}" type="video/mp4">
+            <video controls class="entrada-video" preload="none" 
+                   poster="img/video-poster.jpg"
+                   aria-label="Video: ${entrada.titulo}">
+              ${videoSources}
               Tu navegador no soporta video HTML5.
             </video>
             <div class="video-caption">Proceso creativo en acción 🎬</div>
@@ -301,7 +334,7 @@ class BlogManager {
             <div class="entry-content">
               <h2>¡Ups! Algo salió mal</h2>
               <p>No pude cargar las entradas del blog en este momento. Por favor, intenta recargar la página.</p>
-              <button onclick="location.reload()" class="cta-button-blog">🔄 Reintentar</button>
+              <button onclick="window.blogManager.cargarEntradasDesdeCSV()" class="cta-button-blog">🔄 Reintentar</button>
               <br><br>
               <p><small>Si el problema persiste, puedes contactarme directamente.</small></p>
             </div>
@@ -361,38 +394,59 @@ class BlogManager {
   // ========== LAZY LOADING DE IMÁGENES ==========
   addImageLazyLoading() {
     const imageObserver = new IntersectionObserver(
-      (entries) => {
+      (entries, observer) => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
             const img = entry.target;
+            
+            // Manejar data-src para lazy loading
             if (img.dataset.src) {
               img.src = img.dataset.src;
               img.removeAttribute('data-src');
             }
+            
             img.classList.add('loaded');
-            imageObserver.unobserve(img);
+            observer.unobserve(img);
           }
         });
       },
-      { threshold: 0.1 }
+      {
+        rootMargin: '200px', // Cargar antes de que sean visibles
+        threshold: 0.01
+      }
     );
 
-    document.querySelectorAll('img[data-src], .entrada-imagen').forEach(img => {
+    // Observar todas las imágenes que necesitan lazy loading
+    document.querySelectorAll('img[data-src], img[loading="lazy"]').forEach(img => {
       imageObserver.observe(img);
     });
   }
 
   // ========== CONTROL DE VIDEOS ==========
   addVideoPlayPause() {
-    document.querySelectorAll('video, .entrada-video').forEach(video => {
-      // Reproducir cuando esté visible
+    document.querySelectorAll('video').forEach(video => {
+      // Configurar poster de video si no está definido
+      if (!video.poster) {
+        video.poster = 'img/video-poster.jpg';
+      }
+      
+      // Observador para carga diferida
       const videoObserver = new IntersectionObserver(
         (entries) => {
           entries.forEach(entry => {
             if (entry.isIntersecting) {
-              video.play().catch(e => console.log('Video autoplay prevented:', e));
-            } else {
-              video.pause();
+              // Precargar el video cuando es visible
+              video.load();
+              
+              // Intentar reproducción automática (silenciada)
+              video.muted = true;
+              video.play().catch(e => {
+                console.log('Autoplay no permitido:', e);
+                // Mostrar controles si falla el autoplay
+                video.controls = true;
+              });
+              
+              videoObserver.unobserve(video);
             }
           });
         },
@@ -401,18 +455,24 @@ class BlogManager {
 
       videoObserver.observe(video);
 
-      // Control manual al hacer clic
-      video.addEventListener('click', () => {
-        if (video.paused) {
-          video.play();
-        } else {
-          video.pause();
+      // Manejo de errores
+      video.addEventListener('error', () => {
+        console.error('Error al cargar el video:', video.src);
+        const container = video.closest('.video-container');
+        if (container) {
+          container.innerHTML = `
+            <div class="video-error">
+              <p>El video no pudo cargarse. Intenta recargar la página.</p>
+              <button onclick="location.reload()">Reintentar</button>
+            </div>
+          `;
         }
       });
 
-      // Añadir controles personalizados
+      // Mejorar accesibilidad
       video.addEventListener('loadedmetadata', () => {
-        video.setAttribute('aria-label', `Video: ${video.closest('.blog-entry')?.querySelector('.entry-title')?.textContent || 'Contenido del blog'}`);
+        video.setAttribute('aria-label', 
+          `Video: ${video.closest('.blog-entry')?.querySelector('.entry-title')?.textContent || 'Contenido del blog'}`);
       });
     });
   }
