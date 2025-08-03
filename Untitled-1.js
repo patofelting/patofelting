@@ -807,7 +807,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // Antes del emailjs.send, añade:
 console.log('Enviando formulario...');
-form.addEventListener('submit', _.debounce(handleSubmit, 1000)); // Debe aparecer solo una vez
+
 setupContactForm();
 
 // Inicializar EmailJS con tu clave pública
@@ -819,51 +819,7 @@ setupContactForm();
 
 
 
-// Mostrar / ocultar burbujas mientras arrastra
-['min-slider', 'max-slider'].forEach(id => {
-  const slider = document.getElementById(id);
-  const label = document.getElementById(id === 'min-slider' ? 'thumb-label-min' : 'thumb-label-max');
-
-  slider.addEventListener('input', updateRange);
-  slider.addEventListener('mousedown', () => label.classList.add('visible'));
-  slider.addEventListener('touchstart', () => label.classList.add('visible'));
-  slider.addEventListener('mouseup', () => label.classList.remove('visible'));
-  slider.addEventListener('touchend', () => label.classList.remove('visible'));
-});
-
-
-document.addEventListener('DOMContentLoaded', () => {
-  const hamburguesa = document.getElementById('hamburguesa-btn');
-  const menu = document.getElementById('menu');
-
-  hamburguesa.addEventListener('click', () => {
-    hamburguesa.classList.toggle('activo');
-    menu.classList.toggle('menu-activo');
-  });
-
-  // Cierra el menú si hacés clic en un enlace o fuera
-  document.addEventListener('click', (e) => {
-    if (!menu.contains(e.target) && !hamburguesa.contains(e.target)) {
-      menu.classList.remove('menu-activo');
-      hamburguesa.classList.remove('activo');
-    }
-    if (e.target.tagName === 'A' && menu.classList.contains('menu-activo')) {
-      menu.classList.remove('menu-activo');
-      hamburguesa.classList.remove('activo');
-    }
-  });
-});
-
-
-const btnHamburguesa = document.getElementById("hamburguesa-btn");
-const menu = document.getElementById("menu");
-
-btnHamburguesa.addEventListener("click", () => {
-  btnHamburguesa.classList.toggle("activo");
-  menu.classList.toggle("menu-activo");
-});
-
-// ========== CONFIGURACIÓN DEL FILTRO DE PRECIO ==========
+/// ========== CONFIGURACIÓN DEL FILTRO DE PRECIO ==========
 document.addEventListener('DOMContentLoaded', function() {
   // Selección de elementos del DOM
   const elementos = {
@@ -945,3 +901,43 @@ document.addEventListener('DOMContentLoaded', function() {
   // Inicializar valores
   actualizarRangoPrecio();
 });
+
+function actualizarRangoPrecio() {
+  const min = parseInt(elementos.minSlider.value);
+  const max = parseInt(elementos.maxSlider.value);
+
+  // Asegurar que min no supere max y viceversa
+  if (min > max) {
+    elementos.minSlider.value = max;
+    elementos.maxSlider.value = min;
+  }
+
+  // Mostrar valores arriba
+  document.getElementById("min-price").textContent = `$U${elementos.minSlider.value}`;
+  document.getElementById("max-price").textContent = `$U${elementos.maxSlider.value}`;
+
+  // Posicionar burbujas
+  const rangeSlider = document.querySelector(".range-slider");
+  const sliderWidth = rangeSlider.offsetWidth;
+  const porcentajeMin = (elementos.minSlider.value / 3000) * 100;
+  const porcentajeMax = (elementos.maxSlider.value / 3000) * 100;
+  const thumbMin = document.getElementById("thumb-label-min");
+  const thumbMax = document.getElementById("thumb-label-max");
+  thumbMin.style.left = `calc(${porcentajeMin}% - 20px)`;
+  thumbMax.style.left = `calc(${porcentajeMax}% - 20px)`;
+
+  // Actualizar barra de rango
+  const range = document.querySelector(".range");
+  const track = document.querySelector(".track");
+  if (range && track) {
+    range.style.left = porcentajeMin + "%";
+    range.style.width = (porcentajeMax - porcentajeMin) + "%";
+  }
+
+  filtrosActuales.precioMin = parseInt(elementos.minSlider.value);
+  filtrosActuales.precioMax = parseInt(elementos.maxSlider.value);
+  renderizarProductos();
+}
+
+elementos.minSlider?.addEventListener("input", actualizarRangoPrecio);
+elementos.maxSlider?.addEventListener("input", actualizarRangoPrecio);
