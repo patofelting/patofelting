@@ -819,7 +819,51 @@ setupContactForm();
 
 
 
-/// ========== CONFIGURACIÓN DEL FILTRO DE PRECIO ==========
+// Mostrar / ocultar burbujas mientras arrastra
+['min-slider', 'max-slider'].forEach(id => {
+  const slider = document.getElementById(id);
+  const label = document.getElementById(id === 'min-slider' ? 'thumb-label-min' : 'thumb-label-max');
+
+  slider.addEventListener('input', updateRange);
+  slider.addEventListener('mousedown', () => label.classList.add('visible'));
+  slider.addEventListener('touchstart', () => label.classList.add('visible'));
+  slider.addEventListener('mouseup', () => label.classList.remove('visible'));
+  slider.addEventListener('touchend', () => label.classList.remove('visible'));
+});
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  const hamburguesa = document.getElementById('hamburguesa-btn');
+  const menu = document.getElementById('menu');
+
+  hamburguesa.addEventListener('click', () => {
+    hamburguesa.classList.toggle('activo');
+    menu.classList.toggle('menu-activo');
+  });
+
+  // Cierra el menú si hacés clic en un enlace o fuera
+  document.addEventListener('click', (e) => {
+    if (!menu.contains(e.target) && !hamburguesa.contains(e.target)) {
+      menu.classList.remove('menu-activo');
+      hamburguesa.classList.remove('activo');
+    }
+    if (e.target.tagName === 'A' && menu.classList.contains('menu-activo')) {
+      menu.classList.remove('menu-activo');
+      hamburguesa.classList.remove('activo');
+    }
+  });
+});
+
+
+const btnHamburguesa = document.getElementById("hamburguesa-btn");
+const menu = document.getElementById("menu");
+
+btnHamburguesa.addEventListener("click", () => {
+  btnHamburguesa.classList.toggle("activo");
+  menu.classList.toggle("menu-activo");
+});
+
+// ========== CONFIGURACIÓN DEL FILTRO DE PRECIO ==========
 document.addEventListener('DOMContentLoaded', function() {
   // Selección de elementos del DOM
   const elementos = {
