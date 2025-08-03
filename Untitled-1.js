@@ -902,7 +902,6 @@ function actualizarRangoPrecio() {
     elementos.minSlider.value = max;
     elementos.maxSlider.value = min;
   }
-
   const nuevoMin = parseInt(elementos.minSlider.value, 10);
   const nuevoMax = parseInt(elementos.maxSlider.value, 10);
 
@@ -916,14 +915,16 @@ function actualizarRangoPrecio() {
   const thumbMin = document.getElementById('thumb-label-min');
   const thumbMax = document.getElementById('thumb-label-max');
   if (thumbMin) {
-    const left = (nuevoMin / 3000) * 100;
+    const left = ((nuevoMin - elementos.minSlider.min) / (elementos.minSlider.max - elementos.minSlider.min)) * 100;
     thumbMin.style.left = `${left}%`;
     thumbMin.textContent = `$U${nuevoMin}`;
+    thumbMin.classList.add('visible');
   }
   if (thumbMax) {
-    const left = (nuevoMax / 3000) * 100;
+    const left = ((nuevoMax - elementos.maxSlider.min) / (elementos.maxSlider.max - elementos.maxSlider.min)) * 100;
     thumbMax.style.left = `${left}%`;
     thumbMax.textContent = `$U${nuevoMax}`;
+    thumbMax.classList.add('visible');
   }
 
   // Aplicar filtros
