@@ -871,39 +871,44 @@ const minPrice = document.getElementById('min-price');
 const maxPrice = document.getElementById('max-price');
 const rangeBar = document.querySelector('.range');
 
-function updateRange() {
-  let min = parseInt(minSlider.value, 10);
-  let max = parseInt(maxSlider.value, 10);
+function actualizarRangoPrecio() {
+  const min = parseInt(elementos.minSlider.value, 10);
+  const max = parseInt(elementos.maxSlider.value, 10);
 
-  // Evita que se crucen
+  // Prevenir errores visuales si se cruzan
   if (min > max) {
-    [min, max] = [max, min];
-    minSlider.value = min;
-    maxSlider.value = max;
+    elementos.minSlider.value = max;
+    elementos.maxSlider.value = min;
   }
 
-  // Actualiza los textos
-  minPrice.textContent = `$U${min}`;
-  maxPrice.textContent = `$U${max}`;
-  thumbMin.textContent = `$U${min}`;
-  thumbMax.textContent = `$U${max}`;
+  // Actualizar texto de precios
+  document.getElementById('min-price').textContent = `$U${min}`;
+  document.getElementById('max-price').textContent = `$U${max}`;
 
-  // Calcula posiciones
-  const minPercent = ((min - minSlider.min) / (minSlider.max - minSlider.min)) * 100;
-  const maxPercent = ((max - maxSlider.min) / (maxSlider.max - maxSlider.min)) * 100;
+  // Actualizar posición de las burbujas
+  const rango = 3000;
+  const minPercent = (min / rango) * 100;
+  const maxPercent = (max / rango) * 100;
+
+  const thumbMin = document.getElementById('thumb-label-min');
+  const thumbMax = document.getElementById('thumb-label-max');
 
   thumbMin.style.left = `${minPercent}%`;
+  thumbMin.textContent = `$U${min}`;
+
   thumbMax.style.left = `${maxPercent}%`;
+  thumbMax.textContent = `$U${max}`;
 
-  // Rango verde
-  rangeBar.style.left = minPercent + '%';
-  rangeBar.style.width = (maxPercent - minPercent) + '%';
-
-  // Guarda filtro y renderiza productos
+  // Opcional: actualizar filtro
   filtrosActuales.precioMin = min;
   filtrosActuales.precioMax = max;
   renderizarProductos();
 }
+
+// Vincular los sliders a la función
+elementos.minSlider?.addEventListener('input', actualizarRangoPrecio);
+elementos.maxSlider?.addEventListener('input', actualizarRangoPrecio);
+
 
 // Mostrar burbuja solo al mover
 [minSlider, maxSlider].forEach((slider, i) => {
