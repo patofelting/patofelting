@@ -903,16 +903,31 @@ function actualizarRangoPrecio() {
     elementos.maxSlider.value = min;
   }
 
-  elementos.minSlider.value = min;
-  elementos.maxSlider.value = max;
+  const nuevoMin = parseInt(elementos.minSlider.value, 10);
+  const nuevoMax = parseInt(elementos.maxSlider.value, 10);
 
-  // Actualizar texto
-  document.getElementById('min-price').textContent = `$U${min}`;
-  document.getElementById('max-price').textContent = `$U${max}`;
+  // Actualizar texto de rango arriba del slider
+  const minPriceLabel = document.getElementById('min-price');
+  const maxPriceLabel = document.getElementById('max-price');
+  if (minPriceLabel) minPriceLabel.textContent = `$U${nuevoMin}`;
+  if (maxPriceLabel) maxPriceLabel.textContent = `$U${nuevoMax}`;
 
-  // Actualizar filtro global
-  filtrosActuales.precioMin = min;
-  filtrosActuales.precioMax = max;
+  // Actualizar burbujas (globitos) si existen
+  const thumbMin = document.getElementById('thumb-label-min');
+  const thumbMax = document.getElementById('thumb-label-max');
+  if (thumbMin) {
+    const left = (nuevoMin / 3000) * 100;
+    thumbMin.style.left = `${left}%`;
+    thumbMin.textContent = `$U${nuevoMin}`;
+  }
+  if (thumbMax) {
+    const left = (nuevoMax / 3000) * 100;
+    thumbMax.style.left = `${left}%`;
+    thumbMax.textContent = `$U${nuevoMax}`;
+  }
 
+  // Aplicar filtros
+  filtrosActuales.precioMin = nuevoMin;
+  filtrosActuales.precioMax = nuevoMax;
   renderizarProductos();
 }
