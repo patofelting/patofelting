@@ -458,56 +458,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ========== EXPORTAR PARA USO GLOBAL ==========
 window.BlogUtils = BlogUtils;
-function sincronizarBlogConFirebase() {
-  const hoja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Blog");
-  const datos = hoja.getRange(2, 1, hoja.getLastRow() - 1, 7).getValues();
+// blog.js versión sin Firebase - usa CSV de Google Sheets directamente
 
-  const entradas = {};
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
 
-  datos.forEach((fila, index) => {
-    const id = fila[0];
-    if (!id) return;
+document.addEventListener('DOMContentLoaded', cargarEntradasDesdeCSV);
 
-    entradas[id] = {
-      id: id,
-      fecha: fila[1],
-      titulo: fila[2],
-      contenidoHTML: fila[3],
-      imagenPrincipal: fila[4],
-      videoURL: fila[5],
-      orden: fila[6] || 0
-    };
-  });
-
-  const url = 'https://patofelting-b188f-default-rtdb.firebaseio.com/blog.json';
-  const opciones = {
-    method: 'put',
-    contentType: 'application/json',
-    payload: JSON.stringify(entradas)
-  };
-
-  UrlFetchApp.fetch(url, opciones);
-  Logger.log("Entradas del blog sincronizadas con Firebase");
-}
-
-// 2. Código para incluir en blog.js
-// Esto se conecta a Firebase y renderiza el contenido automáticamente
-
-async function cargarEntradasDesdeFirebase() {
+async function cargarEntradasDesdeCSV() {
   try {
-    const respuesta = await fetch('https://patofelting-b188f-default-rtdb.firebaseio.com/blog.json');
-    const data = await respuesta.json();
+    const respuesta = await fetch(CSV_URL);
+    const texto = await respuesta.text();
+    const filas = texto.trim().split('\n').slice(1); // Saltar encabezado
 
-    if (!data) return;
-
-    const entradas = Object.values(data).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    const entradas = filas.map((linea) => {
+      const [id, fecha, titulo, contenidoHTML, imagenPrincipal, videoURL, orden] = linea.split(',');
+      return { id, fecha, titulo, contenidoHTML, imagenPrincipal, videoURL, orden: Number(orden) || 0 };
+    }).sort((a, b) => a.orden - b.orden);
 
     const contenedor = document.querySelector('.blog-main');
     if (!contenedor) return;
 
     contenedor.innerHTML = entradas.map(renderEntradaBlog).join('');
   } catch (error) {
-    console.error("Error al cargar las entradas del blog:", error);
+    console.error("Error al cargar el blog desde CSV:", error);
   }
 }
 
@@ -531,5 +504,3 @@ function renderEntradaBlog(entrada) {
     </article>
   `;
 }
-
-document.addEventListener('DOMContentLoaded', cargarEntradasDesdeFirebase);
