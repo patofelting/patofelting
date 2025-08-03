@@ -8,10 +8,9 @@ function initMobileMenu() {
 
   // Función para alternar el estado del menú
   const toggleMenu = () => {
-    const isActive = hamburguesa.classList.toggle('activo');
-    menu.classList.toggle('active', isActive);
-    document.body.classList.toggle('no-scroll', isActive);
-    hamburguesa.setAttribute('aria-expanded', isActive);
+    hamburguesa.classList.toggle('activo');
+    menu.classList.toggle('menu-activo'); // <-- CORRECTO
+    document.body.classList.toggle('menu-abierto', menu.classList.contains('menu-activo'));
   };
 
   // Evento click en el botón hamburguesa
@@ -23,7 +22,7 @@ function initMobileMenu() {
   // Cierra el menú al hacer clic en un enlace
   menu.querySelectorAll('a').forEach(link => {
     link.addEventListener('click', () => {
-      if (menu.classList.contains('active')) {
+      if (menu.classList.contains('menu-activo')) {
         toggleMenu();
       }
     });
@@ -31,14 +30,14 @@ function initMobileMenu() {
 
   // Cierra el menú al hacer clic fuera
   document.addEventListener('click', (e) => {
-    if (!menu.contains(e.target) && !hamburguesa.contains(e.target) && menu.classList.contains('active')) {
+    if (!menu.contains(e.target) && !hamburguesa.contains(e.target) && menu.classList.contains('menu-activo')) {
       toggleMenu();
     }
   });
 
   // Cierra el menú al cambiar el tamaño de la pantalla
   window.addEventListener('resize', () => {
-    if (window.innerWidth > 768 && menu.classList.contains('active')) {
+    if (window.innerWidth > 768 && menu.classList.contains('menu-activo')) {
       toggleMenu();
     }
   });
