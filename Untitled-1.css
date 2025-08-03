@@ -2134,27 +2134,78 @@ blockquote {
 }
 
 /* Rango slider container */
+/* Contenedor principal del slider */
 .range-slider {
   position: relative;
   width: 100%;
   margin: 20px 0;
+  height: 40px;
+  display: flex;
+  align-items: center;
 }
 
-.range-slider input[type="range"] {
+/* Track (fondo gris) */
+.track {
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none; /* evita conflicto visual */
-}
-
-.range-slider input[type="range"]:nth-of-type(1) {
-  z-index: 2;
-}
-
-.range-slider input[type="range"]:nth-of-type(2) {
+  width: 100%;
+  height: 4px;
+  background: #ddd;
+  border-radius: 2px;
   z-index: 1;
 }
 
+/* Range (barra verde de selección) */
+.range {
+  position: absolute;
+  height: 4px;
+  background: #34C759;
+  border-radius: 2px;
+  z-index: 2;
+}
+
+/* Input range - estilo base */
+.range-slider input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Thumb (circulo deslizable) */
+.range-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #2E7D32;
+  border: 2px solid white;
+  border-radius: 50%;
+  cursor: pointer;
+  pointer-events: all;
+  margin-top: -7px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s;
+}
+
+.range-slider input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #2E7D32;
+  border: 2px solid white;
+  border-radius: 50%;
+  cursor: pointer;
+  pointer-events: all;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s;
+}
+
+/* Etiquetas de los thumbs */
 .thumb-label {
   position: absolute;
   top: -30px;
@@ -2166,95 +2217,23 @@ blockquote {
   transform: translateX(-50%);
   white-space: nowrap;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 
+/* Mostrar etiquetas al interactuar */
+.range-slider input[type="range"]:active + .thumb-label,
+.range-slider input[type="range"]:focus + .thumb-label {
+  opacity: 1;
+}
+
+/* Posiciones iniciales de las etiquetas */
 #thumb-label-min {
-  left: 0%;
+  left: 0;
 }
 
 #thumb-label-max {
   left: 100%;
-}
-
-
-/* Línea base gris */
-.track {
-  position: absolute;
-  width: 100%;
-  height: 4px;
-  background: #ddd;
-  top: 50%;
-  transform: translateY(-50%);
-  border-radius: 2px;
-  z-index: 1;
-}
-
-/* Rango seleccionado (verde) */
-.range {
-  position: absolute;
-  height: 4px;
-  background: #34C759;
-  top: 50%;
-  transform: translateY(-50%);
-  border-radius: 2px;
-  z-index: 2;
-}
-
-/* Slider base */
-.slider {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 40px;
-  background: transparent;
-  position: absolute;
-  pointer-events: none;
-  z-index: 3;
-}
-
-/* Estilo del thumb (círculo) */
-.slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  background: #2E7D32;
-  border-radius: 50%;
-  border: 2px solid white;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-  cursor: pointer;
-  pointer-events: all;
-  z-index: 4;
-}
-
-.slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  background: #2E7D32;
-  border: 2px solid white;
-  border-radius: 50%;
-  cursor: pointer;
-  pointer-events: all;
-}
-
-/* Botón de reset */
-.reset-btn,
-.aplicar-rango-btn {
-  background-color: #2E7D32;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-  width: 100%;
-  margin-top: 10px;
-  transition: background-color 0.2s;
-}
-
-.reset-btn:hover,
-.aplicar-rango-btn:hover {
-  background-color: #1B5E20;
 }
 
 /* Campo de búsqueda */
