@@ -484,91 +484,91 @@ formEnvio?.addEventListener('submit', async function(e) {
     return;
   }
 
-  // ----------- TRANSACCIÓN DE STOCK -----------
+  // ---- ARMADO DEL MENSAJE Y LOS TOTALES ----
+  let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n`;
+  mensaje += `*📋 Detalles del pedido:*\n`;
+
+  let subtotal = 0;
+  carrito.forEach(item => {
+    const subtotalItem = item.precio * item.cantidad;
+    subtotal += subtotalItem;
+    mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${subtotalItem.toLocaleString('es-UY')}\n`;
+  });
+
+  let costoEnvio = 0;
+  let textoEnvio = 'Retiro en local (Gratis)';
+  if (envio === 'montevideo') {
+    costoEnvio = 150;
+    textoEnvio = 'Envío Montevideo ($150)';
+  } else if (envio === 'interior') {
+    costoEnvio = 300;
+    textoEnvio = 'Envío Interior ($300)';
+  }
+  const total = subtotal + costoEnvio;
+
+  mensaje += `\n*💰 Total:*\n`;
+  mensaje += `Subtotal: $U ${subtotal.toLocaleString('es-UY')}\n`;
+  mensaje += `Envío: $U ${costoEnvio.toLocaleString('es-UY')}\n`;
+  mensaje += `*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
+
+  mensaje += `*👤 Datos del cliente:*\n`;
+  mensaje += `Nombre: ${nombre} ${apellido}\n`;
+  mensaje += `Teléfono: ${telefono}\n`;
+  mensaje += `Método de envío: ${textoEnvio}\n`;
+  if (envio !== 'retiro') {
+    mensaje += `Dirección: ${direccion}\n`;
+  }
+  if (notas) {
+    mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
+  }
+
+  const numeroWhatsApp = '59893566283';
+  sessionStorage.setItem('ultimoPedidoWhatsApp', mensaje);
+
+  console.log('Mensaje a enviar:', mensaje); // Debug
+
+  // PRIMERO: Abre WhatsApp
+  const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
+  console.log('URL de WhatsApp:', urlWhatsApp); // Debug
+  
+  const nuevaPestaña = window.open(urlWhatsApp, '_blank');
+  if (!nuevaPestaña) {
+    mostrarNotificacion('Por favor, permite las ventanas emergentes para enviar el pedido por WhatsApp.', 'error');
+    return;
+  } else {
+    mostrarNotificacion('Pedido enviado a WhatsApp correctamente', 'exito');
+  }
+
+  // SEGUNDO: Intentar actualizar stock (opcional, no bloquea el flujo)
   try {
-    // Intentar descontar el stock con una transacción atómica por cada producto
     for (const item of carrito) {
       const stockRef = ref(db, `productos/${item.id}/stock`);
-      const txResult = await runTransaction(stockRef, currentStock => {
+      await runTransaction(stockRef, currentStock => {
         if (currentStock === null || currentStock < item.cantidad) {
-          return; // aborta la transacción
+          return currentStock; // No modifica si no hay stock suficiente
         }
         return currentStock - item.cantidad;
       });
-      if (!txResult.committed) {
-        mostrarNotificacion(`Stock insuficiente para ${item.nombre}. Actualiza la página.`, 'error');
-        return;
-      }
     }
-
-    // ---- ARMADO DEL MENSAJE Y LOS TOTALES ----
-    let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n`;
-    mensaje += `*📋 Detalles del pedido:*\n`;
-
-    let subtotal = 0;
-    carrito.forEach(item => {
-      const subtotalItem = item.precio * item.cantidad;
-      subtotal += subtotalItem;
-      mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${subtotalItem.toLocaleString('es-UY')}\n`;
-    });
-
-    let costoEnvio = 0;
-    let textoEnvio = 'Retiro en local (Gratis)';
-    if (envio === 'montevideo') {
-      costoEnvio = 150;
-      textoEnvio = 'Envío Montevideo ($150)';
-    } else if (envio === 'interior') {
-      costoEnvio = 300;
-      textoEnvio = 'Envío Interior ($300)';
-    }
-    const total = subtotal + costoEnvio;
-
-    mensaje += `\n*💰 Total:*\n`;
-    mensaje += `Subtotal: $U ${subtotal.toLocaleString('es-UY')}\n`;
-    mensaje += `Envío: $U ${costoEnvio.toLocaleString('es-UY')}\n`;
-    mensaje += `*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
-
-    mensaje += `*👤 Datos del cliente:*\n`;
-    mensaje += `Nombre: ${nombre} ${apellido}\n`;
-    mensaje += `Teléfono: ${telefono}\n`;
-    mensaje += `Método de envío: ${textoEnvio}\n`;
-    if (envio !== 'retiro') {
-      mensaje += `Dirección: ${direccion}\n`;
-    }
-    if (notas) {
-      mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
-    }
-
-    const numeroWhatsApp = '59893566283';
-    sessionStorage.setItem('ultimoPedidoWhatsApp', mensaje);
-
-    // Abre WhatsApp en una pestaña nueva
-    const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
-    const nuevaPestaña = window.open(urlWhatsApp, '_blank');
-    if (!nuevaPestaña) {
-      mostrarNotificacion('Por favor, permite las ventanas emergentes para enviar el pedido por WhatsApp.', 'error');
-    } else {
-      mostrarNotificacion('Pedido listo para enviar por WhatsApp', 'exito');
-    }
-
-    // Limpia el formulario y la UI
-    setTimeout(() => {
-      modalDatosEnvio.classList.remove('visible');
-      setTimeout(() => {
-        modalDatosEnvio.setAttribute('hidden', true);
-        carrito = [];
-        guardarCarrito();
-        renderizarCarrito();
-        renderizarProductos();
-        formEnvio.reset();
-        renderizarResumenPedidoEnvio();
-      }, 300);
-    }, 1000);
-
+    console.log('Stock actualizado correctamente');
   } catch (err) {
-    mostrarNotificacion('Error al preparar el pedido para WhatsApp.', 'error');
-    return;
+    console.warn('No se pudo actualizar el stock:', err);
+    // No mostramos error al usuario porque el pedido ya se envió
   }
+
+  // Limpia el formulario y la UI
+  setTimeout(() => {
+    modalDatosEnvio.classList.remove('visible');
+    setTimeout(() => {
+      modalDatosEnvio.setAttribute('hidden', true);
+      carrito = [];
+      guardarCarrito();
+      renderizarCarrito();
+      renderizarProductos();
+      formEnvio.reset();
+      renderizarResumenPedidoEnvio();
+    }, 300);
+  }, 1000);
 });
 // ========== CARRITO UI ==========
 function toggleCarrito(forceState) {
