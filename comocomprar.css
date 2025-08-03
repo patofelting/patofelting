@@ -464,41 +464,49 @@ input[type="submit"]:hover {
 }
 
 /* Mejoras para Cómo Comprar */
-.como-comprar {
-  max-width: 700px;
+.como-comprar-bonito {
+  max-width: 800px;
   margin: 0 auto;
-  padding: 2rem 1rem 4rem;
-  background-color: #fff;
+  padding: 3rem 1rem;
+  background: linear-gradient(180deg, #f8fff8, #f0fdf0);
   border-radius: 12px;
-  box-shadow: 0 0 20px rgba(0, 128, 0, 0.05);
+  box-shadow: 0 8px 20px rgba(0, 100, 0, 0.05);
   text-align: center;
+  font-family: var(--font-family);
 }
 
-.como-comprar h1 {
-  font-size: 2rem;
+.como-comprar-bonito h1 {
+  font-size: 2.2rem;
   color: var(--primary-color);
-  margin-bottom: 1rem;
-}
-
-.como-comprar .intro {
-  font-size: 1.1rem;
-  color: var(--dark-gray);
-  margin-bottom: 2rem;
-}
-
-.como-comprar ol {
-  text-align: left;
-  padding-left: 1.4rem;
-  font-size: 1.05rem;
-  line-height: 1.8;
-  color: #222;
-}
-
-.como-comprar ol li {
   margin-bottom: 1.2rem;
 }
 
-.como-comprar .destacado {
-  color: var(--primary-color);
+.como-comprar-bonito .intro {
+  font-size: 1.1rem;
+  color: #444;
+  margin-bottom: 2rem;
+}
+
+.pasos-compra {
+  list-style: none;
+  padding-left: 0;
+  text-align: left;
+  display: grid;
+  gap: 1.2rem;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: #222;
+}
+
+.pasos-compra li {
+  background: #ffffff;
+  border-left: 4px solid var(--primary-color);
+  padding: 0.8rem 1rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+.pasos-compra span {
   font-weight: bold;
+  color: var(--primary-color);
 }
