@@ -184,7 +184,8 @@ button {
 
 /* Estilos específicos para la página de política */
 body.policy-page {
-  padding-top: 80px;
+  padding-top: 120px;
+   scroll-padding-top: 120px; 
 }
 
 .policy-container {
