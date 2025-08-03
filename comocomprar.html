@@ -5,26 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cómo comprar | Patofelting</title>
     <link rel="stylesheet" href="comocomprar.css"><!-- Usa tu CSS principal -->
-    <link rel="stylesheet" href="Untitled-1.css>"
 </head>
 <body>
-    <!-- Header/Menu -->
-    <header class="nav">
-        <div class="nav-container">
-            <div class="logo-container">
-                <img src="img/patofelting.jpg" alt="Patofelting Logo" class="logo-img">
-                <span class="logo-text">Patofelting</span>
-            </div>
-            <button class="hamburguesa" aria-label="Menú de navegación" aria-expanded="false">☰</button>
-            <ul class="menu">
-                <li><a href="index.html#inicio">Inicio</a></li>
-                <li><a href="index.html#sobre">Sobre mí</a></li>
-                <li><a href="index.html#productos">Productos</a></li>
-                <li><a href="index.html#contacto">Contacto</a></li>
-                <li><a href="index.html#preguntas">Preguntas</a></li>
-            </ul>
-        </div>
-    </header>
+<nav class="nav">
+  <div class="nav-container">
+    <!-- LOGO -->
+    <div class="logo-container">
+      <img src="img/patofelting.jpg" alt="Logo Patofelting" class="logo-img" />
+      <h2 class="logo-text">Patofelting</h2>
+    </div>
+
+    <!-- BOTÓN HAMBURGUESA -->
+    <button class="hamburguesa" id="hamburguesa-btn" aria-label="Menú de navegación" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+
+
+
+    <!-- MENÚ PRINCIPAL -->
+    <ul class="menu" id="menu">
+      <li><a href="#inicio">Inicio</a></li>
+      <li><a href="#sobre">Sobre mí</a></li>
+      <li><a href="#productos">Productos</a></li>
+      <li><a href="#contacto">Contacto</a></li>
+      <li><a href="#preguntas">Preguntas</a></li>
+    </ul>
+  </div>
+</nav>
+
 
     <main class="container" style="margin-top: 110px;">
         <h1>Cómo comprar</h1>
@@ -50,33 +61,34 @@
     </main>
 
    <footer class="footer">
-    <div class="footer-content">
-      <p>
-        Seguime en
-        <a href="https://www.instagram.com/pato_felting" target="_blank" aria-label="Instagram de Patofelting">
-          <i class="fab fa-instagram"></i> @patofelting
-        </a>
-      </p>
-      <p>📧 <a href="mailto:patofelting@gmail.com">patofelting@gmail.com</a></p>
-
-      <p><a href="politicaempresa.html">Política de la empresa</a></p>
-
-      <p><a href="comocomprar.html">Cómo comprar</a></p>
-      <p>© 2025 <strong>Patofelting</strong> — Hecho con amor en Uruguay 🧶</p>
+  <div class="footer-container">
+    <div class="footer-brand">
+      <img src="img/patofeltinglogo.jpg" alt="Patofelting logo" class="footer-logo" />
+      <h2>Patofelting</h2>
+      <p>Artesanía con amor desde Uruguay</p>
     </div>
-  </footer>
+    <nav class="footer-nav">
+      <a href="#productos">Productos</a>
+      <a href="#como-comprar">¿Cómo comprar?</a>
+      <a href="#faq">Preguntas frecuentes</a>
+      <a href="https://instagram.com/patofelting" target="_blank" rel="noopener" aria-label="Instagram">
+  <img src="img/instagram.png" alt="Instagram" class="icono-instagram" />
+  <span>Instagram</span>
+</a>
+      <a href="mailto:patofelting@gmail.com" class="footer-mail" aria-label="Correo electrónico">
+  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none">
+    <rect x="2" y="5" width="20" height="14" rx="3" fill="#388e3c"/>
+    <polyline points="4,7 12,13 20,7" stroke="#fff" stroke-width="2" fill="none"/>
+  </svg>
+  <span>Correo</span>
+</a>
+    </nav>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2025 Patofelting. Hecho con ♥ en Uruguay.</p>
+  </div>
+</footer>
 
-    <script>
-        // Menú hamburguesa Patofelting
-        const hamburguesa = document.querySelector('.hamburguesa');
-        const menu = document.querySelector('.menu');
-        hamburguesa.addEventListener('click', () => {
-            menu.classList.toggle('active');
-            hamburguesa.setAttribute('aria-expanded', menu.classList.contains('active'));            
-        });
-    </script>
-    <script src="Untitled-1.js" defer type="module"></script>
+<script src="hamburgues.js"></script>
 </body>
 </html>
-
-
