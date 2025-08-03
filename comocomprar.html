@@ -1,29 +1,100 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cómo comprar | Patofelting</title>
-    <link rel="stylesheet" href="comocomprar.css"><!-- Usa tu CSS principal -->
+  <link rel="icon" href="data:,"> <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cómo comprar | Patofelting</title>
+  <link rel="stylesheet" href="Untitled-1.css" />
+  <svg width="0" height="0" style="position:absolute;">
+    <defs>
+      <pattern id="lana-pattern" patternUnits="userSpaceOnUse" width="100" height="100">
+        <path d="M20,50 Q35,30 50,50 Q65,70 80,50" stroke="#7ed957" stroke-width="1.5" fill="none" opacity="0.1"/>
+        <path d="M10,70 Q25,50 40,70 Q55,90 70,70" stroke="#5a8f40" stroke-width="1" fill="none" opacity="0.05"/>
+      </pattern>
+    </defs>
+  </svg>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTnHg4CGR2D7kSs0v4LLanw2qksYuRlEzO+tcaEPQogQ0KaoGN26/zrn20ImR1DfuLWnOo7aBA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  
+  <script>
+    window.SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
+    window.PLACEHOLDER_IMAGE = 'img/placeholder.png';
+    window.FIREBASE_URL = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json'; 
+  </script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
+    authDomain: "patofelting-b188f.firebaseapp.com",
+    databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
+    projectId: "patofelting-b188f",
+    storageBucket: "patofelting-b188f.appspot.com",
+    messagingSenderId: "858377467588",
+    appId: "1:858377467588:web:cade9de05ebccc17f87b91"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const database = getDatabase(app);
+
+  // ✅ Hacerlo accesible en todo el sitio:
+  window.firebaseDatabase = database;
+</script>
+
 </head>
-<body>
-    <!-- Header/Menu -->
-    <header class="nav">
-        <div class="nav-container">
-            <div class="logo-container">
-                <img src="img/patofelting.jpg" alt="Patofelting Logo" class="logo-img">
-                <span class="logo-text">Patofelting</span>
-            </div>
-            <button class="hamburguesa" aria-label="Menú de navegación" aria-expanded="false">☰</button>
-            <ul class="menu">
-                <li><a href="index.html#inicio">Inicio</a></li>
-                <li><a href="index.html#sobre">Sobre mí</a></li>
-                <li><a href="index.html#productos">Productos</a></li>
-                <li><a href="index.html#contacto">Contacto</a></li>
-                <li><a href="index.html#preguntas">Preguntas</a></li>
-            </ul>
-        </div>
-    </header>
+<body oncontextmenu="return true;">
+  
+<nav class="nav">
+  <div class="nav-container">
+    <!-- LOGO -->
+    <div class="logo-container">
+      <img src="img/patofelting.jpg" alt="Logo Patofelting" class="logo-img" />
+      <h2 class="logo-text">Patofelting</h2>
+    </div>
+
+    <!-- BOTÓN HAMBURGUESA -->
+    <button class="hamburguesa" id="hamburguesa-btn" aria-label="Menú de navegación" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <!-- BOTÓN CARRITO -->
+    <button class="carrito-btn" id="carrito-btn-main" aria-label="Abrir carrito de compras">
+      <i class="fas fa-shopping-cart"></i> Carrito (<span id="contador-carrito">0</span>)
+    </button>
+
+    <!-- MENÚ PRINCIPAL -->
+    <ul class="menu" id="menu">
+      <li><a href="index.html#inicio">Inicio</a></li>
+      <li><a href="index.html#sobre">Sobre mí</a></li>
+      <li><a href="index.html#productos">Productos</a></li>
+      <li><a href="index.html#contacto">Contacto</a></li>
+      <li><a href="index.html#preguntas">Preguntas</a></li>
+    </ul>
+  </div>
+</nav>
+
+
+  
+  <div id="carrito-panel" class="carrito-panel">
+    <div class="carrito-header">
+      <h2>Tu Carrito</h2>
+      <button class="cerrar-carrito" aria-label="Cerrar carrito">×</button>
+    </div>
+    <ul id="lista-carrito" class="lista-carrito"></ul>
+    <div class="carrito-footer">
+      <p id="total">Total: $U 0</p>
+      <div class="carrito-acciones">
+        <button class="boton-vaciar-carrito">Vaciar Carrito</button>
+        <button class="boton-finalizar-compra">Finalizar Compra</button>
+      </div>
+    </div>
+  </div>
+  <div class="carrito-overlay"></div>
 
     <main class="container" style="margin-top: 110px;">
         <h1>Cómo comprar</h1>
@@ -48,31 +119,115 @@
         </blockquote>
     </main>
 
-   <footer class="footer">
-    <div class="footer-content">
-      <p>
-        Seguime en
-        <a href="https://www.instagram.com/pato_felting" target="_blank" aria-label="Instagram de Patofelting">
-          <i class="fab fa-instagram"></i> @patofelting
-        </a>
-      </p>
-      <p>📧 <a href="mailto:patofelting@gmail.com">patofelting@gmail.com</a></p>
-
-      <p><a href="politicaempresa.html">Política de la empresa</a></p>
-
-      <p><a href="comocomprar.html">Cómo comprar</a></p>
-      <p>© 2025 <strong>Patofelting</strong> — Hecho con amor en Uruguay 🧶</p>
+  <div id="aviso-pre-compra-modal" class="modal-aviso" role="dialog" aria-modal="true" hidden>
+    <div class="modal-aviso-contenido">
+      <h3>🧙‍♀️ Antes de confirmar tu pedido</h3>
+      <p><strong>Te pedimos que leas cuidadosamente las <em>especificaciones de compra</em></strong>: esto incluye las <strong>características del producto</strong>, <strong>los tiempos de envío</strong>, y nuestra <strong>política de devoluciones</strong>.</p>
+      <p>💫 Cada pieza es creada artesanalmente con paciencia, emoción y muchos pinchazos de amor dependiendo de la complejidad y el volumen de pedidos.</p>
+      <p>🌟 Nuestra intención es que vivas una experiencia mágica y transparente, y que tu figura llegue tal como la soñaste. Te agradecemos por valorar el trabajo hecho a mano.</p>
+      <div class="modal-aviso-botones">
+        <button id="btn-entendido-aviso" class="boton-aviso-entendido">Sí, he leído y deseo continuar 🐑</button>
+        <button id="btn-cancelar-aviso" class="boton-aviso-cancelar">Cancelar compra</button>
+      </div>
     </div>
-  </footer>
+  </div>
 
-    <script>
-        // Menú hamburguesa Patofelting
-        const hamburguesa = document.querySelector('.hamburguesa');
-        const menu = document.querySelector('.menu');
-        hamburguesa.addEventListener('click', () => {
-            menu.classList.toggle('active');
-            hamburguesa.setAttribute('aria-expanded', menu.classList.contains('active'));
-        });
-    </script>
+  <div id="modal-datos-envio" class="modal-datos-envio" role="dialog" aria-modal="true" hidden>
+    <div class="modal-envio-contenido">
+      <button id="btn-cerrar-modal-envio" class="cerrar-modal-envio" aria-label="Cerrar modal">×</button>
+      <div class="modal-envio-header">
+        <h3>Completa tus datos</h3>
+        <p>Finalizá tu compra ingresando la información de envío</p>
+      </div>
+      <form id="form-envio" class="form-envio">
+        <div class="form-grupo">
+          <label for="input-nombre">Nombre*</label>
+          <input type="text" id="input-nombre" placeholder="Ej: María" required>
+        </div>
+        <div class="form-grupo">
+          <label for="input-apellido">Apellido*</label>
+          <input type="text" id="input-apellido" placeholder="Ej: González" required>
+        </div>
+        <div class="form-grupo">
+          <label for="input-telefono">Teléfono*</label>
+          <input type="tel" id="input-telefono" placeholder="Ej: 099123456" required>
+        </div>
+        <div class="form-grupo" id="grupo-direccion">
+          <label for="input-direccion">Dirección*</label>
+          <input type="text" id="input-direccion" placeholder="Ej: Av. 18 de Julio 1234" required>
+          <small class="ayuda-texto">Solo si seleccionás envío</small>
+        </div>
+        <div class="form-grupo">
+          <label for="select-envio">Método de envío*</label>
+          <select id="select-envio" required>
+            <option value="">Seleccionar método</option>
+            <option value="retiro">Retiro en local (Gratis)</option>
+            <option value="montevideo">Envío Montevideo ($150)</option>
+            <option value="interior">Envío Interior ($300)</option>
+          </select>
+        </div>
+        <div class="form-notas">
+          <label for="input-notas">Notas adicionales</label>
+          <textarea id="input-notas" placeholder="Detalles especiales, horarios preferidos, etc." rows="3"></textarea>
+        </div>
+        <div class="resumen-pedido">
+          <h4>Resumen de tu pedido</h4>
+          <div id="resumen-productos"></div>
+          <div class="resumen-total">
+            <span>Total:</span>
+            <span id="resumen-total">$U 0</span>
+          </div>
+        </div>
+        <button type="submit" class="boton-confirmar-envio">
+          <i class="fab fa-whatsapp"></i> Enviar pedido por WhatsApp
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div id="stock-modal" class="modal-stock" hidden>
+  <div class="modal-stock-content" role="dialog" aria-modal="true" aria-labelledby="stock-modal-title">
+    <button class="modal-stock-close" aria-label="Cerrar aviso">&times;</button>
+    <h2 id="stock-modal-title" class="modal-stock-title">¿Te avisamos cuando haya stock?</h2>
+    <form id="stock-form" autocomplete="on">
+      <input type="email" id="stock-email" name="stock-email" class="modal-stock-input" placeholder="Tu email" required>
+      <button type="submit" class="modal-stock-confirm">Confirmar</button>
+    </form>
+    <div id="stock-modal-feedback" class="modal-stock-feedback" hidden></div>
+  </div>
+</div>
+
+   <footer class="footer">
+  <div class="footer-container">
+    <div class="footer-brand">
+      <img src="img/patofeltinglogo.jpg" alt="Patofelting logo" class="footer-logo" />
+      <h2>Patofelting</h2>
+      <p>Artesanía con amor desde Uruguay</p>
+    </div>
+    <nav class="footer-nav">
+      <a href="index.html#productos">Productos</a>
+      <a href="comocomprar.html">¿Cómo comprar?</a>
+      <a href="index.html#preguntas">Preguntas frecuentes</a>
+      <a href="https://instagram.com/patofelting" target="_blank" rel="noopener" aria-label="Instagram">
+  <img src="img/instagram.png" alt="Instagram" class="icono-instagram" />
+  <span>Instagram</span>
+</a>
+      <a href="mailto:patofelting@gmail.com" class="footer-mail" aria-label="Correo electrónico">
+  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none">
+    <rect x="2" y="5" width="20" height="14" rx="3" fill="#388e3c"/>
+    <polyline points="4,7 12,13 20,7" stroke="#fff" stroke-width="2" fill="none"/>
+  </svg>
+  <span>Correo</span>
+</a>
+    </nav>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2025 Patofelting. Hecho con ♥ en Uruguay.</p>
+  </div>
+</footer>
+
+
+
+  <script src="Untitled-1.js" defer type="module"></script>
 </body>
 </html>
