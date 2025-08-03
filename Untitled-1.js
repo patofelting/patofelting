@@ -752,7 +752,7 @@ function setupContactForm() {
 
   if (!form) return;
 
-  emailjs.init('o4IxJz0Zz-LQ8jYKG');
+
 
   form.addEventListener('submit', function (event) {
     event.preventDefault();
