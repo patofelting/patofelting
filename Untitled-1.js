@@ -871,22 +871,17 @@ const minPrice = document.getElementById('min-price');
 const maxPrice = document.getElementById('max-price');
 const rangeBar = document.querySelector('.range');
 
+// ========== FILTRO DE PRECIO ==========
 function actualizarRangoPrecio() {
   const min = parseInt(elementos.minSlider.value, 10);
   const max = parseInt(elementos.maxSlider.value, 10);
-
-  // Prevenir errores visuales si se cruzan
-  if (min > max) {
-    elementos.minSlider.value = max;
-    elementos.maxSlider.value = min;
-  }
 
   // Actualizar texto de precios
   document.getElementById('min-price').textContent = `$U${min}`;
   document.getElementById('max-price').textContent = `$U${max}`;
 
   // Actualizar posición de las burbujas
-  const rango = 3000;
+  const rango = 3000; // Máximo valor del slider
   const minPercent = (min / rango) * 100;
   const maxPercent = (max / rango) * 100;
 
@@ -899,29 +894,30 @@ function actualizarRangoPrecio() {
   thumbMax.style.left = `${maxPercent}%`;
   thumbMax.textContent = `$U${max}`;
 
-  // Opcional: actualizar filtro
+  // Actualizar la barra de rango verde
+  const range = document.querySelector('.range');
+  range.style.left = `${minPercent}%`;
+  range.style.width = `${maxPercent - minPercent}%`;
+
+  // Actualizar filtros
   filtrosActuales.precioMin = min;
   filtrosActuales.precioMax = max;
-  renderizarProductos();
+  aplicarFiltros();
 }
 
-// Vincular los sliders a la función
+// Inicializar eventos de los sliders
 elementos.minSlider?.addEventListener('input', actualizarRangoPrecio);
 elementos.maxSlider?.addEventListener('input', actualizarRangoPrecio);
 
-
-// Mostrar burbuja solo al mover
-[minSlider, maxSlider].forEach((slider, i) => {
-  const label = i === 0 ? thumbMin : thumbMax;
-  slider.addEventListener('input', () => {
-    updateRange();
-    label.classList.add('visible');
-  });
+// Mostrar burbujas solo al mover
+[minSlider, maxSlider].forEach((slider) => {
+  const label = slider.id === 'min-slider' ? thumbMin : thumbMax;
+  
   slider.addEventListener('mousedown', () => label.classList.add('visible'));
   slider.addEventListener('touchstart', () => label.classList.add('visible'));
   slider.addEventListener('mouseup', () => label.classList.remove('visible'));
   slider.addEventListener('touchend', () => label.classList.remove('visible'));
 });
 
-// Inicializa
-updateRange();
+// Inicializar valores
+actualizarRangoPrecio();
