@@ -746,6 +746,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
+// Función para configurar el formulario de contacto
 function setupContactForm() {
   const form = document.getElementById('formulario-contacto');
   const successMessage = document.getElementById('successMessage');
@@ -753,52 +754,60 @@ function setupContactForm() {
 
   if (!form) return;
 
+  // Inicializar EmailJS (REEMPLAZA CON TU USER ID)
+  emailjs.init('user_TuUserIdDeEmailJS'); // <-- IMPORTANTE: Cambia esto por tu User ID real
+
   form.addEventListener('submit', function(event) {
     event.preventDefault();
 
-    // Mostrar estado de carga (opcional)
+    // Cambiar el texto del botón durante el envío
     const submitButton = form.querySelector('button[type="submit"]');
-    const originalButtonText = submitButton.textContent;
-    submitButton.textContent = 'Enviando...';
     submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
 
-    const nombre = document.getElementById('nombre').value;
-    const email = document.getElementById('email').value;
-    const mensaje = document.getElementById('mensaje').value;
+    // Preparar los datos del formulario
+    const formData = {
+      from_name: document.getElementById('nombre').value,
+      from_email: document.getElementById('email').value,
+      message: document.getElementById('mensaje').value,
+      reply_to: document.getElementById('email').value // Para que las respuestas lleguen al remitente
+    };
 
-    emailjs.send('service_89by24g', 'template_8mn7hdp', {
-      nombre: nombre,
-      email: email,
-      mensaje: mensaje
-    })
-    .then(function() {
-      // Éxito
-      successMessage.classList.remove('hidden');
-      errorMessage.classList.add('hidden');
-      form.reset();
-      
-      // Ocultar mensaje después de 5 segundos
-      setTimeout(() => {
+    // Enviar el formulario a través de EmailJS
+    emailjs.send('service_89by24g', 'template_8mn7hdp', formData)
+      .then(function(response) {
+        // Mostrar mensaje de éxito
+        successMessage.classList.remove('hidden');
+        errorMessage.classList.add('hidden');
+        form.reset();
+        
+        // Restaurar el botón
+        submitButton.disabled = false;
+        submitButton.textContent = 'Enviar';
+        
+        // Ocultar el mensaje después de 5 segundos
+        setTimeout(() => {
+          successMessage.classList.add('hidden');
+        }, 5000);
+      })
+      .catch(function(error) {
+        // Mostrar mensaje de error
+        errorMessage.classList.remove('hidden');
         successMessage.classList.add('hidden');
-      }, 5000);
-    })
-    .catch(function(error) {
-      // Error
-      successMessage.classList.add('hidden');
-      errorMessage.classList.remove('hidden');
-      console.error('Error al enviar el formulario:', error);
-    })
-    .finally(function() {
-      // Restaurar botón
-      submitButton.textContent = originalButtonText;
-      submitButton.disabled = false;
-    });
+        
+        // Restaurar el botón
+        submitButton.disabled = false;
+        submitButton.textContent = 'Enviar';
+        
+        console.error('Error al enviar el formulario:', error);
+      });
   });
-
-  // Inicializar EmailJS con tu User ID
- 
 }
 
+// Inicializar cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+  setupContactForm();
+});
 // Llamar a la función cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
   setupContactForm();
