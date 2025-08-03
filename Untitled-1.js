@@ -863,81 +863,85 @@ btnHamburguesa.addEventListener("click", () => {
   menu.classList.toggle("menu-activo");
 });
 
-const minSlider = document.getElementById('min-slider');
-const maxSlider = document.getElementById('max-slider');
-const thumbMin = document.getElementById('thumb-label-min');
-const thumbMax = document.getElementById('thumb-label-max');
-const minPrice = document.getElementById('min-price');
-const maxPrice = document.getElementById('max-price');
-const rangeBar = document.querySelector('.range');
+// ========== CONFIGURACIÓN DEL FILTRO DE PRECIO ==========
+document.addEventListener('DOMContentLoaded', function() {
+  // Selección de elementos del DOM
+  const elementos = {
+    minSlider: document.getElementById('min-slider'),
+    maxSlider: document.getElementById('max-slider'),
+    thumbMin: document.getElementById('thumb-label-min'),
+    thumbMax: document.getElementById('thumb-label-max'),
+    minPrice: document.getElementById('min-price'),
+    maxPrice: document.getElementById('max-price'),
+    range: document.querySelector('.range')
+  };
 
-// ========== FILTRO DE PRECIO ==========
-function actualizarRangoPrecio() {
-  const min = parseInt(elementos.minSlider.value, 10);
-  const max = parseInt(elementos.maxSlider.value, 10);
+  // Verificar que todos los elementos existen
+  if (!elementos.minSlider || !elementos.maxSlider) return;
 
-  // Prevenir que el mínimo sea mayor que el máximo
-  if (min > max) {
-    elementos.minSlider.value = max;
-    elementos.maxSlider.value = min;
-    return actualizarRangoPrecio(); // Vuelve a calcular con valores corregidos
+  // Función para actualizar el rango de precios
+  function actualizarRangoPrecio() {
+    const min = parseInt(elementos.minSlider.value);
+    const max = parseInt(elementos.maxSlider.value);
+
+    // Prevenir que el mínimo sea mayor que el máximo
+    if (min > max) {
+      elementos.minSlider.value = max;
+      elementos.maxSlider.value = min;
+      return actualizarRangoPrecio(); // Vuelve a calcular con valores corregidos
+    }
+
+    // Actualizar texto de precios
+    elementos.minPrice.textContent = `$U${min}`;
+    elementos.maxPrice.textContent = `$U${max}`;
+
+    // Calcular porcentajes para posicionamiento
+    const rangoTotal = 3000; // Valor máximo del slider
+    const minPercent = (min / rangoTotal) * 100;
+    const maxPercent = (max / rangoTotal) * 100;
+
+    // Actualizar posición de las burbujas
+    elementos.thumbMin.style.left = `${minPercent}%`;
+    elementos.thumbMin.textContent = `$U${min}`;
+
+    elementos.thumbMax.style.left = `${maxPercent}%`;
+    elementos.thumbMax.textContent = `$U${max}`;
+
+    // Actualizar la barra de rango verde
+    elementos.range.style.left = `${minPercent}%`;
+    elementos.range.style.width = `${maxPercent - minPercent}%`;
+
+    // Aquí puedes agregar la lógica para filtrar productos si es necesario
+    // filtrosActuales.precioMin = min;
+    // filtrosActuales.precioMax = max;
+    // aplicarFiltros();
   }
 
-  // Actualizar texto de precios
-  elementos.minPrice.textContent = `$U${min}`;
-  elementos.maxPrice.textContent = `$U${max}`;
+  // Función para manejar la visibilidad de las burbujas
+  function manejarVisibilidadBurbujas(slider, mostrar) {
+    const label = slider.id === 'min-slider' ? elementos.thumbMin : elementos.thumbMax;
+    if (mostrar) {
+      label.classList.add('visible');
+    } else {
+      setTimeout(() => label.classList.remove('visible'), 300);
+    }
+  }
 
-  // Actualizar posición de las burbujas
-  const rango = 3000; // Máximo valor del slider
-  const minPercent = (min / rango) * 100;
-  const maxPercent = (max / rango) * 100;
+  // Eventos para los sliders
+  [elementos.minSlider, elementos.maxSlider].forEach(slider => {
+    // Actualizar al mover el slider
+    slider.addEventListener('input', function() {
+      actualizarRangoPrecio();
+      manejarVisibilidadBurbujas(slider, true);
+    });
 
-  elementos.thumbMin.style.left = `${minPercent}%`;
-  elementos.thumbMin.textContent = `$U${min}`;
-  elementos.thumbMin.classList.add('visible');
-
-  elementos.thumbMax.style.left = `${maxPercent}%`;
-  elementos.thumbMax.textContent = `$U${max}`;
-  elementos.thumbMax.classList.add('visible');
-
-  // Actualizar la barra de rango verde
-  elementos.range.style.left = `${minPercent}%`;
-  elementos.range.style.width = `${maxPercent - minPercent}%`;
-
-  // Actualizar filtros
-  filtrosActuales.precioMin = min;
-  filtrosActuales.precioMax = max;
-  aplicarFiltros();
-}
-
-// Inicializar elementos (debería estar al principio de tu código)
-elementos.minSlider = document.getElementById('min-slider');
-elementos.maxSlider = document.getElementById('max-slider');
-elementos.thumbMin = document.getElementById('thumb-label-min');
-elementos.thumbMax = document.getElementById('thumb-label-max');
-elementos.minPrice = document.getElementById('min-price');
-elementos.maxPrice = document.getElementById('max-price');
-elementos.range = document.querySelector('.range');
-
-// Inicializar eventos de los sliders
-elementos.minSlider?.addEventListener('input', actualizarRangoPrecio);
-elementos.maxSlider?.addEventListener('input', actualizarRangoPrecio);
-
-// Mostrar burbujas solo al mover
-[elementos.minSlider, elementos.maxSlider].forEach((slider) => {
-  if (!slider) return;
-  
-  const label = slider.id === 'min-slider' ? elementos.thumbMin : elementos.thumbMax;
-  
-  slider.addEventListener('mousedown', () => label.classList.add('visible'));
-  slider.addEventListener('touchstart', () => label.classList.add('visible'));
-  slider.addEventListener('mouseup', () => {
-    setTimeout(() => label.classList.remove('visible'), 300);
+    // Mostrar/ocultar burbujas
+    slider.addEventListener('mousedown', () => manejarVisibilidadBurbujas(slider, true));
+    slider.addEventListener('touchstart', () => manejarVisibilidadBurbujas(slider, true));
+    slider.addEventListener('mouseup', () => manejarVisibilidadBurbujas(slider, false));
+    slider.addEventListener('touchend', () => manejarVisibilidadBurbujas(slider, false));
   });
-  slider.addEventListener('touchend', () => {
-    setTimeout(() => label.classList.remove('visible'), 300);
-  });
+
+  // Inicializar valores
+  actualizarRangoPrecio();
 });
-
-// Inicializar valores
-actualizarRangoPrecio();
