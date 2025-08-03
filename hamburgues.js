@@ -1,4 +1,3 @@
-// Función principal para inicializar el menú hamburguesa// Función principal para inicializar el menú hamburguesa
 function initMobileMenu() {
   const hamburguesa = document.getElementById('hamburguesa-btn');
   const menu = document.getElementById('menu');
@@ -44,7 +43,4 @@ function initMobileMenu() {
 }
 
 // Inicialización cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', initMobileMenu);
-
-
 document.addEventListener('DOMContentLoaded', initMobileMenu);
