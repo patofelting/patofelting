@@ -57,10 +57,10 @@ class BlogManager {
           categoria: fila.categoria || 'general'
         }))
         .sort((a, b) => {
-          // Ordenar por fecha descendente (más reciente primero)
+          // Ordenar por fecha ascendente (más viejo primero)
           const dateA = new Date(a.fechaRaw);
           const dateB = new Date(b.fechaRaw);
-          return dateB - dateA;
+          return dateA - dateB;
         });
 
       console.log('✅ Entradas cargadas:', this.entradas.length);
@@ -176,7 +176,7 @@ class BlogManager {
   }
 
   renderEntradaBlog(entrada, index) {
-    const esDestacada = index === 0; // La primera entrada (más nueva) es destacada
+    const esDestacada = index === this.entradas.length - 1; // La más nueva es destacada (última)
     
     return `
       <article class="blog-entry ${esDestacada ? 'featured' : ''}" data-entry-id="${entrada.id}">
@@ -215,23 +215,27 @@ class BlogManager {
       .join('');
   }
 
-  // Renderizar contenido multimedia
+  // Renderizar contenido multimedia (soporta varias imágenes separadas por coma)
   renderMediaContent(entrada) {
     let mediaHTML = '';
     
     if (entrada.imagenPrincipal || entrada.videoURL) {
       mediaHTML += '<div class="media-gallery">';
       
+      // Soporta múltiples imágenes separadas por coma
       if (entrada.imagenPrincipal) {
-        mediaHTML += `
-          <div class="photo-polaroid">
-            <img src="${entrada.imagenPrincipal}" 
-                 alt="${entrada.titulo}" 
-                 class="entrada-imagen"
-                 loading="lazy">
-            <div class="polaroid-caption">Momento especial de Patofelting ✨</div>
-          </div>
-        `;
+        const imagenes = entrada.imagenPrincipal.split(',').map(url => url.trim()).filter(url => url !== "");
+        imagenes.forEach(url => {
+          mediaHTML += `
+            <div class="photo-polaroid">
+              <img src="${url}" 
+                   alt="${entrada.titulo}" 
+                   class="entrada-imagen"
+                   loading="lazy">
+              <div class="polaroid-caption">Momento especial de Patofelting ✨</div>
+            </div>
+          `;
+        });
       }
       
       if (entrada.videoURL) {
