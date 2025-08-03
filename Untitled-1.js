@@ -468,6 +468,35 @@ btnCerrarModalEnvio?.addEventListener('click', () => {
   setTimeout(() => { modalDatosEnvio?.setAttribute('hidden', true); }, 300);
 });
 
+// ========== FUNCIONES DE DEBUG PARA WHATSAPP ==========
+window.testWhatsApp = function() {
+  const numeroTest = '59893566283';
+  const mensajeTest = 'Hola! Esta es una prueba desde tu sitio web.';
+  const urlTest = `https://wa.me/${numeroTest}?text=${encodeURIComponent(mensajeTest)}`;
+  
+  console.log('=== PRUEBA WHATSAPP ===');
+  console.log('Número:', numeroTest);
+  console.log('Mensaje:', mensajeTest);
+  console.log('URL completa:', urlTest);
+  
+  // Probar ambos métodos
+  console.log('Intentando con window.location.href...');
+  window.location.href = urlTest;
+};
+
+window.debugUltimoMensaje = function() {
+  const ultimoMensaje = sessionStorage.getItem('ultimoPedidoWhatsApp');
+  console.log('=== ÚLTIMO MENSAJE GUARDADO ===');
+  console.log('Mensaje:', ultimoMensaje);
+  console.log('Longitud:', ultimoMensaje ? ultimoMensaje.length : 'No hay mensaje');
+  
+  if (ultimoMensaje) {
+    const urlDebug = `https://wa.me/59893566283?text=${encodeURIComponent(ultimoMensaje)}`;
+    console.log('URL que se generó:', urlDebug);
+    console.log('Longitud URL:', urlDebug.length);
+  }
+};
+
 // ========== ENVIAR PEDIDO POR WHATSAPP Y ACTUALIZAR STOCK EN TIEMPO REAL ==========
 formEnvio?.addEventListener('submit', async function(e) {
   e.preventDefault();
@@ -526,17 +555,43 @@ formEnvio?.addEventListener('submit', async function(e) {
   sessionStorage.setItem('ultimoPedidoWhatsApp', mensaje);
 
   console.log('Mensaje a enviar:', mensaje); // Debug
+  console.log('Longitud del mensaje:', mensaje.length); // Debug
+
+  // Verificar longitud del mensaje (WhatsApp tiene límite de ~2000 caracteres)
+  if (mensaje.length > 1500) {
+    // Crear versión reducida del mensaje
+    mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n`;
+    mensaje += `*📋 ${carrito.length} productos*\n`;
+    carrito.forEach(item => {
+      mensaje += `➤ ${item.nombre} x${item.cantidad}\n`;
+    });
+    mensaje += `\n*TOTAL: $U ${total.toLocaleString('es-UY')}*\n\n`;
+    mensaje += `*👤 Cliente:* ${nombre} ${apellido}\n`;
+    mensaje += `*📞 Tel:* ${telefono}\n`;
+    mensaje += `*🚚 Envío:* ${textoEnvio}\n`;
+    if (envio !== 'retiro') mensaje += `*📍 Dir:* ${direccion}\n`;
+    if (notas) mensaje += `*📝 Notas:* ${notas}`;
+  }
 
   // PRIMERO: Abre WhatsApp
   const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
   console.log('URL de WhatsApp:', urlWhatsApp); // Debug
+  console.log('Longitud final del mensaje:', mensaje.length); // Debug
   
-  const nuevaPestaña = window.open(urlWhatsApp, '_blank');
-  if (!nuevaPestaña) {
-    mostrarNotificacion('Por favor, permite las ventanas emergentes para enviar el pedido por WhatsApp.', 'error');
-    return;
-  } else {
-    mostrarNotificacion('Pedido enviado a WhatsApp correctamente', 'exito');
+  // Intentar abrir directamente primero
+  try {
+    window.location.href = urlWhatsApp;
+    mostrarNotificacion('Redirigiendo a WhatsApp...', 'exito');
+  } catch (error) {
+    console.warn('Error con location.href, intentando window.open:', error);
+    // Fallback con window.open
+    const nuevaPestaña = window.open(urlWhatsApp, '_blank');
+    if (!nuevaPestaña) {
+      mostrarNotificacion('Por favor, permite las ventanas emergentes para enviar el pedido por WhatsApp.', 'error');
+      return;
+    } else {
+      mostrarNotificacion('Pedido enviado a WhatsApp correctamente', 'exito');
+    }
   }
 
   // SEGUNDO: Intentar actualizar stock (opcional, no bloquea el flujo)
