@@ -171,21 +171,25 @@
           <span id="min-price">$U0</span>
           <span id="max-price">$U3000</span>
         </div>
+<div class="range-slider">
+  <!-- Texto del rango -->
+  <div class="range-values">
+    <span id="min-price">$U0</span> - <span id="max-price">$U3000</span>
+  </div>
 
-        <div class="range-slider slider-container">
-          <!-- BURBUJAS FLOTANTES -->
-          <div id="thumb-label-min" class="thumb-label">$U0</div>
-          <div id="thumb-label-max" class="thumb-label">$U3000</div>
+  <!-- Sliders -->
+  <input type="range" id="min-slider" class="slider" min="0" max="3000" step="10" value="0">
+  <input type="range" id="max-slider" class="slider" min="0" max="3000" step="10" value="3000">
 
-          <!-- SLIDERS -->
-          <input type="range" id="min-slider" min="0" max="3000" value="0" class="slider">
-          <input type="range" id="max-slider" min="0" max="3000" value="3000" class="slider">
+  <!-- Track visual -->
+  <div class="track"></div>
+  <div class="range"></div>
 
-          <!-- TRACK VISUAL -->
-          <div class="track"></div>
-          <div class="range"></div>
-        </div>
-      </div>
+  <!-- Burbujas (thumbs) -->
+  <span class="thumb-label" id="thumb-label-min">$U0</span>
+  <span class="thumb-label" id="thumb-label-max">$U3000</span>
+</div>
+
 
       <!-- BÚSQUEDA -->
       <div class="filtro-busqueda">
