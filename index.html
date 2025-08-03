@@ -164,36 +164,51 @@
         </select>
       </div>
 
-      <!-- RANGO DE PRECIO -->
+      <!-- RANGO DE PRECIO MEJORADO -->
       <div class="price-filter">
-        <div class="price-header range-values">
+        <div class="price-header">
           <span id="min-price">$U0</span>
           <span id="max-price">$U3000</span>
         </div>
         <div class="range-slider">
-          <input type="range" id="min-slider" class="slider" min="0" max="3000" step="10" value="0">
-          <input type="range" id="max-slider" class="slider" min="0" max="3000" step="10" value="3000">
           <div class="track"></div>
           <div class="range"></div>
-          <span class="thumb-label" id="thumb-label-min">$U0</span>
-          <span class="thumb-label" id="thumb-label-max">$U3000</span>
+          <input type="range" 
+                 id="min-slider" 
+                 min="0" 
+                 max="3000" 
+                 step="10" 
+                 value="0"
+                 aria-label="Precio mínimo">
+          <input type="range" 
+                 id="max-slider" 
+                 min="0" 
+                 max="3000" 
+                 step="10" 
+                 value="3000"
+                 aria-label="Precio máximo">
+          <span class="thumb-label" id="thumb-label-min" aria-hidden="true">$U0</span>
+          <span class="thumb-label" id="thumb-label-max" aria-hidden="true">$U3000</span>
         </div>
       </div>
 
       <!-- BÚSQUEDA -->
       <div class="filtro-busqueda">
-        <input type="text" class="input-busqueda" placeholder="Buscar por nombre o descripción...">
+        <input type="text" 
+               class="input-busqueda" 
+               placeholder="Buscar por nombre o descripción..."
+               aria-label="Buscar productos">
       </div>
     </div>
 
     <div id="galeria-productos" class="galeria-productos"></div>
     <div id="product-loader" class="loader" hidden aria-live="polite">
-      <svg class="spinner" viewBox="0 0 50 50">
+      <svg class="spinner" viewBox="0 0 50 50" aria-hidden="true">
         <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"/>
       </svg>
       <p>Cargando productos...</p>
     </div>
-    <div id="paginacion" class="paginacion"></div>
+    <div id="paginacion" class="paginacion" aria-live="polite"></div>
   </div>
 </section>
 
