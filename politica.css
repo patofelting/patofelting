@@ -69,62 +69,123 @@ button {
 
 /* Navigation */
 .nav {
-  background-color: var(--background-color);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  position: fixed;
-  width: 100%;
-  top: 0;
-  z-index: 1000;
-}
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
+      background: var(--blur-bg);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
 
-.nav-container {
+ .nav-container {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 20px;
+  padding: 10px 16px;
+  gap: 12px;
 }
 
-.logo-container {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
 
-.logo-img {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  object-fit: cover;
-}
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-.logo-text {
-  font-size: 1.5rem;
-  font-weight: var(--font-weight-bold);
-  color: var(--primary-color);
-}
+    .logo-img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+    }
 
-.hamburguesa {
-  font-size: 1.5rem;
-  display: none;
-  background: none;
-  color: var(--text-color);
-}
+    .logo-text {
+      font-weight: bold;
+      font-size: 1.2rem;
+      color: var(--primary-color);
+    }
 
-.menu {
-  display: flex;
-  list-style: none;
-  gap: 20px;
-}
+    .menu {
+      display: flex;
+      gap: 2rem;
+    }
 
-.menu li a {
-  padding: 5px 10px;
-  transition: var(--transition);
-  font-weight: var(--font-weight-normal);
-}
+    .menu li {
+      list-style: none;
+    }
 
-.menu li a:hover {
-  color: var(--primary-color);
-}
+    .menu li a {
+      text-decoration: none;
+      color: var(--text-color);
+      font-weight: 500;
+      transition: var(--transition);
+    }
+
+    .menu li a:hover {
+      color: var(--primary-color);
+    }
+
+    .hamburguesa {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      width: 40px;
+      height: 40px;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    .hamburguesa span {
+      display: block;
+      width: 24px;
+      height: 2px;
+      background-color: var(--text-color);
+      border-radius: 1px;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    .hamburguesa.activo span:nth-child(1) {
+      transform: rotate(45deg) translate(4px, 4px);
+    }
+
+    .hamburguesa.activo span:nth-child(2) {
+      opacity: 0;
+    }
+
+    .hamburguesa.activo span:nth-child(3) {
+      transform: rotate(-45deg) translate(4px, -4px);
+    }
+
+    @media (max-width: 768px) {
+      .menu {
+        display: none;
+        flex-direction: column;
+        background: var(--blur-bg);
+        position: absolute;
+        top: 60px;
+        right: 20px;
+        padding: 1rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      }
+
+      .menu.menu-activo {
+        display: flex;
+        animation: fadeIn 0.3s ease forwards;
+      }
+
+      .hamburguesa {
+        display: flex;
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
 /* Estilos específicos para la página de política */
 body.policy-page {
