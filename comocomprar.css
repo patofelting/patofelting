@@ -106,87 +106,53 @@ button {
     }
 
     .menu {
-      display: flex;
-      gap: 2rem;
-    }
+  display: flex;
+  gap: 2rem;
+}
 
-    .menu li {
-      list-style: none;
-    }
+@media (max-width: 768px) {
+  .menu {
+    display: none;
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    width: 280px;
+    background: white;
+    flex-direction: column;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.15);
+    z-index: 1000;
+  }
+  .menu.menu-activo {
+    display: flex !important;
+    animation: fadeIn 0.4s ease-out;
+  }
+  .hamburguesa {
+    display: flex !important;
+    z-index: 1001;
+  }
+  .menu li {
+    margin: 12px 0;
+  }
+  .menu li a {
+    padding: 10px 15px;
+    display: block;
+    border-radius: 6px;
+    transition: all 0.3s;
+  }
+  .menu li a:hover {
+    background: #f5f5f5;
+  }
+  body.menu-abierto {
+    overflow: hidden;
+  }
+}
 
-    .menu li a {
-      text-decoration: none;
-      color: var(--text-color);
-      font-weight: 500;
-      transition: var(--transition);
-    }
-
-    .menu li a:hover {
-      color: var(--primary-color);
-    }
-
-    .hamburguesa {
-      display: none;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      gap: 6px;
-      width: 40px;
-      height: 40px;
-      background: none;
-      border: none;
-      cursor: pointer;
-    }
-
-    .hamburguesa span {
-      display: block;
-      width: 24px;
-      height: 2px;
-      background-color: var(--text-color);
-      border-radius: 1px;
-      transition: transform 0.3s ease, opacity 0.3s ease;
-    }
-
-    .hamburguesa.activo span:nth-child(1) {
-      transform: rotate(45deg) translate(4px, 4px);
-    }
-
-    .hamburguesa.activo span:nth-child(2) {
-      opacity: 0;
-    }
-
-    .hamburguesa.activo span:nth-child(3) {
-      transform: rotate(-45deg) translate(4px, -4px);
-    }
-
-    @media (max-width: 768px) {
-      .menu {
-        display: none;
-        flex-direction: column;
-        background: var(--blur-bg);
-        position: absolute;
-        top: 60px;
-        right: 20px;
-        padding: 1rem;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-      }
-
-      .menu.menu-activo {
-        display: flex;
-        animation: fadeIn 0.3s ease forwards;
-      }
-
-      .hamburguesa {
-        display: flex;
-      }
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 /* Estilos específicos para la página de política */
 body.policy-page {
   padding-top: 80px;
