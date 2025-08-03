@@ -334,13 +334,12 @@ function mostrarModalProducto(prod) {
         </p>
         
         <!-- Campos adicionales -->
-        <div class="modal-especificaciones">
-          ${prod.alto ? `<p><strong>Alto:</strong> ${prod.alto} cm</p>` : ''}
-          ${prod.ancho ? `<p><strong>Ancho:</strong> ${prod.ancho} cm</p>` : ''}
-          ${prod.profundidad ? `<p><strong>Profundidad:</strong> ${prod.profundidad} cm</p>` : ''}
-          ${prod.categoria ? `<p><strong>Categoría:</strong> ${prod.categoria.charAt(0).toUpperCase() + prod.categoria.slice(1)}</p>` : ''}
-          ${prod.detalles ? `<p><strong>Detalles:</strong> ${prod.detalles}</p>` : ''}
-        </div>
+   <div class="modal-especificaciones">
+  ${prod.alto ? `<p><strong>Alto:</strong> ${parseFloat(prod.alto).toFixed(1)} cm</p>` : ''}
+  ${prod.ancho ? `<p><strong>Ancho:</strong> ${parseFloat(prod.ancho).toFixed(1)} cm</p>` : ''}
+  ${prod.profundidad ? `<p><strong>Profundidad:</strong> ${parseFloat(prod.profundidad).toFixed(1)} cm</p>` : ''}
+  ${prod.categoria ? `<p><strong>Categoría:</strong> ${prod.categoria.charAt(0).toUpperCase() + prod.categoria.slice(1)}</p>` : ''}
+</div>
         
         <div class="modal-descripcion">${prod.descripcion || ''}</div>
         
