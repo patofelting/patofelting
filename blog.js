@@ -223,8 +223,11 @@ class BlogManager {
       mediaHTML += '<div class="media-gallery">';
       
       // Soporta múltiples imágenes separadas por coma
-      if (entrada.imagenPrincipal) {
-        const imagenes = entrada.imagenPrincipal.split(',').map(url => url.trim()).filter(url => url !== "");
+     if (entrada.imagenPrincipal) {
+  const imagenes = entrada.imagenPrincipal
+    .split(/[\n,]+/) // separa por coma o salto de línea
+    .map(url => url.trim()) // elimina espacios
+    .filter(url => url.length > 0); // ignora vacíos
         imagenes.forEach(url => {
           mediaHTML += `
             <div class="photo-polaroid">
