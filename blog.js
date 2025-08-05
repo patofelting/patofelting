@@ -819,46 +819,124 @@ function hacerPostitsArrastrables() {
 }
 
 
-function activarCambioDeColorEnPostits() {
+// Función para convertir RGB a hexadecimal
+function rgbToHex(rgb) {
+  if (!rgb) return null;
+  const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+  if (!match) return rgb; // Si no es RGB, devolver el valor original
+  const r = parseInt(match[1]).toString(16).padStart(2, '0');
+  const g = parseInt(match[2]).toString(16).padStart(2, '0');
+  const b = parseInt(match[3]).toString(16).padStart(2, '0');
+  return `#${r}${g}${b}`;
+}
+
+function inicializarPostits() {
   const colores = ['#fff89a', '#ffdab9', '#c8f7dc', '#add8e6', '#ffc0cb'];
 
   document.querySelectorAll('.postit').forEach((postit, index) => {
     const id = `postit-${index}`;
+    let isDragging = false;
+    let startX = 0, startY = 0;
+    let currentX = 0, currentY = 0;
+    let lastTap = 0;
 
-    // Restaurar color si está guardado
+    // Restaurar posición guardada
+    const saved = JSON.parse(localStorage.getItem(id));
+    if (saved) {
+      currentX = saved.x;
+      currentY = saved.y;
+      postit.style.transform = `translate(${currentX}px, ${currentY}px)`;
+    }
+
+    // Restaurar color guardado
     const colorGuardado = localStorage.getItem(`${id}-color`);
     if (colorGuardado) {
       postit.style.backgroundColor = colorGuardado;
     }
 
-    // Doble clic para escritorio
-    postit.addEventListener('dblclick', () => {
-      const colorActual = rgbToHex(postit.style.backgroundColor);
+    // Función para cambiar color
+    const cambiarColor = () => {
+      const colorActual = rgbToHex(postit.style.backgroundColor) || colores[0];
       const actualIndex = colores.findIndex(c => c.toLowerCase() === colorActual.toLowerCase());
       const siguienteColor = colores[(actualIndex + 1) % colores.length];
-
       postit.style.backgroundColor = siguienteColor;
       localStorage.setItem(`${id}-color`, siguienteColor);
+      console.log(`Postit ${id} cambió a color ${siguienteColor}`);
+    };
+
+    // Arrastrar: Mouse
+    postit.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      isDragging = true;
+      startX = e.clientX - currentX;
+      startY = e.clientY - currentY;
+      postit.style.cursor = 'grabbing';
     });
 
-    // Doble toque para dispositivos táctiles
-    let lastTap = 0;
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      currentX = e.clientX - startX;
+      currentY = e.clientY - startY;
+      postit.style.transform = `translate(${currentX}px, ${currentY}px)`;
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!isDragging) return;
+      isDragging = false;
+      postit.style.cursor = 'grab';
+      localStorage.setItem(id, JSON.stringify({ x: currentX, y: currentY }));
+    });
+
+    // Doble clic para cambio de color
+    postit.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      cambiarColor();
+    });
+
+    // Arrastrar y doble toque: Touch
     postit.addEventListener('touchstart', (e) => {
+      const touch = e.touches[0];
       const currentTime = new Date().getTime();
       const tapLength = currentTime - lastTap;
-      if (tapLength < 300 && tapLength > 0) { // 300ms para considerar un doble toque
-        e.preventDefault(); // Evitar comportamiento predeterminado
-        const colorActual = rgbToHex(postit.style.backgroundColor);
-        const actualIndex = colores.findIndex(c => c.toLowerCase() === colorActual.toLowerCase());
-        const siguienteColor = colores[(actualIndex + 1) % colores.length];
 
-        postit.style.backgroundColor = siguienteColor;
-        localStorage.setItem(`${id}-color`, siguienteColor);
+      // Detectar doble toque
+      if (tapLength < 300 && tapLength > 0) {
+        e.preventDefault();
+        cambiarColor();
+      } else {
+        // Iniciar arrastre
+        e.preventDefault();
+        isDragging = true;
+        startX = touch.clientX - currentX;
+        startY = touch.clientY - currentY;
+        postit.style.cursor = 'grabbing';
       }
       lastTap = currentTime;
     }, { passive: false });
+
+    document.addEventListener('touchmove', (e) => {
+      if (!isDragging) return;
+      const touch = e.touches[0];
+      currentX = touch.clientX - startX;
+      currentY = touch.clientY - startY;
+      postit.style.transform = `translate(${currentX}px, ${currentY}px)`;
+    }, { passive: false });
+
+    document.addEventListener('touchend', () => {
+      if (!isDragging) return;
+      isDragging = false;
+      postit.style.cursor = 'grab';
+      localStorage.setItem(id, JSON.stringify({ x: currentX, y: currentY }));
+    });
   });
 }
+
+// Ejecutar cuando el DOM esté cargado
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM cargado, inicializando post-its...');
+  console.log(`Número de post-its encontrados: ${document.querySelectorAll('.postit').length}`);
+  inicializarPostits();
+});
 setTimeout(() => {
   if (typeof aplicarEfectosPostRenderizado === 'function') {
     aplicarEfectosPostRenderizado();
