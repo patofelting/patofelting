@@ -430,33 +430,74 @@ blockquote {
 .producto-card {
   position: relative;
   overflow: hidden;
-  transition: transform 0.4s ease, box-shadow 0.4s ease, background-color 0.4s ease;
-  background-color: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #ffffff, #f5f5f5);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.5s ease;
+  transform-style: preserve-3d;
 }
 
-/* Halo verde artesanal al pasar cursor */
+/* Halo verde artesanal suave */
 .producto-card::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, rgba(67, 193, 96, 0.1), transparent 70%);
+  background: radial-gradient(circle at center, rgba(118, 192, 67, 0.12), transparent 70%);
   opacity: 0;
-  transition: opacity 0.4s ease;
-  pointer-events: none;
+  transition: opacity 0.4s ease, transform 0.6s ease;
+  filter: blur(6px);
   z-index: 0;
 }
 
 .producto-card:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 20px 40px rgba(67, 193, 96, 0.25);
-  background-color: #f0fff5;
+  transform: translateY(-12px) scale(1.035);
+  box-shadow:
+    0 14px 34px rgba(67, 193, 96, 0.18),
+    0 0 24px rgba(67, 193, 96, 0.08),
+    0 0 0 2px rgba(255, 255, 255, 0.5) inset;
+  background: linear-gradient(145deg, #f0fff4, #eafff0);
 }
 
 .producto-card:hover::before {
   opacity: 1;
+  transform: scale(1.2);
 }
+
+/* Luz ambiental animada (opcional) */
+.producto-card::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.15), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.producto-card:hover::after {
+  opacity: 1;
+  animation: shimmer 2s infinite alternate ease-in-out;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: rotate(0deg) scale(1);
+    opacity: 0.1;
+  }
+  100% {
+    transform: rotate(360deg) scale(1.2);
+    opacity: 0.2;
+  }
+}
+
+
+.producto-card:hover::before {
+  opacity: 1;
+  transform: scale(1.2);
 
 .producto-card * {
   position: relative;
