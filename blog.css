@@ -1140,7 +1140,7 @@ background: rgba (255, 107, 107, 0.08);
   transition: transform 0.2s ease, background-color 0.3s ease, box-shadow 0.3s ease;
   cursor: grab;
   user-select: none;
-  touch-action: manipulation; /* Mejor para gestos táctiles */
+  touch-action: none;
   z-index: 10;
 }
 
