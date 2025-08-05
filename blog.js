@@ -1,6 +1,43 @@
 // ========== CONFIGURACIÓN DEL BLOG CON GOOGLE SHEETS ==========
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
 
+/* 
+ * MEJORAS IMPLEMENTADAS EN EL BLOG (Agosto 2024):
+ * ================================================
+ * 
+ * 1. SOPORTE MULTI-MEDIA:
+ *    - Múltiples imágenes por entrada (separadas por coma en Google Sheets)
+ *    - Videos de YouTube (detección automática y embed responsivo)
+ *    - Videos de Vimeo (detección automática y embed responsivo)
+ *    - Videos directos (MP4, WebM, etc.)
+ *    - Medios mixtos (imágenes + videos en la misma entrada)
+ * 
+ * 2. DETECCIÓN INTELIGENTE DE URLs:
+ *    - Reconoce automáticamente URLs de YouTube (youtube.com, youtu.be)
+ *    - Reconoce URLs de Vimeo (vimeo.com)
+ *    - Extrae IDs de video automáticamente
+ *    - Manejo de errores robusto
+ * 
+ * 3. DISEÑO RESPONSIVO:
+ *    - Embeds de video responsivos (16:9 aspect ratio)
+ *    - Adaptación a dispositivos móviles
+ *    - Mantiene el estilo polaroid para imágenes
+ * 
+ * 4. COMPATIBILIDAD:
+ *    - Mantiene compatibilidad con el campo 'videoURL' existente
+ *    - Mejora el procesamiento del campo 'imagenPrincipal'
+ *    - No rompe entradas existentes
+ * 
+ * INSTRUCCIONES DE USO:
+ * ====================
+ * En Google Sheets, el campo 'imagenPrincipal' ahora acepta:
+ * - Una sola imagen: https://i.imgur.com/ejemplo.jpg
+ * - Múltiples imágenes: https://i.imgur.com/1.jpg, https://i.imgur.com/2.jpg
+ * - Videos de YouTube: https://www.youtube.com/watch?v=VIDEO_ID
+ * - Videos de Vimeo: https://vimeo.com/VIDEO_ID
+ * - Combinaciones: imagen.jpg, https://youtube.com/watch?v=ID, imagen2.jpg
+ */
+
 class BlogManager {
   constructor() {
     this.entradas = [];
@@ -215,48 +252,183 @@ class BlogManager {
       .join('');
   }
 
-  // Renderizar contenido multimedia (soporta varias imágenes separadas por coma)
+  // Renderizar contenido multimedia - Soporta múltiples imágenes, videos de YouTube/Vimeo y medios mixtos
   renderMediaContent(entrada) {
     let mediaHTML = '';
     
     if (entrada.imagenPrincipal || entrada.videoURL) {
       mediaHTML += '<div class="media-gallery">';
       
-      // Soporta múltiples imágenes separadas por coma
-     if (entrada.imagenPrincipal) {
-  const imagenes = entrada.imagenPrincipal
-    .split(/[\n,]+/) // separa por coma o salto de línea
-    .map(url => url.trim()) // elimina espacios
-    .filter(url => url.length > 0); // ignora vacíos
-        imagenes.forEach(url => {
-          mediaHTML += `
-            <div class="photo-polaroid">
-              <img src="${url}" 
-                   alt="${entrada.titulo}" 
-                   class="entrada-imagen"
-                   loading="lazy">
-              <div class="polaroid-caption">Momento especial de Patofelting ✨</div>
-            </div>
-          `;
+      // Procesar campo imagenPrincipal que puede contener imágenes Y videos (YouTube/Vimeo)
+      if (entrada.imagenPrincipal) {
+        const mediaUrls = entrada.imagenPrincipal
+          .split(/[\n,]+/) // separa por coma o salto de línea
+          .map(url => url.trim()) // elimina espacios
+          .filter(url => url.length > 0); // ignora vacíos
+
+        mediaUrls.forEach(url => {
+          if (this.isYouTubeURL(url)) {
+            // Detectar y renderizar video de YouTube
+            mediaHTML += this.renderYouTubeEmbed(url, entrada.titulo);
+          } else if (this.isVimeoURL(url)) {
+            // Detectar y renderizar video de Vimeo
+            mediaHTML += this.renderVimeoEmbed(url, entrada.titulo);
+          } else if (this.isVideoURL(url)) {
+            // Video directo (MP4, etc.)
+            mediaHTML += this.renderDirectVideo(url, entrada.titulo);
+          } else {
+            // Imagen regular
+            mediaHTML += this.renderImage(url, entrada.titulo);
+          }
         });
       }
       
+      // Campo videoURL separado (mantenido por compatibilidad)
       if (entrada.videoURL) {
-        mediaHTML += `
-          <div class="video-container">
-            <video controls class="entrada-video" preload="metadata">
-              <source src="${entrada.videoURL}" type="video/mp4">
-              Tu navegador no soporta video HTML5.
-            </video>
-            <div class="video-caption">Proceso creativo en acción 🎬</div>
-          </div>
-        `;
+        if (this.isYouTubeURL(entrada.videoURL)) {
+          mediaHTML += this.renderYouTubeEmbed(entrada.videoURL, entrada.titulo);
+        } else if (this.isVimeoURL(entrada.videoURL)) {
+          mediaHTML += this.renderVimeoEmbed(entrada.videoURL, entrada.titulo);
+        } else {
+          mediaHTML += this.renderDirectVideo(entrada.videoURL, entrada.titulo);
+        }
       }
       
       mediaHTML += '</div>';
     }
     
     return mediaHTML;
+  }
+
+  // Detectar URLs de YouTube
+  isYouTubeURL(url) {
+    const youtubePatterns = [
+      /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/,
+      /youtube\.com\/watch\?v=/,
+      /youtube\.com\/embed\//,
+      /youtu\.be\//
+    ];
+    return youtubePatterns.some(pattern => pattern.test(url));
+  }
+
+  // Detectar URLs de Vimeo
+  isVimeoURL(url) {
+    const vimeoPatterns = [
+      /^https?:\/\/(www\.)?vimeo\.com/,
+      /vimeo\.com\/\d+/
+    ];
+    return vimeoPatterns.some(pattern => pattern.test(url));
+  }
+
+  // Detectar URLs de video directo
+  isVideoURL(url) {
+    const videoExtensions = /\.(mp4|webm|ogg|mov|avi)$/i;
+    return videoExtensions.test(url) || url.includes('video');
+  }
+
+  // Extraer ID de video de YouTube
+  extractYouTubeId(url) {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/,
+      /youtube\.com\/embed\/([^&\n?#]+)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
+  }
+
+  // Extraer ID de video de Vimeo
+  extractVimeoId(url) {
+    const match = url.match(/vimeo\.com\/(\d+)/);
+    return match ? match[1] : null;
+  }
+
+  // Renderizar embed de YouTube
+  renderYouTubeEmbed(url, titulo) {
+    const videoId = this.extractYouTubeId(url);
+    if (!videoId) return this.renderErrorMedia(url, 'YouTube ID no encontrado');
+
+    return `
+      <div class="video-embed-container">
+        <div class="video-embed-wrapper">
+          <iframe 
+            src="https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&showinfo=0" 
+            title="${titulo} - Video de YouTube"
+            frameborder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+            allowfullscreen
+            loading="lazy">
+          </iframe>
+        </div>
+        <div class="video-caption">📺 ${titulo} - Video de YouTube</div>
+      </div>
+    `;
+  }
+
+  // Renderizar embed de Vimeo
+  renderVimeoEmbed(url, titulo) {
+    const videoId = this.extractVimeoId(url);
+    if (!videoId) return this.renderErrorMedia(url, 'Vimeo ID no encontrado');
+
+    return `
+      <div class="video-embed-container">
+        <div class="video-embed-wrapper">
+          <iframe 
+            src="https://player.vimeo.com/video/${videoId}?title=0&byline=0&portrait=0" 
+            title="${titulo} - Video de Vimeo"
+            frameborder="0" 
+            allow="autoplay; fullscreen; picture-in-picture" 
+            allowfullscreen
+            loading="lazy">
+          </iframe>
+        </div>
+        <div class="video-caption">🎬 ${titulo} - Video de Vimeo</div>
+      </div>
+    `;
+  }
+
+  // Renderizar video directo
+  renderDirectVideo(url, titulo) {
+    return `
+      <div class="video-container">
+        <video controls class="entrada-video" preload="metadata" title="${titulo}">
+          <source src="${url}" type="video/mp4">
+          Tu navegador no soporta video HTML5.
+        </video>
+        <div class="video-caption">🎥 Proceso creativo en acción</div>
+      </div>
+    `;
+  }
+
+  // Renderizar imagen
+  renderImage(url, titulo) {
+    return `
+      <div class="photo-polaroid">
+        <img src="${url}" 
+             alt="${titulo}" 
+             class="entrada-imagen"
+             loading="lazy"
+             onerror="this.closest('.photo-polaroid').style.display='none'">
+        <div class="polaroid-caption">✨ Momento especial de Patofelting</div>
+      </div>
+    `;
+  }
+
+  // Renderizar error de media
+  renderErrorMedia(url, error) {
+    console.warn(`Error procesando media: ${error} - URL: ${url}`);
+    return `
+      <div class="media-error">
+        <div class="error-content">
+          <span class="error-icon">⚠️</span>
+          <p>No se pudo cargar el contenido multimedia</p>
+          <small>${error}</small>
+        </div>
+      </div>
+    `;
   }
 
   // Renderizar call-to-action para la entrada destacada
