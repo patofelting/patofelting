@@ -2,37 +2,41 @@
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
 
 /* 
- * MEJORAS IMPLEMENTADAS EN EL BLOG (Agosto 2024):
+ * MEJORAS IMPLEMENTADAS EN EL BLOG (Diciembre 2024):
  * ================================================
  * 
- * 1. SOPORTE MULTI-MEDIA:
- *    - Múltiples imágenes por entrada (separadas por coma en Google Sheets)
+ * 1. REUBICACIÓN DEL CALL-TO-ACTION:
+ *    - Movido al inicio del blog como sección fija (no dinámica)
+ *    - Aparece solo una vez, justo después del header
+ *    - Ya no se incluye dentro de las entradas dinámicas
+ * 
+ * 2. MEJORAS EN PROCESAMIENTO DE MÚLTIPLES IMÁGENES:
+ *    - Separación mejorada de URLs por coma, punto y coma o salto de línea
+ *    - Validación de formato de URLs antes del procesamiento
+ *    - Limpieza automática de espacios en blanco y parámetros innecesarios
+ *    - Manejo inteligente de URLs de imgur (conversión automática a formato directo)
+ *    - Mejor manejo de errores y URLs malformadas
+ * 
+ * 3. GALERÍA DE IMÁGENES OPTIMIZADA:
+ *    - Inserción de todas las imágenes en contenedor .media-gallery
+ *    - Atributos alt mejorados para accesibilidad
+ *    - Loading="lazy" para optimizar rendimiento
+ *    - IDs únicos para cada imagen para mejor tracking
+ *    - Diseño responsivo mejorado
+ * 
+ * 4. SOPORTE MULTI-MEDIA EXISTENTE MANTENIDO:
  *    - Videos de YouTube (detección automática y embed responsivo)
  *    - Videos de Vimeo (detección automática y embed responsivo)
  *    - Videos directos (MP4, WebM, etc.)
  *    - Medios mixtos (imágenes + videos en la misma entrada)
  * 
- * 2. DETECCIÓN INTELIGENTE DE URLs:
- *    - Reconoce automáticamente URLs de YouTube (youtube.com, youtu.be)
- *    - Reconoce URLs de Vimeo (vimeo.com)
- *    - Extrae IDs de video automáticamente
- *    - Manejo de errores robusto
- * 
- * 3. DISEÑO RESPONSIVO:
- *    - Embeds de video responsivos (16:9 aspect ratio)
- *    - Adaptación a dispositivos móviles
- *    - Mantiene el estilo polaroid para imágenes
- * 
- * 4. COMPATIBILIDAD:
- *    - Mantiene compatibilidad con el campo 'videoURL' existente
- *    - Mejora el procesamiento del campo 'imagenPrincipal'
- *    - No rompe entradas existentes
- * 
- * INSTRUCCIONES DE USO:
- * ====================
- * En Google Sheets, el campo 'imagenPrincipal' ahora acepta:
+ * INSTRUCCIONES DE USO ACTUALIZADAS:
+ * =================================
+ * En Google Sheets, el campo 'imagenPrincipal' acepta:
  * - Una sola imagen: https://i.imgur.com/ejemplo.jpg
  * - Múltiples imágenes: https://i.imgur.com/1.jpg, https://i.imgur.com/2.jpg
+ * - Con espacios: https://i.imgur.com/1.jpg , https://i.imgur.com/2.jpg
+ * - Con saltos de línea o punto y coma como separadores
  * - Videos de YouTube: https://www.youtube.com/watch?v=VIDEO_ID
  * - Videos de Vimeo: https://vimeo.com/VIDEO_ID
  * - Combinaciones: imagen.jpg, https://youtube.com/watch?v=ID, imagen2.jpg
@@ -228,8 +232,6 @@ class BlogManager {
             </div>
             
             ${this.renderMediaContent(entrada)}
-            
-            ${esDestacada ? this.renderCallToAction() : ''}
           </div>
         </div>
       </article>
@@ -252,19 +254,16 @@ class BlogManager {
       .join('');
   }
 
-  // Renderizar contenido multimedia - Soporta múltiples imágenes, videos de YouTube/Vimeo y medios mixtos
+  // Renderizar contenido multimedia - Soporta múltiples imágenes con mejor procesamiento de URLs
   renderMediaContent(entrada) {
     let mediaHTML = '';
     
     if (entrada.imagenPrincipal || entrada.videoURL) {
       mediaHTML += '<div class="media-gallery">';
       
-      // Procesar campo imagenPrincipal que puede contener imágenes Y videos (YouTube/Vimeo)
+      // Procesar campo imagenPrincipal que puede contener múltiples imágenes Y videos
       if (entrada.imagenPrincipal) {
-        const mediaUrls = entrada.imagenPrincipal
-          .split(/[\n,]+/) // separa por coma o salto de línea
-          .map(url => url.trim()) // elimina espacios
-          .filter(url => url.length > 0); // ignora vacíos
+        const mediaUrls = this.procesarURLsMedia(entrada.imagenPrincipal);
 
         mediaUrls.forEach(url => {
           if (this.isYouTubeURL(url)) {
@@ -277,7 +276,7 @@ class BlogManager {
             // Video directo (MP4, etc.)
             mediaHTML += this.renderDirectVideo(url, entrada.titulo);
           } else {
-            // Imagen regular
+            // Imagen regular con validación mejorada
             mediaHTML += this.renderImage(url, entrada.titulo);
           }
         });
@@ -298,6 +297,63 @@ class BlogManager {
     }
     
     return mediaHTML;
+  }
+
+  // Nuevo método para procesar y limpiar URLs de media
+  procesarURLsMedia(urlsString) {
+    if (!urlsString || typeof urlsString !== 'string') return [];
+    
+    return urlsString
+      .split(/[\n,;]+/) // separa por coma, punto y coma o salto de línea
+      .map(url => url.trim()) // elimina espacios en blanco
+      .filter(url => url.length > 0) // ignora URLs vacías
+      .filter(url => this.validarURL(url)) // valida formato de URL
+      .map(url => this.limpiarURL(url)); // limpia la URL
+  }
+
+  // Validar formato básico de URL
+  validarURL(url) {
+    try {
+      // Verificar que tiene protocolo o añadirlo si es necesario
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        if (url.includes('imgur.com') || url.includes('youtube.com') || url.includes('vimeo.com')) {
+          url = 'https://' + url;
+        } else {
+          return false; // URLs sin protocolo válido se rechazan
+        }
+      }
+      
+      new URL(url);
+      return true;
+    } catch (e) {
+      console.warn('URL inválida encontrada:', url);
+      return false;
+    }
+  }
+
+  // Limpiar URL removiendo parámetros innecesarios
+  limpiarURL(url) {
+    try {
+      // Añadir protocolo si falta
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+      }
+      
+      const urlObj = new URL(url);
+      
+      // Para imágenes de imgur, asegurar formato directo
+      if (urlObj.hostname.includes('imgur.com')) {
+        // Convertir links de imgur a formato directo de imagen
+        if (!urlObj.pathname.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+          urlObj.pathname = urlObj.pathname + '.jpg';
+        }
+      }
+      
+      return urlObj.toString();
+    } catch (e) {
+      console.warn('Error limpiando URL:', url);
+      return url;
+    }
   }
 
   // Detectar URLs de YouTube
@@ -403,15 +459,20 @@ class BlogManager {
     `;
   }
 
-  // Renderizar imagen
+  // Renderizar imagen con diseño responsivo mejorado
   renderImage(url, titulo) {
+    // Generar un ID único para cada imagen para mejorar la accesibilidad
+    const imageId = `img-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
     return `
       <div class="photo-polaroid">
         <img src="${url}" 
-             alt="${titulo}" 
+             alt="${titulo} - Creación de Patofelting" 
              class="entrada-imagen"
+             id="${imageId}"
              loading="lazy"
-             onerror="this.closest('.photo-polaroid').style.display='none'">
+             onerror="this.closest('.photo-polaroid').style.display='none'"
+             onload="this.classList.add('loaded')">
         <div class="polaroid-caption">✨ Momento especial de Patofelting</div>
       </div>
     `;
@@ -427,18 +488,6 @@ class BlogManager {
           <p>No se pudo cargar el contenido multimedia</p>
           <small>${error}</small>
         </div>
-      </div>
-    `;
-  }
-
-  // Renderizar call-to-action para la entrada destacada
-  renderCallToAction() {
-    return `
-      <div class="call-to-action-blog">
-        <h3>¿Quieres ser parte de esta historia?</h3>
-        <p>Cada pedido que me haces se convierte en una nueva entrada en este cuaderno. Tu idea, tu sueño, tu momento especial.</p>
-        <a href="index.html#productos" class="cta-button-blog">Ver productos disponibles</a>
-        <a href="index.html#contacto" class="cta-button-blog secondary">Contarme tu idea</a>
       </div>
     `;
   }
