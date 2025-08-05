@@ -819,3 +819,30 @@ function hacerPostitsArrastrables() {
 }
 
 
+function activarCambioDeColorEnPostits() {
+  const colores = ['#fff89a', '#ffdab9', '#c8f7dc', '#add8e6', '#ffc0cb']; // Pasteles
+
+  document.querySelectorAll('.postit').forEach((postit, index) => {
+    const id = `postit-${index}`;
+
+    // Restaurar color si está guardado
+    const colorGuardado = localStorage.getItem(`${id}-color`);
+    if (colorGuardado) {
+      postit.style.backgroundColor = colorGuardado;
+    }
+
+    postit.addEventListener('dblclick', () => {
+      const colorActual = postit.style.backgroundColor;
+      const actualIndex = colores.findIndex(c => c === colorActual);
+      const siguienteColor = colores[(actualIndex + 1) % colores.length];
+
+      postit.style.backgroundColor = siguienteColor;
+      localStorage.setItem(`${id}-color`, siguienteColor);
+    });
+  });
+}
+setTimeout(() => {
+  this.aplicarEfectosPostRenderizado();
+  hacerPostitsArrastrables();
+  activarCambioDeColorEnPostits(); // 🎨 Activar colores
+}, 100);
