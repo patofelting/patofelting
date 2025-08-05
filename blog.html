@@ -4,6 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="El cuaderno de bitácora de Patofelting - Historias sobre fibras, agujas y creaciones artesanales">
+  <meta property="og:title" content="El Cuaderno de Patofelting - Mi Historia con las Fibras">
+  <meta property="og:description" content="Historias, fibras y sueños de Patofelting">
+  <meta property="og:image" content="img/patofelting.jpg">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="El Cuaderno de Patofelting">
+  <meta name="twitter:description" content="Historias, fibras y sueños de Patofelting">
+  <meta name="twitter:image" content="img/patofelting.jpg">
   <title>El Cuaderno de Patofelting - Mi Historia con las Fibras</title>
   <link rel="stylesheet" href="blog.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,7 +31,7 @@
         Volver a la tienda
       </a>
       <div class="blog-logo">
-        <img src="img/patofelting.jpg" alt="Logo de Patofelting" class="logo-small" width="40" height="40" loading="lazy">
+        <img src="img/patofelting.jpg" alt="Logo Patofelting, tienda y blog de fibras" class="logo-small" width="40" height="40" loading="lazy">
         <span>Mi Cuaderno de Bitácora</span>
       </div>
     </div>
@@ -37,7 +45,7 @@
         <h1 class="blog-title">El Cuaderno de Patofelting</h1>
         <p class="blog-subtitle">Un viaje entre fibras, agujas y sueños hechos realidad</p>
         <div class="author-info">
-          <img src="img/flordeliz.webp" alt="Patricia, creadora de Patofelting" class="author-avatar" width="60" height="60" loading="lazy">
+          <img src="img/flordeliz.webp" alt="Patricia, creadora de Patofelting y autora del blog" class="author-avatar" width="60" height="60" loading="lazy">
           <span class="author-name">Por Patricia - Creadora de Patofelting</span>
         </div>
       </div>
@@ -45,19 +53,18 @@
   </header>
 
   <!-- Contenido Principal -->
-  <main class="blog-main" id="main-content">
+  <main class="blog-main" id="main-content" role="main" aria-label="Contenido principal del blog">
     <!-- Las entradas se cargarán dinámicamente desde Google Sheets -->
-    <div class="blog-loading" id="blog-loading" aria-live="polite">
+    <div class="blog-loading" id="blog-loading" aria-live="polite" role="status">
       <div class="loading-animation">
         <div class="yarn-ball" aria-hidden="true"></div>
         <div class="needle" aria-hidden="true"></div>
       </div>
       <div class="loading-text">Cargando historias de Patofelting...</div>
     </div>
-    
     <!-- Plantilla para entradas (usada por JavaScript) -->
     <template id="entry-template">
-      <article class="blog-entry" tabindex="0">
+      <article class="blog-entry" tabindex="0" role="article" aria-label="Entrada del blog">
         <div class="notebook-page">
           <div class="red-margin" aria-hidden="true"></div>
           <div class="entry-content">
@@ -85,6 +92,12 @@
     </div>
   </footer>
 
-  <script src="blog.js" defer></script>
+  <script>
+    // Poner el año actual en el footer automáticamente
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('current-year').textContent = new Date().getFullYear();
+    });
+  </script>
+  <script src="blog.js" type="module" defer></script>
 </body>
 </html>
