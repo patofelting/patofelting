@@ -437,7 +437,7 @@ blockquote {
   transform-style: preserve-3d;
 }
 
-/* Halo verde artesanal suave */
+/* Halo verde artesanal al pasar cursor */
 .producto-card::before {
   content: "";
   position: absolute;
@@ -460,44 +460,7 @@ blockquote {
 
 .producto-card:hover::before {
   opacity: 1;
-  transform: scale(1.2);
 }
-
-/* Luz ambiental animada (opcional) */
-.producto-card::after {
-  content: "";
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.15), transparent 60%);
-  opacity: 0;
-  transition: opacity 0.5s ease;
-  z-index: 1;
-  pointer-events: none;
-}
-
-.producto-card:hover::after {
-  opacity: 1;
-  animation: shimmer 2s infinite alternate ease-in-out;
-}
-
-@keyframes shimmer {
-  0% {
-    transform: rotate(0deg) scale(1);
-    opacity: 0.1;
-  }
-  100% {
-    transform: rotate(360deg) scale(1.2);
-    opacity: 0.2;
-  }
-}
-
-
-.producto-card:hover::before {
-  opacity: 1;
-  transform: scale(1.2);
 
 .producto-card * {
   position: relative;
