@@ -1208,3 +1208,8 @@ background: rgba (255, 107, 107, 0.08);
 .postit:hover {
   transform: rotate(0deg) scale(1.05);
 }
+
+
+.postit {
+  transition: transform 0.2s ease, background-color 0.3s ease;
+}
