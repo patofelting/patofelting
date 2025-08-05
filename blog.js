@@ -751,9 +751,22 @@ window.recargarBlog = () => {
 function hacerPostitsArrastrables() {
   const postits = document.querySelectorAll('.postit');
 
-  postits.forEach((postit) => {
+  postits.forEach((postit, index) => {
     let offsetX, offsetY, moviendo = false;
+    const id = `postit-${index}`;
 
+    // Restaurar posición previa si existe
+    const posGuardada = JSON.parse(localStorage.getItem(id));
+    if (posGuardada) {
+      postit.style.left = posGuardada.left;
+      postit.style.top = posGuardada.top;
+    } else {
+      // Posición aleatoria inicial si no hay posición guardada
+      postit.style.left = `${100 + index * 20}px`;
+      postit.style.top = `${100 + index * 20}px`;
+    }
+
+    // Agregar eventos de movimiento
     postit.addEventListener('mousedown', (e) => {
       moviendo = true;
       const rect = postit.getBoundingClientRect();
@@ -764,8 +777,14 @@ function hacerPostitsArrastrables() {
 
     document.addEventListener('mousemove', (e) => {
       if (moviendo) {
-        postit.style.left = `${e.clientX - offsetX}px`;
-        postit.style.top = `${e.clientY - offsetY}px`;
+        const left = `${e.clientX - offsetX}px`;
+        const top = `${e.clientY - offsetY}px`;
+
+        postit.style.left = left;
+        postit.style.top = top;
+
+        // Guardar en localStorage al mover
+        localStorage.setItem(id, JSON.stringify({ left, top }));
       }
     });
 
