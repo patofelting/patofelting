@@ -1178,32 +1178,34 @@ background: rgba (255, 107, 107, 0.08);
 
 
 .postit {
-  position: relative;
-  background: #fff89a; /* amarillo pastel */
-  color: var(--ink-black);
-  width: 220px;
+  position: fixed;
+  width: 180px;
+  min-height: 80px;
+  background: #fff89a;
+  color: #003e1f;
+  font-family: 'Kalam', cursive;
+  font-size: 1rem;
   padding: 1rem;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
-  border-radius: 6px;
-  font-family: var(--font-handwritten);
-  font-size: 1.1rem;
-  line-height: 1.4;
-  transform: rotate(-2.5deg);
-  transition: all 0.3s ease;
+  border-radius: 8px;
+  box-shadow: 4px 6px 20px rgba(0, 0, 0, 0.2);
+  transform: rotate(-2deg); /* 🎨 estilo pegado a mano */
+  cursor: grab;
+  transition: transform 0.2s ease;
+  z-index: 10;
 }
 
 .postit::before {
   content: '';
   position: absolute;
-  top: -12px;
-  left: 50%;
-  width: 20px;
-  height: 20px;
-  background: #ff6b6b;
+  top: -10px;
+  left: calc(50% - 5px);
+  width: 12px;
+  height: 12px;
+  background: #ff5e5e;
   border-radius: 50%;
-  transform: translateX(-50%);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
+
 
 .postit:hover {
   transform: rotate(0deg) scale(1.05);
