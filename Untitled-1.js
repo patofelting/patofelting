@@ -1223,3 +1223,32 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Filtros de precio inicializados correctamente');
   }, 500); // Esperar 500ms para asegurar que el DOM esté completamente cargado
 });
+
+renderEntradaBlog(entrada, index) {
+  const esDestacada = index === 0; // La primera entrada (más reciente) es destacada
+  const template = document.getElementById('entry-template');
+  if (!template) {
+    console.error('❌ No se encontró el template #entry-template');
+    return '';
+  }
+
+  const clone = template.content.cloneNode(true);
+  const article = clone.querySelector('.blog-entry');
+  article.setAttribute('data-entry-id', entrada.id);
+
+  const notebookPage = article.querySelector('.notebook-page');
+  const entryContent = article.querySelector('.entry-content');
+
+  entryContent.innerHTML = `
+    <div class="entry-date">${entrada.fecha}</div>
+    <h2 class="entry-title">${entrada.titulo}</h2>
+    <div class="entry-text">${this.procesarContenido(entrada.contenido)}</div>
+    ${this.renderMediaContent(entrada)}
+  `;
+
+  if (esDestacada) {
+    article.classList.add('featured');
+  }
+
+  return article.outerHTML;
+}
