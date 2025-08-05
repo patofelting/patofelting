@@ -1210,3 +1210,36 @@ background: rgba (255, 107, 107, 0.08);
 .postit:hover {
   transform: rotate(0deg) scale(1.05);
 }
+
+
+.postit-section {
+  position: relative;
+  min-height: 200px;
+  margin: 2rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: center;
+}
+
+.postit {
+  width: 180px;
+  height: 180px;
+  background: #fffeb3;
+  border: 1px solid #e0d96c;
+  box-shadow: 4px 4px 12px rgba(0,0,0,0.1);
+  padding: 1rem;
+  font-family: 'Kalam', cursive;
+  font-size: 1rem;
+  color: #555;
+  line-height: 1.3;
+  position: absolute;
+  border-radius: 12px;
+  cursor: grab;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.postit:hover {
+  box-shadow: 6px 6px 20px rgba(0,0,0,0.15);
+}
+
