@@ -1128,20 +1128,24 @@ background: rgba (255, 107, 107, 0.08);
 
 
 .postit {
-  position: relative;
-  background: #fff89a; /* amarillo pastel */
+  position: absolute; /* ✅ clave para moverlo */
+  background: #fff89a;
   color: var(--ink-black);
-  width: 200px;
+  width: 220px;
   padding: 1rem;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
   border-radius: 6px;
   font-family: var(--font-handwritten);
   font-size: 1.1rem;
   line-height: 1.4;
-  transform: rotate(-3deg);
-  margin: 2rem auto;
+  transform: rotate(-2.5deg);
   transition: all 0.3s ease;
+  cursor: grab; /* cambia el cursor */
   z-index: 10;
+}
+
+.postit:active {
+  cursor: grabbing;
 }
 
 .postit::before {
@@ -1166,12 +1170,12 @@ background: rgba (255, 107, 107, 0.08);
 .postit.green { background: #d7ffd6; }
 
 .postit-section {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  padding: 2rem;
-  gap: 1rem;
+  position: relative;
+  width: 100%;
+  height: 400px; /* podés ajustar esto */
+  margin-bottom: 3rem;
 }
+
 
 .postit {
   position: relative;
