@@ -1,99 +1,90 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mi Cuaderno de Bitácora</title>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Kalam&family=Dancing+Script&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="blog.css" />
-  </head>
-  <body>
-    <!-- Navegación -->
-    <nav class="blog-nav">
-      <div class="nav-container">
-        <a href="index.html" class="back-home">
-          <svg
-            width="24"
-            height="24"
-            fill="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path d="M20 11H7.414l4.293-4.293a1 1 0 0 0-1.414-1.414l-6 6a1 1 0 0 0 0 1.414l6 6a1 1 0 0 0 1.414-1.414L7.414 13H20a1 1 0 0 0 0-2z" />
-          </svg>
-          Volver a la tienda
-        </a>
-        <div class="blog-logo">
-          <img
-            src="img/patofelting.jpg"
-            alt="Logo Patofelting"
-            class="logo-small"
-          />
-          <span>Mi Cuaderno de Bitácora</span>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="El cuaderno de bitácora de Patofelting - Historias sobre fibras, agujas y creaciones artesanales">
+  <title>El Cuaderno de Patofelting - Mi Historia con las Fibras</title>
+  <link rel="stylesheet" href="blog.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Dancing+Script:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+</head>
+<body>
+  <!-- Navegación -->
+  <nav class="blog-nav" aria-label="Navegación principal">
+    <div class="nav-container">
+      <a href="index.html" class="back-home" aria-label="Volver a la tienda principal">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Volver a la tienda
+      </a>
+      <div class="blog-logo">
+        <img src="img/patofelting.jpg" alt="Logo de Patofelting" class="logo-small" width="40" height="40" loading="lazy">
+        <span>Mi Cuaderno de Bitácora</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Header del Blog -->
+  <header class="blog-header">
+    <div class="notebook-page">
+      <div class="red-margin" aria-hidden="true"></div>
+      <div class="header-content">
+        <h1 class="blog-title">El Cuaderno de Patofelting</h1>
+        <p class="blog-subtitle">Un viaje entre fibras, agujas y sueños hechos realidad</p>
+        <div class="author-info">
+          <img src="img/flordeliz.webp" alt="Patricia, creadora de Patofelting" class="author-avatar" width="60" height="60" loading="lazy">
+          <span class="author-name">Por Patricia - Creadora de Patofelting</span>
         </div>
       </div>
-    </nav>
+    </div>
+  </header>
 
-    <!-- Header -->
-    <header class="blog-header">
-      <h1 class="blog-title">El Cuaderno de Patofelting</h1>
-      <p class="blog-subtitle">
-        Un viaje entre fibras, agujas y sueños hechos realidad
-      </p>
-      <div class="author-info">
-        <img
-          src="img/patofelting.jpg"
-          alt="Foto de Patricia"
-          class="author-avatar"
-        />
-        <span class="author-name">Por Patricia - Creadora de Patofelting</span>
+  <!-- Contenido Principal -->
+  <main class="blog-main" id="main-content">
+    <!-- Las entradas se cargarán dinámicamente desde Google Sheets -->
+    <div class="blog-loading" id="blog-loading" aria-live="polite">
+      <div class="loading-animation">
+        <div class="yarn-ball" aria-hidden="true"></div>
+        <div class="needle" aria-hidden="true"></div>
       </div>
-      <!-- Call to Action fijo -->
-      <div class="call-to-action-blog fixed-cta">
-        <h3>¿Quieres ser parte de esta historia?</h3>
-        <p>Cada pedido que me haces se convierte en una nueva entrada en este cuaderno. Tu idea, tu sueño, tu momento especial.</p>
-        <a href="index.html#productos" class="cta-button-blog">Ver productos disponibles</a>
-        <a href="index.html#contacto" class="cta-button-blog secondary">Contarme tu idea</a>
-      </div>
-    </header>
-
-    <!-- Template para entradas -->
+      <div class="loading-text">Cargando historias de Patofelting...</div>
+    </div>
+    
+    <!-- Plantilla para entradas (usada por JavaScript) -->
     <template id="entry-template">
-      <article class="blog-entry">
+      <article class="blog-entry" tabindex="0">
         <div class="notebook-page">
-          <div class="red-margin"></div>
-          <div class="entry-content"></div>
+          <div class="red-margin" aria-hidden="true"></div>
+          <div class="entry-content">
+            <div class="entry-date"></div>
+            <h2 class="entry-title"></h2>
+            <div class="entry-text"></div>
+            <div class="media-gallery"></div>
+          </div>
         </div>
       </article>
     </template>
+  </main>
 
-    <!-- Contenedor principal -->
-    <main class="blog-main">
-      <div class="loading">
-        Cargando historias de Patofelting...
+  <!-- Footer -->
+  <footer class="blog-footer">
+    <div class="footer-content">
+      <p>Con amor desde mi taller,</p>
+      <div class="signature">Patricia ♥</div>
+      <div class="footer-links">
+        <a href="index.html">Volver a la tienda</a>
+        <a href="https://instagram.com/patofelting" target="_blank" rel="noopener noreferrer">Instagram</a>
+        <a href="mailto:patofelting@gmail.com">Contacto</a>
       </div>
-    </main>
+      <p class="copyright">&copy; <span id="current-year"></span> Patofelting. Todos los derechos reservados.</p>
+    </div>
+  </footer>
 
-    <!-- Footer -->
-    <footer class="blog-footer">
-      <div class="footer-content">
-        <p>Con amor desde mi taller,</p>
-        <div class="signature">Patricia ♥</div>
-        <div class="footer-links">
-          <a href="index.html">Volver a la tienda</a>
-          <a href="https://instagram.com/patofelting" target="_blank"
-            >Instagram</a
-          >
-          <a href="mailto:patricia@patofelting.com">Contacto</a>
-        </div>
-        <p>© Patofelting. Todos los derechos reservados.</p>
-      </div>
-    </footer>
-
-    <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
-    <script src="blog.js"></script>
-  </body>
+  <script src="blog.js" defer></script>
+</body>
 </html>
