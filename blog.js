@@ -755,41 +755,39 @@ function hacerPostitsArrastrables() {
     let offsetX, offsetY, moviendo = false;
     const id = `postit-${index}`;
 
-    // Restaurar posición previa si existe
+    // Posición guardada
     const posGuardada = JSON.parse(localStorage.getItem(id));
     if (posGuardada) {
       postit.style.left = posGuardada.left;
       postit.style.top = posGuardada.top;
     } else {
-      // Posición aleatoria inicial si no hay posición guardada
-      postit.style.left = `${100 + index * 20}px`;
-      postit.style.top = `${100 + index * 20}px`;
+      postit.style.left = `${100 + index * 30}px`;
+      postit.style.top = `${100 + index * 30}px`;
     }
 
-    // Agregar eventos de movimiento
+    postit.style.position = 'fixed'; // ✅ clave para que no afecte layout
+
     postit.addEventListener('mousedown', (e) => {
       moviendo = true;
-      const rect = postit.getBoundingClientRect();
-      offsetX = e.clientX - rect.left;
-      offsetY = e.clientY - rect.top;
-      postit.style.zIndex = 1000;
+      offsetX = e.clientX - postit.getBoundingClientRect().left;
+      offsetY = e.clientY - postit.getBoundingClientRect().top;
+      postit.style.zIndex = 9999;
+      postit.style.cursor = 'grabbing';
+      e.preventDefault();
     });
 
     document.addEventListener('mousemove', (e) => {
-      if (moviendo) {
-        const left = `${e.clientX - offsetX}px`;
-        const top = `${e.clientY - offsetY}px`;
-
-        postit.style.left = left;
-        postit.style.top = top;
-
-        // Guardar en localStorage al mover
-        localStorage.setItem(id, JSON.stringify({ left, top }));
-      }
+      if (!moviendo) return;
+      const x = e.clientX - offsetX;
+      const y = e.clientY - offsetY;
+      postit.style.left = `${x}px`;
+      postit.style.top = `${y}px`;
+      localStorage.setItem(id, JSON.stringify({ left: `${x}px`, top: `${y}px` }));
     });
 
     document.addEventListener('mouseup', () => {
       moviendo = false;
+      postit.style.cursor = 'grab';
       postit.style.zIndex = 10;
     });
   });
