@@ -49,19 +49,21 @@ class BlogManager {
         .filter((fila) => fila.titulo && fila.titulo.trim() !== '')
         .map((fila) => {
           console.log('🔍 Procesando fila:', fila);
-          const entrada = {
-            id: fila.id || Date.now().toString(),
-            fecha: this.formatearFecha(fila.fecha),
-            fechaRaw: fila.fecha,
-            titulo: fila.titulo,
-            contenido: fila.contenido || '',
-            imagenes: this.limpiarURLs(fila.imagenPrincipal || fila.imagenes || ''),
-            videos: this.limpiarURLs(fila.videoURL || fila.videos || ''),
-            orden: parseInt(fila.orden) || 0,
-            categoria: fila.categoria || 'general',
-          };
-          console.log('✅ Entrada procesada:', entrada);
-          return entrada;
+     const entrada = {
+  id: fila.id || Date.now().toString(),
+  fecha: this.formatearFecha(fila.fecha),
+  fechaRaw: fila.fecha,
+  titulo: fila.titulo,
+  contenido: fila.contenido || '',
+  imagenes: this.limpiarURLs(fila.imagenPrincipal || fila.imagenes || ''),
+  videos: this.limpiarURLs(fila.videoURL || fila.videos || ''),
+  orden: parseInt(fila.orden) || 0,
+  categoria: fila.categoria || 'general',
+  postit: fila.postit || '', // ✅ nuevo campo
+  ordenpostit: parseInt(fila.ordenpostit) || 0 // ✅ nuevo campo
+};
+console.log('✅ Entrada procesada:', entrada);
+return entrada;
         })
         .sort((a, b) => {
           if (a.orden !== 0 && b.orden !== 0) return a.orden - b.orden;
@@ -166,20 +168,44 @@ class BlogManager {
 
   // ========== RENDERIZADO DEL BLOG ==========
   renderizarBlog() {
-    const contenedor = document.querySelector('.blog-main');
-    if (!contenedor) {
-      console.error('❌ No se encontró el contenedor .blog-main');
-      return;
-    }
-
-    contenedor.innerHTML = this.entradas
-      .map((entrada, index) => this.renderEntradaBlog(entrada, index))
-      .join('');
-
-    setTimeout(() => {
-      this.aplicarEfectosPostRenderizado();
-    }, 100);
+  const contenedor = document.querySelector('.blog-main');
+  if (!contenedor) {
+    console.error('❌ No se encontró el contenedor .blog-main');
+    return;
   }
+
+  // 1. Crear sección de post-its si existen
+  const postits = this.entradas
+    .filter(e => e.postit && e.postit.trim() !== '')
+    .sort((a, b) => a.ordenpostit - b.ordenpostit);
+
+  let postitHTML = '';
+  if (postits.length > 0) {
+    postitHTML += `<section class="postit-section">`;
+    postits.forEach(postit => {
+      postitHTML += `
+        <div class="postit">
+          ${postit.postit}
+        </div>
+      `;
+    });
+    postitHTML += `</section>`;
+  }
+
+  // 2. Renderizar entradas del blog
+  const entradasHTML = this.entradas
+    .map((entrada, index) => this.renderEntradaBlog(entrada, index))
+    .join('');
+
+  // 3. Combinar todo
+  contenedor.innerHTML = postitHTML + entradasHTML;
+
+  // 4. Aplicar efectos
+  setTimeout(() => {
+    this.aplicarEfectosPostRenderizado();
+  }, 100);
+}
+
 
 renderEntradaBlog(entrada, index) {
   const esDestacada = index === 0; // La primera entrada (más reciente) es destacada
