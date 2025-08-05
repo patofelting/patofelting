@@ -842,7 +842,12 @@ function activarCambioDeColorEnPostits() {
   });
 }
 setTimeout(() => {
-  this.aplicarEfectosPostRenderizado();
+  if (typeof aplicarEfectosPostRenderizado === 'function') {
+    aplicarEfectosPostRenderizado();
+  } else if (window.blogManager && typeof blogManager.aplicarEfectosPostRenderizado === 'function') {
+    blogManager.aplicarEfectosPostRenderizado();
+  }
   hacerPostitsArrastrables();
-  activarCambioDeColorEnPostits(); // 🎨 Activar colores
+  activarCambioDeColorEnPostits();
 }, 100);
+
