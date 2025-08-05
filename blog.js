@@ -752,75 +752,41 @@ function hacerPostitsArrastrables() {
   const postits = document.querySelectorAll('.postit');
 
   postits.forEach((postit, index) => {
-    let offsetX = 0, offsetY = 0, dragging = false;
+    let offsetX, offsetY, moviendo = false;
     const id = `postit-${index}`;
 
-    // Restaurar posición desde localStorage
-    const savedPosition = JSON.parse(localStorage.getItem(id));
-    if (savedPosition) {
-      postit.style.transform = `translate(${savedPosition.left}px, ${savedPosition.top}px)`;
+    // Posición guardada
+    const posGuardada = JSON.parse(localStorage.getItem(id));
+    if (posGuardada) {
+      postit.style.left = posGuardada.left;
+      postit.style.top = posGuardada.top;
+    } else {
+      postit.style.left = `${100 + index * 30}px`;
+      postit.style.top = `${100 + index * 30}px`;
     }
 
-    // Posicionamiento inicial
-    postit.style.position = 'absolute';
-    postit.style.cursor = 'grab';
+    postit.style.position = 'fixed'; // ✅ clave para que no afecte layout
 
     postit.addEventListener('mousedown', (e) => {
-      dragging = true;
+      moviendo = true;
       offsetX = e.clientX - postit.getBoundingClientRect().left;
       offsetY = e.clientY - postit.getBoundingClientRect().top;
       postit.style.zIndex = 9999;
-      postit.style.transition = 'none';
       postit.style.cursor = 'grabbing';
       e.preventDefault();
     });
 
     document.addEventListener('mousemove', (e) => {
-      if (!dragging) return;
-
+      if (!moviendo) return;
       const x = e.clientX - offsetX;
       const y = e.clientY - offsetY;
-
-      postit.style.transform = `translate(${x}px, ${y}px)`;
-      postit.setAttribute('data-x', x);
-      postit.setAttribute('data-y', y);
-
-      localStorage.setItem(id, JSON.stringify({ left: x, top: y }));
+      postit.style.left = `${x}px`;
+      postit.style.top = `${y}px`;
+      localStorage.setItem(id, JSON.stringify({ left: `${x}px`, top: `${y}px` }));
     });
 
     document.addEventListener('mouseup', () => {
-      if (!dragging) return;
-      dragging = false;
-      postit.style.cursor = 'grab';
-      postit.style.zIndex = 10;
-    });
-
-    // Touch para móvil
-    postit.addEventListener('touchstart', (e) => {
-      dragging = true;
-      const touch = e.touches[0];
-      offsetX = touch.clientX - postit.getBoundingClientRect().left;
-      offsetY = touch.clientY - postit.getBoundingClientRect().top;
-      postit.style.zIndex = 9999;
-      postit.style.transition = 'none';
-      postit.style.cursor = 'grabbing';
-    });
-
-    document.addEventListener('touchmove', (e) => {
-      if (!dragging) return;
-      const touch = e.touches[0];
-      const x = touch.clientX - offsetX;
-      const y = touch.clientY - offsetY;
-
-      postit.style.transform = `translate(${x}px, ${y}px)`;
-      postit.setAttribute('data-x', x);
-      postit.setAttribute('data-y', y);
-
-      localStorage.setItem(id, JSON.stringify({ left: x, top: y }));
-    });
-
-    document.addEventListener('touchend', () => {
-      dragging = false;
+      moviendo = false;
       postit.style.cursor = 'grab';
       postit.style.zIndex = 10;
     });
