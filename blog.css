@@ -1125,48 +1125,46 @@ background: rgba (255, 107, 107, 0.08);
   z-index: 2;
 }
 
-
-
 .postit {
-  position: absolute; /* ✅ clave para moverlo */
+  position: absolute;
+  width: 180px;
+  min-height: 120px;
   background: #fff89a;
-  color: var(--ink-black);
-  width: 220px;
-  padding: 1rem;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
-  border-radius: 6px;
-  font-family: var(--font-handwritten);
+  font-family: 'Kalam', cursive;
   font-size: 1.1rem;
-  line-height: 1.4;
+  padding: 1rem;
+  border-radius: 10px;
+  color: var(--ink-black);
+  box-shadow: 4px 6px 16px rgba(0, 0, 0, 0.2);
   transform: rotate(-2.5deg);
-  transition: all 0.3s ease;
-  cursor: grab; /* cambia el cursor */
+  transition: transform 0.2s ease, background-color 0.3s ease, box-shadow 0.3s ease;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
   z-index: 10;
 }
 
-.postit:active {
+.postit:hover {
+  transform: rotate(0deg) scale(1.05);
   box-shadow: 6px 8px 20px rgba(0,0,0,0.3);
 }
+
+.postit:active {
+  cursor: grabbing;
+}
+
 .postit::before {
   content: '';
   position: absolute;
-  top: -12px;
+  top: -10px;
   left: 50%;
-  width: 20px;
-  height: 20px;
+  width: 14px;
+  height: 14px;
   background: #ff6b6b;
   border-radius: 50%;
   transform: translateX(-50%);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
-
-.postit:hover {
-  transform: rotate(0deg) scale(1.03);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
-}
-
-.postit.pink { background: #ffd5ec; }
-.postit.green { background: #d7ffd6; }
 
 .postit-section {
   position: relative;
@@ -1174,42 +1172,4 @@ background: rgba (255, 107, 107, 0.08);
   margin-bottom: 2rem;
 }
 
-.postit {
-  position: absolute;
-  width: 180px;
-  min-height: 120px;
-  background: #fff89a;
-  font-family: 'Kalam', cursive;
-  padding: 1rem;
-  border-radius: 10px;
-  box-shadow: 4px 6px 16px rgba(0,0,0,0.2);
-  cursor: grab;
-  user-select: none;
-  touch-action: none; /* Clave para móviles */
-  z-index: 10;
-  transition: box-shadow 0.2s ease;
-}
 
-
-
-.postit::before {
-  content: '';
-  position: absolute;
-  top: -10px;
-  left: calc(50% - 5px);
-  width: 12px;
-  height: 12px;
-  background: #ff5e5e;
-  border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-}
-
-
-.postit:hover {
-  transform: rotate(0deg) scale(1.05);
-}
-
-
-.postit {
-  transition: transform 0.2s ease, background-color 0.3s ease;
-}
