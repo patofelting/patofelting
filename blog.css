@@ -891,6 +891,7 @@ body {
   margin: 0 auto;
 }
 
+/* Loading animation */
 .loading-animation {
   display: flex;
   justify-content: center;
@@ -996,6 +997,7 @@ body {
   border-radius: var(--border-radius);
   box-shadow: 0 8px 25px rgba(0,0,0,0.15);
 }
+
 
 /* ========== IMÁGENES DE GOOGLE SHEETS ========== */
 img[src*="imgur.com"],
@@ -1298,3 +1300,4 @@ img.error {
 .retry-button:active {
   transform: translateY(-1px);
 }
+
