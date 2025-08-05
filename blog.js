@@ -819,5 +819,3 @@ function hacerPostitsArrastrables() {
 }
 
 
-
-
