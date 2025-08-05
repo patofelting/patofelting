@@ -1,7 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="El cuaderno de bitácora de Patofelting - Historias sobre fibras, agujas y creaciones artesanales">
+  <title>El Cuaderno de Patofelting - Mi Historia con las Fibras</title>
+  <link rel="stylesheet" href="blog.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Dancing+Script:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+</head>
 <body>
   <!-- Navegación -->
   <nav class="blog-nav" aria-label="Navegación principal">
-    <!-- ... (sin cambios) -->
+    <div class="nav-container">
+      <a href="index.html" class="back-home" aria-label="Volver a la tienda principal">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Volver a la tienda
+      </a>
+      <div class="blog-logo">
+        <img src="img/patofelting.jpg" alt="Logo de Patofelting" class="logo-small" width="40" height="40" loading="lazy">
+        <span>Mi Cuaderno de Bitácora</span>
+      </div>
+    </div>
   </nav>
 
   <!-- Header del Blog -->
@@ -12,29 +37,16 @@
         <h1 class="blog-title">El Cuaderno de Patofelting</h1>
         <p class="blog-subtitle">Un viaje entre fibras, agujas y sueños hechos realidad</p>
         <div class="author-info">
-          <img src="img/patofelting.jpg" alt="Patricia, creadora de Patofelting" class="author-avatar" width="60" height="60" loading="lazy">
+          <img src="img/img/patofelting.jpg" alt="Patricia, creadora de Patofelting" class="author-avatar" width="60" height="60" loading="lazy">
           <span class="author-name">Por Patricia - Creadora de Patofelting</span>
         </div>
       </div>
     </div>
   </header>
 
-  <!-- ✅ Sección CTA solo una vez -->
-  <section class="cta-cuaderno">
-    <div class="cta-box">
-      <h3>¿Quieres ser parte de esta historia?</h3>
-      <p>
-        Cada pedido que me haces se convierte en una nueva entrada en este cuaderno. Tu idea, tu sueño, tu momento especial.
-      </p>
-      <div class="cta-buttons">
-        <a href="index.html#productos" class="btn-cta">Ver productos disponibles</a>
-        <a href="mailto:patofelting@gmail.com?subject=Quiero%20contarte%20mi%20idea" class="btn-cta secundario">Contarme tu idea</a>
-      </div>
-    </div>
-  </section>
-
   <!-- Contenido Principal -->
   <main class="blog-main" id="main-content">
+    <!-- Las entradas se cargarán dinámicamente desde Google Sheets -->
     <div class="blog-loading" id="blog-loading" aria-live="polite">
       <div class="loading-animation">
         <div class="yarn-ball" aria-hidden="true"></div>
@@ -42,8 +54,8 @@
       </div>
       <div class="loading-text">Cargando historias de Patofelting...</div>
     </div>
-
-    <!-- Plantilla dinámica (usada por JS) -->
+    
+    <!-- Plantilla para entradas (usada por JavaScript) -->
     <template id="entry-template">
       <article class="blog-entry" tabindex="0">
         <div class="notebook-page">
@@ -61,8 +73,18 @@
 
   <!-- Footer -->
   <footer class="blog-footer">
-    <!-- ... (sin cambios) -->
+    <div class="footer-content">
+      <p>Con amor desde mi taller,</p>
+      <div class="signature">Patricia ♥</div>
+      <div class="footer-links">
+        <a href="index.html">Volver a la tienda</a>
+        <a href="https://instagram.com/patofelting" target="_blank" rel="noopener noreferrer">Instagram</a>
+        <a href="mailto:patofelting@gmail.com">Contacto</a>
+      </div>
+      <p class="copyright">&copy; <span id="current-year"></span> Patofelting. Todos los derechos reservados.</p>
+    </div>
   </footer>
 
   <script src="blog.js" defer></script>
 </body>
+</html>
