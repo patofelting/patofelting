@@ -752,41 +752,75 @@ function hacerPostitsArrastrables() {
   const postits = document.querySelectorAll('.postit');
 
   postits.forEach((postit, index) => {
-    let offsetX, offsetY, moviendo = false;
+    let offsetX = 0, offsetY = 0, dragging = false;
     const id = `postit-${index}`;
 
-    // Posición guardada
-    const posGuardada = JSON.parse(localStorage.getItem(id));
-    if (posGuardada) {
-      postit.style.left = posGuardada.left;
-      postit.style.top = posGuardada.top;
-    } else {
-      postit.style.left = `${100 + index * 30}px`;
-      postit.style.top = `${100 + index * 30}px`;
+    // Restaurar posición desde localStorage
+    const savedPosition = JSON.parse(localStorage.getItem(id));
+    if (savedPosition) {
+      postit.style.transform = `translate(${savedPosition.left}px, ${savedPosition.top}px)`;
     }
 
-    postit.style.position = 'fixed'; // ✅ clave para que no afecte layout
+    // Posicionamiento inicial
+    postit.style.position = 'absolute';
+    postit.style.cursor = 'grab';
 
     postit.addEventListener('mousedown', (e) => {
-      moviendo = true;
+      dragging = true;
       offsetX = e.clientX - postit.getBoundingClientRect().left;
       offsetY = e.clientY - postit.getBoundingClientRect().top;
       postit.style.zIndex = 9999;
+      postit.style.transition = 'none';
       postit.style.cursor = 'grabbing';
       e.preventDefault();
     });
 
     document.addEventListener('mousemove', (e) => {
-      if (!moviendo) return;
+      if (!dragging) return;
+
       const x = e.clientX - offsetX;
       const y = e.clientY - offsetY;
-      postit.style.left = `${x}px`;
-      postit.style.top = `${y}px`;
-      localStorage.setItem(id, JSON.stringify({ left: `${x}px`, top: `${y}px` }));
+
+      postit.style.transform = `translate(${x}px, ${y}px)`;
+      postit.setAttribute('data-x', x);
+      postit.setAttribute('data-y', y);
+
+      localStorage.setItem(id, JSON.stringify({ left: x, top: y }));
     });
 
     document.addEventListener('mouseup', () => {
-      moviendo = false;
+      if (!dragging) return;
+      dragging = false;
+      postit.style.cursor = 'grab';
+      postit.style.zIndex = 10;
+    });
+
+    // Touch para móvil
+    postit.addEventListener('touchstart', (e) => {
+      dragging = true;
+      const touch = e.touches[0];
+      offsetX = touch.clientX - postit.getBoundingClientRect().left;
+      offsetY = touch.clientY - postit.getBoundingClientRect().top;
+      postit.style.zIndex = 9999;
+      postit.style.transition = 'none';
+      postit.style.cursor = 'grabbing';
+    });
+
+    document.addEventListener('touchmove', (e) => {
+      if (!dragging) return;
+      const touch = e.touches[0];
+      const x = touch.clientX - offsetX;
+      const y = touch.clientY - offsetY;
+
+      postit.style.transform = `translate(${x}px, ${y}px)`;
+      postit.setAttribute('data-x', x);
+      postit.setAttribute('data-y', y);
+
+      localStorage.setItem(id, JSON.stringify({ left: x, top: y }));
+    });
+
+    document.addEventListener('touchend', () => {
+      dragging = false;
       postit.style.cursor = 'grab';
       postit.style.zIndex = 10;
     });
