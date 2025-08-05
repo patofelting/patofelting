@@ -820,7 +820,7 @@ function hacerPostitsArrastrables() {
 
 
 function activarCambioDeColorEnPostits() {
-  const colores = ['#fff89a', '#ffdab9', '#c8f7dc', '#add8e6', '#ffc0cb']; // Pasteles
+  const colores = ['#fff89a', '#ffdab9', '#c8f7dc', '#add8e6', '#ffc0cb'];
 
   document.querySelectorAll('.postit').forEach((postit, index) => {
     const id = `postit-${index}`;
@@ -831,14 +831,32 @@ function activarCambioDeColorEnPostits() {
       postit.style.backgroundColor = colorGuardado;
     }
 
+    // Doble clic para escritorio
     postit.addEventListener('dblclick', () => {
-      const colorActual = postit.style.backgroundColor;
-      const actualIndex = colores.findIndex(c => c === colorActual);
+      const colorActual = rgbToHex(postit.style.backgroundColor);
+      const actualIndex = colores.findIndex(c => c.toLowerCase() === colorActual.toLowerCase());
       const siguienteColor = colores[(actualIndex + 1) % colores.length];
 
       postit.style.backgroundColor = siguienteColor;
       localStorage.setItem(`${id}-color`, siguienteColor);
     });
+
+    // Doble toque para dispositivos táctiles
+    let lastTap = 0;
+    postit.addEventListener('touchstart', (e) => {
+      const currentTime = new Date().getTime();
+      const tapLength = currentTime - lastTap;
+      if (tapLength < 300 && tapLength > 0) { // 300ms para considerar un doble toque
+        e.preventDefault(); // Evitar comportamiento predeterminado
+        const colorActual = rgbToHex(postit.style.backgroundColor);
+        const actualIndex = colores.findIndex(c => c.toLowerCase() === colorActual.toLowerCase());
+        const siguienteColor = colores[(actualIndex + 1) % colores.length];
+
+        postit.style.backgroundColor = siguienteColor;
+        localStorage.setItem(`${id}-color`, siguienteColor);
+      }
+      lastTap = currentTime;
+    }, { passive: false });
   });
 }
 setTimeout(() => {
