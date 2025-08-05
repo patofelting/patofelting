@@ -181,35 +181,34 @@ class BlogManager {
     }, 100);
   }
 
-  renderEntradaBlog(entrada, index) {
-    const esDestacada = index === 0; // La primera entrada (más reciente) es destacada
-    const template = document.getElementById('entry-template');
-    if (!template) {
-      console.error('❌ No se encontró el template #entry-template');
-      return '';
-    }
-
-    const clone = template.content.cloneNode(true);
-    const article = clone.querySelector('.blog-entry');
-    article.setAttribute('data-entry-id', entrada.id);
-
-    const notebookPage = article.querySelector('.notebook-page');
-    const entryContent = article.querySelector('.entry-content');
-
-    entryContent.innerHTML = `
-      <div class="entry-date">${entrada.fecha}</div>
-      <h2 class="entry-title">${entrada.titulo}</h2>
-      <div class="entry-text">${this.procesarContenido(entrada.contenido)}</div>
-      ${this.renderMediaContent(entrada)}
-      ${esDestacada ? this.renderCallToAction() : ''}
-    `;
-
-    if (esDestacada) {
-      article.classList.add('featured');
-    }
-
-    return article.outerHTML;
+renderEntradaBlog(entrada, index) {
+  const esDestacada = index === 0; // La primera entrada (más reciente) es destacada
+  const template = document.getElementById('entry-template');
+  if (!template) {
+    console.error('❌ No se encontró el template #entry-template');
+    return '';
   }
+
+  const clone = template.content.cloneNode(true);
+  const article = clone.querySelector('.blog-entry');
+  article.setAttribute('data-entry-id', entrada.id);
+
+  const notebookPage = article.querySelector('.notebook-page');
+  const entryContent = article.querySelector('.entry-content');
+
+  entryContent.innerHTML = `
+    <div class="entry-date">${entrada.fecha}</div>
+    <h2 class="entry-title">${entrada.titulo}</h2>
+    <div class="entry-text">${this.procesarContenido(entrada.contenido)}</div>
+    ${this.renderMediaContent(entrada)}
+  `;
+
+  if (esDestacada) {
+    article.classList.add('featured');
+  }
+
+  return article.outerHTML;
+}
 
   procesarContenido(contenido) {
     if (!contenido) return '<p>Sin contenido disponible.</p>';
@@ -268,16 +267,7 @@ class BlogManager {
   return mediaHTML || '';
 }
 
-  renderCallToAction() {
-    return `
-      <div class="call-to-action-blog">
-        <h3>¿Quieres ser parte de esta historia?</h3>
-        <p>Cada pedido que me haces se convierte en una nueva entrada en este cuaderno. Tu idea, tu sueño, tu momento especial.</p>
-        <a href="index.html#productos" class="cta-button-blog">Ver productos disponibles</a>
-        <a href="index.html#contacto" class="cta-button-blog secondary">Contarme tu idea</a>
-      </div>
-    `;
-  }
+ 
 
   mostrarMensajeVacio() {
     const contenedor = document.querySelector('.blog-main');
