@@ -752,43 +752,65 @@ function hacerPostitsArrastrables() {
   const postits = document.querySelectorAll('.postit');
 
   postits.forEach((postit, index) => {
-    let offsetX, offsetY, moviendo = false;
     const id = `postit-${index}`;
+    let isDragging = false;
+    let offsetX = 0, offsetY = 0;
 
-    // Posición guardada
-    const posGuardada = JSON.parse(localStorage.getItem(id));
-    if (posGuardada) {
-      postit.style.left = posGuardada.left;
-      postit.style.top = posGuardada.top;
+    // Restaurar posición previa
+    const saved = JSON.parse(localStorage.getItem(id));
+    if (saved) {
+      postit.style.transform = `translate(${saved.x}px, ${saved.y}px)`;
     } else {
-      postit.style.left = `${100 + index * 30}px`;
-      postit.style.top = `${100 + index * 30}px`;
+      const defaultX = 100 + index * 30;
+      const defaultY = 100 + index * 30;
+      postit.style.transform = `translate(${defaultX}px, ${defaultY}px)`;
     }
 
-    postit.style.position = 'fixed'; // ✅ clave para que no afecte layout
+    // Función común para mover
+    const mover = (x, y) => {
+      postit.style.transform = `translate(${x}px, ${y}px)`;
+      localStorage.setItem(id, JSON.stringify({ x, y }));
+    };
 
+    // MOUSE
     postit.addEventListener('mousedown', (e) => {
-      moviendo = true;
-      offsetX = e.clientX - postit.getBoundingClientRect().left;
-      offsetY = e.clientY - postit.getBoundingClientRect().top;
-      postit.style.zIndex = 9999;
+      isDragging = true;
+      const rect = postit.getBoundingClientRect();
+      offsetX = e.clientX - rect.left;
+      offsetY = e.clientY - rect.top;
       postit.style.cursor = 'grabbing';
       e.preventDefault();
     });
 
     document.addEventListener('mousemove', (e) => {
-      if (!moviendo) return;
-      const x = e.clientX - offsetX;
-      const y = e.clientY - offsetY;
-      postit.style.left = `${x}px`;
-      postit.style.top = `${y}px`;
-      localStorage.setItem(id, JSON.stringify({ left: `${x}px`, top: `${y}px` }));
+      if (!isDragging) return;
+      mover(e.clientX - offsetX, e.clientY - offsetY);
     });
 
     document.addEventListener('mouseup', () => {
-      moviendo = false;
+      if (!isDragging) return;
+      isDragging = false;
       postit.style.cursor = 'grab';
-      postit.style.zIndex = 10;
+    });
+
+    // TOUCH
+    postit.addEventListener('touchstart', (e) => {
+      isDragging = true;
+      const rect = postit.getBoundingClientRect();
+      const touch = e.touches[0];
+      offsetX = touch.clientX - rect.left;
+      offsetY = touch.clientY - rect.top;
+    });
+
+    document.addEventListener('touchmove', (e) => {
+      if (!isDragging) return;
+      const touch = e.touches[0];
+      mover(touch.clientX - offsetX, touch.clientY - offsetY);
+    }, { passive: false });
+
+    document.addEventListener('touchend', () => {
+      isDragging = false;
     });
   });
 }
+
