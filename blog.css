@@ -1145,9 +1145,8 @@ background: rgba (255, 107, 107, 0.08);
 }
 
 .postit:active {
-  cursor: grabbing;
+  box-shadow: 6px 8px 20px rgba(0,0,0,0.3);
 }
-
 .postit::before {
   content: '';
   position: absolute;
@@ -1179,18 +1178,19 @@ background: rgba (255, 107, 107, 0.08);
   position: absolute;
   width: 180px;
   min-height: 120px;
-  background: #fff8a6;
+  background: #fff89a;
   font-family: 'Kalam', cursive;
-  font-size: 1rem;
   padding: 1rem;
-  border-radius: 12px;
-  box-shadow: 3px 3px 12px rgba(0,0,0,0.1);
+  border-radius: 10px;
+  box-shadow: 4px 6px 16px rgba(0,0,0,0.2);
   cursor: grab;
   user-select: none;
-  touch-action: none;
-  transition: transform 0.2s ease;
+  touch-action: none; /* Clave para móviles */
   z-index: 10;
+  transition: box-shadow 0.2s ease;
 }
+
+
 
 .postit::before {
   content: '';
