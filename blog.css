@@ -324,6 +324,76 @@ body {
   margin-top: 1rem;
 }
 
+/* ========== EMBEDS DE VIDEO (YOUTUBE/VIMEO) ========== */
+.video-embed-container {
+  position: relative;
+  background: white;
+  padding: 1rem;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  border-radius: 8px;
+  transform: rotate(-1deg);
+  transition: transform 0.3s ease;
+}
+
+.video-embed-container:hover {
+  transform: rotate(0deg) scale(1.01);
+}
+
+.video-embed-wrapper {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-bottom: 56.25%; /* Aspect ratio 16:9 */
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.video-embed-wrapper iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 4px;
+}
+
+/* Media error styles */
+.media-error {
+  background: rgba(255, 107, 107, 0.1);
+  border: 2px dashed rgba(255, 107, 107, 0.3);
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  margin: 1rem 0;
+}
+
+.error-content {
+  color: var(--pencil-gray);
+}
+
+.error-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.media-error p {
+  margin: 0.5rem 0;
+  font-weight: 600;
+  color: var(--ink-black);
+}
+
+.media-error small {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  word-break: break-all;
+  background: rgba(255, 107, 107, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
 /* ========== COMPARACIONES ANTES/DESPUÉS ========== */
 .before-after {
   margin: 3rem 0;
@@ -746,6 +816,20 @@ body {
   .footer-links {
     flex-direction: column;
     gap: 1rem;
+  }
+  
+  /* Responsive video embeds */
+  .video-embed-container {
+    transform: rotate(0deg);
+    margin: 1rem 0;
+  }
+  
+  .video-embed-wrapper {
+    padding-bottom: 56.25%; /* Maintain 16:9 aspect ratio */
+  }
+  
+  .media-error {
+    padding: 1.5rem 1rem;
   }
 }
 
