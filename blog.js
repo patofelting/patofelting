@@ -754,63 +754,68 @@ function hacerPostitsArrastrables() {
   postits.forEach((postit, index) => {
     const id = `postit-${index}`;
     let isDragging = false;
-    let offsetX = 0, offsetY = 0;
+    let startX = 0, startY = 0;
+    let currentX = 0, currentY = 0;
 
-    // Restaurar posición previa
+    // Restaurar posición guardada
     const saved = JSON.parse(localStorage.getItem(id));
     if (saved) {
-      postit.style.transform = `translate(${saved.x}px, ${saved.y}px)`;
-    } else {
-      const defaultX = 100 + index * 30;
-      const defaultY = 100 + index * 30;
-      postit.style.transform = `translate(${defaultX}px, ${defaultY}px)`;
+      currentX = saved.x;
+      currentY = saved.y;
+      postit.style.transform = `translate(${currentX}px, ${currentY}px)`;
     }
 
-    // Función común para mover
-    const mover = (x, y) => {
-      postit.style.transform = `translate(${x}px, ${y}px)`;
-      localStorage.setItem(id, JSON.stringify({ x, y }));
+    const startDrag = (x, y) => {
+      isDragging = true;
+      startX = x - currentX;
+      startY = y - currentY;
+      postit.style.cursor = 'grabbing';
     };
 
-    // MOUSE
-    postit.addEventListener('mousedown', (e) => {
-      isDragging = true;
-      const rect = postit.getBoundingClientRect();
-      offsetX = e.clientX - rect.left;
-      offsetY = e.clientY - rect.top;
-      postit.style.cursor = 'grabbing';
-      e.preventDefault();
-    });
-
-    document.addEventListener('mousemove', (e) => {
+    const moveDrag = (x, y) => {
       if (!isDragging) return;
-      mover(e.clientX - offsetX, e.clientY - offsetY);
-    });
+      currentX = x - startX;
+      currentY = y - startY;
+      postit.style.transform = `translate(${currentX}px, ${currentY}px)`;
+    };
 
-    document.addEventListener('mouseup', () => {
+    const endDrag = () => {
       if (!isDragging) return;
       isDragging = false;
       postit.style.cursor = 'grab';
+      localStorage.setItem(id, JSON.stringify({ x: currentX, y: currentY }));
+    };
+
+    // Mouse
+    postit.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      startDrag(e.clientX, e.clientY);
     });
 
-    // TOUCH
-    postit.addEventListener('touchstart', (e) => {
-      isDragging = true;
-      const rect = postit.getBoundingClientRect();
-      const touch = e.touches[0];
-      offsetX = touch.clientX - rect.left;
-      offsetY = touch.clientY - rect.top;
+    document.addEventListener('mousemove', (e) => {
+      moveDrag(e.clientX, e.clientY);
     });
+
+    document.addEventListener('mouseup', () => {
+      endDrag();
+    });
+
+    // Touch
+    postit.addEventListener('touchstart', (e) => {
+      const touch = e.touches[0];
+      startDrag(touch.clientX, touch.clientY);
+    }, { passive: false });
 
     document.addEventListener('touchmove', (e) => {
       if (!isDragging) return;
       const touch = e.touches[0];
-      mover(touch.clientX - offsetX, touch.clientY - offsetY);
+      moveDrag(touch.clientX, touch.clientY);
     }, { passive: false });
 
     document.addEventListener('touchend', () => {
-      isDragging = false;
+      endDrag();
     });
   });
 }
+
 
