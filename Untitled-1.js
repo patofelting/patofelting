@@ -274,7 +274,7 @@ return `
           ? `<button class="boton-stock-naranja" data-producto="${p.nombre}" data-productoid="${p.id}" 
                style="background:#FFA500;color:#fff;" aria-label="Avisarme cuando ${p.nombre} tenga stock disponible">
                🟠 Avisame cuando haya stock</button>`
-          : `<button class="boton-agregar" aria-label="Agregar ${p.nombre} al carrito">Agregar</button>`
+          : `<button class="boton-agregar" aria-label="Agregar ${p.nombre} al carrito">Agregar al carrito</button>`
       }
       <button class="boton-detalles" aria-label="Ver detalles de ${p.nombre}">Ver Detalle</button>
     </div>
