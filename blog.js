@@ -223,55 +223,50 @@ class BlogManager {
       .join('');
   }
 
-  renderMediaContent(entrada) {
-    let mediaHTML = '<div class="media-gallery">';
-
-    // Renderizar imágenes (carrusel si hay varias)
-    if (entrada.imagenes.length > 0) {
-      if (entrada.imagenes.length > 1) {
-        mediaHTML += '<div class="carousel">';
-        entrada.imagenes.forEach((url, idx) => {
-          mediaHTML += `
-            <div class="carousel-item ${idx === 0 ? 'active' : ''}">
-              <div class="photo-polaroid">
-                <img src="${url}" alt="${entrada.titulo} - Imagen ${idx + 1}" class="entrada-imagen" loading="lazy" onerror="this.closest('.photo-polaroid').classList.add('image-error'); this.style.display='none';">
-                <div class="polaroid-caption">Momento especial de Patofelting ✨</div>
-              </div>
+ renderMediaContent(entrada) {
+  console.log('Imágenes procesadas:', entrada.imagenes);
+  let mediaHTML = '<div class="media-gallery">';
+  if (entrada.imagenes.length > 0) {
+    if (entrada.imagenes.length > 1) {
+      mediaHTML += '<div class="carousel">';
+      entrada.imagenes.forEach((url, idx) => {
+        console.log('Añadiendo imagen:', url);
+        mediaHTML += `
+          <div class="carousel-item ${idx === 0 ? 'active' : ''}">
+            <div class="photo-polaroid">
+              <img src="${url}" alt="${entrada.titulo} - Imagen ${idx + 1}" class="entrada-imagen" loading="lazy" onerror="this.closest('.photo-polaroid').classList.add('image-error'); this.style.display='none';">
+              <div class="polaroid-caption">Momento especial de Patofelting ✨</div>
             </div>
-          `;
-        });
-        mediaHTML += `
-          <button class="carousel-prev">❮</button>
-          <button class="carousel-next">❯</button>
-        </div>
-        `;
-      } else {
-        mediaHTML += `
-          <div class="photo-polaroid">
-            <img src="${entrada.imagenes[0]}" alt="${entrada.titulo}" class="entrada-imagen" loading="lazy" onerror="this.closest('.photo-polaroid').classList.add('image-error'); this.style.display='none';">
-            <div class="polaroid-caption">Momento especial de Patofelting ✨</div>
           </div>
         `;
-      }
-    }
-
-    // Renderizar video si existe
-    if (entrada.videos.length > 0) {
+      });
       mediaHTML += `
-        <div class="video-container">
-          <video controls class="entrada-video" preload="metadata">
-            <source src="${entrada.videos[0]}" type="video/mp4">
-            Tu navegador no soporta video HTML5.
-          </video>
-          <div class="video-caption">Proceso creativo en acción 🎬</div>
+        <button class="carousel-prev">❮</button>
+        <button class="carousel-next">❯</button>
+      </div>`;
+    } else {
+      mediaHTML += `
+        <div class="photo-polaroid">
+          <img src="${entrada.imagenes[0]}" alt="${entrada.titulo}" class="entrada-imagen" loading="lazy" onerror="this.closest('.photo-polaroid').classList.add('image-error'); this.style.display='none';">
+          <div class="polaroid-caption">Momento especial de Patofelting ✨</div>
         </div>
       `;
     }
-
-    mediaHTML += '</div>';
-
-    return mediaHTML || '';
   }
+  if (entrada.videos.length > 0) {
+    mediaHTML += `
+      <div class="video-container">
+        <video controls class="entrada-video" preload="metadata">
+          <source src="${entrada.videos[0]}" type="video/mp4">
+          Tu navegador no soporta video HTML5.
+        </video>
+        <div class="video-caption">Proceso creativo en acción 🎬</div>
+      </div>
+    `;
+  }
+  mediaHTML += '</div>';
+  return mediaHTML || '';
+}
 
   renderCallToAction() {
     return `
