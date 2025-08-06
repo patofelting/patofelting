@@ -1,5 +1,4 @@
-// ========== CONFIGURACIÓN DEL BLOG CON GOOGLE SHEETS ==========
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?gid=127717360&single=true&output=csv';
+// Existing JS content remains unchanged up to this point...
 
 class BlogManager {
   constructor() {
@@ -15,6 +14,7 @@ class BlogManager {
     this.addTouchInteractions();
     this.addReadingProgress();
     this.initializeAnimations();
+    this.initializePostitColors();
   }
 
   // ========== CARGA DE DATOS DESDE GOOGLE SHEETS ==========
@@ -128,10 +128,57 @@ class BlogManager {
         });
       }
 
+      // Post-it
+      if (entrada.postit) {
+        const postitContainer = document.createElement('div');
+        postitContainer.className = 'postit-container';
+        const postit = document.createElement('div');
+        postit.className = 'postit';
+        postit.textContent = entrada.postit;
+
+        // Color options
+        const colorOptions = document.createElement('div');
+        colorOptions.className = 'postit-color-options';
+        const colors = ['yellow', 'pink', 'green', 'blue'];
+        colors.forEach(color => {
+          const option = document.createElement('div');
+          option.id = `color-${color}`;
+          option.className = 'color-option';
+          option.addEventListener('click', () => this.changePostitColor(postit, color));
+          colorOptions.appendChild(option);
+        });
+
+        postit.appendChild(colorOptions);
+        postitContainer.appendChild(postit);
+        entryElement.appendChild(postitContainer);
+      }
+
       contenedor.appendChild(clone);
     });
 
     this.aplicarEfectosPostRenderizado();
+  }
+
+  // ========== CAMBIO DE COLOR DE POST-IT ==========
+  changePostitColor(postit, color) {
+    const colorMap = {
+      yellow: '#ffeb3b',
+      pink: '#ff80ab',
+      green: '#81c784',
+      blue: '#42a5f5'
+    };
+    postit.style.background = colorMap[color];
+    postit.style.borderColor = this.getBorderColor(color);
+  }
+
+  getBorderColor(color) {
+    const borderMap = {
+      yellow: '#c9a600',
+      pink: '#c74f7d',
+      green: '#4b7f52',
+      blue: '#1976d2'
+    };
+    return borderMap[color] || '#c9a600';
   }
 
   // ========== UTILIDADES ==========
@@ -220,6 +267,7 @@ class BlogManager {
     this.addImageLazyLoading();
     this.addVideoPlayPause();
     this.initializeCarousel();
+    this.initializePostitColors();
 
     document.querySelectorAll('.blog-entry').forEach((entry, index) => {
       setTimeout(() => {
@@ -495,6 +543,15 @@ class BlogManager {
       }
     `;
     document.head.appendChild(style);
+  }
+
+  // ========== INICIALIZACIÓN DE COLORES DE POST-IT ==========
+  initializePostitColors() {
+    document.querySelectorAll('.postit').forEach(postit => {
+      const defaultColor = '#ffeb3b'; // Default yellow
+      postit.style.background = defaultColor;
+      postit.style.borderColor = this.getBorderColor('yellow');
+    });
   }
 
   async recargar() {
