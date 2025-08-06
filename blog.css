@@ -13,7 +13,7 @@
   --primary-green: #43c160;
   --soft-green: #b4f1d9;
   --dark-green: #28705b;
-  --gold-accent: #d4af37; /* Toque premium dorado */
+  --gold-accent: #d4af37;
 
   /* Tipografías */
   --font-handwritten: 'Kalam', cursive;
@@ -166,6 +166,7 @@ body {
 .entry-content {
   padding: 0 var(--margin-right) 0 calc(var(--margin-left) + 2rem);
   min-height: 400px;
+  position: relative;
 }
 
 .entry-date {
@@ -210,109 +211,42 @@ body {
   font-weight: 600;
 }
 
-/* ========== CITAS Y NOTAS ========== */
-.handwritten-note {
-  background: rgba(255, 235, 59, 0.25);
-  padding: 1.2rem;
-  border-left: 5px solid var(--primary-green);
-  margin: 1.5rem 0;
-  font-style: italic;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
-/* ========== CARRUSEL PREMIUM ========== */
-.media-gallery {
-  position: relative;
+/* ========== EFECTO DE LIBRO PARA IMÁGENES ========== */
+.media-book {
   margin-bottom: 2.5rem;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
-  padding-bottom: 15px;
 }
 
-.carousel {
-  display: flex;
-  gap: 1.5rem;
-  padding: 15px 0;
+.book-page {
+  margin-bottom: 1.5rem;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.carousel-item {
-  min-width: 100%;
-  flex-shrink: 0;
-  box-sizing: border-box;
+.book-page:hover {
+  transform: rotate(-1deg) scale(1.02);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
 .entrada-imagen {
   max-width: 100%;
   height: auto;
   border-radius: var(--border-radius);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
   background: linear-gradient(135deg, var(--paper-white), #ffffff);
   border: 2px solid var(--gold-accent);
   padding: 15px;
-  transform: rotate(-1deg);
-  transition: transform 0.4s ease, box-shadow 0.4s ease;
-}
-
-.entrada-imagen:hover {
-  transform: rotate(0deg) scale(1.03);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
 }
 
 .entrada-video {
   max-width: 100%;
   aspect-ratio: 16 / 9;
   border-radius: var(--border-radius);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
   background: linear-gradient(135deg, var(--paper-white), #ffffff);
   border: 2px solid var(--gold-accent);
   padding: 15px;
 }
 
-/* Navegación de puntos */
-.carousel-nav {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 15px;
-}
-
-.carousel-dot {
-  width: 12px;
-  height: 12px;
-  background: var(--pencil-gray);
-  border-radius: 50%;
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.3s ease;
-}
-
-.carousel-dot.active,
-.carousel-dot:hover {
-  background: var(--gold-accent);
-  transform: scale(1.2);
-}
-
-/* Efecto de sombra en los bordes */
-.media-gallery::before,
-.media-gallery::after {
-  content: '';
-  position: absolute;
-  height: 100%;
-  width: 25px;
-  z-index: 1;
-}
-
-.media-gallery::before {
-  left: 0;
-  background: linear-gradient(to right, var(--notebook-bg), transparent);
-}
-
-.media-gallery::after {
-  right: 0;
-  background: linear-gradient(to left, var(--notebook-bg), transparent);
-}
-
-/* ========== POST-IT STYLES ========== */
+/* ========== POST-IT MEJORADOS ========== */
 .postit-container {
   position: relative;
   margin: 2.5rem 0;
@@ -327,10 +261,13 @@ body {
   font-size: 1.4rem;
   color: var(--ink-black);
   max-width: 320px;
-  transform: rotate(-2deg);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-  position: relative;
+  position: absolute;
   transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.postit.dragging {
+  opacity: 0.5;
 }
 
 .postit:hover {
@@ -350,9 +287,11 @@ body {
   border-radius: 6px;
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
   border: 1px solid var(--gold-accent);
+  z-index: 10;
 }
 
-.postit:hover .postit-color-options {
+.postit:hover .postit-color-options,
+.postit:focus-within .postit-color-options {
   display: block;
 }
 
@@ -365,6 +304,7 @@ body {
   border-radius: 50%;
   border: 2px solid var(--gold-accent);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
 }
 
 .color-option:hover {
@@ -586,7 +526,7 @@ body {
 @media (max-width: 1024px) {
   .notebook-page { max-width: 700px; }
   .entry-content { padding-right: 20px; padding-left: calc(var(--margin-left) + 1rem); }
-  .carousel-item .entrada-imagen { padding: 12px; }
+  .book-page .entrada-imagen { padding: 12px; }
 }
 
 @media (max-width: 768px) {
@@ -598,8 +538,7 @@ body {
   .entry-title { font-size: 2.3rem; }
   .entry-text { font-size: 1.1rem; }
   .postit { max-width: 250px; font-size: 1.2rem; padding: 1.2rem; }
-  .media-gallery { padding-bottom: 10px; }
-  .carousel-item .entrada-imagen { padding: 10px; }
+  .book-page { margin-bottom: 1rem; }
   .footer-links a { margin: 0 1rem; }
 }
 
@@ -614,10 +553,7 @@ body {
   .entry-text { font-size: 1rem; }
   .postit { max-width: 200px; font-size: 1.1rem; padding: 1rem; }
   .postit-color-options { display: none !important; }
-  .media-gallery { flex-direction: column; padding-bottom: 0; }
-  .carousel { flex-direction: row; overflow-x: auto; }
-  .carousel-item { min-width: 90%; }
-  .entrada-imagen, .entrada-video { width: 100%; padding: 8px; }
+  .book-page { margin-bottom: 0.8rem; }
   .footer-links { flex-direction: column; }
   .footer-links a { margin: 0.5rem 0; }
 }
