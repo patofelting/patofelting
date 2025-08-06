@@ -1131,32 +1131,23 @@ background: rgba (255, 107, 107, 0.08);
 .postit-container {
   position: relative;
   margin: 2rem 0;
-  touch-action: none; /* Mejora en móviles */
 }
 
 .postit {
-  background: #ffeb3b; /* Amarillo por defecto */
+  background: #ffeb3b; /* Default yellow */
   padding: 1.5rem;
   border: 2px dashed #c9a600;
   border-radius: 8px;
   font-family: var(--font-cursive);
-  font-size: clamp(1.6rem, 2.5vw, 2.8rem); /* Responsivo */
-  color: #333;
-  max-width: clamp(180px, 30vw, 300px); /* Se adapta al ancho del viewport */
+  font-size: clamp(2.2rem, 2.5vw, 2.8rem); /* ← responsivo y más grande */
+  color: var(--ink-black);
+  max-width: 300px;
   transform: rotate(-2deg);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   position: relative;
   transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
   will-change: transform, background;
-  cursor: grab;
-  user-select: none;
-  overflow-wrap: break-word;
-  line-height: 1.4;
-  word-break: break-word;
-}
-
-.postit:active {
-  cursor: grabbing;
+  cursor: pointer;
 }
 
 .postit:hover {
@@ -1171,62 +1162,55 @@ background: rgba (255, 107, 107, 0.08);
   left: 0;
   margin-top: 0.5rem;
   background: white;
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  z-index: 10;
-  transition: opacity 0.2s ease;
+  padding: 0.5rem;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .postit:hover .postit-color-options {
-  display: flex;
-  gap: 0.5rem;
+  display: block;
 }
 
 .color-option {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   display: inline-block;
+  margin: 0 0.25rem;
   cursor: pointer;
   border-radius: 50%;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  border: 2px solid white;
 }
 
 .color-option:hover {
-  transform: scale(1.2);
   border-color: #333;
 }
 
-/* Colores disponibles */
 #color-yellow { background: #ffeb3b; }
-#color-pink   { background: #ff80ab; }
-#color-green  { background: #81c784; }
-#color-blue   { background: #42a5f5; }
+#color-pink { background: #f594b4; }
+#color-green { background: #b8f3bb; }
+#color-blue { background: #8dbce4; }
 
-/* ========== MEDIA QUERIES RESPONSIVAS ========== */
+/* Mantén la opción de ocultar los colores en móviles, si así lo deseas */
+@media (max-width: 480px) {
+  .postit-color-options {
+    display: none !important; /* Hide on small screens */
+  }
+}
 
+/* Ensure media queries and other styles remain compatible */
 @media (max-width: 768px) {
   .postit {
-    font-size: clamp(1.4rem, 3vw, 2.2rem);
-    max-width: 260px;
-    padding: 1rem;
-  }
-
-  .color-option {
-    width: 20px;
-    height: 20px;
+    max-width: 250px;
+    font-size: 1.1rem;
   }
 }
 
 @media (max-width: 480px) {
   .postit {
-    font-size: clamp(1.2rem, 4vw, 1.8rem);
     max-width: 200px;
+    font-size: 1rem;
   }
-
   .postit-color-options {
-    display: none !important;
+    display: none !important; /* Hide on small screens */
   }
 }
