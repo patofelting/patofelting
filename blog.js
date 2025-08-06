@@ -29,50 +29,37 @@ class BlogManager {
       }
 
       const texto = await respuesta.text();
-      console.log('📄 CSV recibido (primeros 500 caracteres):', texto.substring(0, 500));
+      console.log('📄 CSV recibido:', texto.substring(0, 300) + '...');
 
-      let filas;
-      if (typeof Papa !== 'undefined') {
-        const resultado = Papa.parse(texto, {
-          header: true,
-          skipEmptyLines: true,
-          transform: (value) => value.trim(),
-        });
-        filas = resultado.data;
-        console.log('📊 Filas parseadas con PapaParse:', filas);
-      } else {
-        filas = this.parseCSVManual(texto);
-        console.log('📊 Filas parseadas manualmente:', filas);
-      }
+      const filas = this.parseCSVManual(texto);
+      console.log('📊 Filas parseadas:', filas);
 
       this.entradas = filas
         .filter((fila) => fila.titulo && fila.titulo.trim() !== '')
         .map((fila) => {
           console.log('🔍 Procesando fila:', fila);
-     const entrada = {
-  id: fila.id || Date.now().toString(),
-  fecha: this.formatearFecha(fila.fecha),
-  fechaRaw: fila.fecha,
-  titulo: fila.titulo,
-  contenido: fila.contenido || '',
-  imagenes: this.limpiarURLs(fila.imagenPrincipal || fila.imagenes || ''),
-  videos: this.limpiarURLs(fila.videoURL || fila.videos || ''),
-  orden: parseInt(fila.orden) || 0,
-  categoria: fila.categoria || 'general',
-  postit: fila.postit || '', // ✅ nuevo campo
-  ordenpostit: parseInt(fila.ordenpostit) || 0 // ✅ nuevo campo
-};
-console.log('✅ Entrada procesada:', entrada);
-return entrada;
+          const entrada = {
+            id: fila.id || Date.now().toString(),
+            fecha: this.formatearFecha(fila.fecha),
+            fechaRaw: fila.fecha,
+            titulo: fila.titulo,
+            contenido: fila.contenido || '',
+            imagenes: this.limpiarURLs(fila.imagenPrincipal || fila.imegenPrincipal || ''),
+            videos: this.limpiarURLs(fila.videoURL || ''),
+            orden: parseInt(fila.orden) || 0,
+            categoria: fila.categoria || 'general'
+          };
+          console.log('✅ Entrada procesada:', entrada);
+          return entrada;
         })
         .sort((a, b) => {
           if (a.orden !== 0 && b.orden !== 0) return a.orden - b.orden;
           const dateA = new Date(a.fechaRaw);
           const dateB = new Date(b.fechaRaw);
-          return dateB - dateA; // Orden descendente por fecha (nuevo primero)
+          return dateB - dateA;
         });
 
-      console.log('✅ Entradas cargadas:', this.entradas.length);
+      console.log('✅ Total entradas cargadas:', this.entradas.length);
 
       if (this.entradas.length > 0) {
         this.renderizarBlog();
@@ -85,28 +72,29 @@ return entrada;
     }
   }
 
-  // Limpiar y validar URLs
   limpiarURLs(urlsString) {
     if (!urlsString) return [];
     return urlsString
       .split(',')
       .map((url) => url.trim())
-      .filter((url) => url && url.match(/\.(jpeg|jpg|png|gif|mp4)$/i));
+      .filter((url) => url && url.length > 0);
   }
 
-  // Parser CSV manual
   parseCSVManual(texto) {
     const lineas = texto.trim().split('\n');
+    if (lineas.length < 2) return [];
+    
     const headers = lineas[0].split(',').map((h) => h.trim().replace(/"/g, ''));
+    console.log('📋 Headers encontrados:', headers);
 
     return lineas.slice(1).map((linea) => {
       const valores = this.parsearLineaCSV(linea);
       const objeto = {};
-
+      
       headers.forEach((header, index) => {
         objeto[header] = valores[index] || '';
       });
-
+      
       return objeto;
     });
   }
@@ -114,188 +102,173 @@ return entrada;
   parsearLineaCSV(linea) {
     const resultado = [];
     let valorActual = '';
-    let dentroDeComillas = false;
+    let dentroComillas = false;
     let i = 0;
 
     while (i < linea.length) {
       const char = linea[i];
-
+      
       if (char === '"') {
-        dentroDeComillas = !dentroDeComillas;
-      } else if (char === ',' && !dentroDeComillas) {
+        dentroComillas = !dentroComillas;
+      } else if (char === ',' && !dentroComillas) {
         resultado.push(valorActual.trim());
         valorActual = '';
       } else {
         valorActual += char;
       }
-
+      
       i++;
     }
-
+    
     resultado.push(valorActual.trim());
     return resultado;
   }
 
   formatearFecha(fechaString) {
-    if (!fechaString) return new Date().toLocaleDateString('es-ES');
+    if (!fechaString) return 'Sin fecha';
+    
     try {
-      let fecha;
-      if (fechaString.includes('/')) {
+      if (fechaString.includes('de')) return fechaString;
+      
+      const fecha = new Date(fechaString);
+      if (isNaN(fecha.getTime())) {
         const partes = fechaString.split('/');
         if (partes.length === 3) {
-          fecha = new Date(partes[2], partes[1] - 1, partes[0]);
+          const nuevaFecha = new Date(partes[2], partes[1] - 1, partes[0]);
+          if (!isNaN(nuevaFecha.getTime())) {
+            return nuevaFecha.toLocaleDateString('es-ES', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric'
+            });
+          }
         }
-      } else if (fechaString.includes('-')) {
-        fecha = new Date(fechaString);
-      } else {
-        fecha = new Date(fechaString);
+        return fechaString;
       }
-
-      if (isNaN(fecha.getTime())) {
-        throw new Error('Fecha inválida');
-      }
-
+      
       return fecha.toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
         day: 'numeric',
+        month: 'long',
+        year: 'numeric'
       });
     } catch (error) {
-      console.warn('⚠️ Error al formatear fecha:', fechaString);
+      console.warn('Error al formatear fecha:', fechaString);
       return fechaString;
     }
   }
 
-// ========== RENDERIZADO DEL BLOG ==========
-renderizarBlog() {
-  const contenedor = document.querySelector('.blog-main');
-  if (!contenedor) {
-    console.error('❌ No se encontró el contenedor .blog-main');
-    return;
+  renderizarBlog() {
+    const contenedor = document.querySelector('.blog-main');
+    if (!contenedor) {
+      console.error('❌ No se encontró el contenedor .blog-main');
+      return;
+    }
+
+    const loading = document.getElementById('blog-loading');
+    if (loading) loading.style.display = 'none';
+
+    const entradasHTML = this.entradas
+      .map((entrada, index) => this.renderEntradaBlog(entrada, index))
+      .join('');
+
+    contenedor.innerHTML = entradasHTML;
+
+    setTimeout(() => {
+      this.aplicarEfectosPostRenderizado();
+    }, 100);
   }
 
-  // 1. Crear sección de post-its si existen
-  const postits = this.entradas
-    .filter(e => e.postit && e.postit.trim() !== '')
-    .sort((a, b) => a.ordenpostit - b.ordenpostit);
-
-  let postitHTML = '';
-  if (postits.length > 0) {
-    postitHTML += `<section class="postit-section">`;
-    postits.forEach(postit => {
-      postitHTML += `
-        <div class="postit">
-          ${postit.postit}
+  renderEntradaBlog(entrada, index) {
+    const esDestacada = index === 0;
+    
+    return `
+      <article class="blog-entry ${esDestacada ? 'featured' : ''}" data-entry-id="${entrada.id}">
+        <div class="notebook-page">
+          <div class="red-margin"></div>
+          <div class="entry-content">
+            <div class="entry-date">${entrada.fecha}</div>
+            <h2 class="entry-title">${entrada.titulo}</h2>
+            
+            <div class="entry-text">
+              ${this.procesarContenido(entrada.contenido)}
+            </div>
+            
+            ${this.renderMediaContent(entrada)}
+            
+            ${esDestacada ? this.renderCallToAction() : ''}
+          </div>
         </div>
-      `;
-    });
-    postitHTML += `</section>`;
+      </article>
+    `;
   }
 
-  // 2. Renderizar entradas del blog
-  const entradasHTML = this.entradas
-    .map((entrada, index) => this.renderEntradaBlog(entrada, index))
-    .join('');
-
-  // 3. Combinar y volcar en el contenedor
-  contenedor.innerHTML = postitHTML + entradasHTML;
-
-  // 4. Aplicar efectos y hacer los post-its arrastrables
-  setTimeout(() => {
-    this.aplicarEfectosPostRenderizado();
-    hacerPostitsArrastrables(); // ✅ se activa el arrastre
-  }, 100);
-}
-
-// ========== RENDER DE CADA ENTRADA ==========
-renderEntradaBlog(entrada, index) {
-  const esDestacada = index === 0; // La primera entrada (más reciente) es destacada
-  const template = document.getElementById('entry-template');
-  if (!template) {
-    console.error('❌ No se encontró el template #entry-template');
-    return '';
+  procesarContenido(contenido) {
+    if (!contenido) return '<p>Sin contenido disponible.</p>';
+    
+    if (contenido.includes('<') && contenido.includes('>')) {
+      return contenido;
+    }
+    
+    return contenido
+      .split('\n')
+      .filter((parrafo) => parrafo.trim() !== '')
+      .map((parrafo) => `<p>${parrafo.trim()}</p>`)
+      .join('');
   }
 
-  const clone = template.content.cloneNode(true);
-  const article = clone.querySelector('.blog-entry');
-  article.setAttribute('data-entry-id', entrada.id);
-
-  const notebookPage = article.querySelector('.notebook-page');
-  const entryContent = article.querySelector('.entry-content');
-
-  entryContent.innerHTML = `
-    <div class="entry-date">${entrada.fecha}</div>
-    <h2 class="entry-title">${entrada.titulo}</h2>
-    <div class="entry-text">${this.procesarContenido(entrada.contenido)}</div>
-    ${this.renderMediaContent(entrada)}
-  `;
-
-  if (esDestacada) {
-    article.classList.add('featured');
-  }
-
-  return article.outerHTML;
-}
-
-// ========== FORMATEAR CONTENIDO DE TEXTO ==========
-procesarContenido(contenido) {
-  if (!contenido) return '<p>Sin contenido disponible.</p>';
-  if (contenido.includes('<') && contenido.includes('>')) {
-    return contenido; // ya viene con HTML
-  }
-  return contenido
-    .split('\n')
-    .filter((parrafo) => parrafo.trim() !== '')
-    .map((parrafo) => `<p>${parrafo.trim()}</p>`)
-    .join('');
-}
-
- renderMediaContent(entrada) {
-  console.log('Imágenes procesadas:', entrada.imagenes);
-  let mediaHTML = '<div class="media-gallery">';
-  if (entrada.imagenes.length > 0) {
-    if (entrada.imagenes.length > 1) {
-      mediaHTML += '<div class="carousel">';
-      entrada.imagenes.forEach((url, idx) => {
-        console.log('Añadiendo imagen:', url);
-        mediaHTML += `
-          <div class="carousel-item ${idx === 0 ? 'active' : ''}">
+  renderMediaContent(entrada) {
+    let mediaHTML = '';
+    
+    if (entrada.imagenes.length > 0 || entrada.videos.length > 0) {
+      mediaHTML += '<div class="media-gallery">';
+      
+      if (entrada.imagenes.length > 0) {
+        console.log('🖼️ Procesando imágenes:', entrada.imagenes);
+        entrada.imagenes.forEach((url, index) => {
+          mediaHTML += `
             <div class="photo-polaroid">
-              <img src="${url}" alt="${entrada.titulo} - Imagen ${idx + 1}" class="entrada-imagen" loading="lazy" onerror="this.closest('.photo-polaroid').classList.add('image-error'); this.style.display='none';">
+              <img src="${url}" 
+                   alt="${entrada.titulo} - Imagen ${index + 1}" 
+                   class="entrada-imagen"
+                   loading="lazy"
+                   onerror="this.closest('.photo-polaroid').classList.add('image-error'); this.style.display='none';">
               <div class="polaroid-caption">Momento especial de Patofelting ✨</div>
             </div>
-          </div>
-        `;
-      });
-      mediaHTML += `
-        <button class="carousel-prev">❮</button>
-        <button class="carousel-next">❯</button>
-      </div>`;
-    } else {
-      mediaHTML += `
-        <div class="photo-polaroid">
-          <img src="${entrada.imagenes[0]}" alt="${entrada.titulo}" class="entrada-imagen" loading="lazy" onerror="this.closest('.photo-polaroid').classList.add('image-error'); this.style.display='none';">
-          <div class="polaroid-caption">Momento especial de Patofelting ✨</div>
-        </div>
-      `;
+          `;
+        });
+      }
+      
+      if (entrada.videos.length > 0) {
+        console.log('🎥 Procesando videos:', entrada.videos);
+        entrada.videos.forEach((url) => {
+          mediaHTML += `
+            <div class="video-container">
+              <video controls class="entrada-video" preload="metadata">
+                <source src="${url}" type="video/mp4">
+                Tu navegador no soporta video HTML5.
+              </video>
+              <div class="video-caption">Proceso creativo en acción 🎬</div>
+            </div>
+          `;
+        });
+      }
+      
+      mediaHTML += '</div>';
     }
+    
+    return mediaHTML;
   }
-  if (entrada.videos.length > 0) {
-    mediaHTML += `
-      <div class="video-container">
-        <video controls class="entrada-video" preload="metadata">
-          <source src="${entrada.videos[0]}" type="video/mp4">
-          Tu navegador no soporta video HTML5.
-        </video>
-        <div class="video-caption">Proceso creativo en acción 🎬</div>
+
+  renderCallToAction() {
+    return `
+      <div class="call-to-action-blog">
+        <h3>¿Quieres ser parte de esta historia?</h3>
+        <p>Cada pedido que me haces se convierte en una nueva entrada en este cuaderno. Tu idea, tu sueño, tu momento especial.</p>
+        <a href="index.html#productos" class="cta-button-blog">Ver productos disponibles</a>
+        <a href="index.html#contacto" class="cta-button-blog secondary">Contarme tu idea</a>
       </div>
     `;
   }
-  mediaHTML += '</div>';
-  return mediaHTML || '';
-}
-
- 
 
   mostrarMensajeVacio() {
     const contenedor = document.querySelector('.blog-main');
@@ -322,17 +295,13 @@ procesarContenido(contenido) {
     const contenedor = document.querySelector('.blog-main');
     if (contenedor) {
       contenedor.innerHTML = `
-        <div class="error-state">
-          <div class="notebook-page">
-            <div class="red-margin"></div>
-            <div class="entry-content">
-              <h2>¡Ups! Algo salió mal</h2>
-              <p>No pude cargar las entradas del blog en este momento. Por favor, intenta recargar la página.</p>
-              <button onclick="location.reload()" class="cta-button-blog">🔄 Reintentar</button>
-              <br><br>
-              <p><small>Si el problema persiste, puedes contactarme directamente.</small></p>
-            </div>
+        <div class="blog-error">
+          <div class="error-icon">😔</div>
+          <div class="error-message">
+            <h3>¡Ups! Algo salió mal</h3>
+            <p>No pude cargar las entradas del blog en este momento. Por favor, intenta recargar la página.</p>
           </div>
+          <button onclick="location.reload()" class="retry-button">🔄 Reintentar</button>
         </div>
       `;
     }
@@ -341,7 +310,6 @@ procesarContenido(contenido) {
   aplicarEfectosPostRenderizado() {
     this.addImageLazyLoading();
     this.addVideoPlayPause();
-    this.initializeCarousel();
 
     document.querySelectorAll('.blog-entry').forEach((entry, index) => {
       setTimeout(() => {
@@ -350,41 +318,6 @@ procesarContenido(contenido) {
     });
   }
 
-  // Inicializar carrusel básico
-  initializeCarousel() {
-    document.querySelectorAll('.carousel').forEach((carousel) => {
-      const items = carousel.querySelectorAll('.carousel-item');
-      const prevBtn = carousel.querySelector('.carousel-prev');
-      const nextBtn = carousel.querySelector('.carousel-next');
-      let currentIndex = 0;
-
-      if (items.length <= 1) {
-        prevBtn.style.display = 'none';
-        nextBtn.style.display = 'none';
-        return;
-      }
-
-      function updateCarousel() {
-        items.forEach((item, index) => {
-          item.classList.toggle('active', index === currentIndex);
-        });
-      }
-
-      prevBtn.addEventListener('click', () => {
-        currentIndex = (currentIndex > 0) ? currentIndex - 1 : items.length - 1;
-        updateCarousel();
-      });
-
-      nextBtn.addEventListener('click', () => {
-        currentIndex = (currentIndex < items.length - 1) ? currentIndex + 1 : 0;
-        updateCarousel();
-      });
-
-      updateCarousel();
-    });
-  }
-
-  // ========== EFECTOS DE SCROLL ==========
   addScrollEffects() {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -397,9 +330,11 @@ procesarContenido(contenido) {
       { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
     );
 
-    document.querySelectorAll('.blog-entry').forEach((entry) => {
-      observer.observe(entry);
-    });
+    setTimeout(() => {
+      document.querySelectorAll('.blog-entry').forEach((entry) => {
+        observer.observe(entry);
+      });
+    }, 1000);
 
     window.addEventListener('scroll', () => {
       const scrolled = window.pageYOffset;
@@ -415,17 +350,12 @@ procesarContenido(contenido) {
     });
   }
 
-  // ========== LAZY LOADING DE IMÁGENES ==========
   addImageLazyLoading() {
     const imageObserver = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const img = entry.target;
-            if (img.dataset.src) {
-              img.src = img.dataset.src;
-              img.removeAttribute('data-src');
-            }
             img.classList.add('loaded');
             imageObserver.unobserve(img);
           }
@@ -434,21 +364,22 @@ procesarContenido(contenido) {
       { threshold: 0.1 }
     );
 
-    document.querySelectorAll('img[data-src], .entrada-imagen').forEach((img) => {
+    document.querySelectorAll('.entrada-imagen').forEach((img) => {
       imageObserver.observe(img);
     });
   }
 
-  // ========== CONTROL DE VIDEOS ==========
   addVideoPlayPause() {
-    document.querySelectorAll('video, .entrada-video').forEach((video) => {
+    document.querySelectorAll('.entrada-video').forEach((video) => {
       const videoObserver = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
             if (entry.isIntersecting) {
-              video.play().catch((e) => console.log('Video autoplay prevented:', e));
+              // Video visible
             } else {
-              video.pause();
+              if (!video.paused) {
+                video.pause();
+              }
             }
           });
         },
@@ -474,14 +405,13 @@ procesarContenido(contenido) {
     });
   }
 
-  // ========== INTERACCIONES TÁCTILES ==========
   addTouchInteractions() {
     document.querySelectorAll('.photo-polaroid').forEach((polaroid) => {
-      polaroid.addEventListener('touchstart', (e) => {
+      polaroid.addEventListener('touchstart', () => {
         polaroid.style.transform = 'rotate(0deg) scale(1.05)';
       });
 
-      polaroid.addEventListener('touchend', (e) => {
+      polaroid.addEventListener('touchend', () => {
         setTimeout(() => {
           polaroid.style.transform = 'rotate(-2deg) scale(1)';
         }, 150);
@@ -501,7 +431,6 @@ procesarContenido(contenido) {
     });
   }
 
-  // ========== BARRA DE PROGRESO DE LECTURA ==========
   addReadingProgress() {
     const progressBar = document.createElement('div');
     progressBar.className = 'reading-progress';
@@ -540,7 +469,6 @@ procesarContenido(contenido) {
     document.head.appendChild(style);
   }
 
-  // ========== ANIMACIONES DE ENTRADA ==========
   initializeAnimations() {
     const style = document.createElement('style');
     style.textContent = `
@@ -572,7 +500,7 @@ procesarContenido(contenido) {
         to { opacity: 1; }
       }
       
-      .empty-state, .error-state {
+      .empty-state, .blog-error {
         text-align: center;
         padding: 4rem 2rem;
       }
@@ -707,13 +635,11 @@ let blogManager;
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 Iniciando Blog de Patofelting...');
 
-  // ✅ Esperar un frame para asegurarse que todo el DOM (incluyendo <template>) esté disponible
-  requestAnimationFrame(() => {
+  setTimeout(() => {
     blogManager = new BlogManager();
     new BlogEcommerceIntegration();
-  });
+  }, 100);
 
-  // ⏳ Mostrar tiempo de lectura (como ya tenías)
   setTimeout(() => {
     const readingTime = BlogUtils.calculateReadingTime();
     const timeElement = document.createElement('div');
@@ -732,14 +658,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       z-index: 1000;
     `;
     document.body.appendChild(timeElement);
-  }, 2000);
+  }, 3000);
 
-  // 🔁 Auto recarga cada 60 segundos
   setInterval(() => {
     if (blogManager) {
       blogManager.recargar();
     }
-  }, 60000);
+  }, 300000);
 
   console.log('✨ Blog de Patofelting cargado correctamente');
 });
@@ -750,76 +675,3 @@ window.recargarBlog = () => {
     blogManager.recargar();
   }
 };
-
-
-function hacerPostitsArrastrables() {
-  const postits = document.querySelectorAll('.postit');
-
-  postits.forEach((postit, index) => {
-    const id = `postit-${index}`;
-    let isDragging = false;
-    let startX = 0, startY = 0;
-    let currentX = 0, currentY = 0;
-
-    // Restaurar posición guardada
-    const saved = JSON.parse(localStorage.getItem(id));
-    if (saved) {
-      currentX = saved.x;
-      currentY = saved.y;
-      postit.style.transform = `translate(${currentX}px, ${currentY}px)`;
-    }
-
-    const startDrag = (x, y) => {
-      isDragging = true;
-      startX = x - currentX;
-      startY = y - currentY;
-      postit.style.cursor = 'grabbing';
-    };
-
-    const moveDrag = (x, y) => {
-      if (!isDragging) return;
-      currentX = x - startX;
-      currentY = y - startY;
-      postit.style.transform = `translate(${currentX}px, ${currentY}px)`;
-    };
-
-    const endDrag = () => {
-      if (!isDragging) return;
-      isDragging = false;
-      postit.style.cursor = 'grab';
-      localStorage.setItem(id, JSON.stringify({ x: currentX, y: currentY }));
-    };
-
-    // Mouse
-    postit.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      startDrag(e.clientX, e.clientY);
-    });
-
-    document.addEventListener('mousemove', (e) => {
-      moveDrag(e.clientX, e.clientY);
-    });
-
-    document.addEventListener('mouseup', () => {
-      endDrag();
-    });
-
-    // Touch
-    postit.addEventListener('touchstart', (e) => {
-      const touch = e.touches[0];
-      startDrag(touch.clientX, touch.clientY);
-    }, { passive: false });
-
-    document.addEventListener('touchmove', (e) => {
-      if (!isDragging) return;
-      const touch = e.touches[0];
-      moveDrag(touch.clientX, touch.clientY);
-    }, { passive: false });
-
-    document.addEventListener('touchend', () => {
-      endDrag();
-    });
-  });
-}
-
-
