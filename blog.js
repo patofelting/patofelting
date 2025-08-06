@@ -19,51 +19,97 @@ class BlogManager {
 
   // ========== CARGA DE DATOS DESDE GOOGLE SHEETS ==========
 async cargarEntradasDesdeCSV() {
-  try {
-    console.log('🔄 Cargando entradas del blog desde Google Sheets...');
-    const respuesta = await fetch(CSV_URL, { cache: 'reload' });
-    if (!respuesta.ok) throw new Error(`HTTP error! status: ${respuesta.status}`);
+    try {
+      console.log('🔄 Cargando entradas del blog desde Google Sheets...');
+      console.log('📍 URL:', CSV_URL);
 
-    const texto = await respuesta.text();
-    console.log('📄 CSV recibido:', texto.substring(0, 500));
+      const respuesta = await fetch(CSV_URL, { cache: 'reload' });
+      if (!respuesta.ok) throw new Error(`HTTP error! status: ${respuesta.status}`);
 
-    const resultado = Papa.parse(texto, {
-      header: true,
-      skipEmptyLines: true,
-      transform: value => value.trim()
-    });
+      const texto = await respuesta.text();
+      console.log('📄 CSV recibido:', texto.substring(0, 500));
 
-    const filas = resultado.data;
-
-    this.entradas = filas
-      .filter(fila => fila.titulo && fila.titulo.trim() !== '')
-      .map(fila => ({
-        id: fila.id || Date.now().toString(),
-        fecha: this.formatearFecha(fila.fecha),
-        fechaRaw: fila.fecha,
-        titulo: fila.titulo,
-        contenido: fila.contenido || '',
-        imagenes: this.limpiarURLs(fila.imagenPrincipal || ''),
-        videos: this.limpiarURLs(fila.videoURL || ''),
-        orden: parseInt(fila.orden) || 0,
-        categoria: fila.categoria || 'general'
-      }))
-      .sort((a, b) => {
-        if (a.orden !== 0 && b.orden !== 0) return a.orden - b.orden;
-        return new Date(b.fechaRaw) - new Date(a.fechaRaw);
+      const resultado = Papa.parse(texto, {
+        header: true,
+        skipEmptyLines: true,
+        transform: (value) => value.trim(),
       });
 
-    console.log('✅ Entradas procesadas:', this.entradas.length);
+      this.entradas = resultado.data
+        .filter((fila) => fila.titulo && fila.contenido)
+        .map((fila, i) => ({
+          id: fila.id || i.toString(),
+          fecha: fila.fecha || '',
+          titulo: fila.titulo,
+          contenido: fila.contenido,
+          imagenes: this.limpiarURLs(fila.imagenPrincipal || ''),
+          videos: this.limpiarURLs(fila.videoURL || ''),
+          orden: parseInt(fila.orden) || 0,
+          postit: fila.postit || '',
+          ordenpostit: parseInt(fila.ordenpostit) || 0,
+        }))
+        .sort((a, b) => a.orden - b.orden);
 
-    if (this.entradas.length > 0) {
+      console.log('✅ Entradas procesadas:', this.entradas.length);
       this.renderizarBlog();
-    } else {
-      this.mostrarMensajeVacio();
+
+    } catch (error) {
+      console.error('❌ Error al cargar CSV:', error);
+    }
+  }
+
+  limpiarURLs(str) {
+    return str.split(',').map(s => s.trim()).filter(s => s);
+  }
+
+  renderizarBlog() {
+    const contenedor = document.getElementById('main-content');
+    const template = document.getElementById('entry-template');
+    const loader = document.getElementById('blog-loading');
+
+    if (!template || !template.content) {
+      console.error('❌ No se encontró el template para las entradas');
+      return;
     }
 
-  } catch (error) {
-    console.error('❌ Error al cargar CSV:', error);
-    this.mostrarMensajeError();
+    if (loader) loader.style.display = 'none';
+    contenedor.innerHTML = '';
+
+    this.entradas.forEach((entrada) => {
+      const clone = template.content.cloneNode(true);
+
+      clone.querySelector('.entry-title').textContent = entrada.titulo;
+      clone.querySelector('.entry-date').textContent = entrada.fecha;
+
+      const textoContainer = clone.querySelector('.entry-text');
+      entrada.contenido.split('\n').forEach(linea => {
+        if (linea.trim()) {
+          const p = document.createElement('p');
+          p.className = 'notebook-line';
+          p.textContent = linea.trim();
+          textoContainer.appendChild(p);
+        }
+      });
+
+      const galeria = clone.querySelector('.media-gallery');
+      entrada.imagenes.forEach(url => {
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = entrada.titulo;
+        img.loading = 'lazy';
+        galeria.appendChild(img);
+      });
+
+      entrada.videos.forEach(url => {
+        const iframe = document.createElement('iframe');
+        iframe.src = url;
+        iframe.frameBorder = '0';
+        iframe.allowFullscreen = true;
+        galeria.appendChild(iframe);
+      });
+
+      contenedor.appendChild(clone);
+    });
   }
 }
 
