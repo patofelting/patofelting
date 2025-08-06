@@ -102,6 +102,7 @@ class BlogUtils {
 class BlogManager {
   constructor() {
     this.entradas = [];
+    this.highestZIndex = 100; // Track highest z-index for post-its
     this.init();
   }
 
@@ -287,16 +288,19 @@ class BlogManager {
       if (data.left) postit.style.left = data.left;
       if (data.top) postit.style.top = data.top;
       if (data.color) postit.style.background = data.color;
+      if (data.zIndex) postit.style.zIndex = data.zIndex;
     } else {
       // Default position
       postit.style.left = '50px';
       postit.style.top = '50px';
+      postit.style.zIndex = this.highestZIndex++;
     }
 
     const startDragging = (e) => {
       e.preventDefault();
       isDragging = true;
       postit.classList.add('dragging');
+      postit.style.zIndex = this.highestZIndex++; // Bring to front
 
       const rect = postit.getBoundingClientRect();
       const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
@@ -305,7 +309,7 @@ class BlogManager {
       currentY = clientY - parseFloat(postit.style.top || 0);
 
       document.addEventListener('mousemove', drag);
-      document.addEventListener('touchmove', drag);
+      document.addEventListener('touchmove', drag, { passive: false });
       document.addEventListener('mouseup', stopDragging);
       document.addEventListener('touchend', stopDragging);
     };
@@ -326,7 +330,8 @@ class BlogManager {
       localStorage.setItem(`postit_${postit.dataset.id}`, JSON.stringify({
         color: postit.style.background,
         left: postit.style.left,
-        top: postit.style.top
+        top: postit.style.top,
+        zIndex: postit.style.zIndex
       }));
       document.removeEventListener('mousemove', drag);
       document.removeEventListener('touchmove', drag);
@@ -349,10 +354,12 @@ class BlogManager {
         option.className = 'color-option';
         option.addEventListener('click', () => {
           postit.style.background = getComputedStyle(document.getElementById(`color-${color}`)).backgroundColor;
+          postit.style.zIndex = this.highestZIndex++; // Bring to front on color change
           localStorage.setItem(`postit_${postit.dataset.id}`, JSON.stringify({
             color: postit.style.background,
             left: postit.style.left,
-            top: postit.style.top
+            top: postit.style.top,
+            zIndex: postit.style.zIndex
           }));
         });
         colorOptions.appendChild(option);
