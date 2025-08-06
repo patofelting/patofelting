@@ -62,7 +62,6 @@ class BlogUtils {
     return Math.max(1, time);
   }
 
-  // Initialize carousel for a specific media-book container
   static initCarousel(mediaBook, images) {
     if (!mediaBook || images.length === 0) return;
 
@@ -229,7 +228,6 @@ class BlogManager {
           carousel.appendChild(item);
         });
 
-        // Add navigation buttons
         if (entrada.imagenes.length > 1) {
           const prevButton = document.createElement('button');
           prevButton.className = 'carousel-prev';
@@ -267,7 +265,7 @@ class BlogManager {
         postitContainer.appendChild(postit);
 
         // Initialize drag-and-drop and color change
-        this.initializePostitDrag(postit, entryElement);
+        this.initializePostitDrag(postit);
       }
 
       contenedor.appendChild(clone);
@@ -277,14 +275,10 @@ class BlogManager {
     this.initializePostitColors();
   }
 
-  initializePostitDrag(postit, entryElement) {
+  initializePostitDrag(postit) {
     let isDragging = false;
-    let currentX;
-    let currentY;
-    let initialX;
-    let initialY;
-    let xOffset = 0;
-    let yOffset = 0;
+    let currentX = 0;
+    let currentY = 0;
 
     // Restore saved position and color
     const saved = localStorage.getItem(`postit_${postit.dataset.id}`);
@@ -293,37 +287,40 @@ class BlogManager {
       if (data.left) postit.style.left = data.left;
       if (data.top) postit.style.top = data.top;
       if (data.color) postit.style.background = data.color;
+    } else {
+      // Default position
+      postit.style.left = '50px';
+      postit.style.top = '50px';
     }
 
-    postit.addEventListener('mousedown', startDragging);
-    postit.addEventListener('touchstart', startDragging);
-
-    function startDragging(e) {
+    const startDragging = (e) => {
       e.preventDefault();
-      postit.classList.add('dragging');
-      initialX = e.type === 'touchstart' ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
-      initialY = e.type === 'touchstart' ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
       isDragging = true;
+      postit.classList.add('dragging');
+
+      const rect = postit.getBoundingClientRect();
+      const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+      const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+      currentX = clientX - parseFloat(postit.style.left || 0);
+      currentY = clientY - parseFloat(postit.style.top || 0);
 
       document.addEventListener('mousemove', drag);
       document.addEventListener('touchmove', drag);
       document.addEventListener('mouseup', stopDragging);
       document.addEventListener('touchend', stopDragging);
-    }
+    };
 
-    function drag(e) {
-      if (isDragging) {
-        e.preventDefault();
-        currentX = e.type === 'touchmove' ? e.touches[0].clientX - initialX : e.clientX - initialX;
-        currentY = e.type === 'touchmove' ? e.touches[0].clientY - initialY : e.clientY - initialY;
-        xOffset = currentX;
-        yOffset = currentY;
-        postit.style.left = `${currentX}px`;
-        postit.style.top = `${currentY}px`;
-      }
-    }
+    const drag = (e) => {
+      if (!isDragging) return;
+      e.preventDefault();
+      const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+      const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+      postit.style.left = `${clientX - currentX}px`;
+      postit.style.top = `${clientY - currentY}px`;
+    };
 
-    function stopDragging() {
+    const stopDragging = () => {
+      if (!isDragging) return;
       isDragging = false;
       postit.classList.remove('dragging');
       localStorage.setItem(`postit_${postit.dataset.id}`, JSON.stringify({
@@ -335,8 +332,10 @@ class BlogManager {
       document.removeEventListener('touchmove', drag);
       document.removeEventListener('mouseup', stopDragging);
       document.removeEventListener('touchend', stopDragging);
-    }
+    };
 
+    postit.addEventListener('mousedown', startDragging);
+    postit.addEventListener('touchstart', startDragging, { passive: false });
     postit.ondragstart = () => false;
   }
 
@@ -361,11 +360,11 @@ class BlogManager {
       postit.appendChild(colorOptions);
 
       postit.addEventListener('mouseenter', () => {
-        colorOptions.style.display = 'block';
+        colorOptions.style.display = 'flex';
       });
       postit.addEventListener('mouseleave', () => {
         setTimeout(() => {
-          if (!postit.matches(':hover')) {
+          if (!postit.matches(':hover') && !colorOptions.matches(':hover')) {
             colorOptions.style.display = 'none';
           }
         }, 500);
