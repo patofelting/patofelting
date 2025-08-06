@@ -19,66 +19,68 @@ class BlogManager {
   }
 
   // ========== CARGA DE DATOS DESDE GOOGLE SHEETS ==========
-  async cargarEntradasDesdeCSV() {
-    try {
-      console.log('🔄 Cargando entradas del blog desde Google Sheets...');
-      console.log('📍 URL:', CSV_URL);
+async cargarEntradasDesdeCSV() {
+  try {
+    console.log('🔄 Cargando entradas del blog desde Google Sheets...');
+    console.log('📍 URL:', CSV_URL);
 
-      const respuesta = await fetch(CSV_URL, { cache: 'reload' });
-      if (!respuesta.ok) throw new Error(`HTTP error! status: ${respuesta.status}`);
-
-      const texto = await respuesta.text();
-      console.log('📄 CSV recibido:', texto.substring(0, 500));
-
-      const resultado = Papa.parse(texto, {
-        header: true,
-        skipEmptyLines: true,
-        transform: (value) => value.trim(),
-      });
-
-      this.entradas = resultado.data
-        .filter((fila) => fila.titulo && fila.contenido)
-        .map((fila, i) => ({
-          id: fila.id || i.toString(),
-          fecha: fila.fecha || '',
-          titulo: fila.titulo,
-          contenido: fila.contenido,
-          imagenes: this.limpiarURLs(fila.imagenPrincipal || ''),
-          videos: this.limpiarURLs(fila.videoURL || ''),
-          orden: parseInt(fila.orden) || 0,
-          postit: fila.postit || '',
-          ordenpostit: parseInt(fila.ordenpostit) || 0,
-        }))
-        .sort((a, b) => a.orden - b.orden);
-
-      console.log('✅ Entradas procesadas:', this.entradas.length);
-      this.renderizarBlog();
-
-    } catch (error) {
-      console.error('❌ Error al cargar CSV:', error);
-      this.mostrarMensajeError();
+    const respuesta = await fetch(CSV_URL, { cache: 'reload' });
+    if (!respuesta.ok) {
+      throw new Error(`HTTP error! status: ${respuesta.status} - ${respuesta.statusText}`);
     }
+
+    const texto = await respuesta.text();
+    console.log('📄 CSV recibido:', texto.substring(0, 500));
+
+    const resultado = Papa.parse(texto, {
+      header: true,
+      skipEmptyLines: true,
+      transform: (value) => value.trim(),
+    });
+
+    this.entradas = resultado.data
+      .filter((fila) => fila.titulo && fila.contenido)
+      .map((fila, i) => ({
+        id: fila.id || i.toString(),
+        fecha: fila.fecha || '',
+        titulo: fila.titulo,
+        contenido: fila.contenido,
+        imagenes: this.limpiarURLs(fila.imagenPrincipal || ''),
+        videos: this.limpiarURLs(fila.videoURL || ''),
+        orden: parseInt(fila.orden) || 0,
+        postit: fila.postit || '',
+        ordenpostit: parseInt(fila.ordenpostit) || 0,
+      }))
+      .sort((a, b) => a.orden - b.orden);
+
+    console.log('✅ Entradas procesadas:', this.entradas.length);
+    this.renderizarBlog();
+
+  } catch (error) {
+    console.error('❌ Error al cargar CSV:', error.message);
+    this.mostrarMensajeError();
   }
+}
 
   // ========== RENDERIZADO DEL BLOG ==========
   renderizarBlog() {
-    const contenedor = document.getElementById('main-content');
-    const template = document.getElementById('entry-template');
-    const loader = document.getElementById('blog-loading');
+  const contenedor = document.getElementById('main-content');
+  const template = document.getElementById('entry-template');
+  const loader = document.getElementById('blog-loading');
 
-    if (!template || !template.content) {
-      console.error('❌ No se encontró el template para las entradas');
-      this.mostrarMensajeError();
-      return;
-    }
+  if (!template || !template.content) {
+    console.error('❌ No se encontró el template para las entradas. Verifica el ID "entry-template" en el HTML.');
+    this.mostrarMensajeError();
+    return;
+  }
 
-    if (loader) loader.style.display = 'none';
-    contenedor.innerHTML = '';
+  if (loader) loader.style.display = 'none';
+  contenedor.innerHTML = '';
 
-    if (this.entradas.length === 0) {
-      this.mostrarMensajeVacio();
-      return;
-    }
+  if (this.entradas.length === 0) {
+    this.mostrarMensajeVacio();
+    return;
+  }
 
     this.entradas.forEach((entrada) => {
       const clone = template.content.cloneNode(true);
@@ -666,12 +668,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       color: var(--pencil-gray);
       z-index: 1000;
     `;
-
     document.body.appendChild(timeElement);
   }, 2000);
 
-  setInterval(() => {
-    if (blogManager) {
+  // Ajustar setInterval para recargar solo si hay datos previos
+setInterval(() => {
+    if (blogManager && blogManager.entradas.length > 0) {
+      console.log('🔄 Intentando recargar entradas...');
       blogManager.recargar();
     }
   }, 60000);
@@ -679,10 +682,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('✨ Blog de Patofelting cargado correctamente');
 });
 
+ 
 window.BlogUtils = BlogUtils;
 window.recargarBlog = () => {
   if (blogManager) {
     blogManager.recargar();
   }
 };
-
