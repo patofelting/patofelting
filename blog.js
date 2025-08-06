@@ -18,7 +18,7 @@ class BlogManager {
   }
 
   // ========== CARGA DE DATOS DESDE GOOGLE SHEETS ==========
-async cargarEntradasDesdeCSV() {
+  async cargarEntradasDesdeCSV() {
     try {
       console.log('🔄 Cargando entradas del blog desde Google Sheets...');
       console.log('📍 URL:', CSV_URL);
@@ -55,13 +55,11 @@ async cargarEntradasDesdeCSV() {
 
     } catch (error) {
       console.error('❌ Error al cargar CSV:', error);
+      this.mostrarMensajeError();
     }
   }
 
-  limpiarURLs(str) {
-    return str.split(',').map(s => s.trim()).filter(s => s);
-  }
-
+  // ========== RENDERIZADO DEL BLOG ==========
   renderizarBlog() {
     const contenedor = document.getElementById('main-content');
     const template = document.getElementById('entry-template');
@@ -69,18 +67,28 @@ async cargarEntradasDesdeCSV() {
 
     if (!template || !template.content) {
       console.error('❌ No se encontró el template para las entradas');
+      this.mostrarMensajeError();
       return;
     }
 
     if (loader) loader.style.display = 'none';
     contenedor.innerHTML = '';
 
+    if (this.entradas.length === 0) {
+      this.mostrarMensajeVacio();
+      return;
+    }
+
     this.entradas.forEach((entrada) => {
       const clone = template.content.cloneNode(true);
+      const entryElement = clone.querySelector('.blog-entry');
+      entryElement.setAttribute('data-entry-id', entrada.id);
 
+      // Título y fecha
       clone.querySelector('.entry-title').textContent = entrada.titulo;
-      clone.querySelector('.entry-date').textContent = entrada.fecha;
+      clone.querySelector('.entry-date').textContent = this.formatearFecha(entrada.fecha);
 
+      // Contenido del texto en líneas tipo cuaderno
       const textoContainer = clone.querySelector('.entry-text');
       entrada.contenido.split('\n').forEach(linea => {
         if (linea.trim()) {
@@ -91,135 +99,48 @@ async cargarEntradasDesdeCSV() {
         }
       });
 
+      // Galería de medios (imágenes y videos)
       const galeria = clone.querySelector('.media-gallery');
-      entrada.imagenes.forEach(url => {
-        const img = document.createElement('img');
-        img.src = url;
-        img.alt = entrada.titulo;
-        img.loading = 'lazy';
-        galeria.appendChild(img);
-      });
+      
+      if (entrada.imagenes && entrada.imagenes.length > 0) {
+        entrada.imagenes.forEach(url => {
+          const img = document.createElement('img');
+          img.src = url;
+          img.alt = entrada.titulo;
+          img.loading = 'lazy';
+          img.classList.add('entrada-imagen');
+          img.onerror = () => {
+            img.style.display = 'none';
+            console.error(`Error al cargar imagen: ${url}`);
+          };
+          galeria.appendChild(img);
+        });
+      }
 
-      entrada.videos.forEach(url => {
-        const iframe = document.createElement('iframe');
-        iframe.src = url;
-        iframe.frameBorder = '0';
-        iframe.allowFullscreen = true;
-        galeria.appendChild(iframe);
-      });
+      if (entrada.videos && entrada.videos.length > 0) {
+        entrada.videos.forEach(url => {
+          const video = document.createElement('iframe');
+          video.src = url;
+          video.frameBorder = '0';
+          video.allowFullscreen = true;
+          video.classList.add('entrada-video');
+          galeria.appendChild(video);
+        });
+      }
 
       contenedor.appendChild(clone);
     });
-  }
-}
 
-
-renderizarBlog() {
-  const contenedor = document.getElementById('main-content');
-  const template = document.getElementById('entry-template');
-
-  if (!template || !template.content) {
-    console.error('❌ No se encontró el template con ID "entry-template" o no tiene contenido');
-    this.mostrarMensajeError();
-    return;
+    this.aplicarEfectosPostRenderizado();
   }
 
-  contenedor.innerHTML = ''; // Limpiar entradas anteriores
-
-  this.entradas.forEach((entrada) => {
-    const clone = template.content.cloneNode(true);
-    const entryElement = clone.querySelector('.blog-entry');
-
-    clone.querySelector('.entry-title').textContent = entrada.titulo;
-    clone.querySelector('.entry-date').textContent = entrada.fecha;
-
-    const textoContainer = clone.querySelector('.entry-text');
-    entrada.contenido.split('\n').forEach(linea => {
-      if (linea.trim() !== '') {
-        const p = document.createElement('p');
-        p.className = 'notebook-line';
-        p.textContent = linea.trim();
-        textoContainer.appendChild(p);
-      }
-    });
-
-    const galeria = clone.querySelector('.media-gallery');
-    if (entrada.imagenes.length > 0) {
-      entrada.imagenes.forEach(url => {
-        const img = document.createElement('img');
-        img.src = url;
-        img.alt = entrada.titulo;
-        img.loading = 'lazy';
-        galeria.appendChild(img);
-      });
-    }
-
-    if (entrada.videos.length > 0) {
-      entrada.videos.forEach(url => {
-        const video = document.createElement('iframe');
-        video.src = url;
-        video.frameBorder = '0';
-        video.allowFullscreen = true;
-        galeria.appendChild(video);
-      });
-    }
-
-    contenedor.appendChild(clone);
-  });
-
-  document.getElementById('blog-loading').style.display = 'none';
-}
-
-
-  // Limpiar y validar URLs
+  // ========== UTILIDADES ==========
   limpiarURLs(urlsString) {
     if (!urlsString) return [];
     return urlsString
       .split(',')
-      .map((url) => url.trim())
-      .filter((url) => url && url.match(/\.(jpeg|jpg|png|gif|mp4)$/i));
-  }
-
-  // Parser CSV manual
-  parseCSVManual(texto) {
-    const lineas = texto.trim().split('\n');
-    const headers = lineas[0].split(',').map((h) => h.trim().replace(/"/g, ''));
-
-    return lineas.slice(1).map((linea) => {
-      const valores = this.parsearLineaCSV(linea);
-      const objeto = {};
-
-      headers.forEach((header, index) => {
-        objeto[header] = valores[index] || '';
-      });
-
-      return objeto;
-    });
-  }
-
-  parsearLineaCSV(linea) {
-    const resultado = [];
-    let valorActual = '';
-    let dentroDeComillas = false;
-    let i = 0;
-
-    while (i < linea.length) {
-      const char = linea[i];
-
-      if (char === '"') {
-        dentroDeComillas = !dentroDeComillas;
-      } else if (char === ',' && !dentroDeComillas) {
-        resultado.push(valorActual.trim());
-        valorActual = '';
-      } else {
-        valorActual += char;
-      }
-
-      i++;
-    }
-
-    resultado.push(valorActual.trim());
-    return resultado;
+      .map(url => url.trim())
+      .filter(url => url && (url.match(/\.(jpeg|jpg|png|gif)$/i) || url.match(/youtube\.com|youtu\.be|vimeo\.com/i)));
   }
 
   formatearFecha(fechaString) {
@@ -252,100 +173,9 @@ renderizarBlog() {
     }
   }
 
-  // ========== RENDERIZADO DEL BLOG ==========
-
-
-
-renderEntradaBlog(entrada, index) {
-  const esDestacada = index === 0; // La primera entrada (más reciente) es destacada
-  const template = document.getElementById('entry-template');
-  if (!template) {
-    console.error('❌ No se encontró el template #entry-template');
-    return '';
-  }
-
-  const clone = template.content.cloneNode(true);
-  const article = clone.querySelector('.blog-entry');
-  article.setAttribute('data-entry-id', entrada.id);
-
-  const notebookPage = article.querySelector('.notebook-page');
-  const entryContent = article.querySelector('.entry-content');
-
-  entryContent.innerHTML = `
-    <div class="entry-date">${entrada.fecha}</div>
-    <h2 class="entry-title">${entrada.titulo}</h2>
-    <div class="entry-text">${this.procesarContenido(entrada.contenido)}</div>
-    ${this.renderMediaContent(entrada)}
-  `;
-
-  if (esDestacada) {
-    article.classList.add('featured');
-  }
-
-  return article.outerHTML;
-}
-
-  procesarContenido(contenido) {
-    if (!contenido) return '<p>Sin contenido disponible.</p>';
-    if (contenido.includes('<') && contenido.includes('>')) {
-      return contenido;
-    }
-    return contenido
-      .split('\n')
-      .filter((parrafo) => parrafo.trim() !== '')
-      .map((parrafo) => `<p>${parrafo.trim()}</p>`)
-      .join('');
-  }
-
- renderMediaContent(entrada) {
-  console.log('Imágenes procesadas:', entrada.imagenes);
-  let mediaHTML = '<div class="media-gallery">';
-  if (entrada.imagenes.length > 0) {
-    if (entrada.imagenes.length > 1) {
-      mediaHTML += '<div class="carousel">';
-      entrada.imagenes.forEach((url, idx) => {
-        console.log('Añadiendo imagen:', url);
-        mediaHTML += `
-          <div class="carousel-item ${idx === 0 ? 'active' : ''}">
-            <div class="photo-polaroid">
-              <img src="${url}" alt="${entrada.titulo} - Imagen ${idx + 1}" class="entrada-imagen" loading="lazy" onerror="this.closest('.photo-polaroid').classList.add('image-error'); this.style.display='none';">
-              <div class="polaroid-caption">Momento especial de Patofelting ✨</div>
-            </div>
-          </div>
-        `;
-      });
-      mediaHTML += `
-        <button class="carousel-prev">❮</button>
-        <button class="carousel-next">❯</button>
-      </div>`;
-    } else {
-      mediaHTML += `
-        <div class="photo-polaroid">
-          <img src="${entrada.imagenes[0]}" alt="${entrada.titulo}" class="entrada-imagen" loading="lazy" onerror="this.closest('.photo-polaroid').classList.add('image-error'); this.style.display='none';">
-          <div class="polaroid-caption">Momento especial de Patofelting ✨</div>
-        </div>
-      `;
-    }
-  }
-  if (entrada.videos.length > 0) {
-    mediaHTML += `
-      <div class="video-container">
-        <video controls class="entrada-video" preload="metadata">
-          <source src="${entrada.videos[0]}" type="video/mp4">
-          Tu navegador no soporta video HTML5.
-        </video>
-        <div class="video-caption">Proceso creativo en acción 🎬</div>
-      </div>
-    `;
-  }
-  mediaHTML += '</div>';
-  return mediaHTML || '';
-}
-
- 
-
+  // ========== MENSAJES DE ESTADO ==========
   mostrarMensajeVacio() {
-    const contenedor = document.querySelector('.blog-main');
+    const contenedor = document.querySelector('.blog-main') || document.getElementById('main-content');
     if (contenedor) {
       contenedor.innerHTML = `
         <div class="empty-state">
@@ -366,7 +196,7 @@ renderEntradaBlog(entrada, index) {
   }
 
   mostrarMensajeError() {
-    const contenedor = document.querySelector('.blog-main');
+    const contenedor = document.querySelector('.blog-main') || document.getElementById('main-content');
     if (contenedor) {
       contenedor.innerHTML = `
         <div class="error-state">
@@ -385,6 +215,7 @@ renderEntradaBlog(entrada, index) {
     }
   }
 
+  // ========== EFECTOS POST RENDERIZADO ==========
   aplicarEfectosPostRenderizado() {
     this.addImageLazyLoading();
     this.addVideoPlayPause();
@@ -397,7 +228,7 @@ renderEntradaBlog(entrada, index) {
     });
   }
 
-  // Inicializar carrusel básico
+  // ========== CARRUSEL ==========
   initializeCarousel() {
     document.querySelectorAll('.carousel').forEach((carousel) => {
       const items = carousel.querySelectorAll('.carousel-item');
@@ -406,26 +237,30 @@ renderEntradaBlog(entrada, index) {
       let currentIndex = 0;
 
       if (items.length <= 1) {
-        prevBtn.style.display = 'none';
-        nextBtn.style.display = 'none';
+        if (prevBtn) prevBtn.style.display = 'none';
+        if (nextBtn) nextBtn.style.display = 'none';
         return;
       }
 
-      function updateCarousel() {
+      const updateCarousel = () => {
         items.forEach((item, index) => {
           item.classList.toggle('active', index === currentIndex);
         });
+      };
+
+      if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+          currentIndex = (currentIndex > 0) ? currentIndex - 1 : items.length - 1;
+          updateCarousel();
+        });
       }
 
-      prevBtn.addEventListener('click', () => {
-        currentIndex = (currentIndex > 0) ? currentIndex - 1 : items.length - 1;
-        updateCarousel();
-      });
-
-      nextBtn.addEventListener('click', () => {
-        currentIndex = (currentIndex < items.length - 1) ? currentIndex + 1 : 0;
-        updateCarousel();
-      });
+      if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+          currentIndex = (currentIndex < items.length - 1) ? currentIndex + 1 : 0;
+          updateCarousel();
+        });
+      }
 
       updateCarousel();
     });
@@ -524,11 +359,11 @@ renderEntradaBlog(entrada, index) {
   // ========== INTERACCIONES TÁCTILES ==========
   addTouchInteractions() {
     document.querySelectorAll('.photo-polaroid').forEach((polaroid) => {
-      polaroid.addEventListener('touchstart', (e) => {
+      polaroid.addEventListener('touchstart', () => {
         polaroid.style.transform = 'rotate(0deg) scale(1.05)';
       });
 
-      polaroid.addEventListener('touchend', (e) => {
+      polaroid.addEventListener('touchend', () => {
         setTimeout(() => {
           polaroid.style.transform = 'rotate(-2deg) scale(1)';
         }, 150);
@@ -675,7 +510,6 @@ class BlogUtils {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-      locale: 'es-ES',
     };
     return new Date(dateString).toLocaleDateString('es-ES', options);
   }
