@@ -65,7 +65,12 @@ async cargarEntradasDesdeCSV() {
   // ========== RENDERIZADO DEL BLOG ==========
   renderizarBlog() {
   const contenedor = document.getElementById('main-content');
+  console.log('Template encontrado:', document.getElementById('entry-template'));
   const template = document.getElementById('entry-template');
+  if (!contenedor) {
+    console.error('❌ No se encontró el contenedor principal. Verifica el ID "main-content" en el HTML.');
+    return;
+  }
   const loader = document.getElementById('blog-loading');
 
   if (!template || !template.content) {
