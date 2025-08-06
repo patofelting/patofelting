@@ -29,37 +29,50 @@ class BlogManager {
       }
 
       const texto = await respuesta.text();
-      console.log('📄 CSV recibido:', texto.substring(0, 300) + '...');
+      console.log('📄 CSV recibido (primeros 500 caracteres):', texto.substring(0, 500));
 
-      const filas = this.parseCSVManual(texto);
-      console.log('📊 Filas parseadas:', filas);
+      let filas;
+      if (typeof Papa !== 'undefined') {
+        const resultado = Papa.parse(texto, {
+          header: true,
+          skipEmptyLines: true,
+          transform: (value) => value.trim(),
+        });
+        filas = resultado.data;
+        console.log('📊 Filas parseadas con PapaParse:', filas);
+      } else {
+        filas = this.parseCSVManual(texto);
+        console.log('📊 Filas parseadas manualmente:', filas);
+      }
 
       this.entradas = filas
         .filter((fila) => fila.titulo && fila.titulo.trim() !== '')
         .map((fila) => {
           console.log('🔍 Procesando fila:', fila);
-          const entrada = {
-            id: fila.id || Date.now().toString(),
-            fecha: this.formatearFecha(fila.fecha),
-            fechaRaw: fila.fecha,
-            titulo: fila.titulo,
-            contenido: fila.contenido || '',
-            imagenes: this.limpiarURLs(fila.imagenPrincipal || fila.imegenPrincipal || ''),
-            videos: this.limpiarURLs(fila.videoURL || ''),
-            orden: parseInt(fila.orden) || 0,
-            categoria: fila.categoria || 'general'
-          };
-          console.log('✅ Entrada procesada:', entrada);
-          return entrada;
+     const entrada = {
+  id: fila.id || Date.now().toString(),
+  fecha: this.formatearFecha(fila.fecha),
+  fechaRaw: fila.fecha,
+  titulo: fila.titulo,
+  contenido: fila.contenido || '',
+  imagenes: this.limpiarURLs(fila.imagenPrincipal || fila.imagenes || ''),
+  videos: this.limpiarURLs(fila.videoURL || fila.videos || ''),
+  orden: parseInt(fila.orden) || 0,
+  categoria: fila.categoria || 'general',
+  postit: fila.postit || '', // ✅ nuevo campo
+  ordenpostit: parseInt(fila.ordenpostit) || 0 // ✅ nuevo campo
+};
+console.log('✅ Entrada procesada:', entrada);
+return entrada;
         })
         .sort((a, b) => {
           if (a.orden !== 0 && b.orden !== 0) return a.orden - b.orden;
           const dateA = new Date(a.fechaRaw);
           const dateB = new Date(b.fechaRaw);
-          return dateB - dateA;
+          return dateB - dateA; // Orden descendente por fecha (nuevo primero)
         });
 
-      console.log('✅ Total entradas cargadas:', this.entradas.length);
+      console.log('✅ Entradas cargadas:', this.entradas.length);
 
       if (this.entradas.length > 0) {
         this.renderizarBlog();
@@ -72,29 +85,28 @@ class BlogManager {
     }
   }
 
+  // Limpiar y validar URLs
   limpiarURLs(urlsString) {
     if (!urlsString) return [];
     return urlsString
       .split(',')
       .map((url) => url.trim())
-      .filter((url) => url && url.length > 0);
+      .filter((url) => url && url.match(/\.(jpeg|jpg|png|gif|mp4)$/i));
   }
 
+  // Parser CSV manual
   parseCSVManual(texto) {
     const lineas = texto.trim().split('\n');
-    if (lineas.length < 2) return [];
-    
     const headers = lineas[0].split(',').map((h) => h.trim().replace(/"/g, ''));
-    console.log('📋 Headers encontrados:', headers);
 
     return lineas.slice(1).map((linea) => {
       const valores = this.parsearLineaCSV(linea);
       const objeto = {};
-      
+
       headers.forEach((header, index) => {
         objeto[header] = valores[index] || '';
       });
-      
+
       return objeto;
     });
   }
@@ -102,113 +114,133 @@ class BlogManager {
   parsearLineaCSV(linea) {
     const resultado = [];
     let valorActual = '';
-    let dentroComillas = false;
+    let dentroDeComillas = false;
     let i = 0;
 
     while (i < linea.length) {
       const char = linea[i];
-      
+
       if (char === '"') {
-        dentroComillas = !dentroComillas;
-      } else if (char === ',' && !dentroComillas) {
+        dentroDeComillas = !dentroDeComillas;
+      } else if (char === ',' && !dentroDeComillas) {
         resultado.push(valorActual.trim());
         valorActual = '';
       } else {
         valorActual += char;
       }
-      
+
       i++;
     }
-    
+
     resultado.push(valorActual.trim());
     return resultado;
   }
 
   formatearFecha(fechaString) {
-    if (!fechaString) return 'Sin fecha';
-    
+    if (!fechaString) return new Date().toLocaleDateString('es-ES');
     try {
-      if (fechaString.includes('de')) return fechaString;
-      
-      const fecha = new Date(fechaString);
-      if (isNaN(fecha.getTime())) {
+      let fecha;
+      if (fechaString.includes('/')) {
         const partes = fechaString.split('/');
         if (partes.length === 3) {
-          const nuevaFecha = new Date(partes[2], partes[1] - 1, partes[0]);
-          if (!isNaN(nuevaFecha.getTime())) {
-            return nuevaFecha.toLocaleDateString('es-ES', {
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric'
-            });
-          }
+          fecha = new Date(partes[2], partes[1] - 1, partes[0]);
         }
-        return fechaString;
+      } else if (fechaString.includes('-')) {
+        fecha = new Date(fechaString);
+      } else {
+        fecha = new Date(fechaString);
       }
-      
+
+      if (isNaN(fecha.getTime())) {
+        throw new Error('Fecha inválida');
+      }
+
       return fecha.toLocaleDateString('es-ES', {
-        day: 'numeric',
+        year: 'numeric',
         month: 'long',
-        year: 'numeric'
+        day: 'numeric',
       });
     } catch (error) {
-      console.warn('Error al formatear fecha:', fechaString);
+      console.warn('⚠️ Error al formatear fecha:', fechaString);
       return fechaString;
     }
   }
 
+  // ========== RENDERIZADO DEL BLOG ==========
   renderizarBlog() {
-    const contenedor = document.querySelector('.blog-main');
-    if (!contenedor) {
-      console.error('❌ No se encontró el contenedor .blog-main');
-      return;
-    }
-
-    const loading = document.getElementById('blog-loading');
-    if (loading) loading.style.display = 'none';
-
-    const entradasHTML = this.entradas
-      .map((entrada, index) => this.renderEntradaBlog(entrada, index))
-      .join('');
-
-    contenedor.innerHTML = entradasHTML;
-
-    setTimeout(() => {
-      this.aplicarEfectosPostRenderizado();
-    }, 100);
+  const contenedor = document.querySelector('.blog-main');
+  if (!contenedor) {
+    console.error('❌ No se encontró el contenedor .blog-main');
+    return;
   }
 
-  renderEntradaBlog(entrada, index) {
-    const esDestacada = index === 0;
-    
-    return `
-      <article class="blog-entry ${esDestacada ? 'featured' : ''}" data-entry-id="${entrada.id}">
-        <div class="notebook-page">
-          <div class="red-margin"></div>
-          <div class="entry-content">
-            <div class="entry-date">${entrada.fecha}</div>
-            <h2 class="entry-title">${entrada.titulo}</h2>
-            
-            <div class="entry-text">
-              ${this.procesarContenido(entrada.contenido)}
-            </div>
-            
-            ${this.renderMediaContent(entrada)}
-            
-            ${esDestacada ? this.renderCallToAction() : ''}
-          </div>
+  // 1. Crear sección de post-its si existen
+  const postits = this.entradas
+    .filter(e => e.postit && e.postit.trim() !== '')
+    .sort((a, b) => a.ordenpostit - b.ordenpostit);
+
+  let postitHTML = '';
+  if (postits.length > 0) {
+    postitHTML += `<section class="postit-section">`;
+    postits.forEach(postit => {
+      postitHTML += `
+        <div class="postit">
+          ${postit.postit}
         </div>
-      </article>
-    `;
+      `;
+    });
+    postitHTML += `</section>`;
   }
+
+  // 2. Renderizar entradas del blog
+  const entradasHTML = this.entradas
+    .map((entrada, index) => this.renderEntradaBlog(entrada, index))
+    .join('');
+
+  // 3. Combinar todo
+  contenedor.innerHTML = postitHTML + entradasHTML;
+
+  // 4. Aplicar efectos
+  setTimeout(() => {
+    this.aplicarEfectosPostRenderizado();
+  }, 100);
+}
+
+
+renderEntradaBlog(entrada, index) {
+  const esDestacada = index === 0; // La primera entrada (más reciente) es destacada
+  const template = document.getElementById('entry-template');
+  if (!template) {
+    console.error('❌ No se encontró el template #entry-template');
+    return '';
+  }
+
+  const clone = template.content.cloneNode(true);
+  const article = clone.querySelector('.blog-entry');
+  article.setAttribute('data-entry-id', entrada.id);
+
+  const notebookPage = article.querySelector('.notebook-page');
+  const entryContent = article.querySelector('.entry-content');
+
+  entryContent.innerHTML = `
+    <div class="entry-date">${entrada.fecha}</div>
+    <h2 class="entry-title">${entrada.titulo}</h2>
+    <div class="entry-text">${this.procesarContenido(entrada.contenido)}</div>
+    ${this.renderMediaContent(entrada)}
+  `;
+
+  if (esDestacada) {
+    article.classList.add('featured');
+  }
+
+  return article.outerHTML;
+}
 
   procesarContenido(contenido) {
     if (!contenido) return '<p>Sin contenido disponible.</p>';
-    
     if (contenido.includes('<') && contenido.includes('>')) {
       return contenido;
     }
-    
     return contenido
       .split('\n')
       .filter((parrafo) => parrafo.trim() !== '')
@@ -216,59 +248,52 @@ class BlogManager {
       .join('');
   }
 
-  renderMediaContent(entrada) {
-    let mediaHTML = '';
-    
-    if (entrada.imagenes.length > 0 || entrada.videos.length > 0) {
-      mediaHTML += '<div class="media-gallery">';
-      
-      if (entrada.imagenes.length > 0) {
-        console.log('🖼️ Procesando imágenes:', entrada.imagenes);
-        entrada.imagenes.forEach((url, index) => {
-          mediaHTML += `
+ renderMediaContent(entrada) {
+  console.log('Imágenes procesadas:', entrada.imagenes);
+  let mediaHTML = '<div class="media-gallery">';
+  if (entrada.imagenes.length > 0) {
+    if (entrada.imagenes.length > 1) {
+      mediaHTML += '<div class="carousel">';
+      entrada.imagenes.forEach((url, idx) => {
+        console.log('Añadiendo imagen:', url);
+        mediaHTML += `
+          <div class="carousel-item ${idx === 0 ? 'active' : ''}">
             <div class="photo-polaroid">
-              <img src="${url}" 
-                   alt="${entrada.titulo} - Imagen ${index + 1}" 
-                   class="entrada-imagen"
-                   loading="lazy"
-                   onerror="this.closest('.photo-polaroid').classList.add('image-error'); this.style.display='none';">
+              <img src="${url}" alt="${entrada.titulo} - Imagen ${idx + 1}" class="entrada-imagen" loading="lazy" onerror="this.closest('.photo-polaroid').classList.add('image-error'); this.style.display='none';">
               <div class="polaroid-caption">Momento especial de Patofelting ✨</div>
             </div>
-          `;
-        });
-      }
-      
-      if (entrada.videos.length > 0) {
-        console.log('🎥 Procesando videos:', entrada.videos);
-        entrada.videos.forEach((url) => {
-          mediaHTML += `
-            <div class="video-container">
-              <video controls class="entrada-video" preload="metadata">
-                <source src="${url}" type="video/mp4">
-                Tu navegador no soporta video HTML5.
-              </video>
-              <div class="video-caption">Proceso creativo en acción 🎬</div>
-            </div>
-          `;
-        });
-      }
-      
-      mediaHTML += '</div>';
+          </div>
+        `;
+      });
+      mediaHTML += `
+        <button class="carousel-prev">❮</button>
+        <button class="carousel-next">❯</button>
+      </div>`;
+    } else {
+      mediaHTML += `
+        <div class="photo-polaroid">
+          <img src="${entrada.imagenes[0]}" alt="${entrada.titulo}" class="entrada-imagen" loading="lazy" onerror="this.closest('.photo-polaroid').classList.add('image-error'); this.style.display='none';">
+          <div class="polaroid-caption">Momento especial de Patofelting ✨</div>
+        </div>
+      `;
     }
-    
-    return mediaHTML;
   }
-
-  renderCallToAction() {
-    return `
-      <div class="call-to-action-blog">
-        <h3>¿Quieres ser parte de esta historia?</h3>
-        <p>Cada pedido que me haces se convierte en una nueva entrada en este cuaderno. Tu idea, tu sueño, tu momento especial.</p>
-        <a href="index.html#productos" class="cta-button-blog">Ver productos disponibles</a>
-        <a href="index.html#contacto" class="cta-button-blog secondary">Contarme tu idea</a>
+  if (entrada.videos.length > 0) {
+    mediaHTML += `
+      <div class="video-container">
+        <video controls class="entrada-video" preload="metadata">
+          <source src="${entrada.videos[0]}" type="video/mp4">
+          Tu navegador no soporta video HTML5.
+        </video>
+        <div class="video-caption">Proceso creativo en acción 🎬</div>
       </div>
     `;
   }
+  mediaHTML += '</div>';
+  return mediaHTML || '';
+}
+
+ 
 
   mostrarMensajeVacio() {
     const contenedor = document.querySelector('.blog-main');
@@ -295,13 +320,17 @@ class BlogManager {
     const contenedor = document.querySelector('.blog-main');
     if (contenedor) {
       contenedor.innerHTML = `
-        <div class="blog-error">
-          <div class="error-icon">😔</div>
-          <div class="error-message">
-            <h3>¡Ups! Algo salió mal</h3>
-            <p>No pude cargar las entradas del blog en este momento. Por favor, intenta recargar la página.</p>
+        <div class="error-state">
+          <div class="notebook-page">
+            <div class="red-margin"></div>
+            <div class="entry-content">
+              <h2>¡Ups! Algo salió mal</h2>
+              <p>No pude cargar las entradas del blog en este momento. Por favor, intenta recargar la página.</p>
+              <button onclick="location.reload()" class="cta-button-blog">🔄 Reintentar</button>
+              <br><br>
+              <p><small>Si el problema persiste, puedes contactarme directamente.</small></p>
+            </div>
           </div>
-          <button onclick="location.reload()" class="retry-button">🔄 Reintentar</button>
         </div>
       `;
     }
@@ -310,6 +339,7 @@ class BlogManager {
   aplicarEfectosPostRenderizado() {
     this.addImageLazyLoading();
     this.addVideoPlayPause();
+    this.initializeCarousel();
 
     document.querySelectorAll('.blog-entry').forEach((entry, index) => {
       setTimeout(() => {
@@ -318,6 +348,41 @@ class BlogManager {
     });
   }
 
+  // Inicializar carrusel básico
+  initializeCarousel() {
+    document.querySelectorAll('.carousel').forEach((carousel) => {
+      const items = carousel.querySelectorAll('.carousel-item');
+      const prevBtn = carousel.querySelector('.carousel-prev');
+      const nextBtn = carousel.querySelector('.carousel-next');
+      let currentIndex = 0;
+
+      if (items.length <= 1) {
+        prevBtn.style.display = 'none';
+        nextBtn.style.display = 'none';
+        return;
+      }
+
+      function updateCarousel() {
+        items.forEach((item, index) => {
+          item.classList.toggle('active', index === currentIndex);
+        });
+      }
+
+      prevBtn.addEventListener('click', () => {
+        currentIndex = (currentIndex > 0) ? currentIndex - 1 : items.length - 1;
+        updateCarousel();
+      });
+
+      nextBtn.addEventListener('click', () => {
+        currentIndex = (currentIndex < items.length - 1) ? currentIndex + 1 : 0;
+        updateCarousel();
+      });
+
+      updateCarousel();
+    });
+  }
+
+  // ========== EFECTOS DE SCROLL ==========
   addScrollEffects() {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -330,11 +395,9 @@ class BlogManager {
       { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
     );
 
-    setTimeout(() => {
-      document.querySelectorAll('.blog-entry').forEach((entry) => {
-        observer.observe(entry);
-      });
-    }, 1000);
+    document.querySelectorAll('.blog-entry').forEach((entry) => {
+      observer.observe(entry);
+    });
 
     window.addEventListener('scroll', () => {
       const scrolled = window.pageYOffset;
@@ -350,12 +413,17 @@ class BlogManager {
     });
   }
 
+  // ========== LAZY LOADING DE IMÁGENES ==========
   addImageLazyLoading() {
     const imageObserver = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const img = entry.target;
+            if (img.dataset.src) {
+              img.src = img.dataset.src;
+              img.removeAttribute('data-src');
+            }
             img.classList.add('loaded');
             imageObserver.unobserve(img);
           }
@@ -364,22 +432,21 @@ class BlogManager {
       { threshold: 0.1 }
     );
 
-    document.querySelectorAll('.entrada-imagen').forEach((img) => {
+    document.querySelectorAll('img[data-src], .entrada-imagen').forEach((img) => {
       imageObserver.observe(img);
     });
   }
 
+  // ========== CONTROL DE VIDEOS ==========
   addVideoPlayPause() {
-    document.querySelectorAll('.entrada-video').forEach((video) => {
+    document.querySelectorAll('video, .entrada-video').forEach((video) => {
       const videoObserver = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
             if (entry.isIntersecting) {
-              // Video visible
+              video.play().catch((e) => console.log('Video autoplay prevented:', e));
             } else {
-              if (!video.paused) {
-                video.pause();
-              }
+              video.pause();
             }
           });
         },
@@ -405,13 +472,14 @@ class BlogManager {
     });
   }
 
+  // ========== INTERACCIONES TÁCTILES ==========
   addTouchInteractions() {
     document.querySelectorAll('.photo-polaroid').forEach((polaroid) => {
-      polaroid.addEventListener('touchstart', () => {
+      polaroid.addEventListener('touchstart', (e) => {
         polaroid.style.transform = 'rotate(0deg) scale(1.05)';
       });
 
-      polaroid.addEventListener('touchend', () => {
+      polaroid.addEventListener('touchend', (e) => {
         setTimeout(() => {
           polaroid.style.transform = 'rotate(-2deg) scale(1)';
         }, 150);
@@ -431,6 +499,7 @@ class BlogManager {
     });
   }
 
+  // ========== BARRA DE PROGRESO DE LECTURA ==========
   addReadingProgress() {
     const progressBar = document.createElement('div');
     progressBar.className = 'reading-progress';
@@ -469,6 +538,7 @@ class BlogManager {
     document.head.appendChild(style);
   }
 
+  // ========== ANIMACIONES DE ENTRADA ==========
   initializeAnimations() {
     const style = document.createElement('style');
     style.textContent = `
@@ -500,7 +570,7 @@ class BlogManager {
         to { opacity: 1; }
       }
       
-      .empty-state, .blog-error {
+      .empty-state, .error-state {
         text-align: center;
         padding: 4rem 2rem;
       }
@@ -635,10 +705,8 @@ let blogManager;
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 Iniciando Blog de Patofelting...');
 
-  setTimeout(() => {
-    blogManager = new BlogManager();
-    new BlogEcommerceIntegration();
-  }, 100);
+  blogManager = new BlogManager();
+  new BlogEcommerceIntegration();
 
   setTimeout(() => {
     const readingTime = BlogUtils.calculateReadingTime();
@@ -657,14 +725,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       color: var(--pencil-gray);
       z-index: 1000;
     `;
+
     document.body.appendChild(timeElement);
-  }, 3000);
+  }, 2000);
 
   setInterval(() => {
     if (blogManager) {
       blogManager.recargar();
     }
-  }, 300000);
+  }, 60000);
 
   console.log('✨ Blog de Patofelting cargado correctamente');
 });
@@ -675,3 +744,5 @@ window.recargarBlog = () => {
     blogManager.recargar();
   }
 };
+
+
