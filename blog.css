@@ -1150,6 +1150,7 @@ background: rgba (255, 107, 107, 0.08);
   cursor: pointer;
 }
 
+
 .postit:hover {
   transform: rotate(0deg) scale(1.05);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
@@ -1185,17 +1186,10 @@ background: rgba (255, 107, 107, 0.08);
   border-color: #333;
 }
 
-#color-yellow { background: #ffeb3b; }
-#color-pink { background: #f594b4; }
-#color-green { background: #b8f3bb; }
-#color-blue { background: #8dbce4; }
-
-/* Mantén la opción de ocultar los colores en móviles, si así lo deseas */
-@media (max-width: 480px) {
-  .postit-color-options {
-    display: none !important; /* Hide on small screens */
-  }
-}
+#color-yellow { background: #f5eead; }
+#color-pink { background: #fca8c4; }
+#color-green { background: #b8f1bb; }
+#color-blue { background: #42a5f5; }
 
 /* Ensure media queries and other styles remain compatible */
 @media (max-width: 768px) {
