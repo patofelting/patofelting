@@ -61,6 +61,43 @@ class BlogUtils {
 
     return Math.max(1, time);
   }
+
+  // Initialize carousel for a specific media-book container
+  static initCarousel(mediaBook, images) {
+    if (!mediaBook || images.length === 0) return;
+
+    const carousel = mediaBook.querySelector('.carousel');
+    if (!carousel) return;
+
+    const items = carousel.querySelectorAll('.carousel-item');
+    const prevButton = carousel.querySelector('.carousel-prev');
+    const nextButton = carousel.querySelector('.carousel-next');
+    let currentIndex = 0;
+
+    if (images.length <= 1) {
+      prevButton.style.display = 'none';
+      nextButton.style.display = 'none';
+      return;
+    }
+
+    const showItem = (index) => {
+      items.forEach((item, i) => {
+        item.classList.toggle('active', i === index);
+      });
+    };
+
+    prevButton.addEventListener('click', () => {
+      currentIndex = (currentIndex - 1 + items.length) % items.length;
+      showItem(currentIndex);
+    });
+
+    nextButton.addEventListener('click', () => {
+      currentIndex = (currentIndex + 1) % items.length;
+      showItem(currentIndex);
+    });
+
+    showItem(currentIndex);
+  }
 }
 
 class BlogManager {
@@ -80,7 +117,6 @@ class BlogManager {
     this.initializePostitColors();
   }
 
-  // ========== CARGA DE DATOS DESDE GOOGLE SHEETS ==========
   async cargarEntradasDesdeCSV() {
     try {
       console.log('🔄 Cargando entradas del blog desde Google Sheets...');
@@ -124,7 +160,6 @@ class BlogManager {
     }
   }
 
-  // ========== RENDERIZADO DEL BLOG ==========
   renderizarBlog() {
     const contenedor = document.getElementById('main-content');
     const template = document.getElementById('entry-template');
@@ -172,26 +207,46 @@ class BlogManager {
       // Efecto de libro para imágenes
       const mediaBook = clone.querySelector('.media-book');
       if (entrada.imagenes && entrada.imagenes.length > 0) {
-        entrada.imagenes.forEach(url => {
-          const page = document.createElement('div');
-          page.className = 'book-page';
+        const carousel = document.createElement('div');
+        carousel.className = 'carousel';
+        entrada.imagenes.forEach((url, index) => {
+          const item = document.createElement('div');
+          item.className = `carousel-item ${index === 0 ? 'active' : ''}`;
+          const polaroid = document.createElement('div');
+          polaroid.className = 'photo-polaroid';
           const img = document.createElement('img');
           img.src = url;
           img.alt = entrada.titulo;
           img.loading = 'lazy';
           img.classList.add('entrada-imagen');
           img.onerror = () => {
+            polaroid.classList.add('image-error');
             img.style.display = 'none';
             console.error(`Error al cargar imagen: ${url}`);
           };
-          page.appendChild(img);
-          mediaBook.appendChild(page);
+          polaroid.appendChild(img);
+          item.appendChild(polaroid);
+          carousel.appendChild(item);
         });
+
+        // Add navigation buttons
+        if (entrada.imagenes.length > 1) {
+          const prevButton = document.createElement('button');
+          prevButton.className = 'carousel-prev';
+          prevButton.innerHTML = '◄';
+          const nextButton = document.createElement('button');
+          nextButton.className = 'carousel-next';
+          nextButton.innerHTML = '►';
+          carousel.appendChild(prevButton);
+          carousel.appendChild(nextButton);
+        }
+
+        mediaBook.appendChild(carousel);
+        BlogUtils.initCarousel(mediaBook, entrada.imagenes);
       }
 
       // Videos
       if (entrada.videos && entrada.videos.length > 0) {
-        const mediaBook = clone.querySelector('.media-book');
         entrada.videos.forEach(url => {
           const video = document.createElement('iframe');
           video.src = url;
@@ -208,35 +263,11 @@ class BlogManager {
         const postit = document.createElement('div');
         postit.className = 'postit';
         postit.textContent = entrada.postit;
-        postit.setAttribute('draggable', 'true');
+        postit.setAttribute('data-id', entrada.id);
         postitContainer.appendChild(postit);
 
-        // Inicializar arrastrar y soltar
-        postit.addEventListener('dragstart', (e) => {
-          e.dataTransfer.setData('text/plain', postit.outerHTML);
-          postit.classList.add('dragging');
-        });
-
-        postit.addEventListener('dragend', () => {
-          postit.classList.remove('dragging');
-        });
-
-        entryElement.addEventListener('dragover', (e) => {
-          e.preventDefault();
-        });
-
-        entryElement.addEventListener('drop', (e) => {
-          e.preventDefault();
-          const data = e.dataTransfer.getData('text/plain');
-          const draggedPostit = document.createElement('div');
-          draggedPostit.innerHTML = data;
-          const newPostit = draggedPostit.querySelector('.postit');
-          newPostit.style.position = 'absolute';
-          newPostit.style.left = `${e.pageX - entryElement.offsetLeft}px`;
-          newPostit.style.top = `${e.pageY - entryElement.offsetTop}px`;
-          entryElement.appendChild(newPostit);
-          postit.remove(); // Remover el original si se suelta
-        });
+        // Initialize drag-and-drop and color change
+        this.initializePostitDrag(postit, entryElement);
       }
 
       contenedor.appendChild(clone);
@@ -246,7 +277,69 @@ class BlogManager {
     this.initializePostitColors();
   }
 
-  // Método existente para colores de post-it (ajustado)
+  initializePostitDrag(postit, entryElement) {
+    let isDragging = false;
+    let currentX;
+    let currentY;
+    let initialX;
+    let initialY;
+    let xOffset = 0;
+    let yOffset = 0;
+
+    // Restore saved position and color
+    const saved = localStorage.getItem(`postit_${postit.dataset.id}`);
+    if (saved) {
+      const data = JSON.parse(saved);
+      if (data.left) postit.style.left = data.left;
+      if (data.top) postit.style.top = data.top;
+      if (data.color) postit.style.background = data.color;
+    }
+
+    postit.addEventListener('mousedown', startDragging);
+    postit.addEventListener('touchstart', startDragging);
+
+    function startDragging(e) {
+      e.preventDefault();
+      postit.classList.add('dragging');
+      initialX = e.type === 'touchstart' ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
+      initialY = e.type === 'touchstart' ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
+      isDragging = true;
+
+      document.addEventListener('mousemove', drag);
+      document.addEventListener('touchmove', drag);
+      document.addEventListener('mouseup', stopDragging);
+      document.addEventListener('touchend', stopDragging);
+    }
+
+    function drag(e) {
+      if (isDragging) {
+        e.preventDefault();
+        currentX = e.type === 'touchmove' ? e.touches[0].clientX - initialX : e.clientX - initialX;
+        currentY = e.type === 'touchmove' ? e.touches[0].clientY - initialY : e.clientY - initialY;
+        xOffset = currentX;
+        yOffset = currentY;
+        postit.style.left = `${currentX}px`;
+        postit.style.top = `${currentY}px`;
+      }
+    }
+
+    function stopDragging() {
+      isDragging = false;
+      postit.classList.remove('dragging');
+      localStorage.setItem(`postit_${postit.dataset.id}`, JSON.stringify({
+        color: postit.style.background,
+        left: postit.style.left,
+        top: postit.style.top
+      }));
+      document.removeEventListener('mousemove', drag);
+      document.removeEventListener('touchmove', drag);
+      document.removeEventListener('mouseup', stopDragging);
+      document.removeEventListener('touchend', stopDragging);
+    }
+
+    postit.ondragstart = () => false;
+  }
+
   initializePostitColors() {
     document.querySelectorAll('.postit').forEach(postit => {
       const colorOptions = document.createElement('div');
@@ -257,12 +350,16 @@ class BlogManager {
         option.className = 'color-option';
         option.addEventListener('click', () => {
           postit.style.background = getComputedStyle(document.getElementById(`color-${color}`)).backgroundColor;
+          localStorage.setItem(`postit_${postit.dataset.id}`, JSON.stringify({
+            color: postit.style.background,
+            left: postit.style.left,
+            top: postit.style.top
+          }));
         });
         colorOptions.appendChild(option);
       });
       postit.appendChild(colorOptions);
 
-      // Mostrar/ocultar colores con mouseleave
       postit.addEventListener('mouseenter', () => {
         colorOptions.style.display = 'block';
       });
@@ -271,12 +368,22 @@ class BlogManager {
           if (!postit.matches(':hover')) {
             colorOptions.style.display = 'none';
           }
-        }, 500); // 0.5 segundos de retraso
+        }, 500);
       });
     });
   }
 
-  // Otros métodos (addScrollEffects, addImageLazyLoading, etc.) pueden permanecer sin cambios si están definidos...
+  // Placeholder methods
+  addScrollEffects() {}
+  addImageLazyLoading() {}
+  addVideoPlayPause() {}
+  addTouchInteractions() {}
+  addReadingProgress() {}
+  initializeAnimations() {}
+
+  recargar() {
+    this.cargarEntradasDesdeCSV();
+  }
 }
 
 class BlogEcommerceIntegration {
@@ -287,13 +394,11 @@ class BlogEcommerceIntegration {
 
   addProductLinks() {
     const productMentions = document.querySelectorAll('[data-product]');
-
     productMentions.forEach((mention) => {
       const productId = mention.dataset.product;
       mention.addEventListener('click', () => {
         window.location.href = `index.html#productos?highlight=${productId}`;
       });
-
       mention.style.cursor = 'pointer';
       mention.style.textDecoration = 'underline';
       mention.style.color = 'var(--primary-green)';
@@ -305,7 +410,6 @@ class BlogEcommerceIntegration {
       cta.addEventListener('click', (e) => {
         const action = e.target.textContent.trim();
         console.log(`Blog CTA clicked: ${action}`);
-
         if (typeof gtag !== 'undefined') {
           gtag('event', 'blog_cta_click', {
             event_category: 'Blog',
@@ -323,7 +427,6 @@ let blogManager;
 
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 Iniciando Blog de Patofelting...');
-
   blogManager = new BlogManager();
   new BlogEcommerceIntegration();
 
