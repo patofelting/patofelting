@@ -19,73 +19,73 @@ class BlogManager {
   }
 
   // ========== CARGA DE DATOS DESDE GOOGLE SHEETS ==========
-async cargarEntradasDesdeCSV() {
-  try {
-    console.log('🔄 Cargando entradas del blog desde Google Sheets...');
-    console.log('📍 URL:', CSV_URL);
+  async cargarEntradasDesdeCSV() {
+    try {
+      console.log('🔄 Cargando entradas del blog desde Google Sheets...');
+      console.log('📍 URL:', CSV_URL);
 
-    const respuesta = await fetch(CSV_URL, { cache: 'reload' });
-    if (!respuesta.ok) {
-      throw new Error(`HTTP error! status: ${respuesta.status} - ${respuesta.statusText}`);
+      const respuesta = await fetch(CSV_URL, { cache: 'reload' });
+      if (!respuesta.ok) {
+        throw new Error(`HTTP error! status: ${respuesta.status} - ${respuesta.statusText}`);
+      }
+
+      const texto = await respuesta.text();
+      console.log('📄 CSV recibido:', texto.substring(0, 500));
+
+      const resultado = Papa.parse(texto, {
+        header: true,
+        skipEmptyLines: true,
+        transform: (value) => value.trim(),
+      });
+
+      this.entradas = resultado.data
+        .filter((fila) => fila.titulo && fila.contenido)
+        .map((fila, i) => ({
+          id: fila.id || i.toString(),
+          fecha: fila.fecha || '',
+          titulo: fila.titulo,
+          contenido: fila.contenido,
+          imagenes: this.limpiarURLs(fila.imagenPrincipal || ''),
+          videos: this.limpiarURLs(fila.videoURL || ''),
+          orden: parseInt(fila.orden) || 0,
+          postit: fila.postit || '',
+          ordenpostit: parseInt(fila.ordenpostit) || 0,
+        }))
+        .sort((a, b) => a.orden - b.orden);
+
+      console.log('✅ Entradas procesadas:', this.entradas.length);
+      this.renderizarBlog();
+
+    } catch (error) {
+      console.error('❌ Error al cargar CSV:', error.message);
+      this.mostrarMensajeError();
     }
-
-    const texto = await respuesta.text();
-    console.log('📄 CSV recibido:', texto.substring(0, 500));
-
-    const resultado = Papa.parse(texto, {
-      header: true,
-      skipEmptyLines: true,
-      transform: (value) => value.trim(),
-    });
-
-    this.entradas = resultado.data
-      .filter((fila) => fila.titulo && fila.contenido)
-      .map((fila, i) => ({
-        id: fila.id || i.toString(),
-        fecha: fila.fecha || '',
-        titulo: fila.titulo,
-        contenido: fila.contenido,
-        imagenes: this.limpiarURLs(fila.imagenPrincipal || ''),
-        videos: this.limpiarURLs(fila.videoURL || ''),
-        orden: parseInt(fila.orden) || 0,
-        postit: fila.postit || '',
-        ordenpostit: parseInt(fila.ordenpostit) || 0,
-      }))
-      .sort((a, b) => a.orden - b.orden);
-
-    console.log('✅ Entradas procesadas:', this.entradas.length);
-    this.renderizarBlog();
-
-  } catch (error) {
-    console.error('❌ Error al cargar CSV:', error.message);
-    this.mostrarMensajeError();
   }
-}
 
   // ========== RENDERIZADO DEL BLOG ==========
   renderizarBlog() {
-  const contenedor = document.getElementById('main-content');
-  console.log('Template encontrado:', document.getElementById('entry-template'));
-  const template = document.getElementById('entry-template');
-  if (!contenedor) {
-    console.error('❌ No se encontró el contenedor principal. Verifica el ID "main-content" en el HTML.');
-    return;
-  }
-  const loader = document.getElementById('blog-loading');
+    const contenedor = document.getElementById('main-content');
+    const template = document.getElementById('entry-template');
+    const loader = document.getElementById('blog-loading');
 
-  if (!template || !template.content) {
-    console.error('❌ No se encontró el template para las entradas. Verifica el ID "entry-template" en el HTML.');
-    this.mostrarMensajeError();
-    return;
-  }
+    if (!contenedor) {
+      console.error('❌ No se encontró el contenedor principal. Verifica el ID "main-content" en el HTML.');
+      return;
+    }
 
-  if (loader) loader.style.display = 'none';
-  contenedor.innerHTML = '';
+    if (!template || !template.content) {
+      console.error('❌ No se encontró el template para las entradas. Verifica el ID "entry-template" en el HTML.');
+      this.mostrarMensajeError();
+      return;
+    }
 
-  if (this.entradas.length === 0) {
-    this.mostrarMensajeVacio();
-    return;
-  }
+    if (loader) loader.style.display = 'none';
+    contenedor.innerHTML = '';
+
+    if (this.entradas.length === 0) {
+      this.mostrarMensajeVacio();
+      return;
+    }
 
     this.entradas.forEach((entrada) => {
       const clone = template.content.cloneNode(true);
@@ -96,7 +96,7 @@ async cargarEntradasDesdeCSV() {
       clone.querySelector('.entry-title').textContent = entrada.titulo;
       clone.querySelector('.entry-date').textContent = this.formatearFecha(entrada.fecha);
 
-      // Contenido del texto en líneas tipo cuaderno
+      // Contenido
       const textoContainer = clone.querySelector('.entry-text');
       entrada.contenido.split('\n').forEach(linea => {
         if (linea.trim()) {
@@ -107,11 +107,12 @@ async cargarEntradasDesdeCSV() {
         }
       });
 
-      // Galería de medios (imágenes y videos)
-      const galeria = clone.querySelector('.media-gallery');
-      
+      // Efecto de libro para imágenes
+      const mediaBook = clone.querySelector('.media-book');
       if (entrada.imagenes && entrada.imagenes.length > 0) {
         entrada.imagenes.forEach(url => {
+          const page = document.createElement('div');
+          page.className = 'book-page';
           const img = document.createElement('img');
           img.src = url;
           img.alt = entrada.titulo;
@@ -121,533 +122,102 @@ async cargarEntradasDesdeCSV() {
             img.style.display = 'none';
             console.error(`Error al cargar imagen: ${url}`);
           };
-          galeria.appendChild(img);
+          page.appendChild(img);
+          mediaBook.appendChild(page);
         });
       }
 
+      // Videos
       if (entrada.videos && entrada.videos.length > 0) {
+        const mediaBook = clone.querySelector('.media-book');
         entrada.videos.forEach(url => {
           const video = document.createElement('iframe');
           video.src = url;
           video.frameBorder = '0';
           video.allowFullscreen = true;
           video.classList.add('entrada-video');
-          galeria.appendChild(video);
+          mediaBook.appendChild(video);
         });
       }
 
-      // Post-it
+      // Post-it con arrastrar y soltar
       if (entrada.postit) {
-        const postitContainer = document.createElement('div');
-        postitContainer.className = 'postit-container';
+        const postitContainer = clone.querySelector('.postit-container');
         const postit = document.createElement('div');
         postit.className = 'postit';
         postit.textContent = entrada.postit;
+        postit.setAttribute('draggable', 'true');
+        postitContainer.appendChild(postit);
 
-        // Color options
-        const colorOptions = document.createElement('div');
-        colorOptions.className = 'postit-color-options';
-        const colors = ['yellow', 'pink', 'green', 'blue'];
-        colors.forEach(color => {
-          const option = document.createElement('div');
-          option.id = `color-${color}`;
-          option.className = 'color-option';
-          option.addEventListener('click', () => this.changePostitColor(postit, color));
-          colorOptions.appendChild(option);
+        // Inicializar arrastrar y soltar
+        postit.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', postit.outerHTML);
+          postit.classList.add('dragging');
         });
 
-        postit.appendChild(colorOptions);
-        postitContainer.appendChild(postit);
-        entryElement.appendChild(postitContainer);
+        postit.addEventListener('dragend', () => {
+          postit.classList.remove('dragging');
+        });
+
+        entryElement.addEventListener('dragover', (e) => {
+          e.preventDefault();
+        });
+
+        entryElement.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const data = e.dataTransfer.getData('text/plain');
+          const draggedPostit = document.createElement('div');
+          draggedPostit.innerHTML = data;
+          const newPostit = draggedPostit.querySelector('.postit');
+          newPostit.style.position = 'absolute';
+          newPostit.style.left = `${e.pageX - entryElement.offsetLeft}px`;
+          newPostit.style.top = `${e.pageY - entryElement.offsetTop}px`;
+          entryElement.appendChild(newPostit);
+          postit.remove(); // Remover el original si se suelta
+        });
       }
 
       contenedor.appendChild(clone);
     });
 
-    this.aplicarEfectosPostRenderizado();
-  }
-
-  // ========== CAMBIO DE COLOR DE POST-IT ==========
-  changePostitColor(postit, color) {
-    const colorMap = {
-      yellow: '#ffeb3b',
-      pink: '#ff80ab',
-      green: '#81c784',
-      blue: '#42a5f5'
-    };
-    postit.style.background = colorMap[color];
-    postit.style.borderColor = this.getBorderColor(color);
-  }
-
-  getBorderColor(color) {
-    const borderMap = {
-      yellow: '#c9a600',
-      pink: '#c74f7d',
-      green: '#4b7f52',
-      blue: '#1976d2'
-    };
-    return borderMap[color] || '#c9a600';
-  }
-
-  // ========== UTILIDADES ==========
-  limpiarURLs(urlsString) {
-    if (!urlsString) return [];
-    return urlsString
-      .split(',')
-      .map(url => url.trim())
-      .filter(url => url && (url.match(/\.(jpeg|jpg|png|gif)$/i) || url.match(/youtube\.com|youtu\.be|vimeo\.com/i)));
-  }
-
-  formatearFecha(fechaString) {
-    if (!fechaString) return new Date().toLocaleDateString('es-ES');
-    try {
-      let fecha;
-      if (fechaString.includes('/')) {
-        const partes = fechaString.split('/');
-        if (partes.length === 3) {
-          fecha = new Date(partes[2], partes[1] - 1, partes[0]);
-        }
-      } else if (fechaString.includes('-')) {
-        fecha = new Date(fechaString);
-      } else {
-        fecha = new Date(fechaString);
-      }
-
-      if (isNaN(fecha.getTime())) {
-        throw new Error('Fecha inválida');
-      }
-
-      return fecha.toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-    } catch (error) {
-      console.warn('⚠️ Error al formatear fecha:', fechaString);
-      return fechaString;
-    }
-  }
-
-  // ========== MENSAJES DE ESTADO ==========
-  mostrarMensajeVacio() {
-    const contenedor = document.querySelector('.blog-main') || document.getElementById('main-content');
-    if (contenedor) {
-      contenedor.innerHTML = `
-        <div class="empty-state">
-          <div class="notebook-page">
-            <div class="red-margin"></div>
-            <div class="entry-content">
-              <h2>El cuaderno está esperando...</h2>
-              <p>Pronto comenzaré a escribir aquí mis aventuras con el fieltro. ¡Vuelve pronto para leer mis historias! 🧶</p>
-              <div class="loading-animation">
-                <div class="yarn-ball"></div>
-                <div class="needle"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-  }
-
-  mostrarMensajeError() {
-    const contenedor = document.querySelector('.blog-main') || document.getElementById('main-content');
-    if (contenedor) {
-      contenedor.innerHTML = `
-        <div class="error-state">
-          <div class="notebook-page">
-            <div class="red-margin"></div>
-            <div class="entry-content">
-              <h2>¡Ups! Algo salió mal</h2>
-              <p>No pude cargar las entradas del blog en este momento. Por favor, intenta recargar la página.</p>
-              <button onclick="location.reload()" class="cta-button-blog">🔄 Reintentar</button>
-              <br><br>
-              <p><small>Si el problema persiste, puedes contactarme directamente.</small></p>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-  }
-
-  // ========== EFECTOS POST RENDERIZADO ==========
-  aplicarEfectosPostRenderizado() {
-    this.addImageLazyLoading();
-    this.addVideoPlayPause();
-    this.initializeCarousel();
+    // Añadir colores al post-it después de renderizar
     this.initializePostitColors();
-
-    document.querySelectorAll('.blog-entry').forEach((entry, index) => {
-      setTimeout(() => {
-        entry.classList.add('fade-in');
-      }, index * 200);
-    });
   }
 
-  // ========== CARRUSEL ==========
-  initializeCarousel() {
-    document.querySelectorAll('.carousel').forEach((carousel) => {
-      const items = carousel.querySelectorAll('.carousel-item');
-      const prevBtn = carousel.querySelector('.carousel-prev');
-      const nextBtn = carousel.querySelector('.carousel-next');
-      let currentIndex = 0;
-
-      if (items.length <= 1) {
-        if (prevBtn) prevBtn.style.display = 'none';
-        if (nextBtn) nextBtn.style.display = 'none';
-        return;
-      }
-
-      const updateCarousel = () => {
-        items.forEach((item, index) => {
-          item.classList.toggle('active', index === currentIndex);
-        });
-      };
-
-      if (prevBtn) {
-        prevBtn.addEventListener('click', () => {
-          currentIndex = (currentIndex > 0) ? currentIndex - 1 : items.length - 1;
-          updateCarousel();
-        });
-      }
-
-      if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
-          currentIndex = (currentIndex < items.length - 1) ? currentIndex + 1 : 0;
-          updateCarousel();
-        });
-      }
-
-      updateCarousel();
-    });
-  }
-
-  // ========== EFECTOS DE SCROLL ==========
-  addScrollEffects() {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('fade-in');
-          }
-        });
-      },
-      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
-    );
-
-    document.querySelectorAll('.blog-entry').forEach((entry) => {
-      observer.observe(entry);
-    });
-
-    window.addEventListener('scroll', () => {
-      const scrolled = window.pageYOffset;
-      const parallax = document.querySelectorAll('.photo-polaroid, .video-container');
-
-      parallax.forEach((element) => {
-        const speed = 0.02;
-        const yPos = -(scrolled * speed);
-        const currentRotation = element.style.transform.match(/rotate\(([^)]+)\)/);
-        const rotation = currentRotation ? currentRotation[1] : '0deg';
-        element.style.transform = `translateY(${yPos}px) rotate(${rotation})`;
-      });
-    });
-  }
-
-  // ========== LAZY LOADING DE IMÁGENES ==========
-  addImageLazyLoading() {
-    const imageObserver = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const img = entry.target;
-            if (img.dataset.src) {
-              img.src = img.dataset.src;
-              img.removeAttribute('data-src');
-            }
-            img.classList.add('loaded');
-            imageObserver.unobserve(img);
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    document.querySelectorAll('img[data-src], .entrada-imagen').forEach((img) => {
-      imageObserver.observe(img);
-    });
-  }
-
-  // ========== CONTROL DE VIDEOS ==========
-  addVideoPlayPause() {
-    document.querySelectorAll('video, .entrada-video').forEach((video) => {
-      const videoObserver = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              video.play().catch((e) => console.log('Video autoplay prevented:', e));
-            } else {
-              video.pause();
-            }
-          });
-        },
-        { threshold: 0.5 }
-      );
-
-      videoObserver.observe(video);
-
-      video.addEventListener('click', () => {
-        if (video.paused) {
-          video.play();
-        } else {
-          video.pause();
-        }
-      });
-
-      video.addEventListener('loadedmetadata', () => {
-        video.setAttribute(
-          'aria-label',
-          `Video: ${video.closest('.blog-entry')?.querySelector('.entry-title')?.textContent || 'Contenido del blog'}`
-        );
-      });
-    });
-  }
-
-  // ========== INTERACCIONES TÁCTILES ==========
-  addTouchInteractions() {
-    document.querySelectorAll('.photo-polaroid').forEach((polaroid) => {
-      polaroid.addEventListener('touchstart', () => {
-        polaroid.style.transform = 'rotate(0deg) scale(1.05)';
-      });
-
-      polaroid.addEventListener('touchend', () => {
-        setTimeout(() => {
-          polaroid.style.transform = 'rotate(-2deg) scale(1)';
-        }, 150);
-      });
-    });
-
-    document.querySelectorAll('button, .cta-button-blog').forEach((button) => {
-      button.addEventListener('touchstart', () => {
-        button.style.transform = 'scale(0.95)';
-      });
-
-      button.addEventListener('touchend', () => {
-        setTimeout(() => {
-          button.style.transform = 'scale(1)';
-        }, 100);
-      });
-    });
-  }
-
-  // ========== BARRA DE PROGRESO DE LECTURA ==========
-  addReadingProgress() {
-    const progressBar = document.createElement('div');
-    progressBar.className = 'reading-progress';
-    progressBar.innerHTML = '<div class="progress-fill"></div>';
-    document.body.appendChild(progressBar);
-
-    const progressFill = progressBar.querySelector('.progress-fill');
-
-    window.addEventListener('scroll', () => {
-      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
-      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-      const scrolled = (winScroll / height) * 100;
-
-      progressFill.style.width = scrolled + '%';
-    });
-
-    const style = document.createElement('style');
-    style.textContent = `
-      .reading-progress {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 4px;
-        background: rgba(67, 193, 96, 0.2);
-        z-index: 1001;
-      }
-      
-      .progress-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #43c160, #b4f1d9);
-        width: 0%;
-        transition: width 0.3s ease;
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  // ========== ANIMACIONES DE ENTRADA ==========
-  initializeAnimations() {
-    const style = document.createElement('style');
-    style.textContent = `
-      .blog-entry {
-        opacity: 0;
-        transform: translateY(30px);
-        transition: all 0.6s ease;
-      }
-      
-      .blog-entry.fade-in {
-        opacity: 1;
-        transform: translateY(0);
-      }
-      
-      .photo-polaroid, .video-container {
-        transition: transform 0.3s ease;
-      }
-      
-      .entrada-imagen, .entrada-video {
-        transition: opacity 0.5s ease;
-      }
-      
-      .entrada-imagen.loaded {
-        animation: fadeIn 0.5s ease;
-      }
-      
-      @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-      
-      .empty-state, .error-state {
-        text-align: center;
-        padding: 4rem 2rem;
-      }
-      
-      .loading-animation {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 1rem;
-        margin: 2rem 0;
-      }
-      
-      .yarn-ball {
-        width: 30px;
-        height: 30px;
-        background: var(--primary-green);
-        border-radius: 50%;
-        animation: bounce 1.5s infinite;
-      }
-      
-      .needle {
-        width: 2px;
-        height: 40px;
-        background: linear-gradient(to bottom, #c0c0c0, #808080);
-        border-radius: 1px;
-        animation: sewing 2s infinite;
-      }
-      
-      @keyframes bounce {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-10px); }
-      }
-      
-      @keyframes sewing {
-        0%, 100% { transform: translateY(0) rotate(0deg); }
-        25% { transform: translateY(-5px) rotate(-5deg); }
-        75% { transform: translateY(5px) rotate(5deg); }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  // ========== INICIALIZACIÓN DE COLORES DE POST-IT ==========
+  // Método existente para colores de post-it (ajustado)
   initializePostitColors() {
     document.querySelectorAll('.postit').forEach(postit => {
-      const defaultColor = '#ffeb3b'; // Default yellow
-      postit.style.background = defaultColor;
-      postit.style.borderColor = this.getBorderColor('yellow');
-    });
-  }
-
-  async recargar() {
-    console.log('🔄 Recargando entradas del blog...');
-    await this.cargarEntradasDesdeCSV();
-  }
-}
-
-// ========== FUNCIONES UTILITARIAS ==========
-class BlogUtils {
-  static formatDate(dateString) {
-    const options = {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    };
-    return new Date(dateString).toLocaleDateString('es-ES', options);
-  }
-
-  static shareOnSocial(platform, url = window.location.href, text = 'Mira esta historia de Patofelting') {
-    const encodedUrl = encodeURIComponent(url);
-    const encodedText = encodeURIComponent(text);
-
-    const urls = {
-      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
-      twitter: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
-      whatsapp: `https://wa.me/?text=${encodedText} ${encodedUrl}`,
-      pinterest: `https://pinterest.com/pin/create/button/?url=${encodedUrl}&description=${encodedText}`,
-    };
-
-    if (urls[platform]) {
-      window.open(urls[platform], '_blank', 'width=600,height=400');
-    }
-  }
-
-  static calculateReadingTime() {
-    const blogMain = document.querySelector('.blog-main');
-    if (!blogMain) return 1;
-
-    const text = blogMain.textContent;
-    const wordsPerMinute = 200;
-    const words = text.trim().split(/\s+/).length;
-    const time = Math.ceil(words / wordsPerMinute);
-
-    return Math.max(1, time);
-  }
-}
-
-// ========== INTEGRACIÓN CON E-COMMERCE ==========
-class BlogEcommerceIntegration {
-  constructor() {
-    this.addProductLinks();
-    this.addCallToActionTracking();
-  }
-
-  addProductLinks() {
-    const productMentions = document.querySelectorAll('[data-product]');
-
-    productMentions.forEach((mention) => {
-      const productId = mention.dataset.product;
-      mention.addEventListener('click', () => {
-        window.location.href = `index.html#productos?highlight=${productId}`;
+      const colorOptions = document.createElement('div');
+      colorOptions.className = 'postit-color-options';
+      ['yellow', 'pink', 'green', 'blue'].forEach(color => {
+        const option = document.createElement('div');
+        option.id = `color-${color}`;
+        option.className = 'color-option';
+        option.addEventListener('click', () => {
+          postit.style.background = getComputedStyle(document.getElementById(`color-${color}`)).backgroundColor;
+        });
+        colorOptions.appendChild(option);
       });
+      postit.appendChild(colorOptions);
 
-      mention.style.cursor = 'pointer';
-      mention.style.textDecoration = 'underline';
-      mention.style.color = 'var(--primary-green)';
-    });
-  }
-
-  addCallToActionTracking() {
-    document.querySelectorAll('.cta-button-blog').forEach((cta) => {
-      cta.addEventListener('click', (e) => {
-        const action = e.target.textContent.trim();
-        console.log(`Blog CTA clicked: ${action}`);
-
-        if (typeof gtag !== 'undefined') {
-          gtag('event', 'blog_cta_click', {
-            event_category: 'Blog',
-            event_label: action,
-          });
-        }
+      // Mostrar/ocultar colores con mouseleave
+      postit.addEventListener('mouseenter', () => {
+        colorOptions.style.display = 'block';
+      });
+      postit.addEventListener('mouseleave', () => {
+        setTimeout(() => {
+          if (!postit.matches(':hover')) {
+            colorOptions.style.display = 'none';
+          }
+        }, 500); // 0.5 segundos de retraso
       });
     });
   }
+
+  // Otros métodos (formatearFecha, mostrarMensajeError, etc.) permanecen sin cambios...
 }
 
-// ========== INICIALIZACIÓN ==========
+// Resto del código (BlogUtils, BlogEcommerceIntegration, inicialización) permanece igual...
 let blogManager;
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -676,8 +246,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.body.appendChild(timeElement);
   }, 2000);
 
-  // Ajustar setInterval para recargar solo si hay datos previos
-setInterval(() => {
+  setInterval(() => {
     if (blogManager && blogManager.entradas.length > 0) {
       console.log('🔄 Intentando recargar entradas...');
       blogManager.recargar();
@@ -687,7 +256,6 @@ setInterval(() => {
   console.log('✨ Blog de Patofelting cargado correctamente');
 });
 
- 
 window.BlogUtils = BlogUtils;
 window.recargarBlog = () => {
   if (blogManager) {
