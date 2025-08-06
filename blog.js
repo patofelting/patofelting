@@ -68,6 +68,63 @@ async cargarEntradasDesdeCSV() {
 }
 
 
+renderizarBlog() {
+  const contenedor = document.getElementById('main-content');
+  const template = document.getElementById('entry-template');
+
+  if (!template || !template.content) {
+    console.error('❌ No se encontró el template con ID "entry-template" o no tiene contenido');
+    this.mostrarMensajeError();
+    return;
+  }
+
+  contenedor.innerHTML = ''; // Limpiar entradas anteriores
+
+  this.entradas.forEach((entrada) => {
+    const clone = template.content.cloneNode(true);
+    const entryElement = clone.querySelector('.blog-entry');
+
+    clone.querySelector('.entry-title').textContent = entrada.titulo;
+    clone.querySelector('.entry-date').textContent = entrada.fecha;
+
+    const textoContainer = clone.querySelector('.entry-text');
+    entrada.contenido.split('\n').forEach(linea => {
+      if (linea.trim() !== '') {
+        const p = document.createElement('p');
+        p.className = 'notebook-line';
+        p.textContent = linea.trim();
+        textoContainer.appendChild(p);
+      }
+    });
+
+    const galeria = clone.querySelector('.media-gallery');
+    if (entrada.imagenes.length > 0) {
+      entrada.imagenes.forEach(url => {
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = entrada.titulo;
+        img.loading = 'lazy';
+        galeria.appendChild(img);
+      });
+    }
+
+    if (entrada.videos.length > 0) {
+      entrada.videos.forEach(url => {
+        const video = document.createElement('iframe');
+        video.src = url;
+        video.frameBorder = '0';
+        video.allowFullscreen = true;
+        galeria.appendChild(video);
+      });
+    }
+
+    contenedor.appendChild(clone);
+  });
+
+  document.getElementById('blog-loading').style.display = 'none';
+}
+
+
   // Limpiar y validar URLs
   limpiarURLs(urlsString) {
     if (!urlsString) return [];
@@ -150,58 +207,7 @@ async cargarEntradasDesdeCSV() {
   }
 
   // ========== RENDERIZADO DEL BLOG ==========
-renderizarBlog() {
-  const contenedor = document.getElementById('main-content');
-  contenedor.innerHTML = ''; // Limpiar entradas anteriores
 
-  const template = document.getElementById('entry-template');
-
-  this.entradas.forEach((entrada) => {
-    const clone = template.content.cloneNode(true);
-    const entryElement = clone.querySelector('.blog-entry');
-
-    // Rellenar título y fecha
-    clone.querySelector('.entry-title').textContent = entrada.titulo;
-    clone.querySelector('.entry-date').textContent = entrada.fecha;
-
-    // Rellenar contenido línea por línea como párrafos
-    const textoContainer = clone.querySelector('.entry-text');
-    entrada.contenido.split('\n').forEach(linea => {
-      if (linea.trim() !== '') {
-        const p = document.createElement('p');
-        p.className = 'notebook-line';
-        p.textContent = linea.trim();
-        textoContainer.appendChild(p);
-      }
-    });
-
-    // Galería de medios (imágenes y videos opcionales)
-    const galeria = clone.querySelector('.media-gallery');
-    if (entrada.imagenes.length > 0) {
-      entrada.imagenes.forEach(url => {
-        const img = document.createElement('img');
-        img.src = url;
-        img.alt = entrada.titulo;
-        img.loading = 'lazy';
-        galeria.appendChild(img);
-      });
-    }
-
-    if (entrada.videos.length > 0) {
-      entrada.videos.forEach(url => {
-        const video = document.createElement('iframe');
-        video.src = url;
-        video.frameBorder = '0';
-        video.allowFullscreen = true;
-        galeria.appendChild(video);
-      });
-    }
-
-    contenedor.appendChild(clone);
-  });
-
-  document.getElementById('blog-loading').style.display = 'none';
-}
 
 
 renderEntradaBlog(entrada, index) {
