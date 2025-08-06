@@ -707,9 +707,13 @@ let blogManager;
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 Iniciando Blog de Patofelting...');
 
-  blogManager = new BlogManager();
-  new BlogEcommerceIntegration();
+  // ✅ Esperar un frame para asegurarse que todo el DOM (incluyendo <template>) esté disponible
+  requestAnimationFrame(() => {
+    blogManager = new BlogManager();
+    new BlogEcommerceIntegration();
+  });
 
+  // ⏳ Mostrar tiempo de lectura (como ya tenías)
   setTimeout(() => {
     const readingTime = BlogUtils.calculateReadingTime();
     const timeElement = document.createElement('div');
@@ -727,10 +731,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       color: var(--pencil-gray);
       z-index: 1000;
     `;
-
     document.body.appendChild(timeElement);
   }, 2000);
 
+  // 🔁 Auto recarga cada 60 segundos
   setInterval(() => {
     if (blogManager) {
       blogManager.recargar();
