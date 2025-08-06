@@ -1,4 +1,5 @@
 // Existing JS content remains unchanged up to this point...
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?gid=127717360&single=true&output=csv';
 
 class BlogManager {
   constructor() {
@@ -684,3 +685,4 @@ window.recargarBlog = () => {
     blogManager.recargar();
   }
 };
+
