@@ -13,21 +13,6 @@
   <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 </head>
 <body>
-  <!-- Template único para entradas -->
-  <template id="entry-template">
-    <article class="blog-entry" tabindex="0">
-      <div class="notebook-page">
-        <div class="red-margin" aria-hidden="true"></div>
-        <div class="entry-content">
-          <div class="entry-date"></div>
-          <h2 class="entry-title"></h2>
-          <div class="entry-text"></div>
-          <div class="media-gallery"></div>
-        </div>
-      </div>
-    </article>
-  </template>
-
   <!-- Navegación -->
   <nav class="blog-nav" aria-label="Navegación principal">
     <div class="nav-container">
@@ -44,8 +29,31 @@
     </div>
   </nav>
 
+  <!-- Header del Blog -->
+  <header class="blog-header">
+    <h1 class="blog-title">El Cuaderno de Patofelting</h1>
+    <p class="blog-subtitle">Historias tejidas con amor y fibras</p>
+  </header>
+
   <!-- Contenido Principal -->
   <main class="blog-main" id="main-content">
+    <!-- Template para entradas -->
+    <template id="entry-template">
+      <article class="blog-entry" tabindex="0">
+        <div class="notebook-page">
+          <div class="red-margin" aria-hidden="true"></div>
+          <div class="entry-content">
+            <div class="entry-date"></div>
+            <h2 class="entry-title"></h2>
+            <div class="entry-text"></div>
+            <div class="media-book"></div> <!-- Cambio a media-book para efecto de libro -->
+            <div class="postit-container" draggable="true"></div> <!-- Habilita arrastrar -->
+          </div>
+        </div>
+      </article>
+    </template>
+
+    <!-- Carga inicial -->
     <div class="blog-loading" id="blog-loading" aria-live="polite">
       <div class="loading-animation">
         <div class="yarn-ball" aria-hidden="true"></div>
@@ -53,7 +61,7 @@
       </div>
       <div class="loading-text">Cargando historias de Patofelting...</div>
     </div>
-    
+
     <div class="blog-entries" id="blog-entries">
       <!-- Las entradas se insertarán aquí dinámicamente -->
     </div>
