@@ -1,5 +1,67 @@
-// Existing JS content remains unchanged up to this point...
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?gid=127717360&single=true&output=csv';
+class BlogUtils {
+  static formatearFecha(fecha) {
+    if (!fecha) return '';
+    const [day, month, year] = fecha.split('/');
+    return `${day}/${month}/${year}`;
+  }
+
+  static mostrarMensajeError() {
+    const contenedor = document.getElementById('main-content');
+    if (!contenedor) return;
+
+    contenedor.innerHTML = `
+      <div class="blog-error">
+        <span class="error-icon">❌</span>
+        <div class="error-message">Hubo un error al cargar las entradas. Por favor, intenta de nuevo.</div>
+        <button class="retry-button" onclick="window.recargarBlog()">Reintentar</button>
+      </div>
+    `;
+  }
+
+  static mostrarMensajeVacio() {
+    const contenedor = document.getElementById('main-content');
+    if (!contenedor) return;
+
+    contenedor.innerHTML = `
+      <div class="blog-error">
+        <span class="error-icon">📝</span>
+        <div class="error-message">No hay historias para mostrar aún. ¡Vuelve pronto!</div>
+      </div>
+    `;
+  }
+
+  static limpiarURLs(urls) {
+    return urls.split(',').map(url => url.trim()).filter(url => url);
+  }
+
+  static shareOnSocial(platform, text, url = window.location.href) {
+    const encodedUrl = encodeURIComponent(url);
+    const encodedText = encodeURIComponent(text);
+
+    const urls = {
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+      twitter: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
+      whatsapp: `https://wa.me/?text=${encodedText} ${encodedUrl}`,
+      pinterest: `https://pinterest.com/pin/create/button/?url=${encodedUrl}&description=${encodedText}`,
+    };
+
+    if (urls[platform]) {
+      window.open(urls[platform], '_blank', 'width=600,height=400');
+    }
+  }
+
+  static calculateReadingTime() {
+    const blogMain = document.querySelector('.blog-main');
+    if (!blogMain) return 1;
+
+    const text = blogMain.textContent;
+    const wordsPerMinute = 200;
+    const words = text.trim().split(/\s+/).length;
+    const time = Math.ceil(words / wordsPerMinute);
+
+    return Math.max(1, time);
+  }
+}
 
 class BlogManager {
   constructor() {
@@ -45,8 +107,8 @@ class BlogManager {
           fecha: fila.fecha || '',
           titulo: fila.titulo,
           contenido: fila.contenido,
-          imagenes: this.limpiarURLs(fila.imagenPrincipal || ''),
-          videos: this.limpiarURLs(fila.videoURL || ''),
+          imagenes: BlogUtils.limpiarURLs(fila.imagenPrincipal || ''),
+          videos: BlogUtils.limpiarURLs(fila.videoURL || ''),
           orden: parseInt(fila.orden) || 0,
           postit: fila.postit || '',
           ordenpostit: parseInt(fila.ordenpostit) || 0,
@@ -58,7 +120,7 @@ class BlogManager {
 
     } catch (error) {
       console.error('❌ Error al cargar CSV:', error.message);
-      this.mostrarMensajeError();
+      BlogUtils.mostrarMensajeError();
     }
   }
 
@@ -75,7 +137,7 @@ class BlogManager {
 
     if (!template || !template.content) {
       console.error('❌ No se encontró el template para las entradas. Verifica el ID "entry-template" en el HTML.');
-      this.mostrarMensajeError();
+      BlogUtils.mostrarMensajeError();
       return;
     }
 
@@ -83,7 +145,7 @@ class BlogManager {
     contenedor.innerHTML = '';
 
     if (this.entradas.length === 0) {
-      this.mostrarMensajeVacio();
+      BlogUtils.mostrarMensajeVacio();
       return;
     }
 
@@ -94,7 +156,7 @@ class BlogManager {
 
       // Título y fecha
       clone.querySelector('.entry-title').textContent = entrada.titulo;
-      clone.querySelector('.entry-date').textContent = this.formatearFecha(entrada.fecha);
+      clone.querySelector('.entry-date').textContent = BlogUtils.formatearFecha(entrada.fecha);
 
       // Contenido
       const textoContainer = clone.querySelector('.entry-text');
@@ -214,10 +276,49 @@ class BlogManager {
     });
   }
 
-  // Otros métodos (formatearFecha, mostrarMensajeError, etc.) permanecen sin cambios...
+  // Otros métodos (addScrollEffects, addImageLazyLoading, etc.) pueden permanecer sin cambios si están definidos...
 }
 
-// Resto del código (BlogUtils, BlogEcommerceIntegration, inicialización) permanece igual...
+class BlogEcommerceIntegration {
+  constructor() {
+    this.addProductLinks();
+    this.addCallToActionTracking();
+  }
+
+  addProductLinks() {
+    const productMentions = document.querySelectorAll('[data-product]');
+
+    productMentions.forEach((mention) => {
+      const productId = mention.dataset.product;
+      mention.addEventListener('click', () => {
+        window.location.href = `index.html#productos?highlight=${productId}`;
+      });
+
+      mention.style.cursor = 'pointer';
+      mention.style.textDecoration = 'underline';
+      mention.style.color = 'var(--primary-green)';
+    });
+  }
+
+  addCallToActionTracking() {
+    document.querySelectorAll('.cta-button-blog').forEach((cta) => {
+      cta.addEventListener('click', (e) => {
+        const action = e.target.textContent.trim();
+        console.log(`Blog CTA clicked: ${action}`);
+
+        if (typeof gtag !== 'undefined') {
+          gtag('event', 'blog_cta_click', {
+            event_category: 'Blog',
+            event_label: action,
+          });
+        }
+      });
+    });
+  }
+}
+
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?gid=127717360&single=true&output=csv';
+
 let blogManager;
 
 document.addEventListener('DOMContentLoaded', async () => {
