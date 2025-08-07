@@ -5,6 +5,12 @@ class BlogUtils {
     return `${day}/${month}/${year}`;
   }
 
+  static parseDate(fecha) {
+    if (!fecha) return new Date(0);
+    const [day, month, year] = fecha.split('/').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
   static mostrarMensajeError() {
     const contenedor = document.getElementById('main-content');
     if (!contenedor) return;
@@ -61,53 +67,17 @@ class BlogUtils {
 
     return Math.max(1, time);
   }
-
-  static initCarousel(mediaBook, images) {
-    if (!mediaBook || images.length === 0) return;
-
-    const carousel = mediaBook.querySelector('.carousel');
-    if (!carousel) return;
-
-    const items = carousel.querySelectorAll('.carousel-item');
-    const prevButton = carousel.querySelector('.carousel-prev');
-    const nextButton = carousel.querySelector('.carousel-next');
-    let currentIndex = 0;
-
-    if (images.length <= 1) {
-      prevButton.style.display = 'none';
-      nextButton.style.display = 'none';
-      return;
-    }
-
-    const showItem = (index) => {
-      items.forEach((item, i) => {
-        item.classList.toggle('active', i === index);
-      });
-    };
-
-    prevButton.addEventListener('click', () => {
-      currentIndex = (currentIndex - 1 + items.length) % items.length;
-      showItem(currentIndex);
-    });
-
-    nextButton.addEventListener('click', () => {
-      currentIndex = (currentIndex + 1) % items.length;
-      showItem(currentIndex);
-    });
-
-    showItem(currentIndex);
-  }
 }
 
 class BlogManager {
   constructor() {
     this.entradas = [];
-    this.highestZIndex = 100; // Track highest z-index for post-its
     this.init();
   }
 
   async init() {
     await this.cargarEntradasDesdeCSV();
+    this.renderizarIndice();
     this.addScrollEffects();
     this.addImageLazyLoading();
     this.addVideoPlayPause();
@@ -149,7 +119,11 @@ class BlogManager {
           postit: fila.postit || '',
           ordenpostit: parseInt(fila.ordenpostit) || 0,
         }))
-        .sort((a, b) => a.orden - b.orden);
+        .sort((a, b) => {
+          const dateA = BlogUtils.parseDate(a.fecha);
+          const dateB = BlogUtils.parseDate(b.fecha);
+          return dateB - dateA || a.orden - b.orden;
+        });
 
       console.log('✅ Entradas procesadas:', this.entradas.length);
       this.renderizarBlog();
@@ -166,12 +140,12 @@ class BlogManager {
     const loader = document.getElementById('blog-loading');
 
     if (!contenedor) {
-      console.error('❌ No se encontró el contenedor principal. Verifica el ID "main-content" en el HTML.');
+      console.error('❌ No se encontró el contenedor principal.');
       return;
     }
 
     if (!template || !template.content) {
-      console.error('❌ No se encontró el template para las entradas. Verifica el ID "entry-template" en el HTML.');
+      console.error('❌ No se encontró el template para las entradas.');
       BlogUtils.mostrarMensajeError();
       return;
     }
@@ -181,6 +155,7 @@ class BlogManager {
 
     if (this.entradas.length === 0) {
       BlogUtils.mostrarMensajeVacio();
+      this.renderizarIndice();
       return;
     }
 
@@ -188,12 +163,12 @@ class BlogManager {
       const clone = template.content.cloneNode(true);
       const entryElement = clone.querySelector('.blog-entry');
       entryElement.setAttribute('data-entry-id', entrada.id);
+      entryElement.setAttribute('aria-labelledby', `entry-title-${entrada.id}`);
 
-      // Título y fecha
       clone.querySelector('.entry-title').textContent = entrada.titulo;
+      clone.querySelector('.entry-title').id = `entry-title-${entrada.id}`;
       clone.querySelector('.entry-date').textContent = BlogUtils.formatearFecha(entrada.fecha);
 
-      // Contenido
       const textoContainer = clone.querySelector('.entry-text');
       entrada.contenido.split('\n').forEach(linea => {
         if (linea.trim()) {
@@ -204,47 +179,25 @@ class BlogManager {
         }
       });
 
-      // Efecto de libro para imágenes
       const mediaBook = clone.querySelector('.media-book');
       if (entrada.imagenes && entrada.imagenes.length > 0) {
-        const carousel = document.createElement('div');
-        carousel.className = 'carousel';
-        entrada.imagenes.forEach((url, index) => {
-          const item = document.createElement('div');
-          item.className = `carousel-item ${index === 0 ? 'active' : ''}`;
-          const polaroid = document.createElement('div');
-          polaroid.className = 'photo-polaroid';
+        entrada.imagenes.forEach(url => {
+          const page = document.createElement('div');
+          page.className = 'book-page';
           const img = document.createElement('img');
           img.src = url;
-          img.alt = entrada.titulo;
+          img.alt = `Imagen para ${entrada.titulo}`;
           img.loading = 'lazy';
           img.classList.add('entrada-imagen');
           img.onerror = () => {
-            polaroid.classList.add('image-error');
-            img.style.display = 'none';
-            console.error(`Error al cargar imagen: ${url}`);
+            img.hidden = true;
+            console.warn(`Error al cargar imagen: ${url}`);
           };
-          polaroid.appendChild(img);
-          item.appendChild(polaroid);
-          carousel.appendChild(item);
+          page.appendChild(img);
+          mediaBook.appendChild(page);
         });
-
-        if (entrada.imagenes.length > 1) {
-          const prevButton = document.createElement('button');
-          prevButton.className = 'carousel-prev';
-          prevButton.innerHTML = '◄';
-          const nextButton = document.createElement('button');
-          nextButton.className = 'carousel-next';
-          nextButton.innerHTML = '►';
-          carousel.appendChild(prevButton);
-          carousel.appendChild(nextButton);
-        }
-
-        mediaBook.appendChild(carousel);
-        BlogUtils.initCarousel(mediaBook, entrada.imagenes);
       }
 
-      // Videos
       if (entrada.videos && entrada.videos.length > 0) {
         entrada.videos.forEach(url => {
           const video = document.createElement('iframe');
@@ -252,96 +205,100 @@ class BlogManager {
           video.frameBorder = '0';
           video.allowFullscreen = true;
           video.classList.add('entrada-video');
+          video.setAttribute('aria-label', `Video para ${entrada.titulo}`);
           mediaBook.appendChild(video);
         });
       }
 
-      // Post-it con arrastrar y soltar
       if (entrada.postit) {
         const postitContainer = clone.querySelector('.postit-container');
         const postit = document.createElement('div');
         postit.className = 'postit';
         postit.textContent = entrada.postit;
-        postit.setAttribute('data-id', entrada.id);
+        postit.setAttribute('draggable', 'true');
+        postit.setAttribute('data-id', `postit-${entrada.id}`);
         postitContainer.appendChild(postit);
 
-        // Initialize drag-and-drop and color change
-        this.initializePostitDrag(postit);
+        postit.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', postit.outerHTML);
+          postit.classList.add('dragging');
+        });
+
+        postit.addEventListener('dragend', () => {
+          postit.classList.remove('dragging');
+        });
+
+        entryElement.addEventListener('dragover', (e) => {
+          e.preventDefault();
+        });
+
+        entryElement.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const data = e.dataTransfer.getData('text/plain');
+          const draggedPostit = document.createElement('div');
+          draggedPostit.innerHTML = data;
+          const newPostit = draggedPostit.querySelector('.postit');
+          newPostit.style.position = 'absolute';
+          newPostit.style.left = `${e.pageX - entryElement.offsetLeft}px`;
+          newPostit.style.top = `${e.pageY - entryElement.offsetTop}px`;
+          entryElement.appendChild(newPostit);
+          postit.remove();
+          this.savePostitPosition(newPostit);
+        });
       }
 
       contenedor.appendChild(clone);
     });
 
-    // Añadir colores al post-it después de renderizar
     this.initializePostitColors();
+    this.renderizarIndice();
   }
 
-  initializePostitDrag(postit) {
-    let isDragging = false;
-    let currentX = 0;
-    let currentY = 0;
+  renderizarIndice() {
+    const indexList = document.getElementById('index-list');
+    const indexNav = document.getElementById('blog-index');
+    if (!indexList || !indexNav) return;
 
-    // Restore saved position and color
-    const saved = localStorage.getItem(`postit_${postit.dataset.id}`);
-    if (saved) {
-      const data = JSON.parse(saved);
-      if (data.left) postit.style.left = data.left;
-      if (data.top) postit.style.top = data.top;
-      if (data.color) postit.style.background = data.color;
-      if (data.zIndex) postit.style.zIndex = data.zIndex;
-    } else {
-      // Default position
-      postit.style.left = '50px';
-      postit.style.top = '50px';
-      postit.style.zIndex = this.highestZIndex++;
+    indexList.innerHTML = '';
+    if (this.entradas.length === 0) {
+      indexNav.style.display = 'none';
+      return;
     }
 
-    const startDragging = (e) => {
-      e.preventDefault();
-      isDragging = true;
-      postit.classList.add('dragging');
-      postit.style.zIndex = this.highestZIndex++; // Bring to front
+    indexNav.style.display = 'block';
+    this.entradas.forEach(entrada => {
+      const li = document.createElement('li');
+      li.className = 'index-item';
+      li.textContent = entrada.titulo;
+      li.setAttribute('role', 'link');
+      li.setAttribute('tabindex', '0');
+      li.setAttribute('aria-label', `Ir a la entrada: ${entrada.titulo}`);
+      li.addEventListener('click', () => {
+        document.querySelector(`[data-entry-id="${entrada.id}"]`).scrollIntoView({ behavior: 'smooth' });
+      });
+      li.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          document.querySelector(`[data-entry-id="${entrada.id}"]`).scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+      indexList.appendChild(li);
+    });
 
-      const rect = postit.getBoundingClientRect();
-      const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
-      const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
-      currentX = clientX - parseFloat(postit.style.left || 0);
-      currentY = clientY - parseFloat(postit.style.top || 0);
+    const toggleButton = document.querySelector('.index-toggle');
+    if (toggleButton) {
+      toggleButton.addEventListener('click', () => {
+        const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
+        toggleButton.setAttribute('aria-expanded', !isExpanded);
+        indexList.classList.toggle('hidden');
+      });
+    }
+  }
 
-      document.addEventListener('mousemove', drag);
-      document.addEventListener('touchmove', drag, { passive: false });
-      document.addEventListener('mouseup', stopDragging);
-      document.addEventListener('touchend', stopDragging);
-    };
-
-    const drag = (e) => {
-      if (!isDragging) return;
-      e.preventDefault();
-      const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
-      const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
-      postit.style.left = `${clientX - currentX}px`;
-      postit.style.top = `${clientY - currentY}px`;
-    };
-
-    const stopDragging = () => {
-      if (!isDragging) return;
-      isDragging = false;
-      postit.classList.remove('dragging');
-      localStorage.setItem(`postit_${postit.dataset.id}`, JSON.stringify({
-        color: postit.style.background,
-        left: postit.style.left,
-        top: postit.style.top,
-        zIndex: postit.style.zIndex
-      }));
-      document.removeEventListener('mousemove', drag);
-      document.removeEventListener('touchmove', drag);
-      document.removeEventListener('mouseup', stopDragging);
-      document.removeEventListener('touchend', stopDragging);
-    };
-
-    postit.addEventListener('mousedown', startDragging);
-    postit.addEventListener('touchstart', startDragging, { passive: false });
-    postit.ondragstart = () => false;
+  savePostitPosition(postit) {
+    const id = postit.dataset.id;
+    const color = postit.style.background;
+    const pos = { left: postit.style.left, top: postit.style.top };
+    localStorage.setItem(`postit_${id}`, JSON.stringify({ color, ...pos }));
   }
 
   initializePostitColors() {
@@ -352,40 +309,60 @@ class BlogManager {
         const option = document.createElement('div');
         option.id = `color-${color}`;
         option.className = 'color-option';
+        option.setAttribute('aria-label', `Cambiar a color ${color}`);
         option.addEventListener('click', () => {
           postit.style.background = getComputedStyle(document.getElementById(`color-${color}`)).backgroundColor;
-          postit.style.zIndex = this.highestZIndex++; // Bring to front on color change
-          localStorage.setItem(`postit_${postit.dataset.id}`, JSON.stringify({
-            color: postit.style.background,
-            left: postit.style.left,
-            top: postit.style.top,
-            zIndex: postit.style.zIndex
-          }));
+          this.savePostitPosition(postit);
         });
         colorOptions.appendChild(option);
       });
       postit.appendChild(colorOptions);
 
       postit.addEventListener('mouseenter', () => {
-        colorOptions.style.display = 'flex';
+        colorOptions.style.display = 'block';
       });
       postit.addEventListener('mouseleave', () => {
         setTimeout(() => {
-          if (!postit.matches(':hover') && !colorOptions.matches(':hover')) {
+          if (!postit.matches(':hover')) {
             colorOptions.style.display = 'none';
           }
         }, 500);
       });
+
+      const id = postit.dataset.id;
+      const saved = localStorage.getItem(`postit_${id}`);
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data.color) postit.style.background = data.color;
+        if (data.left) postit.style.left = data.left;
+        if (data.top) postit.style.top = data.top;
+      }
     });
   }
 
-  // Placeholder methods
-  addScrollEffects() {}
-  addImageLazyLoading() {}
-  addVideoPlayPause() {}
-  addTouchInteractions() {}
-  addReadingProgress() {}
-  initializeAnimations() {}
+  addScrollEffects() {
+    // Placeholder for scroll effects
+  }
+
+  addImageLazyLoading() {
+    // Already implemented via loading="lazy"
+  }
+
+  addVideoPlayPause() {
+    // Placeholder for video controls
+  }
+
+  addTouchInteractions() {
+    // Placeholder for touch interactions
+  }
+
+  addReadingProgress() {
+    // Placeholder for reading progress
+  }
+
+  initializeAnimations() {
+    // Placeholder for animations
+  }
 
   recargar() {
     this.cargarEntradasDesdeCSV();
@@ -445,7 +422,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       position: fixed;
       bottom: 20px;
       left: 20px;
-      background: white;
+      background: var(--paper-white);
       padding: 0.5rem 1rem;
       border-radius: 25px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.1);
@@ -472,3 +449,33 @@ window.recargarBlog = () => {
     blogManager.recargar();
   }
 };
+
+// Manejo de post-it dragging
+document.querySelectorAll('.postit').forEach(postit => {
+  postit.onmousedown = function(e) {
+    let shiftX = e.clientX - postit.getBoundingClientRect().left;
+    let shiftY = e.clientY - postit.getBoundingClientRect().top;
+    postit.classList.add('dragging');
+    function moveAt(pageX, pageY) {
+      postit.style.left = pageX - shiftX + 'px';
+      postit.style.top = pageY - shiftY + 'px';
+    }
+    function onMouseMove(e) {
+      moveAt(e.pageX, e.pageY);
+    }
+    document.addEventListener('mousemove', onMouseMove);
+    postit.onmouseup = function() {
+      document.removeEventListener('mousemove', onMouseMove);
+      postit.onmouseup = null;
+      postit.classList.remove('dragging');
+      const id = postit.dataset.id;
+      const color = postit.style.background;
+      localStorage.setItem(`postit_${id}`, JSON.stringify({ 
+        color, 
+        left: postit.style.left, 
+        top: postit.style.top 
+      }));
+    };
+  };
+  postit.ondragstart = () => false;
+});
