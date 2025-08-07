@@ -148,6 +148,68 @@ function renderBlog(entries) {
 
     contenedor.appendChild(clone);
   });
+
+  // Habilita movimiento de post-its después de renderizar
+  enableMovablePostits();
+}
+
+// ========== HACER POST-ITS MÓVILES ==========
+function enableMovablePostits() {
+  document.querySelectorAll('.postit').forEach(postit => {
+    postit.style.position = 'relative'; // Necesario para mover
+
+    let isDragging = false, startX, startY, origX, origY;
+
+    // Mouse
+    postit.addEventListener('mousedown', function(e) {
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      origX = parseInt(postit.style.left || 0, 10);
+      origY = parseInt(postit.style.top || 0, 10);
+      postit.style.zIndex = 1000;
+      document.body.style.userSelect = 'none';
+    });
+    document.addEventListener('mousemove', function(e) {
+      if (!isDragging) return;
+      let dx = e.clientX - startX;
+      let dy = e.clientY - startY;
+      postit.style.left = (origX + dx) + 'px';
+      postit.style.top = (origY + dy) + 'px';
+    });
+    document.addEventListener('mouseup', function() {
+      if (isDragging) {
+        isDragging = false;
+        postit.style.zIndex = '';
+        document.body.style.userSelect = '';
+      }
+    });
+
+    // Touch
+    postit.addEventListener('touchstart', function(e) {
+      isDragging = true;
+      const touch = e.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      origX = parseInt(postit.style.left || 0, 10);
+      origY = parseInt(postit.style.top || 0, 10);
+      postit.style.zIndex = 1000;
+    });
+    document.addEventListener('touchmove', function(e) {
+      if (!isDragging) return;
+      const touch = e.touches[0];
+      let dx = touch.clientX - startX;
+      let dy = touch.clientY - startY;
+      postit.style.left = (origX + dx) + 'px';
+      postit.style.top = (origY + dy) + 'px';
+    }, { passive: false });
+    document.addEventListener('touchend', function() {
+      if (isDragging) {
+        isDragging = false;
+        postit.style.zIndex = '';
+      }
+    });
+  });
 }
 
 // ========== RESPONSIVE ÍNDICE ==========
