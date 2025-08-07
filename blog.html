@@ -3,79 +3,102 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Patofelting - Mi Cuaderno de Bitácora</title>
+  <meta name="description" content="El cuaderno de bitácora de Patofelting - Historias sobre fibras, agujas y creaciones artesanales">
+  <title>El Cuaderno de Patofelting - Mi Historia con las Fibras</title>
   <link rel="stylesheet" href="blog.css">
-  <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&Dancing+Script:wght@400;700&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Dancing+Script:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 </head>
 <body>
-  <nav class="blog-nav">
-    <div class="nav-container">
-      <a href="index.html" class="back-home">
-        <img src="patofelting.jpg" alt="Patofelting Logo" class="logo-small">
-        Volver a la tienda
-      </a>
-      <div class="blog-logo">
-        <img src="patofelting.jpg" alt="Blog Logo" class="logo-small">
-        <span>El Cuaderno de Patofelting</span>
-      </div>
-    </div>
-  </nav>
-
-  <header class="blog-header">
-    <h1 class="blog-title">El Cuaderno de Patofelting</h1>
-    <p class="blog-subtitle">Un viaje entre fibras, agujas y sueños hechos realidad</p>
-    <div class="author-info">
-      <img src="patricia.jpg" alt="Patricia, creadora de Patofelting" class="author-avatar">
-      <span class="author-name">Por Patricia- Cuaderno de patofelting</span>
-    </div>
-  </header>
-
-  <nav id="blog-index" class="blog-index" aria-label="Índice de entradas del blog">
-    <button class="index-toggle" aria-expanded="false" aria-controls="index-list">
-      <span class="toggle-icon">📖</span> Índice de Historias
-    </button>
-    <ul id="index-list" class="index-list hidden"></ul>
-  </nav>
-
-  <main id="main-content" class="blog-main">
-    <div class="blog-loading">
-      <div class="loading-animation">
-        <div class="yarn-ball"></div>
-        <div class="needle"></div>
-      </div>
-      <div class="loading-text">Cargando historias de Patofelting...</div>
-    </div>
-  </main>
-
+  <!-- Template único para entradas -->
   <template id="entry-template">
-    <section class="blog-entry" data-entry-id="">
+    <article class="blog-entry" tabindex="0">
       <div class="notebook-page">
-        <div class="red-margin"></div>
+        <div class="red-margin" aria-hidden="true"></div>
         <div class="entry-content">
           <div class="entry-date"></div>
           <h2 class="entry-title"></h2>
+          <div class="polaroid-gallery"></div>
           <div class="entry-text"></div>
-          <div class="media-book"></div>
           <div class="postit-container"></div>
         </div>
       </div>
-    </section>
+    </article>
   </template>
 
+  <!-- Navegación superior -->
+  <nav class="blog-nav" aria-label="Navegación principal">
+    <div class="nav-container">
+      <a href="index.html" class="back-home" aria-label="Volver a la tienda principal">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Volver a la tienda
+      </a>
+      <div class="blog-logo">
+        <img src="img/patofelting.jpg" alt="Logo de Patofelting" class="logo-small" width="40" height="40" loading="lazy">
+        <span>Mi Cuaderno de Bitácora</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Índice adaptativo -->
+  <button id="toggle-index" aria-controls="blog-index" aria-expanded="false" class="index-toggle" tabindex="0">
+    ☰ Índice
+  </button>
+  <nav id="blog-index" aria-label="Índice de historias" class="hidden"></nav>
+
+  <!-- Contenido Principal -->
+  <main class="blog-main" id="main-content">
+    <div class="blog-loading" id="blog-loading" aria-live="polite">
+      <div class="loading-animation">
+        <div class="yarn-ball" aria-hidden="true"></div>
+        <div class="needle" aria-hidden="true"></div>
+      </div>
+      <div class="loading-text">Cargando historias de Patofelting...</div>
+    </div>
+    <div class="blog-entries" id="blog-entries">
+      <!-- Las entradas se insertarán aquí dinámicamente -->
+    </div>
+    <div class="empty-state hidden" id="blog-empty">
+      <div class="notebook-page">
+        <div class="red-margin" aria-hidden="true"></div>
+        <div class="entry-content text-center">
+          <span style="font-size:2.2em;display:block;">📝</span>
+          <p>No hay historias para mostrar aún. ¡Vuelve pronto!</p>
+        </div>
+      </div>
+    </div>
+    <div class="error-state hidden" id="blog-error">
+      <div class="notebook-page">
+        <div class="red-margin" aria-hidden="true"></div>
+        <div class="entry-content text-center">
+          <span style="font-size:2.2em;display:block;">❌</span>
+          <p>Hubo un error al cargar las entradas. <br>Por favor, intenta de nuevo.</p>
+          <button class="retry-button" onclick="window.recargarBlog()">Reintentar</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
   <footer class="blog-footer">
     <div class="footer-content">
       <p>Con amor desde mi taller,</p>
-      <p class="signature">Patricia ♥</p>
+      <div class="signature">Patricia ♥</div>
       <div class="footer-links">
         <a href="index.html">Volver a la tienda</a>
-        <a href="https://instagram.com/patofelting">Instagram</a>
-        <a href="mailto:contacto@patofelting.com">Contacto</a>
+        <a href="https://instagram.com/patofelting" target="_blank" rel="noopener noreferrer">Instagram</a>
+        <a href="mailto:patofelting@gmail.com">Contacto</a>
       </div>
-      <p class="mt-2">© Patofelting. Todos los derechos reservados.</p>
+      <p class="copyright">&copy; <span id="current-year"></span> Patofelting. Todos los derechos reservados.</p>
     </div>
   </footer>
 
-  <script src="blog.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="blog.js" defer></script>
 </body>
 </html>
