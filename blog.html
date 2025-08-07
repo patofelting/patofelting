@@ -3,60 +3,65 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>El cuaderno de Patofelting</title>
+  <title>Patofelting - Mi Cuaderno de Bitácora</title>
   <link rel="stylesheet" href="blog.css">
-  <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&Dancing+Script:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 </head>
 <body>
   <nav class="blog-nav">
     <div class="nav-container">
       <a href="index.html" class="back-home">
-        <img src="assets/icon-home.png" alt="Volver a la tienda" class="icon-home">
-        
+        <img src="logo.png" alt="Patofelting Logo" class="logo-small">
+        Volver a la tienda
       </a>
       <div class="blog-logo">
-        <img src="img/patofelting.jpg" alt="Patofelting Logo" class="logo-small">
-        <span>Patofelting</span>
+        <img src="logo.png" alt="Blog Logo" class="logo-small">
+        <span>Mi Cuaderno de Bitácora</span>
       </div>
     </div>
   </nav>
 
   <header class="blog-header">
-   
-    <h1 class="blog-title">El cuaderno de Patofelting</h1>
-    <p class="blog-subtitle">Un viaje entre fibras, agujas y sueños hechos realidad</p>
+    <h1 class="blog-title">Mi Cuaderno de Bitácora</h1>
+    <p class="blog-subtitle">Historias, inspiraciones y momentos desde mi taller</p>
     <div class="author-info">
-      <img src="assets/author.jpg" alt="Patricia" class="author-avatar">
-      <span class="author-name">Por Patricia- Creadora de Patofelting</span>
+      <img src="patricia.jpg" alt="Patricia, creadora de Patofelting" class="author-avatar">
+      <span class="author-name">Patricia</span>
     </div>
   </header>
 
-  <main class="blog-main">
-    <div id="blog-loading" class="blog-loading">
+  <nav id="blog-index" class="blog-index" aria-label="Índice de entradas del blog">
+    <button class="index-toggle" aria-expanded="false" aria-controls="index-list">
+      <span class="toggle-icon">📖</span> Índice de Historias
+    </button>
+    <ul id="index-list" class="index-list hidden"></ul>
+  </nav>
+
+  <main id="main-content" class="blog-main">
+    <div class="blog-loading">
       <div class="loading-animation">
         <div class="yarn-ball"></div>
         <div class="needle"></div>
       </div>
       <div class="loading-text">Cargando historias de Patofelting...</div>
     </div>
-
-    <div id="main-content"></div>
-
-    <template id="entry-template">
-      <article class="blog-entry" data-entry-id="">
-        <div class="notebook-page">
-          <div class="red-margin"></div>
-          <div class="entry-content">
-            <div class="entry-date"></div>
-            <h2 class="entry-title"></h2>
-            <div class="entry-text"></div>
-            <div class="postit-container"></div>
-            <div class="media-book"></div>
-          </div>
-        </div>
-      </article>
-    </template>
   </main>
+
+  <template id="entry-template">
+    <section class="blog-entry" data-entry-id="">
+      <div class="notebook-page">
+        <div class="red-margin"></div>
+        <div class="entry-content">
+          <div class="entry-date"></div>
+          <h2 class="entry-title"></h2>
+          <div class="entry-text"></div>
+          <div class="media-book"></div>
+          <div class="postit-container"></div>
+        </div>
+      </div>
+    </section>
+  </template>
 
   <footer class="blog-footer">
     <div class="footer-content">
@@ -64,14 +69,13 @@
       <p class="signature">Patricia ♥</p>
       <div class="footer-links">
         <a href="index.html">Volver a la tienda</a>
-        <a href="https://www.instagram.com/patofelting">Instagram</a>
+        <a href="https://instagram.com/patofelting">Instagram</a>
         <a href="mailto:contacto@patofelting.com">Contacto</a>
       </div>
       <p class="mt-2">© Patofelting. Todos los derechos reservados.</p>
     </div>
   </footer>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <script src="blog.js"></script>
 </body>
 </html>
