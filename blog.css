@@ -1438,3 +1438,82 @@ background: rgba (255, 107, 107, 0.08);
 }
 .hidden { display: none !important; }
 
+
+/* ...tu css existente... */
+
+/* Botón de índice siempre visible en mobile */
+@media (max-width: 600px) {
+  .index-toggle {
+    display: block !important;
+    position: fixed;
+    top: 70px;
+    left: 18px;
+    z-index: 800;
+    border-radius: 16px 16px 8px 8px;
+    padding: 0.38em 1.3em;
+    background: linear-gradient(110deg, #f8eac7 90%, #f6e1b7 100%);
+    border: 2px solid var(--red-margin);
+    font-size: 1.1rem;
+    color: var(--pencil-gray);
+    box-shadow: 0 2px 8px rgba(186,145,74,0.13);
+  }
+  /* Overlay para el menú */
+  #blog-index-overlay {
+    display: none;
+    position: fixed;
+    z-index: 700;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(50,40,30,0.18);
+  }
+  #blog-index.menu-mobile-open ~ #blog-index-overlay {
+    display: block;
+  }
+  #blog-index {
+    display: none !important;
+    position: fixed !important;
+    z-index: 900;
+    top: 0; left: 0; right: 0;
+    width: 98vw;
+    max-width: 98vw;
+    margin: 10vw 1vw 0 1vw;
+    padding: 1.3em 0.8em 1em 1em;
+    border-radius: 0 0 24px 24px;
+    background: linear-gradient(108deg,#fffbe8 90%,#f6e1b7 100%);
+    border: 2.5px solid var(--red-margin);
+    box-shadow: 0 9px 32px 0px #e6be7e39;
+    font-size: 1.13rem;
+    animation: slideDownMenu .4s cubic-bezier(.89,.04,.21,1.32);
+    overflow-y: auto;
+    max-height: 60vh;
+  }
+  #blog-index.menu-mobile-open {
+    display: block !important;
+  }
+  #blog-index ul {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  #blog-index li {
+    font-size: 1.22rem;
+    margin-bottom: 0; /* gap ya lo da */
+  }
+  #blog-index li a {
+    padding: 0.8em 0.7em;
+    border-radius: 12px;
+    font-size: 1.17rem;
+    background: transparent;
+    display: block;
+    text-align: left;
+    min-width: 60vw;
+  }
+  #blog-index li a:active {
+    background: #ffefc3;
+    color: var(--red-margin);
+  }
+  @keyframes slideDownMenu {
+    0% { opacity: 0; transform: translateY(-30px);}
+    100% { opacity: 1; transform: translateY(0);}
+  }
+}
+
