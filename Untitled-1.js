@@ -3,14 +3,15 @@
 // ===============================
 const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
-const CSV_URL = window.SHEET_CSV_URL;
-const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
+const CSV_URL = window.SHEET_CSV_URL; // por si lo usás en el futuro
+const PLACEHOLDER_IMAGE =
+  window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
-// Import Authentication (tu index.html ya inicializa Firebase App)
+// Firebase (tu index.html ya inicializa la app)
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getDatabase, ref, runTransaction, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-const db = window.firebaseDatabase;
+const db = window.firebaseDatabase || getDatabase(window.firebaseApp);
 const auth = getAuth(window.firebaseApp);
 
 // ===============================
@@ -28,58 +29,66 @@ let filtrosActuales = {
 };
 
 // ===============================
-// LOAD PRODUCTS ON PAGE LOAD
+// ARRANQUE
 // ===============================
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     await signInAnonymously(auth);
-    console.log('✅ Signed in anonymously to Firebase.');
-    cargarProductosDesdeFirebase();
+    console.log('✅ Firebase anónimo OK');
+    await cargarProductosDesdeFirebase();
   } catch (error) {
-    console.error('❌ Error signing in to Firebase:', error);
-    let errorMessage = 'Error de autenticación con Firebase.';
+    console.error('❌ Error Firebase:', error);
+    let msg = 'Error de autenticación con Firebase.';
     if (error.code === 'auth/configuration-not-found') {
-      errorMessage = 'Autenticación anónima no está habilitada en Firebase. Por favor, contacta al administrador.';
+      msg = 'Habilitá la autenticación anónima en Firebase.';
     } else if (error.code === 'auth/network-request-failed') {
-      errorMessage = 'Error de red. Por favor, verifica tu conexión a internet.';
+      msg = 'Error de red. Verifica tu conexión.';
     }
-    mostrarNotificacion(errorMessage, 'error');
+    mostrarNotificacion(msg, 'error');
   }
 
   cargarCarrito();
-  ensureProductModal(); // ← crea modal si falta en el HTML
+  ensureProductModal();   // crea el modal si no existe
   init();
 });
 
 // ===============================
-// Referencias al DOM
+// DOM
 // ===============================
-const getElement = id => document.getElementById(id);
+const $ = (id) => document.getElementById(id);
 const elementos = {
-  galeriaProductos: getElement('galeria-productos'),
-  paginacion: getElement('paginacion'),
-  productoModal: getElement('producto-modal'),
-  modalContenido: getElement('modal-contenido'),
-  listaCarrito: getElement('lista-carrito'),
-  totalCarrito: getElement('total'),
-  contadorCarrito: getElement('contador-carrito'),
+  galeriaProductos: $('galeria-productos'),
+  paginacion: $('paginacion'),
+
+  productoModal: $('producto-modal'),
+  modalContenido: $('modal-contenido'),
+
+  listaCarrito: $('lista-carrito'),
+  totalCarrito: $('total'),
+  contadorCarrito: $('contador-carrito'),
+
   inputBusqueda: document.querySelector('.input-busqueda'),
-  selectCategoria: getElement('filtro-categoria'),
-  precioMinInput: getElement('min-slider'),
-  precioMaxInput: getElement('max-slider'),
-  carritoBtnMain: getElement('carrito-btn-main'),
-  carritoPanel: getElement('carrito-panel'),
+  selectCategoria: $('filtro-categoria'),
+  precioMinInput: $('min-slider'),
+  precioMaxInput: $('max-slider'),
+
+  carritoBtnMain: $('carrito-btn-main'),
+  carritoPanel: $('carrito-panel'),
   carritoOverlay: document.querySelector('.carrito-overlay'),
   btnVaciarCarrito: document.querySelector('.boton-vaciar-carrito'),
   btnFinalizarCompra: document.querySelector('.boton-finalizar-compra'),
   btnCerrarCarrito: document.querySelector('.cerrar-carrito'),
-  avisoPreCompraModal: getElement('aviso-pre-compra-modal'),
-  btnEntendidoAviso: getElement('btn-entendido-aviso'),
-  btnCancelarAviso: getElement('btn-cancelar-aviso'),
-  productLoader: getElement('product-loader'),
+
+  avisoPreCompraModal: $('aviso-pre-compra-modal'),
+  btnEntendidoAviso: $('btn-entendido-aviso'),
+  btnCancelarAviso: $('btn-cancelar-aviso'),
+
+  productLoader: $('product-loader'),
+
   hamburguesa: document.querySelector('.hamburguesa'),
-  menu: getElement('menu'),
-  aplicarRangoBtn: document.querySelector('.aplicar-rango-btn')
+  menu: $('menu'),
+
+  aplicarRangoBtn: document.querySelector('.aplicar-rango-btn'),
 };
 
 // ===============================
@@ -90,7 +99,7 @@ function mostrarNotificacion(mensaje, tipo = 'exito') {
   noti.className = `notificacion ${tipo}`;
   noti.textContent = mensaje;
   document.body.appendChild(noti);
-  setTimeout(() => noti.classList.add('show'), 10);
+  requestAnimationFrame(() => noti.classList.add('show'));
   setTimeout(() => {
     noti.classList.remove('show');
     setTimeout(() => noti.remove(), 300);
@@ -109,8 +118,7 @@ function cargarCarrito() {
   try {
     carrito = JSON.parse(localStorage.getItem(LS_CARRITO_KEY)) || [];
     actualizarContadorCarrito();
-  } catch (e) {
-    console.error("Error al cargar el carrito de localStorage:", e);
+  } catch {
     carrito = [];
   }
 }
@@ -136,9 +144,9 @@ async function vaciarCarrito() {
     guardarCarrito();
     renderizarCarrito();
     renderizarProductos();
-    mostrarNotificacion('Carrito vaciado y stock restaurado correctamente', 'exito');
+    mostrarNotificacion('Carrito vaciado y stock restaurado', 'exito');
   } catch (error) {
-    console.error("Error al vaciar el carrito y restaurar el stock:", error);
+    console.error("Error al vaciar carrito:", error);
     mostrarNotificacion('Ocurrió un error al vaciar el carrito', 'error');
   }
 }
@@ -184,6 +192,7 @@ async function cargarProductosDesdeFirebase() {
 
     procesarDatosProductos(snapshot.val());
 
+    // live updates
     onValue(productosRef, (snap) => {
       if (!snap.exists()) {
         productos = [];
@@ -194,13 +203,13 @@ async function cargarProductosDesdeFirebase() {
       }
       procesarDatosProductos(snap.val());
     }, (error) => {
-      console.error('Error en listener de productos Firebase:', error);
+      console.error('onValue error:', error);
       mostrarNotificacion('Error al recibir actualizaciones de productos', 'error');
     });
 
   } catch (e) {
-    console.error('Error al cargar productos desde Firebase:', e);
-    mostrarNotificacion('Error al cargar productos: ' + (e.message || 'Error desconocido'), 'error');
+    console.error('Error al cargar productos:', e);
+    mostrarNotificacion('No se pudieron cargar los productos', 'error');
     elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos.</p>';
   } finally {
     setTimeout(() => {
@@ -216,10 +225,7 @@ function procesarDatosProductos(data) {
   productos = [];
   Object.keys(data).forEach(key => {
     const p = data[key];
-    if (!p || typeof p !== 'object') {
-      console.warn(`Producto ${key} inválido`, p);
-      return;
-    }
+    if (!p || typeof p !== 'object') return;
 
     productos.push({
       id: p.id && !isNaN(p.id) ? parseInt(p.id) : parseInt(key),
@@ -227,7 +233,9 @@ function procesarDatosProductos(data) {
       descripcion: typeof p.descripcion === 'string' ? p.descripcion.trim() : '',
       precio: !isNaN(parseFloat(p.precio)) ? parseFloat(p.precio) : 0,
       stock: !isNaN(parseInt(p.stock, 10)) ? Math.max(0, parseInt(p.stock, 10)) : 0,
-      imagenes: Array.isArray(p.imagenes) ? p.imagenes.filter(img => typeof img === 'string' && img.trim() !== '') : [PLACEHOLDER_IMAGE],
+      imagenes: Array.isArray(p.imagenes)
+        ? p.imagenes.filter(img => typeof img === 'string' && img.trim() !== '')
+        : [PLACEHOLDER_IMAGE],
       categoria: typeof p.categoria === 'string' ? p.categoria.toLowerCase().trim() : 'otros',
       estado: typeof p.estado === 'string' ? p.estado.trim() : '',
       adicionales: typeof p.adicionales === 'string' ? p.adicionales.trim() : '',
@@ -279,6 +287,7 @@ function renderizarCarrito() {
   const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
   elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
 
+  // listeners +/-
   elementos.listaCarrito.querySelectorAll('.disminuir-cantidad').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const id = parseInt(e.target.dataset.id);
@@ -295,7 +304,7 @@ function renderizarCarrito() {
           renderizarProductos();
           mostrarNotificacion(`Reducida cantidad de "${item.nombre}"`, 'info');
         }).catch(error => {
-          console.error("Error al disminuir cantidad:", error);
+          console.error("Error disminuir cantidad:", error);
           mostrarNotificacion("Error al actualizar cantidad", "error");
         });
       }
@@ -317,7 +326,7 @@ function crearCardProducto(p) {
   const enCarrito = carrito.find(i => i.id === p.id);
   const disp = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
   const agot = disp <= 0;
-  const imagenPrincipal = p.imagenes && p.imagenes.length > 0 ? p.imagenes[0] : PLACEHOLDER_IMAGE;
+  const imagenPrincipal = p.imagenes?.[0] || PLACEHOLDER_IMAGE;
 
   return `
     <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}">
@@ -329,7 +338,7 @@ function crearCardProducto(p) {
           ${agot ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
         </button>
         ${agot ? `
-        <button class="boton-aviso-stock" data-nombre="${p.nombre.replace(/'/g, "\\'")}" style="background-color: #ffd93b; color: #333; font-weight: bold;">
+        <button class="boton-aviso-stock" data-nombre="${p.nombre.replace(/'/g, "\\'")}" style="background-color:#ffd93b;color:#333;font-weight:bold;">
           📩 Avisame cuando haya stock
         </button>` : ''}
       </div>
@@ -357,40 +366,36 @@ function renderizarProductos() {
 
   if (!elementos.galeriaProductos) return;
 
-  elementos.galeriaProductos.innerHTML = '';
-
-  if (paginados.length === 0) {
-    elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No se encontraron productos que coincidan con los filtros.</p>';
-  } else {
-    elementos.galeriaProductos.innerHTML = paginados.map(crearCardProducto).join('');
-  }
+  elementos.galeriaProductos.innerHTML = paginados.length
+    ? paginados.map(crearCardProducto).join('')
+    : '<p class="sin-productos">No se encontraron productos que coincidan con los filtros.</p>';
 
   renderizarPaginacion(productosFiltrados.length);
 }
 
 function renderizarPaginacion(totalProductos) {
   const totalPages = Math.ceil(totalProductos / PRODUCTOS_POR_PAGINA);
-  const paginacionContainer = elementos.paginacion;
-  if (!paginacionContainer) return;
+  const pag = elementos.paginacion;
+  if (!pag) return;
 
-  paginacionContainer.innerHTML = '';
+  pag.innerHTML = '';
   if (totalPages <= 1) return;
 
   for (let i = 1; i <= totalPages; i++) {
-    const pageButton = document.createElement('button');
-    pageButton.textContent = i;
-    pageButton.className = i === paginaActual ? 'active' : '';
-    pageButton.addEventListener('click', () => {
+    const btn = document.createElement('button');
+    btn.textContent = i;
+    btn.className = i === paginaActual ? 'active' : '';
+    btn.addEventListener('click', () => {
       paginaActual = i;
       renderizarProductos();
 
-      // ✅ No “sube” la página: solo hacemos scroll si estás por encima de la galería
+      // Hacé scroll solo si estás por encima de la galería (no "sube" toda la página)
       const targetTop = elementos.galeriaProductos.offsetTop - 100;
       if (window.scrollY + 10 < targetTop) {
         window.scrollTo({ top: targetTop, behavior: 'smooth' });
       }
     });
-    paginacionContainer.appendChild(pageButton);
+    pag.appendChild(btn);
   }
 }
 
@@ -398,7 +403,6 @@ function renderizarPaginacion(totalProductos) {
 // MODAL DE PRODUCTO
 // ===============================
 function ensureProductModal() {
-  // Si faltan los nodos del modal en el HTML, los creamos.
   if (!document.getElementById('producto-modal')) {
     const modal = document.createElement('div');
     modal.id = 'producto-modal';
@@ -411,11 +415,11 @@ function ensureProductModal() {
     `;
     document.body.appendChild(modal);
   }
-  // Actualizamos referencias
+
   elementos.productoModal = document.getElementById('producto-modal');
   elementos.modalContenido = document.getElementById('modal-contenido');
 
-  // Cerrar por backdrop o ESC
+  // cerrar por fondo o ESC
   elementos.productoModal.addEventListener('click', (e) => {
     if (e.target.dataset.close === '1') cerrarModal();
   });
@@ -434,7 +438,7 @@ function mostrarModalProducto(producto) {
   const agotado = disponibles <= 0;
   let currentIndex = 0;
 
-  function renderCarruselAndContent() {
+  function render() {
     contenido.innerHTML = `
       <button class="cerrar-modal" aria-label="Cerrar modal" onclick="cerrarModal()">&times;</button>
       <div class="modal-flex">
@@ -479,30 +483,22 @@ function mostrarModalProducto(producto) {
       </div>
     `;
 
-    const btnPrev = contenido.querySelector('.modal-prev');
-    const btnNext = contenido.querySelector('.modal-next');
-    const thumbnails = contenido.querySelectorAll('.thumbnail');
-    const addModalBtn = contenido.querySelector('.boton-agregar-modal');
-    const cantidadInput = contenido.querySelector('.cantidad-modal-input');
+    const prev = contenido.querySelector('.modal-prev');
+    const next = contenido.querySelector('.modal-next');
+    const thumbs = contenido.querySelectorAll('.thumbnail');
+    const addBtn = contenido.querySelector('.boton-agregar-modal');
+    const qty = contenido.querySelector('.cantidad-modal-input');
 
-    btnPrev?.addEventListener('click', () => {
-      if (currentIndex > 0) { currentIndex--; renderCarruselAndContent(); }
-    });
-    btnNext?.addEventListener('click', () => {
-      if (currentIndex < producto.imagenes.length - 1) { currentIndex++; renderCarruselAndContent(); }
-    });
-    thumbnails.forEach(th => th.addEventListener('click', () => {
-      currentIndex = parseInt(th.dataset.index);
-      renderCarruselAndContent();
-    }));
-    addModalBtn?.addEventListener('click', (e) => {
-      const id = parseInt(e.currentTarget.dataset.id);
-      const cantidad = parseInt(cantidadInput.value);
-      agregarAlCarrito(id, cantidad, addModalBtn);
+    prev?.addEventListener('click', () => { if (currentIndex > 0) { currentIndex--; render(); } });
+    next?.addEventListener('click', () => { if (currentIndex < producto.imagenes.length - 1) { currentIndex++; render(); } });
+    thumbs.forEach(th => th.addEventListener('click', () => { currentIndex = parseInt(th.dataset.index); render(); }));
+    addBtn?.addEventListener('click', () => {
+      const cantidad = Math.max(1, parseInt(qty.value));
+      agregarAlCarrito(producto.id, cantidad, addBtn);
     });
   }
 
-  renderCarruselAndContent();
+  render();
   modal.classList.add('active');
   document.body.classList.add('no-scroll');
 }
@@ -516,10 +512,10 @@ function cerrarModal() {
 window.cerrarModal = cerrarModal;
 
 // ===============================
-// LÓGICA DE COMPRA
+// COMPRA
 // ===============================
 function agregarAlCarrito(id, cantidad = 1, boton = null) {
-  if (isNaN(id) || id === null) {
+  if (!Number.isFinite(id)) {
     mostrarNotificacion("ID de producto inválido", "error");
     return;
   }
@@ -531,24 +527,24 @@ function agregarAlCarrito(id, cantidad = 1, boton = null) {
   }
 
   const cantidadAgregar = Math.max(1, parseInt(cantidad));
-  if (isNaN(cantidadAgregar)) {
+  if (!Number.isFinite(cantidadAgregar)) {
     mostrarNotificacion("Cantidad inválida", "error");
     return;
   }
 
   const enCarrito = carrito.find(item => item.id === id);
-  const cantidadYaEnCarrito = enCarrito ? enCarrito.cantidad : 0;
-  const stockDisponible = producto.stock - cantidadYaEnCarrito;
+  const yaEnCarrito = enCarrito ? enCarrito.cantidad : 0;
+  const stockDisponible = producto.stock - yaEnCarrito;
 
   if (stockDisponible < cantidadAgregar) {
     mostrarNotificacion("Stock insuficiente", "error");
     return;
   }
 
-  let textoOriginal = null;
+  let original = null;
   if (boton) {
     boton.disabled = true;
-    textoOriginal = boton.innerHTML;
+    original = boton.innerHTML;
     boton.innerHTML = `Agregando <span class="spinner"></span>`;
   }
 
@@ -559,13 +555,12 @@ function agregarAlCarrito(id, cantidad = 1, boton = null) {
     return currentStock - cantidadAgregar;
   }).then((res) => {
     if (!res.committed) {
-      mostrarNotificacion('❌ Stock insuficiente o actualizado por otro usuario. Intente de nuevo.', 'error');
+      mostrarNotificacion('❌ Stock actualizado por otro usuario. Probá de nuevo.', 'error');
       return;
     }
 
-    if (enCarrito) {
-      enCarrito.cantidad += cantidadAgregar;
-    } else {
+    if (enCarrito) enCarrito.cantidad += cantidadAgregar;
+    else {
       carrito.push({
         id: producto.id,
         nombre: producto.nombre,
@@ -578,15 +573,15 @@ function agregarAlCarrito(id, cantidad = 1, boton = null) {
     guardarCarrito();
     renderizarCarrito();
     renderizarProductos();
-    mostrarNotificacion("✅ Producto agregado al carrito", "exito");
+    mostrarNotificacion("✅ Producto agregado", "exito");
 
   }).catch((error) => {
-    console.error("Error al agregar al carrito:", error);
-    mostrarNotificacion("⚠️ Error inesperado al agregar al carrito", "error");
+    console.error("Error agregar carrito:", error);
+    mostrarNotificacion("⚠️ Error inesperado al agregar", "error");
   }).finally(() => {
     if (boton) {
       boton.disabled = false;
-      boton.innerHTML = textoOriginal;
+      boton.innerHTML = original;
     }
   });
 }
@@ -627,8 +622,8 @@ function resetearFiltros() {
 // FAQ
 // ===============================
 function inicializarFAQ() {
-  const faqToggles = document.querySelectorAll('.faq-toggle');
-  faqToggles.forEach(toggle => {
+  const toggles = document.querySelectorAll('.faq-toggle');
+  toggles.forEach(toggle => {
     toggle.addEventListener('click', () => {
       const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
       toggle.setAttribute('aria-expanded', !isExpanded);
@@ -642,11 +637,11 @@ function inicializarFAQ() {
 // MENÚ HAMBURGUESA
 // ===============================
 function inicializarMenuHamburguesa() {
-  const hamburguesa = document.querySelector('.hamburguesa');
-  const menu = document.getElementById('menu');
+  const hamburguesa = elementos.hamburguesa;
+  const menu = elementos.menu;
   if (!hamburguesa || !menu) return;
 
-  hamburguesa.addEventListener('click', function() {
+  hamburguesa.addEventListener('click', () => {
     const expanded = menu.classList.toggle('active');
     hamburguesa.setAttribute('aria-expanded', expanded);
     document.body.classList.toggle('no-scroll', expanded);
@@ -665,20 +660,14 @@ function inicializarMenuHamburguesa() {
 // CONTACTO (EmailJS opcional)
 // ===============================
 function setupContactForm() {
-  const formContacto = document.getElementById('formContacto');
-  const successMessage = document.getElementById('successMessage');
-  const errorMessage = document.getElementById('errorMessage');
+  const form = document.getElementById('formContacto');
+  const ok = document.getElementById('successMessage');
+  const err = document.getElementById('errorMessage');
 
-  if (formContacto && window.emailjs) {
+  if (form && window.emailjs) {
     emailjs.init("YOUR_EMAILJS_USER_ID");
-    formContacto.addEventListener('submit', (e) => {
+    form.addEventListener('submit', (e) => {
       e.preventDefault();
-      if (!window.emailjs) {
-        errorMessage.classList.remove('hidden');
-        errorMessage.textContent = 'Error: Servicio de email no disponible.';
-        setTimeout(() => errorMessage.classList.add('hidden'), 3000);
-        return;
-      }
       const nombre = document.getElementById('nombre').value;
       const email = document.getElementById('email').value;
       const mensaje = document.getElementById('mensaje').value;
@@ -686,20 +675,15 @@ function setupContactForm() {
       emailjs.send('service_89by24g', 'template_8mn7hdp', {
         from_name: nombre, from_email: email, message: mensaje
       }).then(() => {
-        successMessage.classList.remove('hidden');
-        errorMessage.classList.add('hidden');
-        formContacto.reset();
-        setTimeout(() => successMessage.classList.add('hidden'), 3000);
+        ok.classList.remove('hidden'); err.classList.add('hidden'); form.reset();
+        setTimeout(() => ok.classList.add('hidden'), 3000);
       }, (error) => {
-        console.error('Error al enviar:', error);
-        errorMessage.classList.remove('hidden');
-        successMessage.classList.add('hidden');
-        errorMessage.textContent = 'Error al enviar el mensaje. Intenta de nuevo.';
-        setTimeout(() => errorMessage.classList.add('hidden'), 3000);
+        console.error('EmailJS error:', error);
+        err.classList.remove('hidden'); ok.classList.add('hidden');
+        err.textContent = 'Error al enviar el mensaje. Intenta de nuevo.';
+        setTimeout(() => err.classList.add('hidden'), 3000);
       });
     });
-  } else if (formContacto && !window.emailjs) {
-    console.warn('EmailJS no cargado. Formulario no funcional.');
   }
 }
 
@@ -715,7 +699,7 @@ function init() {
 }
 
 // ===============================
-// EVENTOS
+// EVENTOS (delegación de la galería incluida)
 // ===============================
 function inicializarEventos() {
   elementos.carritoBtnMain?.addEventListener('click', () => toggleCarrito(true));
@@ -724,11 +708,9 @@ function inicializarEventos() {
 
   document.getElementById('select-envio')?.addEventListener('change', actualizarResumenPedido);
   elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
+
   elementos.btnFinalizarCompra?.addEventListener('click', () => {
-    if (carrito.length === 0) {
-      mostrarNotificacion('El carrito está vacío', 'error');
-      return;
-    }
+    if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
     elementos.avisoPreCompraModal.style.display = 'flex';
     elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'false');
   });
@@ -745,10 +727,8 @@ function inicializarEventos() {
   });
 
   elementos.btnCancelarAviso?.addEventListener('click', () => {
-    if (elementos.avisoPreCompraModal) {
-      elementos.avisoPreCompraModal.style.display = 'none';
-      elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
-    }
+    elementos.avisoPreCompraModal.style.display = 'none';
+    elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
   });
 
   elementos.inputBusqueda?.addEventListener('input', (e) => {
@@ -770,18 +750,17 @@ function inicializarEventos() {
     aplicarFiltros();
   });
 
-  // Delegación en la galería
- // Delegación de eventos robusta para la galería de productos
-(function initGaleriaDelegation() {
+  // Delegación de eventos robusta para la galería de productos
   const root = elementos.galeriaProductos;
   if (!root) return;
 
-  // Evita handlers duplicados si init() se llama más de una vez
+  // Evita duplicados si re-inicializás
   if (root._pfDelegationAttached) {
     root.removeEventListener('click', root._pfDelegationAttached);
+    root.removeEventListener('keydown', root._pfDelegationKeydown);
   }
 
-  const handler = (e) => {
+  const clickHandler = (e) => {
     const card = e.target.closest('.producto-card');
     if (!card || !root.contains(card)) return;
 
@@ -791,11 +770,9 @@ function inicializarEventos() {
     const producto = productos.find(p => p.id === id);
     if (!producto) return;
 
-    // Botón/disparador (admite [data-action], button o a)
     const trigger = e.target.closest('[data-action], button, a');
     if (!trigger) return;
 
-    // Determinar acción
     const action =
       trigger.dataset.action ||
       (trigger.classList.contains('boton-detalles') ? 'detalle' :
@@ -809,37 +786,30 @@ function inicializarEventos() {
 
     switch (action) {
       case 'detalle':
-        // Si tenés un helper que asegura el modal, llamalo;
-        // no rompe si no existe:
-        try { ensureProductModal?.(); } catch(_) {}
+        ensureProductModal();
         verDetalle(id);
         break;
-
       case 'agregar':
-        // Pasamos el botón real si existe para feedback visual
         agregarAlCarrito(id, 1, trigger.closest('button'));
         break;
-
       case 'aviso':
         preguntarStock(trigger.dataset.nombre || producto.nombre);
         break;
     }
   };
 
-  root.addEventListener('click', handler, { passive: false });
-  root._pfDelegationAttached = handler;
-
-  // Accesibilidad: activar con Enter/Espacio
-  root.addEventListener('keydown', (e) => {
+  const keyHandler = (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     const btn = e.target.closest('.boton-detalles, .boton-agregar, .boton-aviso-stock, [data-action]');
-    if (btn) {
-      e.preventDefault();
-      btn.click();
-    }
-  });
-})();
+    if (btn) { e.preventDefault(); btn.click(); }
+  };
 
+  root.addEventListener('click', clickHandler);
+  root.addEventListener('keydown', keyHandler);
+
+  root._pfDelegationAttached = clickHandler;
+  root._pfDelegationKeydown = keyHandler;
+}
 
 // ===============================
 // RESUMEN PEDIDO / ENVÍO
@@ -847,7 +817,6 @@ function inicializarEventos() {
 function actualizarResumenPedido() {
   const resumenProductos = document.getElementById('resumen-productos');
   const resumenTotal = document.getElementById('resumen-total');
-
   if (!resumenProductos || !resumenTotal) return;
 
   if (carrito.length === 0) {
@@ -873,7 +842,6 @@ function actualizarResumenPedido() {
   const envioSelect = document.getElementById('select-envio');
   const metodoEnvio = envioSelect ? envioSelect.value : 'retiro';
   let costoEnvio = 0;
-
   if (metodoEnvio === 'montevideo') costoEnvio = 150;
   else if (metodoEnvio === 'interior') costoEnvio = 300;
 
@@ -924,58 +892,60 @@ document.getElementById('form-envio')?.addEventListener('submit', async function
   const notas = document.getElementById('input-notas').value.trim();
 
   if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
-    mostrarNotificacion('Por favor complete todos los campos obligatorios', 'error');
+    mostrarNotificacion('Completá todos los campos obligatorios', 'error');
     return;
   }
 
+  // Validar stock por las dudas
   for (const item of carrito) {
-    const productoReal = productos.find(p => p.id === item.id);
-    if (!productoReal || productoReal.stock < item.cantidad) {
-      mostrarNotificacion(`Stock insuficiente para "${item.nombre}".`, 'error');
+    const pReal = productos.find(p => p.id === item.id);
+    if (!pReal || pReal.stock < item.cantidad) {
+      mostrarNotificacion(`Stock insuficiente para "${item.nombre}"`, 'error');
       return;
     }
   }
 
-  let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n`;
-  mensaje += `*📋 Detalles del pedido:*\n`;
+  let msg = `¡Hola Patofelting! Quiero hacer un pedido:\n\n`;
+  msg += `*📋 Detalles del pedido:*\n`;
   carrito.forEach(item => {
-    mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}\n`;
+    msg += `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}\n`;
   });
 
   const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
   const costoEnvio = envio === 'montevideo' ? 150 : envio === 'interior' ? 300 : 0;
   const total = subtotal + costoEnvio;
 
-  mensaje += `\n*💰 Total:*\n`;
-  mensaje += `Subtotal: $U ${subtotal.toLocaleString('es-UY')}\n`;
-  mensaje += `Envío: $U ${costoEnvio.toLocaleString('es-UY')}\n`;
-  mensaje += `*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
-  mensaje += `*👤 Datos del cliente:*\n`;
-  mensaje += `Nombre: ${nombre} ${apellido}\n`;
-  mensaje += `Teléfono: ${telefono}\n`;
-  mensaje += `Método de envío: ${envio === 'montevideo' ? 'Envío Montevideo ($150)' : envio === 'interior' ? 'Envío Interior ($300)' : 'Retiro en local (Gratis)'}\n`;
-  if (envio !== 'retiro') mensaje += `Dirección: ${direccion}\n`;
-  if (notas) mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
+  msg += `\n*💰 Total:*\n`;
+  msg += `Subtotal: $U ${subtotal.toLocaleString('es-UY')}\n`;
+  msg += `Envío: $U ${costoEnvio.toLocaleString('es-UY')}\n`;
+  msg += `*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
+  msg += `*👤 Datos del cliente:*\n`;
+  msg += `Nombre: ${nombre} ${apellido}\n`;
+  msg += `Teléfono: ${telefono}\n`;
+  msg += `Método de envío: ${envio === 'montevideo' ? 'Envío Montevideo ($150)' : envio === 'interior' ? 'Envío Interior ($300)' : 'Retiro en local (Gratis)'}\n`;
+  if (envio !== 'retiro') msg += `Dirección: ${direccion}\n`;
+  if (notas) msg += `\n*📝 Notas adicionales:*\n${notas}`;
 
   const numeroWhatsApp = '59893566283';
-  sessionStorage.setItem('ultimoPedidoWhatsApp', mensaje);
+  sessionStorage.setItem('ultimoPedidoWhatsApp', msg);
 
-  const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
-  const nuevaPestaña = window.open(urlWhatsApp, '_blank');
-  if (!nuevaPestaña || nuevaPestaña.closed || typeof nuevaPestaña.closed == 'undefined') {
-    window.location.href = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${encodeURIComponent(mensaje)}`;
+  const url = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(msg)}`;
+  const win = window.open(url, '_blank');
+  if (!win || win.closed || typeof win.closed === 'undefined') {
+    window.location.href = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${encodeURIComponent(msg)}`;
   }
 
   setTimeout(() => {
-    document.getElementById('modal-datos-envio').classList.remove('visible');
-    document.getElementById('modal-datos-envio').setAttribute('aria-hidden', 'true');
+    document.getElementById('modal-datos-envio')?.classList.remove('visible');
+    document.getElementById('modal-datos-envio')?.setAttribute('aria-hidden', 'true');
     setTimeout(() => {
-      document.getElementById('modal-datos-envio').style.display = 'none';
+      const m = document.getElementById('modal-datos-envio');
+      if (m) m.style.display = 'none';
       carrito = [];
       guardarCarrito();
       actualizarUI();
       mostrarNotificacion('Pedido listo para enviar por WhatsApp', 'exito');
-      document.getElementById('form-envio').reset();
+      document.getElementById('form-envio')?.reset();
     }, 300);
   }, 1000);
 });
@@ -1000,12 +970,12 @@ function updateRange() {
     maxSlider.value = maxVal;
   }
 
-  const sliderMax = parseInt(minSlider.max);
-  const porcentajeMin = (minVal / sliderMax) * 100;
-  const porcentajeMax = (maxVal / sliderMax) * 100;
+  const sliderMax = parseInt(minSlider.max || '3000');
+  const pctMin = (minVal / sliderMax) * 100;
+  const pctMax = (maxVal / sliderMax) * 100;
 
-  range.style.left = porcentajeMin + '%';
-  range.style.width = (porcentajeMax - porcentajeMin) + '%';
+  range.style.left = pctMin + '%';
+  range.style.width = (pctMax - pctMin) + '%';
 
   minPriceSpan.textContent = `$U${minVal}`;
   maxPriceSpan.textContent = `$U${maxVal}`;
@@ -1032,27 +1002,11 @@ function preguntarStock(nombreProducto) {
 function verDetalle(id) {
   const producto = productos.find(p => p.id === id);
   if (producto) {
-    mostrarModalProducto(producto); // ✅ abre siempre
+    mostrarModalProducto(producto);
   } else {
     mostrarNotificacion("Producto no encontrado", "error");
   }
 }
-
 window.verDetalle = verDetalle;
 window.agregarAlCarrito = agregarAlCarrito;
 window.preguntarStock = preguntarStock;
-function toggleCarrito(abrir) {
-  if (!elementos.carritoOverlay || !elementos.carritoModal) return;
-
-  if (abrir) {
-    elementos.carritoOverlay.classList.add('active');
-    elementos.carritoModal.classList.add('active');
-    document.body.classList.add('no-scroll');
-    renderizarCarrito();
-  } else {
-    elementos.carritoOverlay.classList.remove('active');
-    elementos.carritoModal.classList.remove('active');
-    document.body.classList.remove('no-scroll');
-  }
-}
-}
