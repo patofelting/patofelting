@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Nunito:wght@400;600&family=Kalam:wght@300;400;700&display=swap" rel="stylesheet" />
 
-  <!-- Favicon -->
+  <!-- Favicon (opcional) -->
   <link rel="icon" href="favicon.ico" type="image/x-icon" />
   <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
 
@@ -55,7 +55,6 @@
               </div>
               <div class="comment-actions">
                 <button type="submit" class="comment-send">Publicar</button>
-                
               </div>
             </form>
           </section>
@@ -114,21 +113,46 @@
     </div>
   </footer>
 
-  <!-- JSON-LD (lo llena el JS) -->
+  <!-- JSON-LD (lo completa blog.js) -->
   <script id="jsonld-slot" type="application/ld+json"></script>
 
   <!-- CSV -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-
+  <!-- Firebase (Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script>
-    const firebaseConfig = {/* tu config */};
-    firebase.initializeApp(firebaseConfig);
-    window.firebaseCompatDb = firebase.database();
+    // Config tomada de tu sitio principal (index.html)
+    window.firebaseConfig = {
+      apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
+      authDomain: "patofelting-b188f.firebaseapp.com",
+      databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
+      projectId: "patofelting-b188f",
+      storageBucket: "patofelting-b188f.appspot.com",
+      messagingSenderId: "858377467588",
+      appId: "1:858377467588:web:cade9de05ebccc17f87b91"
+    };
+
+    // Inicialización (Compat)
+    try {
+      const app = firebase.initializeApp(window.firebaseConfig);
+      window.firebaseCompatApp  = app;
+      window.firebaseCompatDb   = firebase.database();
+      window.firebaseCompatAuth = firebase.auth();
+
+      // Iniciar sesión anónima para poder asociar reacciones/favoritos/comentarios a un uid
+      window.firebaseCompatAuth.signInAnonymously().catch((err) => {
+        console.warn('Anon auth failed:', err);
+      });
+    } catch (e) {
+      console.error('Error inicializando Firebase:', e);
+      // Si falla, dejamos las refs undefined para que blog.js use el fallback localStorage
+      window.firebaseCompatDb = null;
+      window.firebaseCompatAuth = null;
+    }
   </script>
- 
 
   <!-- App -->
   <script src="blog.js" defer></script>
