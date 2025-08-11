@@ -1,9 +1,22 @@
 /* =========================================================
-   BLOG Patofelting — CSV → UI + Post-its + Reacciones + Comentarios
-   Firebase (compat) si está configurado; si no, fallback a localStorage.
+   Blog "El Cuaderno de Patofelting"
+   - CSV → UI
+   - Reacciones + Favoritos
+   - Post-its (mover, color, borrar, persistencia)
+   - Comentarios (con eliminación para admin)
+   - Lazy images + SEO JSON-LD
+   - Firebase (compat) opcional; fallback a localStorage
 ========================================================= */
 
+/* ============================ CONFIG ============================ */
 const HAS_FIREBASE = !!(window.firebaseCompatDb && window.firebaseCompatAuth);
+
+// Activa modo admin con window.PF_IS_ADMIN = true
+// o agregando ?pfadmin=1 a la URL (se guarda en localStorage)
+if (new URLSearchParams(location.search).get('pfadmin') === '1') {
+  localStorage.setItem('pf_admin', '1');
+}
+const IS_ADMIN = !!window.PF_IS_ADMIN || localStorage.getItem('pf_admin') === '1';
 
 const LS_KEYS = {
   reactions: 'pf_reactions_v2',
@@ -14,11 +27,12 @@ const LS_KEYS = {
 
 const PATHS = {
   reactions: (id) => `/blog/reactions/${id}`,                        // counts { "🧶": n, "✨": m }
-  reactionsByUser: (id, uid) => `/blog/reactionsByUser/${id}/${uid}`,// { "🧶": true, "✨": true }
+  reactionsByUser: (id, uid) => `/blog/reactionsByUser/${id}/${uid}`,// { "🧶": true }
   favorites: (id, uid) => `/blog/favorites/${id}/${uid}`,            // true/false
   comments: (id) => `/blog/comments/${id}`                           // { commentId: {id,name,text,ts,uid} }
 };
 
+/* ============================ UTILS ============================ */
 class BlogUtils {
   static formatearFecha(fecha) {
     if (!fecha) return '';
@@ -30,7 +44,9 @@ class BlogUtils {
     if (!contenedor) return;
     contenedor.innerHTML = `
       <div class="blog-error" style="padding:2rem;text-align:center">
-        <div class="error-message">Hubo un error al cargar las entradas. <button class="retry-button" onclick="window.recargarBlog()">Reintentar</button></div>
+        <div class="error-message">Hubo un error al cargar las entradas.
+          <button class="retry-button" onclick="window.recargarBlog()">Reintentar</button>
+        </div>
       </div>`;
   }
   static mostrarMensajeVacio() {
@@ -52,7 +68,7 @@ class BlogUtils {
     return Math.max(1, Math.ceil(words / 200));
   }
   static initCarousel(mediaBook, images) {
-    if (!mediaBook || !images || !images.length) return;
+    if (!mediaBook || !images?.length) return;
     const carousel = mediaBook.querySelector('.carousel');
     if (!carousel) return;
     const items = carousel.querySelectorAll('.carousel-item');
@@ -64,28 +80,27 @@ class BlogUtils {
     next?.addEventListener('click', () => { current = (current + 1) % items.length; show(current); });
     show(current);
   }
-  static sanitize(s){ return s.replace(/[<>]/g, ''); }
+  static sanitize(s){ return (s || '').replace(/[<>]/g, ''); }
 }
 
+/* ============================ CORE ============================ */
 class BlogManager {
   constructor() {
     this.entradas = [];
-    this.uid = null; // auth uid (anónimo)
+    this.uid = null; // auth uid (anónimo si Firebase compat está activo)
     this.init();
   }
 
   async init() {
-    // UID si hay Firebase
     if (HAS_FIREBASE) {
-      window.firebaseCompatAuth.onAuthStateChanged(user => {
-        this.uid = user ? user.uid : null;
-      });
+      window.firebaseCompatAuth.onAuthStateChanged(user => { this.uid = user ? user.uid : null; });
     }
 
     await this.cargarEntradasDesdeCSV();
     this.addImageLazyLoading();
     this.addVideoPlayPause();
     this.buildIndex();
+    this.ensurePerEntryUI();     // asegura contenedores (reacciones / postits / comentarios)
     this.initReactions();
     this.enablePostits();
     this.initCommentsAll();
@@ -105,7 +120,7 @@ class BlogManager {
     }, 800);
   }
 
-  /* ================== DATOS ================== */
+  /* =============== Datos (CSV) =============== */
   async cargarEntradasDesdeCSV() {
     try {
       const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?gid=127717360&single=true&output=csv';
@@ -136,7 +151,7 @@ class BlogManager {
     }
   }
 
-  /* ================== RENDER ================== */
+  /* =============== Render =============== */
   renderizarBlog() {
     const contenedor = document.getElementById('blog-entries');
     const template = document.getElementById('entry-template');
@@ -168,8 +183,14 @@ class BlogManager {
         textoContainer.appendChild(p);
       });
 
-      // carrusel imágenes
-      const mediaBook = clone.querySelector('.media-book');
+      // carrusel imágenes (dentro de un .media-book; si no existe, lo creo)
+      let mediaBook = clone.querySelector('.media-book');
+      if (!mediaBook) {
+        mediaBook = document.createElement('div');
+        mediaBook.className = 'media-book';
+        textoContainer.after(mediaBook);
+      }
+
       if (entrada.imagenes?.length) {
         const carousel = document.createElement('div');
         carousel.className = 'carousel';
@@ -199,29 +220,55 @@ class BlogManager {
         });
       }
 
-      // post-it inicial
+      // Post-it inicial (si viene desde CSV)
+      let postitBox = clone.querySelector('.postit-container');
+      if (!postitBox) {
+        postitBox = document.createElement('div');
+        postitBox.className = 'postit-container';
+        postitBox.style.position = 'relative';
+        textoContainer.after(postitBox);
+      }
       if (entrada.postit) {
-        const box = clone.querySelector('.postit-container');
         const p = { id: crypto.randomUUID(), text: entrada.postit, x: 8, y: 6, color:'#ffeb3b', w: 220, h: 150 };
-        box.appendChild(this._renderPostit(p, entrada.id));
+        postitBox.appendChild(this._renderPostit(p, entrada.id));
       }
 
+      // Reacciones + Favorito (si no existe en el template lo creo)
+      if (!clone.querySelector('.entry-reactions')) {
+        const react = document.createElement('div');
+        react.className = 'entry-reactions';
+        react.innerHTML = `
+          <button class="reaction-btn" data-emoji="🧶" aria-pressed="false" title="Reaccionar con lana">🧶 <span>0</span></button>
+          <button class="reaction-btn" data-emoji="✨" aria-pressed="false" title="¡Me encanta!">✨ <span>0</span></button>
+          <button class="entry-fav" aria-pressed="false" title="Guardar en favoritos">❤</button>
+        `;
+        mediaBook.after(react);
+      }
+
+      // Comentarios (si no existe en el template lo creo)
+      if (!clone.querySelector('.entry-comments')) {
+        const comments = document.createElement('section');
+        comments.className = 'entry-comments';
+        comments.innerHTML = `
+          <ul class="comments-list"></ul>
+          <form class="comment-form">
+            <input name="name" class="comment-name" placeholder="Tu nombre" autocomplete="name">
+            <textarea name="text" class="comment-textarea" placeholder="Escribe tu comentario…" required></textarea>
+            <button type="submit">Publicar</button>
+          </form>
+        `;
+        mediaBook.after(comments);
+      }
+
+      // añadir al DOM
       contenedor.appendChild(clone);
+
       // activar carrusel
       if (entrada.imagenes?.length) BlogUtils.initCarousel(mediaBook, entrada.imagenes);
     });
-
-    // extras
-    this.addImageLazyLoading();
-    this.addVideoPlayPause();
-    this.buildIndex();
-    this.initReactions();
-    this.enablePostits();
-    this.initCommentsAll();
-    this.injectJSONLD();
   }
 
-  /* ================== TOC ================== */
+  /* =============== TOC =============== */
   buildIndex() {
     const index = document.getElementById('blog-index');
     if (!index) return;
@@ -251,7 +298,14 @@ class BlogManager {
     overlay.addEventListener('click',()=>toggle(false));
   }
 
-  /* ================== Reacciones / Favoritos ================== */
+  /* =============== Reacciones / Favoritos =============== */
+  ensurePerEntryUI(){
+    // asegura que todos los artículos tengan los contenedores mínimos
+    document.querySelectorAll('.blog-entry').forEach(entry=>{
+      entry.querySelector('.postit-container')?.style.setProperty('position','relative');
+    });
+  }
+
   initReactions() {
     const cache = JSON.parse(localStorage.getItem(LS_KEYS.reactions) || '{}');
 
@@ -263,7 +317,6 @@ class BlogManager {
       const emojiBtns = wrap.querySelectorAll('[data-emoji]');
       const favBtn = wrap.querySelector('.entry-fav');
 
-      // --- Firebase LIVE counts ---
       if (HAS_FIREBASE) {
         // counts
         window.firebaseCompatDb.ref(PATHS.reactions(id)).on('value', snap=>{
@@ -274,28 +327,24 @@ class BlogManager {
           });
         });
 
-        // user flags (to marcar ya reaccionado)
-        const updatePressed = (flags = {})=>{
-          emojiBtns.forEach(btn=>{
-            const emoji = btn.dataset.emoji;
-            btn.setAttribute('aria-pressed', String(!!flags[emoji]));
+        // estado por usuario + fav
+        const attachUserUI = ()=>{
+          const uid = this.uid; if (!uid) return;
+          window.firebaseCompatDb.ref(PATHS.reactionsByUser(id, uid)).on('value', s => {
+            const flags = s.val() || {};
+            emojiBtns.forEach(btn=>{
+              const emoji = btn.dataset.emoji;
+              btn.setAttribute('aria-pressed', String(!!flags[emoji]));
+            });
+          });
+          window.firebaseCompatDb.ref(PATHS.favorites(id, uid)).on('value', s => {
+            const isFav = !!s.val();
+            favBtn?.classList.toggle('active', isFav);
+            favBtn?.setAttribute('aria-pressed', String(isFav));
           });
         };
-        const applyFavState = (isFav)=> {
-          favBtn?.classList.toggle('active', !!isFav);
-          favBtn?.setAttribute('aria-pressed', String(!!isFav));
-        };
-
-        const attachUserUI = ()=>{
-          const uid = this.uid;
-          if (!uid) return; // se setea cuando onAuthStateChanged dispare
-          window.firebaseCompatDb.ref(PATHS.reactionsByUser(id, uid)).on('value', s => updatePressed(s.val() || {}));
-          window.firebaseCompatDb.ref(PATHS.favorites(id, uid)).on('value', s => applyFavState(!!s.val()));
-        };
         attachUserUI();
-        if (!this.uid) {
-          window.firebaseCompatAuth.onAuthStateChanged(()=> attachUserUI());
-        }
+        if (!this.uid) window.firebaseCompatAuth.onAuthStateChanged(()=> attachUserUI());
 
         // clicks
         emojiBtns.forEach(btn=>{
@@ -306,7 +355,7 @@ class BlogManager {
 
             const byUserRef = window.firebaseCompatDb.ref(`${PATHS.reactionsByUser(id, uid)}/${emoji}`);
             const exists = (await byUserRef.get()).exists();
-            if (exists) return; // evitar doble reacción por usuario
+            if (exists) return;
 
             const countRef = window.firebaseCompatDb.ref(`${PATHS.reactions(id)}/${emoji}`);
             await countRef.transaction(n => (typeof n==='number' ? n : 0) + 1);
@@ -323,8 +372,8 @@ class BlogManager {
           await ref.set(!cur);
         });
 
-      // --- LocalStorage fallback ---
       } else {
+        // LocalStorage fallback
         const state = cache[id] || { '🧶':0, '✨':0, fav:false };
         emojiBtns.forEach(btn=>{
           const emoji = btn.dataset.emoji;
@@ -336,7 +385,6 @@ class BlogManager {
             btn.animate([{transform:'scale(1)'},{transform:'scale(1.15)'},{transform:'scale(1)'}],{duration:180});
           });
         });
-
         if (favBtn){
           favBtn.classList.toggle('active', !!state.fav);
           favBtn.setAttribute('aria-pressed', String(!!state.fav));
@@ -351,7 +399,7 @@ class BlogManager {
     });
   }
 
-  /* ================== Post-its ================== */
+  /* =============== Post-its =============== */
   enablePostits() {
     const store = JSON.parse(localStorage.getItem(LS_KEYS.postits) || '{}');
 
@@ -359,11 +407,12 @@ class BlogManager {
       const id = entry.getAttribute('data-entry-id');
       const box = entry.querySelector('.postit-container');
       if(!box) return;
+      box.style.position = 'relative';
 
       // restaurar
       (store[id] || []).forEach(p=> box.appendChild(this._renderPostit(p, id)));
 
-      // botón crear
+      // botón crear (si no existe)
       if (!box.querySelector('.postit-add')){
         const add = document.createElement('button');
         add.textContent='➕ Post-it';
@@ -383,56 +432,96 @@ class BlogManager {
   }
 
   _renderPostit(p, entryId){
+    const entry = document.querySelector(`#entry-${entryId}`);
+    const box = entry.querySelector('.postit-container');
+
     const el = document.createElement('div');
-    el.className='postit'; el.dataset.pid=p.id;
-    el.style.left = (typeof p.x==='string' ? p.x : p.x + '%');
-    el.style.top  = (typeof p.y==='string' ? p.y : p.y + '%');
-    if (p.w) el.style.width = (typeof p.w==='string' ? p.w : p.w+'px');
-    if (p.h) el.style.height= (typeof p.h==='string' ? p.h : p.h+'px');
+    el.className = 'postit';
+    el.dataset.pid = p.id;
+    el.style.position = 'absolute';
+    el.style.background = p.color || '#ffeb3b';
+    el.style.left  = (typeof p.x === 'number' ? p.x + '%' : p.x || '6%');
+    el.style.top   = (typeof p.y === 'number' ? p.y + '%' : p.y || '6%');
+    if (p.w) el.style.width  = (typeof p.w === 'number' ? p.w + 'px' : p.w);
+    if (p.h) el.style.height = (typeof p.h === 'number' ? p.h + 'px' : p.h);
 
+    // barra
     const bar = document.createElement('div');
-    bar.className='postit-bar';
-    const title = document.createElement('span'); title.className='title'; title.textContent='Nota';
-    const tools = document.createElement('div'); tools.className='tools';
+    bar.className = 'postit-bar';
+    bar.style.touchAction = 'none';
+    const title = document.createElement('span'); title.className = 'title'; title.textContent = 'Nota';
 
-    const palette = document.createElement('div'); palette.className='postit-color-options';
+    const tools = document.createElement('div'); tools.className = 'tools';
+
+    // paleta
+    const palette = document.createElement('div'); palette.className = 'postit-color-options';
     ['#f5eead','#fca8c4','#b8f1bb','#42a5f5'].forEach(c=>{
-      const dot=document.createElement('span'); dot.className='color-option'; dot.style.background=c;
-      dot.addEventListener('click', ()=>{ el.style.background=c; });
+      const dot = document.createElement('span'); dot.className = 'color-option'; dot.style.background = c;
+      dot.addEventListener('click', (e)=>{ e.stopPropagation(); el.style.background = c; });
       palette.appendChild(dot);
     });
 
-    const btnDel = document.createElement('button'); btnDel.title='Eliminar'; btnDel.innerHTML='🗑️';
-    btnDel.addEventListener('click', ()=>{ el.remove(); this._persistPostits(document.querySelector(`#entry-${entryId}`)); });
+    // borrar
+    const btnDel = document.createElement('button');
+    btnDel.type = 'button';
+    btnDel.title = 'Eliminar';
+    btnDel.setAttribute('aria-label','Eliminar nota');
+    btnDel.innerHTML = '🗑️';
+    btnDel.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      el.remove();
+      this._persistPostits(entry);
+    });
 
-    tools.appendChild(palette); tools.appendChild(btnDel);
-    bar.appendChild(title); bar.appendChild(tools);
+    tools.appendChild(palette);
+    tools.appendChild(btnDel);
+    bar.appendChild(title);
+    bar.appendChild(tools);
 
+    // contenido
     const content = document.createElement('div');
-    content.className='postit-content'; content.contentEditable = true;
+    content.className = 'postit-content';
+    content.contentEditable = true;
     content.textContent = p.text || '';
 
-    el.appendChild(bar); el.appendChild(content);
+    el.appendChild(bar);
+    el.appendChild(content);
 
-    // Drag por la barrita
-    let dragging=false, sx=0, sy=0, startLeft=0, startTop=0;
-    bar.addEventListener('pointerdown', (e)=>{
-      dragging=true; bar.setPointerCapture(e.pointerId);
-      sx=e.clientX; sy=e.clientY;
-      const r=el.getBoundingClientRect();
-      startLeft = r.left + window.scrollX;
-      startTop  = r.top  + window.scrollY;
-      bar.style.cursor='grabbing';
-    });
-    bar.addEventListener('pointermove', (e)=>{
-      if(!dragging) return;
-      const dx=e.clientX - sx, dy=e.clientY - sy;
-      el.style.left = (startLeft + dx) + 'px';
-      el.style.top  = (startTop  + dy) + 'px';
-    });
-    const stop = (e)=>{ if(!dragging) return; dragging=false; bar.releasePointerCapture?.(e.pointerId); bar.style.cursor='grab'; };
-    bar.addEventListener('pointerup', stop);
-    bar.addEventListener('pointercancel', stop);
+    // ===== DRAG relativo al contenedor =====
+    let dragging = false, offsetX = 0, offsetY = 0;
+
+    const getContainerRect = () => box.getBoundingClientRect();
+
+    const onDown = (e)=>{
+      dragging = true;
+      el.classList.add('dragging');
+      bar.setPointerCapture?.(e.pointerId);
+      const rect = el.getBoundingClientRect();
+      offsetX = e.clientX - rect.left;
+      offsetY = e.clientY - rect.top;
+    };
+    const onMove = (e)=>{
+      if (!dragging) return;
+      const crect = getContainerRect();
+      let left = e.clientX - crect.left - offsetX;
+      let top  = e.clientY - crect.top  - offsetY;
+      left = Math.max(0, Math.min(left, crect.width  - el.offsetWidth));
+      top  = Math.max(0, Math.min(top,  crect.height - el.offsetHeight));
+      el.style.left = (left / crect.width) * 100 + '%';
+      el.style.top  = (top  / crect.height) * 100 + '%';
+    };
+    const onUp = (e)=>{
+      if (!dragging) return;
+      dragging = false;
+      el.classList.remove('dragging');
+      bar.releasePointerCapture?.(e.pointerId);
+      this._persistPostits(entry);
+    };
+
+    bar.addEventListener('pointerdown', onDown);
+    bar.addEventListener('pointermove', onMove);
+    bar.addEventListener('pointerup', onUp);
+    bar.addEventListener('pointercancel', onUp);
 
     return el;
   }
@@ -440,23 +529,23 @@ class BlogManager {
   _persistPostits(entry){
     const id = entry.getAttribute('data-entry-id');
     const list = [...entry.querySelectorAll('.postit')].map(el=>{
-      const rect=el.getBoundingClientRect(), parent=entry.getBoundingClientRect();
-      const w = parseInt(getComputedStyle(el).width,10);
-      const h = parseInt(getComputedStyle(el).height,10);
+      const style = getComputedStyle(el);
       return {
         id: el.dataset.pid,
         text: el.querySelector('.postit-content')?.textContent?.trim() || '',
-        color: el.style.background || '#ffeb3b',
-        x: ((rect.left - parent.left) / parent.width) * 100,
-        y: ((rect.top  - parent.top ) / parent.height) * 100,
-        w, h
+        color: style.backgroundColor,
+        x: parseFloat(style.left),   // en %
+        y: parseFloat(style.top),    // en %
+        w: parseInt(style.width,10),
+        h: parseInt(style.height,10)
       };
     });
     const store = JSON.parse(localStorage.getItem(LS_KEYS.postits) || '{}');
-    store[id]=list; localStorage.setItem(LS_KEYS.postits, JSON.stringify(store));
+    store[id] = list;
+    localStorage.setItem(LS_KEYS.postits, JSON.stringify(store));
   }
 
-  /* ================== Comentarios ================== */
+  /* =============== Comentarios (con borrar para admin) =============== */
   initCommentsAll(){
     document.querySelectorAll('.blog-entry').forEach(entry=>{
       const id = entry.getAttribute('data-entry-id');
@@ -477,6 +566,7 @@ class BlogManager {
                 <span class="comment-name">${c.name || 'Anónimo'}</span>
                 <span>•</span>
                 <time datetime="${new Date(c.ts).toISOString()}">${new Date(c.ts).toLocaleString()}</time>
+                ${IS_ADMIN ? '<button class="comment-del" title="Eliminar">🗑️</button>' : ''}
               </div>
               <div class="comment-text">${c.text}</div>
             </li>
@@ -490,7 +580,6 @@ class BlogManager {
           render(Object.values(val));
         }, err=>{
           console.warn('FB comments error:', err);
-          // fallback una vez
           const ls = JSON.parse(localStorage.getItem(LS_KEYS.comments(id)) || '[]');
           render(ls);
         });
@@ -502,8 +591,8 @@ class BlogManager {
       // publicar
       form.addEventListener('submit', async (e)=>{
         e.preventDefault();
-        const name = BlogUtils.sanitize((form.name.value || 'Anónimo').trim());
-        const text = BlogUtils.sanitize((form.text.value || '').trim());
+        const name = BlogUtils.sanitize((form.name?.value || 'Anónimo').trim());
+        const text = BlogUtils.sanitize((form.text?.value || '').trim());
         if (!text) return;
 
         // rate-limit 10s
@@ -525,17 +614,37 @@ class BlogManager {
           const key = LS_KEYS.comments(id);
           const arr = JSON.parse(localStorage.getItem(key) || '[]'); arr.push(comment);
           localStorage.setItem(key, JSON.stringify(arr));
-          // re-render local
           const ls = JSON.parse(localStorage.getItem(key) || '[]'); render(ls);
         }
 
         form.reset();
         localStorage.setItem(LS_KEYS.lastCommentAt, String(Date.now()));
       });
+
+      // eliminar (solo admin)
+      list.addEventListener('click', async (e)=>{
+        const btn = e.target.closest('.comment-del');
+        if (!btn || !IS_ADMIN) return;
+        const li = btn.closest('.comment-item');
+        const cid = li?.dataset.id;
+        if (!cid) return;
+
+        if (!confirm('¿Eliminar este comentario?')) return;
+
+        if (HAS_FIREBASE) {
+          try { await window.firebaseCompatDb.ref(`${PATHS.comments(id)}/${cid}`).remove(); }
+          catch (err) { alert('No se pudo eliminar en servidor.'); console.warn(err); }
+        } else {
+          const key = LS_KEYS.comments(id);
+          const arr = JSON.parse(localStorage.getItem(key) || '[]').filter(c=>c.id !== cid);
+          localStorage.setItem(key, JSON.stringify(arr));
+          render(arr);
+        }
+      });
     });
   }
 
-  /* ================== Lazy / Videos ================== */
+  /* =============== Lazy / Videos =============== */
   addImageLazyLoading() {
     const imgs = document.querySelectorAll('.entrada-imagen');
     if (!imgs.length) return;
@@ -561,7 +670,7 @@ class BlogManager {
     iframes.forEach(v=>io.observe(v));
   }
 
-  /* ================== SEO ================== */
+  /* =============== SEO =============== */
   injectJSONLD(){
     const slot=document.getElementById('jsonld-slot'); if(!slot) return;
     const items=[...document.querySelectorAll('.blog-entry')].map(e=>{
@@ -578,10 +687,7 @@ class BlogManager {
   recargar(){ this.cargarEntradasDesdeCSV(); }
 }
 
-/* Reintento público */
-window.recargarBlog = () => window.blogManager?.recargar();
-
-/* Ecommerce hooks (opcional) */
+/* ============================ Ecommerce hooks (opcional) ============================ */
 class BlogEcommerceIntegration{
   constructor(){ this.addProductLinks(); this.addCallToActionTracking(); }
   addProductLinks(){
@@ -595,14 +701,13 @@ class BlogEcommerceIntegration{
     document.querySelectorAll('.cta-button-blog').forEach(cta=>{
       cta.addEventListener('click',(e)=>{
         const action=e.target.textContent.trim();
-        console.log(`Blog CTA clicked: ${action}`);
         if(typeof gtag!=='undefined'){ gtag('event','blog_cta_click',{event_category:'Blog',event_label:action}); }
       });
     });
   }
 }
 
-/* Arranque */
+/* ============================ Arranque ============================ */
 let blogManager;
 document.addEventListener('DOMContentLoaded',()=>{
   blogManager = new BlogManager();
@@ -610,153 +715,9 @@ document.addEventListener('DOMContentLoaded',()=>{
   const y=document.getElementById('current-year'); if(y) y.textContent=new Date().getFullYear();
 });
 
+/* Utilidades para admin rápidas (opcionales) */
+window.enableBlogAdmin = () => { localStorage.setItem('pf_admin','1'); location.reload(); };
+window.disableBlogAdmin = () => { localStorage.removeItem('pf_admin'); location.reload(); };
 
-/* === FIX post-its: drag, z-index, accesibilidad === */
-.postit-container{ position: relative; }
-
-.postit{
-  position: absolute;          /* ← clave para mover con left/top */
-  z-index: 20;
-  cursor: grab;
-  background: var(--postit-bg, #ffeb3b);
-  width: 220px; min-height: 150px;
-}
-
-.postit.dragging{ z-index: 40; }
-
-.postit-bar{
-  display: flex; align-items: center; justify-content: space-between;
-  gap: .5rem; padding: .25rem .4rem;
-  cursor: grab; user-select: none;
-  touch-action: none;          /* ← permite arrastrar en touch sin scroll */
-}
-
-.postit .tools{ display: flex; align-items: center; gap: .35rem; }
-.postit .tools button{ background: none; border: 0; cursor: pointer; }
-.postit .tools button:focus{ outline: 2px solid rgba(0,0,0,.15); border-radius: 6px; }
-
-.postit-color-options{ display: inline-flex; gap: .25rem; }
-.postit-color-options .color-option{
-  width: 14px; height: 14px; border-radius: 999px; border: 2px solid #fff;
-  box-shadow: 0 0 0 1px rgba(0,0,0,.1);
-}
-
-.postit-content{
-  padding: .5rem .6rem .7rem;
-  min-height: 110px;
-  line-height: 1.25;
-}
-_renderPostit(p, entryId){
-  const entry = document.querySelector(`#entry-${entryId}`);
-  const box = entry.querySelector('.postit-container');
-
-  const el = document.createElement('div');
-  el.className = 'postit';
-  el.dataset.pid = p.id;
-  el.style.background = p.color || '#ffeb3b';
-  el.style.left  = (typeof p.x === 'number' ? p.x + '%' : p.x || '6%');
-  el.style.top   = (typeof p.y === 'number' ? p.y + '%' : p.y || '6%');
-  if (p.w) el.style.width  = (typeof p.w === 'number' ? p.w + 'px' : p.w);
-  if (p.h) el.style.height = (typeof p.h === 'number' ? p.h + 'px' : p.h);
-
-  // barra
-  const bar = document.createElement('div');
-  bar.className = 'postit-bar';
-  const title = document.createElement('span'); title.className = 'title'; title.textContent = 'Nota';
-
-  const tools = document.createElement('div'); tools.className = 'tools';
-
-  // paleta
-  const palette = document.createElement('div'); palette.className = 'postit-color-options';
-  ['#f5eead','#fca8c4','#b8f1bb','#42a5f5'].forEach(c=>{
-    const dot = document.createElement('span'); dot.className = 'color-option'; dot.style.background = c;
-    dot.addEventListener('click', (e)=>{ e.stopPropagation(); el.style.background = c; });
-    palette.appendChild(dot);
-  });
-
-  // borrar
-  const btnDel = document.createElement('button');
-  btnDel.type = 'button';
-  btnDel.title = 'Eliminar';
-  btnDel.setAttribute('aria-label','Eliminar nota');
-  btnDel.innerHTML = '🗑️';
-  btnDel.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    el.remove();
-    this._persistPostits(entry);
-  });
-
-  tools.appendChild(palette);
-  tools.appendChild(btnDel);
-  bar.appendChild(title);
-  bar.appendChild(tools);
-
-  // contenido
-  const content = document.createElement('div');
-  content.className = 'postit-content';
-  content.contentEditable = true;
-  content.textContent = p.text || '';
-
-  el.appendChild(bar);
-  el.appendChild(content);
-
-  // ===== DRAG relativo al contenedor =====
-  let dragging = false, offsetX = 0, offsetY = 0;
-
-  const getContainerRect = () => box.getBoundingClientRect();
-
-  const onDown = (e)=>{
-    dragging = true;
-    el.classList.add('dragging');
-    bar.setPointerCapture?.(e.pointerId);
-    const rect = el.getBoundingClientRect();
-    offsetX = e.clientX - rect.left;
-    offsetY = e.clientY - rect.top;
-  };
-  const onMove = (e)=>{
-    if (!dragging) return;
-    const crect = getContainerRect();
-    // nuevas coords en px relativas al contenedor
-    let left = e.clientX - crect.left - offsetX;
-    let top  = e.clientY - crect.top  - offsetY;
-    // límites
-    left = Math.max(0, Math.min(left, crect.width  - el.offsetWidth));
-    top  = Math.max(0, Math.min(top,  crect.height - el.offsetHeight));
-    // actualizar en %
-    el.style.left = (left / crect.width) * 100 + '%';
-    el.style.top  = (top  / crect.height) * 100 + '%';
-  };
-  const onUp = (e)=>{
-    if (!dragging) return;
-    dragging = false;
-    el.classList.remove('dragging');
-    bar.releasePointerCapture?.(e.pointerId);
-    this._persistPostits(entry);
-  };
-
-  bar.addEventListener('pointerdown', onDown);
-  bar.addEventListener('pointermove', onMove);
-  bar.addEventListener('pointerup', onUp);
-  bar.addEventListener('pointercancel', onUp);
-
-  return el;
-}
-_persistPostits(entry){
-  const id = entry.getAttribute('data-entry-id');
-  const list = [...entry.querySelectorAll('.postit')].map(el=>{
-    const style = getComputedStyle(el);
-    return {
-      id: el.dataset.pid,
-      text: el.querySelector('.postit-content')?.textContent?.trim() || '',
-      color: style.backgroundColor,
-      // guardamos en %
-      x: parseFloat(style.left),   // ya están en %
-      y: parseFloat(style.top),    // ya están en %
-      w: parseInt(style.width,10),
-      h: parseInt(style.height,10)
-    };
-  });
-  const store = JSON.parse(localStorage.getItem(LS_KEYS.postits) || '{}');
-  store[id] = list;
-  localStorage.setItem(LS_KEYS.postits, JSON.stringify(store));
-}
+/* Reintento público */
+window.recargarBlog = () => window.blogManager?.recargar();
