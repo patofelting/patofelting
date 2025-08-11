@@ -10,8 +10,17 @@ class BlogUtils {
     return `${day}/${month}/${year}`;
   }
 
+  // dd/mm/yyyy (también acepta d/m/yyyy) y valida fecha real
+  static esFechaValida(fecha) {
+    if (!fecha) return false;
+    const m = String(fecha).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!m) return false;
+    const d = +m[1], mo = +m[2], y = +m[3];
+    const dt = new Date(y, mo - 1, d);
+    return dt.getFullYear() === y && dt.getMonth() === (mo - 1) && dt.getDate() === d;
+  }
+
   static mostrarMensajeError() {
-    // Apagar loader SIEMPRE
     const loader = document.getElementById('blog-loading');
     if (loader) loader.style.display = 'none';
 
@@ -27,7 +36,6 @@ class BlogUtils {
   }
 
   static mostrarMensajeVacio() {
-    // Apagar loader SIEMPRE
     const loader = document.getElementById('blog-loading');
     if (loader) loader.style.display = 'none';
 
@@ -52,9 +60,9 @@ class BlogUtils {
     const blogMain = document.querySelector('.blog-main');
     if (!blogMain) return 1;
     const text = blogMain.textContent || '';
-    const wordsPerMinute = 200;
+    const wpm = 200;
     const words = text.trim().split(/\s+/).length;
-    return Math.max(1, Math.ceil(words / wordsPerMinute));
+    return Math.max(1, Math.ceil(words / wpm));
   }
 }
 
@@ -85,10 +93,14 @@ class BlogManager {
       });
 
       const nuevas = resultado.data
-        .filter((fila) => fila.titulo && fila.contenido)
+        .filter((fila) =>
+          fila.titulo &&
+          fila.contenido &&
+          BlogUtils.esFechaValida(fila.fecha) // ← exige fecha válida
+        )
         .map((fila, i) => ({
           id: fila.id || i.toString(),
-          fecha: fila.fecha || '',
+          fecha: fila.fecha,
           titulo: fila.titulo,
           contenido: fila.contenido,
           imagenes: BlogUtils.limpiarURLs(fila.imagenPrincipal || ''),
