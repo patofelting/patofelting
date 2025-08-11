@@ -1,9 +1,9 @@
 /* =========================================================
    BLOG Patofelting — CSV → UI + Post-its + Reacciones + Comentarios
-   LocalStorage por defecto. Hooks para Firebase (compat) opcional.
+   Firebase (compat) si está configurado; si no, fallback a localStorage.
 ========================================================= */
 
-const HAS_FIREBASE = !!window.firebaseCompatDb; // si agregas los <script> compat y config en el HTML
+const HAS_FIREBASE = !!(window.firebaseCompatDb && window.firebaseCompatAuth);
 
 const LS_KEYS = {
   reactions: 'pf_reactions_v2',
@@ -12,13 +12,19 @@ const LS_KEYS = {
   lastCommentAt: 'pf_last_comment_ts'
 };
 
+const PATHS = {
+  reactions: (id) => `/blog/reactions/${id}`,                        // counts { "🧶": n, "✨": m }
+  reactionsByUser: (id, uid) => `/blog/reactionsByUser/${id}/${uid}`,// { "🧶": true, "✨": true }
+  favorites: (id, uid) => `/blog/favorites/${id}/${uid}`,            // true/false
+  comments: (id) => `/blog/comments/${id}`                           // { commentId: {id,name,text,ts,uid} }
+};
+
 class BlogUtils {
   static formatearFecha(fecha) {
     if (!fecha) return '';
     const [day, month, year] = fecha.split('/');
     return `${day}/${month}/${year}`;
   }
-
   static mostrarMensajeError() {
     const contenedor = document.getElementById('main-content');
     if (!contenedor) return;
@@ -27,7 +33,6 @@ class BlogUtils {
         <div class="error-message">Hubo un error al cargar las entradas. <button class="retry-button" onclick="window.recargarBlog()">Reintentar</button></div>
       </div>`;
   }
-
   static mostrarMensajeVacio() {
     const contenedor = document.getElementById('main-content');
     if (!contenedor) return;
@@ -36,14 +41,9 @@ class BlogUtils {
         <div class="error-message">No hay historias para mostrar aún. ¡Vuelve pronto!</div>
       </div>`;
   }
-
   static limpiarURLs(urls) {
-    return (urls || '')
-      .split(',')
-      .map(u => u.trim())
-      .filter(Boolean);
+    return (urls || '').split(',').map(u => u.trim()).filter(Boolean);
   }
-
   static calculateReadingTime() {
     const blogMain = document.querySelector('.blog-main');
     if (!blogMain) return 1;
@@ -51,9 +51,8 @@ class BlogUtils {
     const words = text.trim().split(/\s+/).length;
     return Math.max(1, Math.ceil(words / 200));
   }
-
   static initCarousel(mediaBook, images) {
-    if (!mediaBook || !images || images.length === 0) return;
+    if (!mediaBook || !images || !images.length) return;
     const carousel = mediaBook.querySelector('.carousel');
     if (!carousel) return;
     const items = carousel.querySelectorAll('.carousel-item');
@@ -65,17 +64,24 @@ class BlogUtils {
     next?.addEventListener('click', () => { current = (current + 1) % items.length; show(current); });
     show(current);
   }
-
-  static sanitize(s){ return s.replace(/[<>]/g, ''); } // básico contra HTML injection
+  static sanitize(s){ return s.replace(/[<>]/g, ''); }
 }
 
 class BlogManager {
   constructor() {
     this.entradas = [];
+    this.uid = null; // auth uid (anónimo)
     this.init();
   }
 
   async init() {
+    // UID si hay Firebase
+    if (HAS_FIREBASE) {
+      window.firebaseCompatAuth.onAuthStateChanged(user => {
+        this.uid = user ? user.uid : null;
+      });
+    }
+
     await this.cargarEntradasDesdeCSV();
     this.addImageLazyLoading();
     this.addVideoPlayPause();
@@ -173,7 +179,6 @@ class BlogManager {
           const polaroid = document.createElement('div'); polaroid.className='photo-polaroid';
           const img = document.createElement('img');
           img.src=url; img.alt=`${entrada.titulo} — imagen ${i+1}`; img.loading='lazy'; img.classList.add('entrada-imagen');
-          img.onerror = () => { polaroid.style.opacity=.5; };
           polaroid.appendChild(img); item.appendChild(polaroid); carousel.appendChild(item);
         });
         if (entrada.imagenes.length>1){
@@ -186,12 +191,11 @@ class BlogManager {
 
       // videos
       if (entrada.videos?.length) {
-        const mediaBook2 = clone.querySelector('.media-book');
         entrada.videos.forEach(url=>{
           const video=document.createElement('iframe');
           video.src=url; video.className='entrada-video'; video.loading='lazy';
           video.allowFullscreen = true; video.setAttribute('title', entrada.titulo);
-          mediaBook2.appendChild(video);
+          mediaBook.appendChild(video);
         });
       }
 
@@ -203,7 +207,6 @@ class BlogManager {
       }
 
       contenedor.appendChild(clone);
-
       // activar carrusel
       if (entrada.imagenes?.length) BlogUtils.initCarousel(mediaBook, entrada.imagenes);
     });
@@ -234,7 +237,6 @@ class BlogManager {
     });
     index.innerHTML=''; index.appendChild(ul);
   }
-
   wireIndexMobile() {
     const btn=document.querySelector('.index-toggle');
     const index=document.getElementById('blog-index');
@@ -249,7 +251,7 @@ class BlogManager {
     overlay.addEventListener('click',()=>toggle(false));
   }
 
-  /* ================== Reacciones ================== */
+  /* ================== Reacciones / Favoritos ================== */
   initReactions() {
     const cache = JSON.parse(localStorage.getItem(LS_KEYS.reactions) || '{}');
 
@@ -257,32 +259,94 @@ class BlogManager {
       const id = entry.getAttribute('data-entry-id');
       const wrap = entry.querySelector('.entry-reactions');
       if (!wrap) return;
-      const state = cache[id] || { '🧶':0, '✨':0, fav:false };
 
-      wrap.querySelectorAll('[data-emoji]').forEach(btn=>{
-        const emoji = btn.dataset.emoji;
-        btn.querySelector('span').textContent = state[emoji] || 0;
-        btn.setAttribute('aria-pressed','false');
-        btn.addEventListener('click', ()=>{
-          state[emoji]=(state[emoji]||0)+1;
-          btn.querySelector('span').textContent=state[emoji];
-          cache[id]=state; localStorage.setItem(LS_KEYS.reactions, JSON.stringify(cache));
-          btn.animate([{transform:'scale(1)'},{transform:'scale(1.15)'},{transform:'scale(1)'}],{duration:180});
-          // TODO Firebase: if (HAS_FIREBASE) increment /blog/reactions/{id}/{emoji}
-        });
-      });
+      const emojiBtns = wrap.querySelectorAll('[data-emoji]');
+      const favBtn = wrap.querySelector('.entry-fav');
 
-      const fav = wrap.querySelector('.entry-fav');
-      if (fav){
-        fav.classList.toggle('active', !!state.fav);
-        fav.setAttribute('aria-pressed', String(!!state.fav));
-        fav.addEventListener('click', ()=>{
-          state.fav=!state.fav;
-          fav.classList.toggle('active', state.fav);
-          fav.setAttribute('aria-pressed', String(state.fav));
-          cache[id]=state; localStorage.setItem(LS_KEYS.reactions, JSON.stringify(cache));
-          // TODO Firebase: store user fav if needed
+      // --- Firebase LIVE counts ---
+      if (HAS_FIREBASE) {
+        // counts
+        window.firebaseCompatDb.ref(PATHS.reactions(id)).on('value', snap=>{
+          const counts = snap.val() || {};
+          emojiBtns.forEach(btn=>{
+            const emoji = btn.dataset.emoji;
+            btn.querySelector('span').textContent = counts[emoji] || 0;
+          });
         });
+
+        // user flags (to marcar ya reaccionado)
+        const updatePressed = (flags = {})=>{
+          emojiBtns.forEach(btn=>{
+            const emoji = btn.dataset.emoji;
+            btn.setAttribute('aria-pressed', String(!!flags[emoji]));
+          });
+        };
+        const applyFavState = (isFav)=> {
+          favBtn?.classList.toggle('active', !!isFav);
+          favBtn?.setAttribute('aria-pressed', String(!!isFav));
+        };
+
+        const attachUserUI = ()=>{
+          const uid = this.uid;
+          if (!uid) return; // se setea cuando onAuthStateChanged dispare
+          window.firebaseCompatDb.ref(PATHS.reactionsByUser(id, uid)).on('value', s => updatePressed(s.val() || {}));
+          window.firebaseCompatDb.ref(PATHS.favorites(id, uid)).on('value', s => applyFavState(!!s.val()));
+        };
+        attachUserUI();
+        if (!this.uid) {
+          window.firebaseCompatAuth.onAuthStateChanged(()=> attachUserUI());
+        }
+
+        // clicks
+        emojiBtns.forEach(btn=>{
+          btn.addEventListener('click', async ()=>{
+            const emoji = btn.dataset.emoji;
+            const uid = this.uid;
+            if (!uid) { alert('Reintentá en 1 segundo… (conectando)'); return; }
+
+            const byUserRef = window.firebaseCompatDb.ref(`${PATHS.reactionsByUser(id, uid)}/${emoji}`);
+            const exists = (await byUserRef.get()).exists();
+            if (exists) return; // evitar doble reacción por usuario
+
+            const countRef = window.firebaseCompatDb.ref(`${PATHS.reactions(id)}/${emoji}`);
+            await countRef.transaction(n => (typeof n==='number' ? n : 0) + 1);
+            await byUserRef.set(true);
+            btn.animate([{transform:'scale(1)'},{transform:'scale(1.15)'},{transform:'scale(1)'}],{duration:180});
+          });
+        });
+
+        favBtn?.addEventListener('click', async ()=>{
+          const uid = this.uid;
+          if (!uid) { alert('Reintentá en 1 segundo… (conectando)'); return; }
+          const ref = window.firebaseCompatDb.ref(PATHS.favorites(id, uid));
+          const cur = (await ref.get()).val();
+          await ref.set(!cur);
+        });
+
+      // --- LocalStorage fallback ---
+      } else {
+        const state = cache[id] || { '🧶':0, '✨':0, fav:false };
+        emojiBtns.forEach(btn=>{
+          const emoji = btn.dataset.emoji;
+          btn.querySelector('span').textContent = state[emoji] || 0;
+          btn.addEventListener('click', ()=>{
+            state[emoji]=(state[emoji]||0)+1;
+            btn.querySelector('span').textContent=state[emoji];
+            cache[id]=state; localStorage.setItem(LS_KEYS.reactions, JSON.stringify(cache));
+            btn.animate([{transform:'scale(1)'},{transform:'scale(1.15)'},{transform:'scale(1)'}],{duration:180});
+          });
+        });
+
+        if (favBtn){
+          favBtn.classList.toggle('active', !!state.fav);
+          favBtn.setAttribute('aria-pressed', String(!!state.fav));
+          favBtn.addEventListener('click', ()=>{
+            state.fav=!state.fav;
+            favBtn.classList.toggle('active', state.fav);
+            favBtn.setAttribute('aria-pressed', String(state.fav));
+            cache[id]=state; localStorage.setItem(LS_KEYS.reactions, JSON.stringify(cache));
+          });
+        }
       }
     });
   }
@@ -326,13 +390,11 @@ class BlogManager {
     if (p.w) el.style.width = (typeof p.w==='string' ? p.w : p.w+'px');
     if (p.h) el.style.height= (typeof p.h==='string' ? p.h : p.h+'px');
 
-    // barrita superior (arrastre + herramientas)
     const bar = document.createElement('div');
     bar.className='postit-bar';
     const title = document.createElement('span'); title.className='title'; title.textContent='Nota';
     const tools = document.createElement('div'); tools.className='tools';
 
-    // paleta colores
     const palette = document.createElement('div'); palette.className='postit-color-options';
     ['#f5eead','#fca8c4','#b8f1bb','#42a5f5'].forEach(c=>{
       const dot=document.createElement('span'); dot.className='color-option'; dot.style.background=c;
@@ -340,7 +402,6 @@ class BlogManager {
       palette.appendChild(dot);
     });
 
-    // borrar
     const btnDel = document.createElement('button'); btnDel.title='Eliminar'; btnDel.innerHTML='🗑️';
     btnDel.addEventListener('click', ()=>{ el.remove(); this._persistPostits(document.querySelector(`#entry-${entryId}`)); });
 
@@ -402,15 +463,44 @@ class BlogManager {
       const section = entry.querySelector('.entry-comments');
       const list = section.querySelector('.comments-list');
       const form = section.querySelector('.comment-form');
-      const howTo = section.querySelector('.how-to-cloud');
 
-      // carga inicial (localStorage o Firebase si existiera)
-      this._loadComments(id).then(comments=>{
-        this._renderComments(list, comments);
-      });
+      const render = (comments)=>{
+        if (!Array.isArray(comments) || !comments.length){
+          list.innerHTML = '<li class="comment-item"><div class="comment-text">Sé el primero en comentar ✨</div></li>';
+          return;
+        }
+        list.innerHTML = comments
+          .sort((a,b)=>a.ts-b.ts)
+          .map(c=>`
+            <li class="comment-item" data-id="${c.id}">
+              <div class="comment-meta">
+                <span class="comment-name">${c.name || 'Anónimo'}</span>
+                <span>•</span>
+                <time datetime="${new Date(c.ts).toISOString()}">${new Date(c.ts).toLocaleString()}</time>
+              </div>
+              <div class="comment-text">${c.text}</div>
+            </li>
+          `).join('');
+      };
+
+      // Suscripción / carga
+      if (HAS_FIREBASE) {
+        window.firebaseCompatDb.ref(PATHS.comments(id)).on('value', snap=>{
+          const val = snap.val() || {};
+          render(Object.values(val));
+        }, err=>{
+          console.warn('FB comments error:', err);
+          // fallback una vez
+          const ls = JSON.parse(localStorage.getItem(LS_KEYS.comments(id)) || '[]');
+          render(ls);
+        });
+      } else {
+        const ls = JSON.parse(localStorage.getItem(LS_KEYS.comments(id)) || '[]');
+        render(ls);
+      }
 
       // publicar
-      form.addEventListener('submit',(e)=>{
+      form.addEventListener('submit', async (e)=>{
         e.preventDefault();
         const name = BlogUtils.sanitize((form.name.value || 'Anónimo').trim());
         const text = BlogUtils.sanitize((form.text.value || '').trim());
@@ -418,71 +508,31 @@ class BlogManager {
 
         // rate-limit 10s
         const last = Number(localStorage.getItem(LS_KEYS.lastCommentAt) || 0);
-        if (Date.now() - last < 10_000) {
-          alert('Espera unos segundos antes de comentar otra vez 🙏');
-          return;
+        if (Date.now() - last < 10_000) { alert('Esperá unos segundos antes de comentar otra vez 🙏'); return; }
+
+        const comment = { id: crypto.randomUUID(), name, text, ts: Date.now(), uid: this.uid || null };
+
+        if (HAS_FIREBASE) {
+          try {
+            await window.firebaseCompatDb.ref(`${PATHS.comments(id)}/${comment.id}`).set(comment);
+          } catch(e) {
+            console.warn('FB write fail, saving LS', e);
+            const key = LS_KEYS.comments(id);
+            const arr = JSON.parse(localStorage.getItem(key) || '[]'); arr.push(comment);
+            localStorage.setItem(key, JSON.stringify(arr));
+          }
+        } else {
+          const key = LS_KEYS.comments(id);
+          const arr = JSON.parse(localStorage.getItem(key) || '[]'); arr.push(comment);
+          localStorage.setItem(key, JSON.stringify(arr));
+          // re-render local
+          const ls = JSON.parse(localStorage.getItem(key) || '[]'); render(ls);
         }
 
-        const comment = { id: crypto.randomUUID(), name, text, ts: Date.now() };
-        this._saveComment(id, comment).then(()=>{
-          form.reset();
-          this._loadComments(id).then(c=> this._renderComments(list,c));
-          localStorage.setItem(LS_KEYS.lastCommentAt, String(Date.now()));
-        });
-      });
-
-      // info firebase
-      howTo.addEventListener('click', (e)=>{
-        e.preventDefault();
-        alert('Para que los comentarios sean públicos, añade Firebase compat en el HTML (app + database) y define window.firebaseCompatDb. Ya está soportado en este código.');
+        form.reset();
+        localStorage.setItem(LS_KEYS.lastCommentAt, String(Date.now()));
       });
     });
-  }
-
-  _renderComments(list, comments){
-    if (!Array.isArray(comments) || !list) return;
-    if (!comments.length){
-      list.innerHTML = '<li class="comment-item"><div class="comment-text">Sé el primero en comentar ✨</div></li>';
-      return;
-    }
-    list.innerHTML = comments
-      .sort((a,b)=>a.ts-b.ts)
-      .map(c=>`
-        <li class="comment-item" data-id="${c.id}">
-          <div class="comment-meta">
-            <span class="comment-name">${c.name || 'Anónimo'}</span>
-            <span>•</span>
-            <time datetime="${new Date(c.ts).toISOString()}">${new Date(c.ts).toLocaleString()}</time>
-          </div>
-          <div class="comment-text">${c.text}</div>
-        </li>
-      `).join('');
-  }
-
-  async _loadComments(postId){
-    if (HAS_FIREBASE){
-      // FIREBASE compat ejemplo (lectura simple)
-      try{
-        const snap = await window.firebaseCompatDb.ref(`/blog/comments/${postId}`).get();
-        const val = snap.val() || {};
-        return Object.values(val);
-      }catch(e){ console.warn('Firebase read error, fallback LS', e); }
-    }
-    // LocalStorage
-    return JSON.parse(localStorage.getItem(LS_KEYS.comments(postId)) || '[]');
-  }
-
-  async _saveComment(postId, comment){
-    if (HAS_FIREBASE){
-      try{
-        await window.firebaseCompatDb.ref(`/blog/comments/${postId}/${comment.id}`).set(comment);
-        return;
-      }catch(e){ console.warn('Firebase write error, fallback LS', e); }
-    }
-    const key = LS_KEYS.comments(postId);
-    const arr = JSON.parse(localStorage.getItem(key) || '[]');
-    arr.push(comment);
-    localStorage.setItem(key, JSON.stringify(arr));
   }
 
   /* ================== Lazy / Videos ================== */
@@ -498,7 +548,6 @@ class BlogManager {
     },{rootMargin:'200px 0px 200px 0px'});
     imgs.forEach(i=>{ i.style.opacity=.001; io.observe(i); });
   }
-
   addVideoPlayPause() {
     const iframes = document.querySelectorAll('.entrada-video');
     if (!iframes.length) return;
