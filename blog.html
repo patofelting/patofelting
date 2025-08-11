@@ -1,30 +1,48 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="El cuaderno de bitácora de Patofelting - Historias sobre fibras, agujas y creaciones artesanales">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="El cuaderno de bitácora de Patofelting - Historias sobre fibras, agujas y creaciones artesanales" />
   <title>El Cuaderno de Patofelting - Mi Historia con las Fibras</title>
-  <link rel="stylesheet" href="blog.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Dancing+Script:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="icon" href="favicon.ico" type="image/x-icon">
-  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+
+  <!-- Tipografías (legibles y cálidas) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Nunito:wght@400;600&family=Kalam:wght@300;400;700&display=swap" rel="stylesheet" />
+
+  <!-- Favicon / PWA -->
+  <link rel="icon" href="favicon.ico" type="image/x-icon" />
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="blog.css" />
 </head>
 <body>
-  <!-- Template único para entradas -->
+  <!-- Template para entradas -->
   <template id="entry-template">
     <article class="blog-entry" tabindex="0">
-      <div class="notebook-page">
+      <div class="notebook-page" style="content-visibility:auto; contain-intrinsic-size: 900px 600px;">
         <div class="red-margin" aria-hidden="true"></div>
         <div class="entry-content">
           <div class="entry-date"></div>
           <h2 class="entry-title"></h2>
-          <!-- GALERÍA DE POLAROID (asegúrate de este nombre para el JS) -->
-          <div class="polaroid-gallery"></div>
           <div class="entry-text"></div>
-          <div class="postit-container"></div>
+
+          <!-- Galería multimedia (carrusel y videos) -->
+          <div class="media-gallery">
+            <div class="media-book"></div>
+          </div>
+
+          <!-- Post-it drag & drop -->
+          <div class="postit-container" aria-label="Notas rápidas"></div>
+
+          <!-- Reacciones / Favoritos -->
+          <div class="entry-reactions" role="group" aria-label="Reacciones">
+            <button class="react-woo" data-emoji="🧶" aria-pressed="false" title="Me encanta">🧶 <span>0</span></button>
+            <button class="react-wow" data-emoji="✨" aria-pressed="false" title="Qué inspiración">✨ <span>0</span></button>
+            <button class="entry-fav" aria-pressed="false" title="Guardar en Favoritos">★</button>
+          </div>
         </div>
       </div>
     </article>
@@ -40,17 +58,21 @@
         Volver a la tienda
       </a>
       <div class="blog-logo">
-        <img src="img/patofelting.jpg" alt="Logo de Patofelting" class="logo-small" width="40" height="40" loading="lazy">
+        <img src="img/patofelting.jpg" alt="Logo de Patofelting" class="logo-small" width="40" height="40" loading="lazy" />
         <span>Mi Cuaderno de Bitácora</span>
       </div>
     </div>
   </nav>
 
-  <!-- Índice adaptativo -->
-  <button id="toggle-index" aria-controls="blog-index" aria-expanded="false" class="index-toggle" tabindex="0">
-    ☰ Índice
-  </button>
-  <nav id="blog-index" aria-label="Índice de historias" class="hidden"></nav>
+  <!-- Índice / TOC -->
+  <header class="blog-header">
+    <h1 class="blog-title">El Cuaderno de Patofelting</h1>
+    <p class="blog-subtitle">Historias, trucos y procesos con fibras — hecho a mano ♥</p>
+
+    <button class="index-toggle" aria-controls="blog-index" aria-expanded="false">📚 Índice</button>
+    <nav id="blog-index" class="hidden" aria-label="Índice de entradas"></nav>
+    <div id="blog-index-overlay" class="hidden" aria-hidden="true"></div>
+  </header>
 
   <!-- Contenido Principal -->
   <main class="blog-main" id="main-content">
@@ -61,28 +83,8 @@
       </div>
       <div class="loading-text">Cargando historias de Patofelting...</div>
     </div>
-    <div class="blog-entries" id="blog-entries">
-      <!-- Las entradas se insertarán aquí dinámicamente -->
-    </div>
-    <div class="empty-state hidden" id="blog-empty">
-      <div class="notebook-page">
-        <div class="red-margin" aria-hidden="true"></div>
-        <div class="entry-content text-center">
-          <span style="font-size:2.2em;display:block;">📝</span>
-          <p>No hay historias para mostrar aún. ¡Vuelve pronto!</p>
-        </div>
-      </div>
-    </div>
-    <div class="error-state hidden" id="blog-error">
-      <div class="notebook-page">
-        <div class="red-margin" aria-hidden="true"></div>
-        <div class="entry-content text-center">
-          <span style="font-size:2.2em;display:block;">❌</span>
-          <p>Hubo un error al cargar las entradas. <br>Por favor, intenta de nuevo.</p>
-          <button class="retry-button" onclick="window.recargarBlog()">Reintentar</button>
-        </div>
-      </div>
-    </div>
+
+    <div class="blog-entries" id="blog-entries"></div>
   </main>
 
   <!-- Footer -->
@@ -99,7 +101,12 @@
     </div>
   </footer>
 
+  <!-- JSON-LD (lo llena el JS) -->
+  <script id="jsonld-slot" type="application/ld+json"></script>
+
+  <!-- Librería CSV -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <!-- App -->
   <script src="blog.js" defer></script>
 </body>
 </html>
