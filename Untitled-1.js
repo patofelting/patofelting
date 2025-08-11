@@ -771,26 +771,75 @@ function inicializarEventos() {
   });
 
   // Delegación en la galería
-  elementos.galeriaProductos?.addEventListener('click', (e) => {
-    const boton = e.target.closest('button');
-    const tarjeta = e.target.closest('.producto-card');
-    if (!tarjeta || !boton) return;
+ // Delegación de eventos robusta para la galería de productos
+(function initGaleriaDelegation() {
+  const root = elementos.galeriaProductos;
+  if (!root) return;
 
-    const id = parseInt(tarjeta.dataset.id);
+  // Evita handlers duplicados si init() se llama más de una vez
+  if (root._pfDelegationAttached) {
+    root.removeEventListener('click', root._pfDelegationAttached);
+  }
+
+  const handler = (e) => {
+    const card = e.target.closest('.producto-card');
+    if (!card || !root.contains(card)) return;
+
+    const id = Number(card.dataset.id);
+    if (!Number.isFinite(id)) return;
+
     const producto = productos.find(p => p.id === id);
-    if (!producto || isNaN(id)) return;
+    if (!producto) return;
 
+    // Botón/disparador (admite [data-action], button o a)
+    const trigger = e.target.closest('[data-action], button, a');
+    if (!trigger) return;
+
+    // Determinar acción
+    const action =
+      trigger.dataset.action ||
+      (trigger.classList.contains('boton-detalles') ? 'detalle' :
+       trigger.classList.contains('boton-agregar')  ? 'agregar' :
+       trigger.classList.contains('boton-aviso-stock') ? 'aviso' : '');
+
+    if (!action) return;
+
+    e.preventDefault();
     e.stopPropagation();
 
-    if (boton.classList.contains('boton-detalles')) {
-      verDetalle(id);
-    } else if (boton.classList.contains('boton-agregar')) {
-      agregarAlCarrito(id, 1, boton);
-    } else if (boton.classList.contains('boton-aviso-stock')) {
-      preguntarStock(boton.dataset.nombre || producto.nombre);
+    switch (action) {
+      case 'detalle':
+        // Si tenés un helper que asegura el modal, llamalo;
+        // no rompe si no existe:
+        try { ensureProductModal?.(); } catch(_) {}
+        verDetalle(id);
+        break;
+
+      case 'agregar':
+        // Pasamos el botón real si existe para feedback visual
+        agregarAlCarrito(id, 1, trigger.closest('button'));
+        break;
+
+      case 'aviso':
+        preguntarStock(trigger.dataset.nombre || producto.nombre);
+        break;
+    }
+  };
+
+  root.addEventListener('click', handler, { passive: false });
+  root._pfDelegationAttached = handler;
+
+  // Accesibilidad: activar con Enter/Espacio
+  root.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const btn = e.target.closest('.boton-detalles, .boton-agregar, .boton-aviso-stock, [data-action]');
+    if (btn) {
+      e.preventDefault();
+      btn.click();
     }
   });
-}
+})();
+
 
 // ===============================
 // RESUMEN PEDIDO / ENVÍO
@@ -992,3 +1041,18 @@ function verDetalle(id) {
 window.verDetalle = verDetalle;
 window.agregarAlCarrito = agregarAlCarrito;
 window.preguntarStock = preguntarStock;
+function toggleCarrito(abrir) {
+  if (!elementos.carritoOverlay || !elementos.carritoModal) return;
+
+  if (abrir) {
+    elementos.carritoOverlay.classList.add('active');
+    elementos.carritoModal.classList.add('active');
+    document.body.classList.add('no-scroll');
+    renderizarCarrito();
+  } else {
+    elementos.carritoOverlay.classList.remove('active');
+    elementos.carritoModal.classList.remove('active');
+    document.body.classList.remove('no-scroll');
+  }
+}
+}
