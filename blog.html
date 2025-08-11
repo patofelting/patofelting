@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Nunito:wght@400;600&family=Kalam:wght@300;400;700&display=swap" rel="stylesheet" />
 
-  <!-- Favicon (si aún no tenés el archivo, podés quitar esta línea para evitar el 404) -->
+  <!-- Favicon -->
   <link rel="icon" href="favicon.ico" type="image/x-icon" />
   <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
 
@@ -22,7 +22,7 @@
   <!-- Template de cada entrada -->
   <template id="entry-template">
     <article class="blog-entry" tabindex="0">
-      <div class="notebook-page" style="content-visibility:auto; contain-intrinsic-size: 900px 600px;">
+      <div class="notebook-page">
         <div class="red-margin" aria-hidden="true"></div>
         <div class="entry-content">
           <div class="entry-date"></div>
@@ -30,18 +30,16 @@
           <div class="entry-text"></div>
 
           <!-- Galería -->
-          <div class="media-gallery">
-            <div class="media-book"></div>
-          </div>
+          <div class="media-gallery"></div>
 
           <!-- Post-its -->
           <div class="postit-container" aria-label="Notas rápidas"></div>
 
-          <!-- Reacciones / Favoritos -->
+          <!-- Reacciones -->
           <div class="entry-reactions" role="group" aria-label="Reacciones">
-            <button class="react-woo" data-emoji="🧶" aria-pressed="false" title="Me encanta">🧶 <span>0</span></button>
-            <button class="react-wow" data-emoji="✨" aria-pressed="false" title="Qué inspiración">✨ <span>0</span></button>
-            <button class="entry-fav" aria-pressed="false" title="Guardar en Favoritos">★</button>
+            <button class="reaction-btn" data-emoji="🧶" aria-pressed="false" title="Me encanta (lana)">🧶 <span>0</span></button>
+            <button class="reaction-btn" data-emoji="✨" aria-pressed="false" title="Brilló">✨ <span>0</span></button>
+            <button class="entry-fav" aria-pressed="false" title="Guardar en favoritos">★</button>
           </div>
 
           <!-- Comentarios -->
@@ -49,11 +47,9 @@
             <h3>Comentarios</h3>
             <ul class="comments-list" role="list"></ul>
             <form class="comment-form" autocomplete="off">
-              <div class="comment-row">
-                <input name="name" class="comment-name" placeholder="Tu nombre" maxlength="40" aria-label="Tu nombre" />
-                <textarea name="text" class="comment-text" placeholder="Escribe tu comentario…" rows="3" required aria-label="Comentario"></textarea>
-              </div>
-              <div class="comment-actions">
+              <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+                <input type="text" name="name" placeholder="Tu nombre" class="comment-name" style="flex:1;min-width:160px">
+                <textarea name="text" placeholder="Escribe tu comentario…" class="comment-text" style="flex:2;min-width:220px" rows="2"></textarea>
                 <button type="submit" class="comment-send">Publicar</button>
               </div>
             </form>
@@ -113,21 +109,19 @@
     </div>
   </footer>
 
-  <!-- JSON-LD (lo completa blog.js) -->
+  <!-- JSON-LD -->
   <script id="jsonld-slot" type="application/ld+json"></script>
 
-  <!-- CSV -->
+  <!-- Dependencias -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-
-  <!-- Firebase (Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
-  <!-- Tu archivo con la config e inicialización (usa la que te pasé) -->
+  <!-- Configuración Firebase -->
   <script src="firebase-config.js"></script>
 
-  <!-- App -->
-  <script src="blog.js" defer></script>
+  <!-- Aplicación -->
+  <script src="blog.js"></script>
 </body>
 </html>
