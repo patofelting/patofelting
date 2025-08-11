@@ -1,373 +1,1126 @@
-/* ===============================
-   Blog de Patofelting – JS corregido
-   Mantiene la estructura HTML existente
-=================================*/
+// ===============================
+// CONFIGURACIÓN GLOBAL
+// ===============================
+const PRODUCTOS_POR_PAGINA = 6;
+const LS_CARRITO_KEY = 'carrito';
+const CSV_URL = window.SHEET_CSV_URL;
+const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
-class BlogUtils {
-  static formatearFecha(fecha) {
-    if (!fecha) return '';
-    const [day, month, year] = String(fecha).split('/');
-    return `${day}/${month}/${year}`;
-  }
+// Import Firebase core module for initializeApp (Already done in index.html, so removed here)
+// Import Authentication functions
+import {
+  getAuth,
+  signInAnonymously
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-  static mostrarMensajeError() {
-    const contenedor = document.getElementById('main-content');
-    if (!contenedor) return;
-    contenedor.innerHTML = `
-      <div class="blog-error">
-        <span class="error-icon">❌</span>
-        <div class="error-message">Hubo un error al cargar las entradas. Por favor, intenta de nuevo.</div>
-        <button class="retry-button" onclick="window.recargarBlog()">Reintentar</button>
-      </div>
-    `;
-  }
+// Import Realtime Database functions
+import {
+  getDatabase,
+  ref,
+  runTransaction,
+  onValue,
+  get
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-  static mostrarMensajeVacio() {
-    const contenedor = document.getElementById('main-content');
-    if (!contenedor) return;
-    contenedor.innerHTML = `
-      <div class="blog-error">
-        <span class="error-icon">📝</span>
-        <div class="error-message">No hay historias para mostrar aún. ¡Vuelve pronto!</div>
-      </div>
-    `;
-  }
+// We assume Firebase is already initialized in index.html and its instances are available globally
+// const app = initializeApp(firebaseConfig); // REMOVED: Already initialized in index.html
+const db = window.firebaseDatabase; // Use the globally exposed database instance
+const auth = getAuth(window.firebaseApp); // Assuming firebaseApp is also exposed globally or derive from `db`
 
-  static limpiarURLs(urls) {
-    return String(urls || '')
-      .split(',')
-      .map((u) => u.trim())
-      .filter(Boolean);
-  }
+// ===============================
+// ESTADO GLOBAL
+// ===============================
+let productos = [];
+let carrito = [];
+let paginaActual = 1;
 
-  static calculateReadingTime() {
-    const blogMain = document.querySelector('.blog-main');
-    if (!blogMain) return 1;
-    const text = blogMain.textContent || '';
-    const wordsPerMinute = 200;
-    const words = text.trim().split(/\s+/).length;
-    return Math.max(1, Math.ceil(words / wordsPerMinute));
-  }
-}
-
-class BlogManager {
-  constructor() {
-    this.entradas = [];
-  }
-
-  async init() {
-    await this.cargarEntradasDesdeCSV();
-    this.addReadingProgressBar();
-  }
-
-  // ========== CARGA DE DATOS DESDE GOOGLE SHEETS ==========
-  async cargarEntradasDesdeCSV() {
-    try {
-      const respuesta = await fetch(CSV_URL, { cache: 'reload' });
-      if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status} - ${respuesta.statusText}`);
-
-      const texto = await respuesta.text();
-      const resultado = Papa.parse(texto, {
-        header: true,
-        skipEmptyLines: true,
-        transform: (value) => (value ? value.trim() : ''),
-      });
-
-      this.entradas = resultado.data
-        .filter((fila) => fila.titulo && fila.contenido)
-        .map((fila, i) => ({
-          id: fila.id || i.toString(),
-          fecha: fila.fecha || '',
-          titulo: fila.titulo,
-          contenido: fila.contenido,
-          imagenes: BlogUtils.limpiarURLs(fila.imagenPrincipal || ''),
-          videos: BlogUtils.limpiarURLs(fila.videoURL || ''),
-          orden: parseInt(fila.orden) || 0,
-          postit: fila.postit || '',
-          ordenpostit: parseInt(fila.ordenpostit) || 0,
-        }))
-        .sort((a, b) => a.orden - b.orden);
-
-      this.renderizarBlog();
-    } catch (error) {
-      console.error('❌ Error al cargar CSV:', error);
-      BlogUtils.mostrarMensajeError();
-    }
-  }
-
-  // ========== RENDER ==========
-  renderizarBlog() {
-    const wrap = document.getElementById('blog-entries');
-    const template = document.getElementById('entry-template');
-    const loader = document.getElementById('blog-loading');
-    if (loader) loader.style.display = 'none';
-
-    if (!wrap || !template || !template.content) {
-      console.error('❌ Faltan elementos base en el HTML (blog-entries o entry-template).');
-      return;
-    }
-
-    wrap.innerHTML = '';
-
-    if (this.entradas.length === 0) {
-      BlogUtils.mostrarMensajeVacio();
-      return;
-    }
-
-    this.entradas.forEach((entrada) => {
-      const clone = template.content.cloneNode(true);
-      const entry = clone.querySelector('.blog-entry');
-      entry.setAttribute('data-entry-id', entrada.id);
-
-      // Título y fecha
-      clone.querySelector('.entry-title').textContent = entrada.titulo;
-      clone.querySelector('.entry-date').textContent = BlogUtils.formatearFecha(entrada.fecha);
-
-      // Contenido (líneas del cuaderno)
-      const textoContainer = clone.querySelector('.entry-text');
-      entrada.contenido.split('\n').forEach((linea) => {
-        if (linea.trim()) {
-          const p = document.createElement('p');
-          p.className = 'notebook-line';
-          p.textContent = linea.trim();
-          textoContainer.appendChild(p);
-        }
-      });
-
-      // Medios en el contenedor YA EXISTENTE .media-gallery
-      const media = clone.querySelector('.media-gallery');
-      if (media) {
-        // Imágenes
-        if (entrada.imagenes && entrada.imagenes.length > 0) {
-          entrada.imagenes.forEach((url) => {
-            const fig = document.createElement('figure');
-            fig.className = 'photo-polaroid';
-            const img = document.createElement('img');
-            img.src = url;
-            img.alt = entrada.titulo;
-            img.loading = 'lazy';
-            img.classList.add('entrada-imagen');
-            img.onerror = () => { fig.classList.add('image-error'); img.remove(); };
-            fig.appendChild(img);
-            media.appendChild(fig);
-          });
-        }
-        // Videos (YouTube/Vimeo embebidos)
-        if (entrada.videos && entrada.videos.length > 0) {
-          entrada.videos.forEach((url) => {
-            const iframe = document.createElement('iframe');
-            iframe.src = url;
-            iframe.loading = 'lazy';
-            iframe.allowFullscreen = true;
-            iframe.classList.add('entrada-video');
-            media.appendChild(iframe);
-          });
-        }
-      }
-
-      // Post-it (sin requerir .postit-container en HTML)
-      if (entrada.postit) {
-        const content = clone.querySelector('.entry-content') || entry;
-        const postit = document.createElement('div');
-        postit.className = 'postit';
-        postit.textContent = entrada.postit;
-        postit.setAttribute('data-id', `postit_${entrada.id}`);
-        content.appendChild(postit);
-
-        // Picker de color
-        const colorBox = document.createElement('div');
-        colorBox.className = 'postit-color-options';
-        ['yellow', 'pink', 'green', 'blue'].forEach((color) => {
-          const option = document.createElement('div');
-          option.id = `color-${color}`;
-          option.className = 'color-option';
-          option.addEventListener('click', () => {
-            const bg = getComputedStyle(option).backgroundColor;
-            postit.style.background = bg;
-            BlogManager.persistirPostit(postit);
-          });
-          colorBox.appendChild(option);
-        });
-        postit.appendChild(colorBox);
-
-        // Arrastre + persistencia
-        this.makeDraggable(postit);
-        this.restaurarPostit(postit);
-      }
-
-      wrap.appendChild(clone);
-    });
-  }
-
-  // ========== Post-it: persistencia & drag ==========
-  static persistirPostit(el) {
-    const id = el.dataset.id || '';
-    if (!id) return;
-    const data = {
-      color: el.style.background || '',
-      left: el.style.left || '',
-      top: el.style.top || '',
-      position: el.style.position || '',
-    };
-    localStorage.setItem(id, JSON.stringify(data));
-  }
-
-  restaurarPostit(el) {
-    const id = el.dataset.id || '';
-    if (!id) return;
-    const saved = localStorage.getItem(id);
-    if (!saved) return;
-    try {
-      const data = JSON.parse(saved);
-      if (data.color) el.style.background = data.color;
-      if (data.left) el.style.left = data.left;
-      if (data.top) el.style.top = data.top;
-      el.style.position = data.position || 'absolute';
-    } catch { /* noop */ }
-  }
-
-  makeDraggable(el) {
-    // Desktop
-    el.addEventListener('mousedown', (down) => {
-      el.style.position = el.style.position || 'absolute';
-      let shiftX = down.clientX - el.getBoundingClientRect().left;
-      let shiftY = down.clientY - el.getBoundingClientRect().top;
-
-      const move = (e) => {
-        el.style.left = e.pageX - shiftX + 'px';
-        el.style.top = e.pageY - shiftY + 'px';
-      };
-      const up = () => {
-        document.removeEventListener('mousemove', move);
-        document.removeEventListener('mouseup', up);
-        BlogManager.persistirPostit(el);
-      };
-
-      document.addEventListener('mousemove', move);
-      document.addEventListener('mouseup', up);
-    });
-    el.ondragstart = () => false;
-
-    // Touch (móvil)
-    el.addEventListener('touchstart', (t) => {
-      const touch = t.touches[0];
-      el.style.position = el.style.position || 'absolute';
-      let shiftX = touch.clientX - el.getBoundingClientRect().left;
-      let shiftY = touch.clientY - el.getBoundingClientRect().top;
-
-      const move = (e) => {
-        const p = e.touches ? e.touches[0] : e;
-        el.style.left = p.pageX - shiftX + 'px';
-        el.style.top = p.pageY - shiftY + 'px';
-      };
-      const end = () => {
-        document.removeEventListener('touchmove', move);
-        document.removeEventListener('touchend', end);
-        BlogManager.persistirPostit(el);
-      };
-
-      document.addEventListener('touchmove', move, { passive: true });
-      document.addEventListener('touchend', end);
-    }, { passive: true });
-  }
-
-  // ========== UX: barra de progreso ==========
-  addReadingProgressBar() {
-    const bar = document.createElement('div');
-    bar.className = 'reading-progress';
-    document.body.appendChild(bar);
-
-    const onScroll = () => {
-      const h = document.documentElement;
-      const scrolled = (h.scrollTop) / (h.scrollHeight - h.clientHeight);
-      bar.style.width = Math.max(0, Math.min(1, scrolled)) * 100 + '%';
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-  }
-
-  // ========== Recarga segura ==========
-  async recargar() {
-    await this.cargarEntradasDesdeCSV();
-  }
-}
-
-/* ============ Integración eCommerce opcional ============ */
-class BlogEcommerceIntegration {
-  constructor() {
-    this.addProductLinks();
-    this.addCallToActionTracking();
-  }
-
-  addProductLinks() {
-    const productMentions = document.querySelectorAll('[data-product]');
-    productMentions.forEach((mention) => {
-      const productId = mention.dataset.product;
-      mention.addEventListener('click', () => {
-        window.location.href = `index.html#productos?highlight=${productId}`;
-      });
-      mention.style.cursor = 'pointer';
-      mention.style.textDecoration = 'underline';
-      mention.style.color = 'var(--primary-green)';
-    });
-  }
-
-  addCallToActionTracking() {
-    document.querySelectorAll('.cta-button-blog').forEach((cta) => {
-      cta.addEventListener('click', (e) => {
-        const action = e.target.textContent.trim();
-        if (typeof gtag !== 'undefined') {
-          gtag('event', 'blog_cta_click', {
-            event_category: 'Blog',
-            event_label: action,
-          });
-        }
-      });
-    });
-  }
-}
-
-/* ============ Configuración ============ */
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?gid=127717360&single=true&output=csv';
-
-let blogManager;
-
-document.addEventListener('DOMContentLoaded', async () => {
-  // Año en footer si existe
-  const y = document.getElementById('current-year');
-  if (y) y.textContent = new Date().getFullYear();
-
-  blogManager = new BlogManager();
-  await blogManager.init();
-  new BlogEcommerceIntegration();
-
-  // Badge temporal de tiempo de lectura (desaparece)
-  setTimeout(() => {
-    const readingTime = BlogUtils.calculateReadingTime();
-    const timeElement = document.createElement('div');
-    timeElement.className = 'reading-time';
-    timeElement.innerHTML = `<span>📖 Tiempo de lectura: ${readingTime} min</span>`;
-    timeElement.style.cssText = `
-      position: fixed; bottom: 20px; left: 20px; background: #fff;
-      padding: .5rem 1rem; border-radius: 25px; box-shadow: 0 4px 15px rgba(0,0,0,.1);
-      font-size: .9rem; color: var(--pencil-gray); z-index: 1000;
-    `;
-    document.body.appendChild(timeElement);
-    setTimeout(() => timeElement.remove(), 8000);
-  }, 2000);
-
-  // Auto-refresh opcional cada 60s
-  setInterval(() => {
-    if (blogManager && blogManager.entradas.length > 0) {
-      blogManager.recargar();
-    }
-  }, 60000);
-});
-
-// Exponer recarga manual para el botón “Reintentar”
-window.recargarBlog = () => {
-  if (blogManager) blogManager.recargar();
+let filtrosActuales = {
+  precioMin: 0, // Default to 0 for min price
+  precioMax: 3000, // Default to 3000 for max price, based on slider max
+  categoria: 'todos',
+  busqueda: ''
 };
 
+// ===============================
+// LOAD PRODUCTS ON PAGE LOAD
+// ===============================
+document.addEventListener('DOMContentLoaded', async () => {
+  // It's generally better to load from Firebase as it's real-time and should be the source of truth for stock.
+  // CSV can be used for initial data import if needed, but Firebase should override.
+  try {
+    await signInAnonymously(auth);
+    console.log('✅ Signed in anonymously to Firebase.');
+    cargarProductosDesdeFirebase();
+  } catch (error) {
+    console.error('❌ Error signing in to Firebase:', error);
+    let errorMessage = 'Error de autenticación con Firebase.';
+    if (error.code === 'auth/configuration-not-found') {
+      errorMessage = 'Autenticación anónima no está habilitada en Firebase. Por favor, contacta al administrador.';
+    } else if (error.code === 'auth/network-request-failed') {
+      errorMessage = 'Error de red. Por favor, verifica tu conexión a internet.';
+    }
+    mostrarNotificacion(errorMessage, 'error');
+  }
 
-const loader = document.getElementById('blog-loading'); if (loader) loader.style.display = 'none';
+  cargarCarrito(); // Load cart from localStorage
+  init(); // Initialize other UI elements and event listeners
+});
+
+
+// ===============================
+// Referencias al DOM
+// ===============================
+const getElement = id => document.getElementById(id);
+const elementos = {
+  galeriaProductos: getElement('galeria-productos'),
+  paginacion: getElement('paginacion'),
+  productoModal: getElement('producto-modal'),
+  modalContenido: getElement('modal-contenido'),
+  listaCarrito: getElement('lista-carrito'),
+  totalCarrito: getElement('total'),
+  contadorCarrito: getElement('contador-carrito'),
+  inputBusqueda: document.querySelector('.input-busqueda'),
+  selectCategoria: getElement('filtro-categoria'),
+  precioMinInput: getElement('min-slider'),
+  precioMaxInput: getElement('max-slider'),
+  // botonResetearFiltros: document.querySelector('.boton-resetear-filtros'), // This button does not exist in HTML
+  carritoBtnMain: getElement('carrito-btn-main'),
+  carritoPanel: getElement('carrito-panel'),
+  carritoOverlay: document.querySelector('.carrito-overlay'),
+  btnVaciarCarrito: document.querySelector('.boton-vaciar-carrito'),
+  btnFinalizarCompra: document.querySelector('.boton-finalizar-compra'),
+  btnCerrarCarrito: document.querySelector('.cerrar-carrito'),
+  avisoPreCompraModal: getElement('aviso-pre-compra-modal'),
+  btnEntendidoAviso: getElement('btn-entendido-aviso'),
+  btnCancelarAviso: getElement('btn-cancelar-aviso'),
+  productLoader: getElement('product-loader'),
+  hamburguesa: document.querySelector('.hamburguesa'),
+  menu: getElement('menu'),
+  aplicarRangoBtn: document.querySelector('.aplicar-rango-btn')
+};
+
+// ===============================
+// FUNCIONES AUXILIARES
+// ===============================
+function mostrarNotificacion(mensaje, tipo = 'exito') {
+  const noti = document.createElement('div');
+  noti.className = `notificacion ${tipo}`;
+  noti.textContent = mensaje;
+  document.body.appendChild(noti);
+  setTimeout(() => noti.classList.add('show'), 10);
+  setTimeout(() => {
+    noti.classList.remove('show');
+    setTimeout(() => noti.remove(), 300);
+  }, 2500);
+}
+
+// ===============================
+// CARRITO: GUARDAR, CARGAR Y RENDERIZAR
+// ===============================
+function guardarCarrito() {
+  localStorage.setItem(LS_CARRITO_KEY, JSON.stringify(carrito));
+  actualizarContadorCarrito();
+}
+
+function cargarCarrito() {
+  try {
+    carrito = JSON.parse(localStorage.getItem(LS_CARRITO_KEY)) || [];
+    actualizarContadorCarrito();
+  } catch (e) {
+    console.error("Error al cargar el carrito de localStorage:", e);
+    carrito = [];
+  }
+}
+
+async function vaciarCarrito() {
+  if (carrito.length === 0) {
+    mostrarNotificacion('El carrito ya está vacío', 'info');
+    return;
+  }
+
+  try {
+    // Perform a transaction for each item to restore stock in Firebase
+    await Promise.all(
+      carrito.map(async (item) => {
+        const productRef = ref(db, `productos/${item.id}/stock`);
+        await runTransaction(productRef, (currentStock) => {
+          // If stock is null or not a number, initialize it to 0 before adding back
+          if (typeof currentStock !== 'number' || isNaN(currentStock)) {
+            currentStock = 0;
+          }
+          return currentStock + item.cantidad;
+        });
+      })
+    );
+
+    carrito = []; // Clear the local cart
+    guardarCarrito(); // Update localStorage
+    renderizarCarrito(); // Re-render the cart UI
+    renderizarProductos(); // Re-render product gallery to show updated stock
+    mostrarNotificacion('Carrito vaciado y stock restaurado correctamente', 'exito');
+  } catch (error) {
+    console.error("Error al vaciar el carrito y restaurar el stock:", error);
+    mostrarNotificacion('Ocurrió un error al vaciar el carrito', 'error');
+  }
+}
+
+
+function actualizarContadorCarrito() {
+  const total = carrito.reduce((sum, i) => sum + i.cantidad, 0);
+  if (elementos.contadorCarrito) {
+    elementos.contadorCarrito.textContent = total;
+    elementos.contadorCarrito.classList.toggle('visible', total > 0);
+  }
+}
+
+// Cargar datos de productos desde Firebase
+async function cargarProductosDesdeFirebase() {
+  const productosRef = ref(db, 'productos');
+
+  try {
+    if (elementos.productLoader) {
+      elementos.productLoader.style.display = 'flex';
+      elementos.productLoader.hidden = false;
+    }
+
+    // Use get() for initial load to avoid flickering if onValue takes time
+    const snapshot = await get(productosRef);
+
+    if (!snapshot.exists()) {
+      elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles.</p>';
+      return;
+    }
+
+    // Process initial data
+    procesarDatosProductos(snapshot.val());
+
+    // Set up real-time listener for subsequent changes
+    onValue(productosRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        productos = []; // Clear products if no data
+        renderizarProductos();
+        actualizarCategorias();
+        actualizarUI();
+        return;
+      }
+      procesarDatosProductos(snapshot.val());
+    }, (error) => {
+      console.error('Error en listener de productos Firebase:', error);
+      mostrarNotificacion('Error al recibir actualizaciones de productos', 'error');
+    });
+
+  } catch (e) {
+    console.error('Error al cargar productos desde Firebase:', e);
+    mostrarNotificacion('Error al cargar productos: ' + (e.message || 'Error desconocido'), 'error');
+    elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos.</p>';
+  } finally {
+    setTimeout(() => { // Small delay to ensure loader is seen if load is too fast
+      if (elementos.productLoader) {
+        elementos.productLoader.style.display = 'none';
+        elementos.productLoader.hidden = true;
+      }
+    }, 300);
+  }
+}
+
+// Auxiliary function to process product data from Firebase
+function procesarDatosProductos(data) {
+  // Clear existing products to avoid duplicates when onValue is triggered
+  productos = [];
+  Object.keys(data).forEach(key => {
+    const p = data[key];
+    if (!p || typeof p !== 'object') {
+      console.warn(`Producto ${key} tiene datos inválidos o faltantes`, p);
+      return; // Skip invalid product entries
+    }
+
+    productos.push({
+      id: p.id && !isNaN(p.id) ? parseInt(p.id) : parseInt(key), // Use key as ID if p.id is missing/invalid
+      nombre: typeof p.nombre === 'string' ? p.nombre.trim() : 'Sin nombre',
+      descripcion: typeof p.descripcion === 'string' ? p.descripcion.trim() : '',
+      precio: !isNaN(parseFloat(p.precio)) ? parseFloat(p.precio) : 0,
+      stock: !isNaN(parseInt(p.stock, 10)) ? Math.max(0, parseInt(p.stock, 10)) : 0,
+      imagenes: Array.isArray(p.imagenes) ? p.imagenes.filter(img => typeof img === 'string' && img.trim() !== '') : [PLACEHOLDER_IMAGE],
+      categoria: typeof p.categoria === 'string' ? p.categoria.toLowerCase().trim() : 'otros',
+      estado: typeof p.estado === 'string' ? p.estado.trim() : '',
+      // Add other properties if they exist in your Firebase data
+      adicionales: typeof p.adicionales === 'string' ? p.adicionales.trim() : '',
+      alto: !isNaN(parseFloat(p.alto)) ? parseFloat(p.alto) : null,
+      ancho: !isNaN(parseFloat(p.ancho)) ? parseFloat(p.ancho) : null,
+      profundidad: !isNaN(parseFloat(p.profundidad)) ? parseFloat(p.profundidad) : null,
+    });
+  });
+
+  renderizarProductos();
+  actualizarCategorias();
+  actualizarUI();
+}
+
+
+function renderizarCarrito() {
+  if (!elementos.listaCarrito || !elementos.totalCarrito) return;
+
+  if (carrito.length === 0) {
+    elementos.listaCarrito.innerHTML = '<p class="carrito-vacio">Tu carrito está vacío</p>';
+    elementos.totalCarrito.textContent = 'Total: $U 0';
+    return;
+  }
+
+  elementos.listaCarrito.innerHTML = carrito.map(item => {
+    const producto = productos.find(p => p.id === item.id);
+    // Calculate available stock based on current product stock minus what's already in the cart for this item
+    const stockRealProducto = producto ? producto.stock : 0;
+    const disponiblesParaAgregar = Math.max(0, stockRealProducto - item.cantidad);
+
+    return `
+    <li class="carrito-item" data-id="${item.id}">
+      <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}" loading="lazy">
+      <div class="carrito-item-info">
+        <span class="carrito-item-nombre">${item.nombre}</span>
+        <span class="carrito-item-precio">$U ${item.precio.toLocaleString('es-UY')} c/u</span>
+        <div class="carrito-item-controls">
+          <button class="disminuir-cantidad" data-id="${item.id}" aria-label="Reducir cantidad" ${item.cantidad <= 1 ? 'disabled' : ''}>-</button>
+          <span class="carrito-item-cantidad">${item.cantidad}</span>
+          <button class="aumentar-cantidad" data-id="${item.id}" aria-label="Aumentar cantidad" ${disponiblesParaAgregar <= 0 ? 'disabled' : ''}>+</button>
+        </div>
+        <span class="carrito-item-subtotal">Subtotal: $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
+      </div>
+    </li>
+  `;
+  }).join('');
+
+  const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+  elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
+
+  // Delegate events for quantity buttons
+  elementos.listaCarrito.querySelectorAll('.disminuir-cantidad').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = parseInt(e.target.dataset.id);
+      const item = carrito.find(item => item.id === id);
+      if (item && item.cantidad > 1) {
+        // Decrease quantity in cart
+        item.cantidad--;
+        // Restore stock in Firebase for the decreased amount
+        const productRef = ref(db, `productos/${id}/stock`);
+        runTransaction(productRef, (currentStock) => {
+          if (typeof currentStock !== 'number' || isNaN(currentStock)) {
+            currentStock = 0;
+          }
+          return currentStock + 1; // Add back 1 to stock
+        }).then(() => {
+          guardarCarrito();
+          renderizarCarrito();
+          renderizarProductos(); // Re-render product gallery to show updated stock
+          mostrarNotificacion(`Reducida cantidad de "${item.nombre}"`, 'info');
+        }).catch(error => {
+          console.error("Error al disminuir cantidad y restaurar stock:", error);
+          mostrarNotificacion("Error al actualizar cantidad", "error");
+        });
+      }
+    });
+  });
+
+  elementos.listaCarrito.querySelectorAll('.aumentar-cantidad').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = parseInt(e.target.dataset.id);
+      agregarAlCarrito(id, 1); // Use transaction-based add to check stock and decrement
+    });
+  });
+}
+
+// ===============================
+// ABRIR Y CERRAR CARRITO
+// ===============================
+function toggleCarrito(forceState) {
+  if (!elementos.carritoPanel || !elementos.carritoOverlay) return;
+  let isOpen;
+  if (typeof forceState === 'boolean') {
+    isOpen = forceState;
+  } else {
+    isOpen = !elementos.carritoPanel.classList.contains('active');
+  }
+
+  elementos.carritoPanel.classList.toggle('active', isOpen);
+  elementos.carritoOverlay.classList.toggle('active', isOpen);
+  document.body.classList.toggle('no-scroll', isOpen);
+
+  if (isOpen) renderizarCarrito();
+}
+
+// ===============================
+// PRODUCTOS, FILTROS Y PAGINACIÓN
+// ===============================
+
+function agregarAlCarrito(id, cantidad = 1, boton = null) {
+  if (isNaN(id) || id === null) {
+    mostrarNotificacion("ID de producto inválido", "error");
+    return;
+  }
+
+  const producto = productos.find(p => p.id === id);
+  if (!producto) {
+    mostrarNotificacion("Producto no encontrado", "error");
+    return;
+  }
+
+  const cantidadAgregar = Math.max(1, parseInt(cantidad));
+  if (isNaN(cantidadAgregar)) {
+    mostrarNotificacion("Cantidad inválida", "error");
+    return;
+  }
+
+  // Check how much of this product is already in the cart
+  const enCarrito = carrito.find(item => item.id === id);
+  const cantidadYaEnCarrito = enCarrito ? enCarrito.cantidad : 0;
+
+  // Calculate actual stock available for new additions
+  const stockDisponible = producto.stock - cantidadYaEnCarrito;
+
+  if (stockDisponible < cantidadAgregar) {
+    mostrarNotificacion("Stock insuficiente", "error");
+    return;
+  }
+
+  let textoOriginal = null;
+  if (boton) {
+    boton.disabled = true;
+    textoOriginal = boton.innerHTML;
+    boton.innerHTML = `Agregando <span class="spinner"></span>`;
+  }
+
+  const productRef = ref(db, `productos/${id}/stock`);
+  runTransaction(productRef, (currentStock) => {
+    // If stock is null or not a number, initialize it to 0
+    if (typeof currentStock !== 'number' || isNaN(currentStock)) {
+      currentStock = 0;
+    }
+
+    if (currentStock < cantidadAgregar) {
+      // Abort transaction if stock is insufficient
+      return undefined;
+    }
+    return currentStock - cantidadAgregar; // Decrement stock
+  }).then((res) => {
+    if (!res.committed) {
+      // Transaction was aborted, likely due to insufficient stock
+      mostrarNotificacion('❌ Stock insuficiente o actualizado por otro usuario. Intente de nuevo.', 'error');
+      return;
+    }
+
+    if (enCarrito) {
+      enCarrito.cantidad += cantidadAgregar;
+    } else {
+      carrito.push({
+        id: producto.id,
+        nombre: producto.nombre,
+        precio: producto.precio,
+        cantidad: cantidadAgregar,
+        imagen: producto.imagenes?.[0] || PLACEHOLDER_IMAGE
+      });
+    }
+
+    guardarCarrito();
+    renderizarCarrito();
+    renderizarProductos(); // Re-render gallery to reflect stock change
+    mostrarNotificacion("✅ Producto agregado al carrito", "exito");
+
+  }).catch((error) => {
+    console.error("Error al agregar al carrito (transacción Firebase):", error);
+    mostrarNotificacion("⚠️ Error inesperado al agregar al carrito", "error");
+  }).finally(() => {
+    if (boton) {
+      boton.disabled = false;
+      boton.innerHTML = textoOriginal;
+    }
+  });
+}
+
+
+function filtrarProductos() {
+  return productos.filter(p => {
+    if (!p) return false; // Ensure product is valid
+    const {
+      precioMin,
+      precioMax,
+      categoria,
+      busqueda
+    } = filtrosActuales;
+    const b = busqueda?.toLowerCase() || "";
+
+    const matchesPrice = (p.precio >= precioMin) && (p.precio <= precioMax);
+    const matchesCategory = (categoria === 'todos' || p.categoria === categoria);
+    const matchesSearch = (!b || p.nombre.toLowerCase().includes(b) || p.descripcion.toLowerCase().includes(b));
+
+    return matchesPrice && matchesCategory && matchesSearch;
+  });
+}
+
+function actualizarCategorias() {
+  if (!elementos.selectCategoria) return;
+  // Get unique categories from products, filter out empty/null values, and sort
+  const cats = ['todos', ...new Set(productos.map(p => p.categoria).filter(Boolean).sort())];
+  elementos.selectCategoria.innerHTML = cats
+    .map(cat => `<option value="${cat}">${cat.charAt(0).toUpperCase() + cat.slice(1)}</option>`)
+    .join('');
+  // Set the selected category back if it was previously set
+  elementos.selectCategoria.value = filtrosActuales.categoria;
+}
+
+// ===============================
+// FUNCIONES GLOBALES
+// ===============================
+
+function crearCardProducto(p) {
+  const enCarrito = carrito.find(i => i.id === p.id);
+  const disp = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
+  const agot = disp <= 0;
+  const imagenPrincipal = p.imagenes && p.imagenes.length > 0 ? p.imagenes[0] : PLACEHOLDER_IMAGE;
+
+  return `
+    <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}">
+      <img src="${imagenPrincipal}" alt="${p.nombre}" class="producto-img" loading="lazy">
+      <h3 class="producto-nombre">${p.nombre}</h3>
+      <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
+      <div class="card-acciones">
+        <button class="boton-agregar${agot ? ' agotado' : ''}" data-id="${p.id}" ${agot ? 'disabled' : ''}>
+          ${agot ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
+        </button>
+        ${agot ? `
+        <button class="boton-aviso-stock" data-nombre="${p.nombre.replace(/'/g, "\\'")}" style="background-color: #ffd93b; color: #333; font-weight: bold;">
+          📩 Avisame cuando haya stock
+        </button>` : ''}
+      </div>
+      <button class="boton-detalles" data-id="${p.id}">🔍 Ver Detalle</button>
+    </div>
+  `;
+}
+
+
+function renderizarProductos() {
+  const productosFiltrados = filtrarProductos();
+  const inicio = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
+  const paginados = productosFiltrados.slice(inicio, inicio + PRODUCTOS_POR_PAGINA);
+
+  if (!elementos.galeriaProductos) return;
+
+  // Clear existing products and re-render
+  elementos.galeriaProductos.innerHTML = ''; // Clear content first
+
+  if (paginados.length === 0) {
+    elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No se encontraron productos que coincidan con los filtros.</p>';
+  } else {
+    elementos.galeriaProductos.innerHTML = paginados.map(crearCardProducto).join('');
+  }
+
+  renderizarPaginacion(productosFiltrados.length);
+}
+
+
+function renderizarPaginacion(totalProductos) {
+  const totalPages = Math.ceil(totalProductos / PRODUCTOS_POR_PAGINA);
+  const paginacionContainer = elementos.paginacion;
+
+  if (!paginacionContainer) return;
+
+  paginacionContainer.innerHTML = ''; // Clear existing pagination buttons
+
+  if (totalPages <= 1) {
+    return;
+  }
+
+  for (let i = 1; i <= totalPages; i++) {
+    const pageButton = document.createElement('button');
+    pageButton.textContent = i;
+    pageButton.className = i === paginaActual ? 'active' : '';
+    pageButton.addEventListener('click', () => {
+      paginaActual = i;
+      renderizarProductos();
+      window.scrollTo({
+        top: elementos.galeriaProductos.offsetTop - 100,
+        behavior: 'smooth'
+      }); // Scroll to products section
+    });
+    paginacionContainer.appendChild(pageButton);
+  }
+}
+
+// ===============================
+// MODAL DE PRODUCTO
+// ===============================
+function mostrarModalProducto(producto) {
+  const modal = elementos.productoModal;
+  const contenido = elementos.modalContenido;
+  if (!modal || !contenido) return;
+
+  const enCarrito = carrito.find(item => item.id === producto.id) || {
+    cantidad: 0
+  };
+  const disponibles = Math.max(0, producto.stock - enCarrito.cantidad);
+  const agotado = disponibles <= 0;
+  let currentIndex = 0; // Reset index each time modal opens
+
+  function renderCarruselAndContent() {
+    contenido.innerHTML = `
+      <button class="cerrar-modal" aria-label="Cerrar modal" onclick="cerrarModal()">&times;</button>
+      <div class="modal-flex">
+        <div class="modal-carrusel">
+          <img id="modal-imagen" src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
+          ${
+            producto.imagenes.length > 1
+              ? `
+          <div class="modal-controls">
+            <button class="modal-prev" aria-label="Imagen anterior" ${currentIndex === 0 ? 'disabled' : ''}>
+              <svg width="26" height="26" viewBox="0 0 26 26"><polyline points="17 22 9 13 17 4" fill="none" stroke="#2e7d32" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="modal-next" aria-label="Siguiente imagen" ${currentIndex === producto.imagenes.length - 1 ? 'disabled' : ''}>
+              <svg width="26" height="26" viewBox="0 0 26 26"><polyline points="9 4 17 13 9 22" fill="none" stroke="#2e7d32" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          `
+              : ''
+          }
+          <div class="modal-thumbnails">
+            ${producto.imagenes
+              .map(
+                (img, i) =>
+                  `<img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}">`
+              )
+              .join('')}
+          </div>
+        </div>
+        <div class="modal-info">
+          <h1 class="modal-nombre">${producto.nombre}</h1>
+          <p class="modal-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
+          <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">
+            ${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}
+          </p>
+          <div class="modal-descripcion">
+            ${producto.descripcion || ''}
+            <br>
+            ${producto.adicionales ? `<small><b>Adicionales:</b> ${producto.adicionales}</small><br>` : ''}
+            ${
+              producto.alto || producto.ancho || producto.profundidad
+                ? `<small><b>Medidas:</b> ${producto.alto ? producto.alto + ' cm (alto)' : ''}${producto.ancho ? ' x ' + producto.ancho + ' cm (ancho)' : ''}${producto.profundidad ? ' x ' + producto.profundidad + ' cm (prof.)' : ''}</small>`
+                : ''
+            }
+          </div>
+          <div class="modal-acciones">
+            <input type="number" value="1" min="1" max="${disponibles}" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
+            <button class="boton-agregar-modal ${agotado ? 'agotado' : ''}" data-id="${producto.id}" ${agotado ? 'disabled' : ''}>
+              ${agotado ? 'Agotado' : 'Agregar al carrito'}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Event listeners for modal elements
+    contenido.querySelector('.cerrar-modal').onclick = () => cerrarModal();
+
+    const btnPrev = contenido.querySelector('.modal-prev');
+    const btnNext = contenido.querySelector('.modal-next');
+    const thumbnails = contenido.querySelectorAll('.thumbnail');
+    const addModalBtn = contenido.querySelector('.boton-agregar-modal');
+    const cantidadInput = contenido.querySelector('.cantidad-modal-input');
+
+    btnPrev?.addEventListener('click', () => {
+      if (currentIndex > 0) {
+        currentIndex--;
+        renderCarruselAndContent();
+      }
+    });
+
+    btnNext?.addEventListener('click', () => {
+      if (currentIndex < producto.imagenes.length - 1) {
+        currentIndex++;
+        renderCarruselAndContent();
+      }
+    });
+
+    thumbnails.forEach(th => {
+      th.addEventListener('click', () => {
+        currentIndex = parseInt(th.dataset.index);
+        renderCarruselAndContent();
+      });
+    });
+
+    addModalBtn?.addEventListener('click', (e) => {
+      const id = parseInt(e.currentTarget.dataset.id);
+      const cantidad = parseInt(cantidadInput.value);
+      agregarAlCarrito(id, cantidad, addModalBtn);
+    });
+  }
+
+  renderCarruselAndContent();
+  modal.classList.add('active'); // Use a class to control visibility and animation
+  document.body.classList.add('no-scroll'); // Prevent scrolling body when modal is open
+}
+
+function cerrarModal() {
+  if (elementos.productoModal) {
+    elementos.productoModal.classList.remove('active');
+    document.body.classList.remove('no-scroll');
+  }
+}
+window.cerrarModal = cerrarModal; // Expose to global scope for onclick in HTML
+
+// ===============================
+// ACTUALIZAR UI
+// ===============================
+function actualizarUI() {
+  renderizarCarrito();
+  actualizarContadorCarrito();
+}
+
+// ===============================
+// FILTROS Y RESET
+// ===============================
+function aplicarFiltros() {
+  paginaActual = 1; // Reset to first page when filters change
+  renderizarProductos();
+}
+
+function resetearFiltros() {
+  filtrosActuales = {
+    precioMin: 0,
+    precioMax: 3000, // Assuming max price is 3000 from the slider setup
+    categoria: 'todos',
+    busqueda: ''
+  };
+  if (elementos.inputBusqueda) elementos.inputBusqueda.value = '';
+  if (elementos.selectCategoria) elementos.selectCategoria.value = 'todos';
+  if (elementos.precioMinInput) elementos.precioMinInput.value = '0'; // Reset slider values
+  if (elementos.precioMaxInput) elementos.precioMaxInput.value = '3000'; // Reset slider values
+  updateRange(); // Update slider UI
+  aplicarFiltros();
+}
+
+// ===============================
+// FAQ INTERACTIVO
+// ===============================
+function inicializarFAQ() {
+  const faqToggles = document.querySelectorAll('.faq-toggle');
+  faqToggles.forEach(toggle => {
+    toggle.addEventListener('click', () => {
+      const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', !isExpanded);
+      const content = toggle.nextElementSibling;
+      if (content) {
+        content.hidden = isExpanded; // Toggle hidden attribute
+        // Optional: add a class for CSS transitions
+        // content.classList.toggle('active', !isExpanded);
+      }
+    });
+  });
+}
+
+// ===============================
+// MENÚ HAMBURGUESA RESPONSIVE
+// ===============================
+function inicializarMenuHamburguesa() {
+  const hamburguesa = document.querySelector('.hamburguesa');
+  const menu = document.getElementById('menu');
+  if (!hamburguesa || !menu) return;
+
+  hamburguesa.addEventListener('click', function() {
+    const expanded = menu.classList.toggle('active');
+    hamburguesa.setAttribute('aria-expanded', expanded);
+    document.body.classList.toggle('no-scroll', expanded);
+  });
+
+  // Close menu when a link is clicked (for single-page navigation)
+  menu.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      menu.classList.remove('active');
+      hamburguesa.setAttribute('aria-expanded', false);
+      document.body.classList.remove('no-scroll');
+    });
+  });
+}
+
+// ===============================
+// CONTACT FORM CON EMAILJS
+// ===============================
+function setupContactForm() {
+  const formContacto = document.getElementById('formContacto');
+  const successMessage = document.getElementById('successMessage');
+  const errorMessage = document.getElementById('errorMessage');
+
+  if (formContacto && window.emailjs) { // Ensure emailjs library is loaded
+    // Initialize EmailJS with your user ID
+    emailjs.init("YOUR_EMAILJS_USER_ID"); // Replace with your actual EmailJS User ID
+
+    formContacto.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      // Check if emailjs is available
+      if (!window.emailjs) {
+        console.error('EmailJS library is not loaded.');
+        errorMessage.classList.remove('hidden');
+        errorMessage.textContent = 'Error: Servicio de email no disponible. Intenta de nuevo más tarde.';
+        setTimeout(() => errorMessage.classList.add('hidden'), 3000);
+        return;
+      }
+
+      const nombre = document.getElementById('nombre').value;
+      const email = document.getElementById('email').value;
+      const mensaje = document.getElementById('mensaje').value;
+
+      emailjs.send('service_89by24g', 'template_8mn7hdp', { // Replace with your Service ID and Template ID
+          from_name: nombre,
+          from_email: email,
+          message: mensaje
+        })
+        .then(() => {
+          successMessage.classList.remove('hidden');
+          errorMessage.classList.add('hidden');
+          formContacto.reset();
+          setTimeout(() => successMessage.classList.add('hidden'), 3000);
+        }, (error) => {
+          console.error('Error al enviar el mensaje:', error);
+          errorMessage.classList.remove('hidden');
+          successMessage.classList.add('hidden');
+          errorMessage.textContent = 'Error al enviar el mensaje. Intenta de nuevo.';
+          setTimeout(() => errorMessage.classList.add('hidden'), 3000);
+        });
+    });
+  } else if (formContacto && !window.emailjs) {
+    console.warn('EmailJS library not found. Contact form will not function.');
+    // Optionally disable the form or show a message
+    // formContacto.querySelector('button[type="submit"]').disabled = true;
+    // errorMessage.textContent = 'El servicio de contacto no está disponible.';
+    // errorMessage.classList.remove('hidden');
+  }
+}
+
+
+// ===============================
+// INICIALIZACIÓN GENERAL
+// ===============================
+function init() {
+  inicializarMenuHamburguesa();
+  inicializarFAQ();
+  setupContactForm();
+  // cargarCarrito() is called in DOMContentLoaded before init now
+  inicializarEventos();
+  updateRange(); // Initialize slider positions
+}
+
+// ===============================
+// EVENTOS
+// ===============================
+function inicializarEventos() {
+  elementos.carritoBtnMain?.addEventListener('click', () => toggleCarrito(true));
+  elementos.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
+  elementos.btnCerrarCarrito?.addEventListener('click', () => toggleCarrito(false));
+
+  document.getElementById('select-envio')?.addEventListener('change', actualizarResumenPedido);
+  elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
+  elementos.btnFinalizarCompra?.addEventListener('click', () => {
+    if (carrito.length === 0) {
+      mostrarNotificacion('El carrito está vacío', 'error');
+      return;
+    }
+    elementos.avisoPreCompraModal.style.display = 'flex';
+    elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'false');
+  });
+
+  elementos.btnEntendidoAviso?.addEventListener('click', () => {
+    const modalEnvio = document.getElementById('modal-datos-envio');
+    if (modalEnvio) {
+      elementos.avisoPreCompraModal.style.display = 'none';
+      elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
+      modalEnvio.style.display = 'flex';
+      modalEnvio.classList.add('visible'); // Add visible class for animation
+      actualizarResumenPedido();
+    }
+  });
+
+  elementos.btnCancelarAviso?.addEventListener('click', () => {
+    if (elementos.avisoPreCompraModal) {
+      elementos.avisoPreCompraModal.style.display = 'none';
+      elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
+    }
+  });
+
+  elementos.inputBusqueda?.addEventListener('input', (e) => {
+    filtrosActuales.busqueda = e.target.value.toLowerCase();
+    aplicarFiltros();
+  });
+
+  elementos.selectCategoria?.addEventListener('change', (e) => {
+    filtrosActuales.categoria = e.target.value;
+    aplicarFiltros();
+  });
+
+  // Update filters immediately when sliders are moved
+  elementos.precioMinInput?.addEventListener('input', () => {
+    updateRange();
+    aplicarFiltros(); // Apply filters immediately on slider change
+  });
+
+  elementos.precioMaxInput?.addEventListener('input', () => {
+    updateRange();
+    aplicarFiltros(); // Apply filters immediately on slider change
+  });
+
+  elementos.aplicarRangoBtn?.addEventListener('click', () => {
+    // This button is redundant if filters apply on input, but keep if user needs explicit apply.
+    // Ensure that the filter values are updated from the slider inputs, not just by updateRange()
+    filtrosActuales.precioMin = parseInt(elementos.precioMinInput.value);
+    filtrosActuales.precioMax = parseInt(elementos.precioMaxInput.value);
+    aplicarFiltros();
+  });
+
+  // Delegated event listener for product cards (add to cart, view details, stock notification)
+  elementos.galeriaProductos?.addEventListener('click', (e) => {
+    const boton = e.target.closest('button');
+    const tarjeta = e.target.closest('.producto-card');
+
+    if (!tarjeta || !boton) return;
+
+    const id = parseInt(tarjeta.dataset.id);
+    const producto = productos.find(p => p.id === id);
+    if (!producto || isNaN(id)) return;
+
+    e.stopPropagation(); // Prevent duplicate clicks from propagating
+
+    if (boton.classList.contains('boton-detalles')) {
+      verDetalle(id);
+    } else if (boton.classList.contains('boton-agregar')) {
+      agregarAlCarrito(id, 1, boton);
+    } else if (boton.classList.contains('boton-aviso-stock')) {
+      preguntarStock(boton.dataset.nombre || producto.nombre);
+    }
+  });
+
+}
+
+
+function actualizarResumenPedido() {
+  const resumenProductos = document.getElementById('resumen-productos');
+  const resumenTotal = document.getElementById('resumen-total');
+
+  if (!resumenProductos || !resumenTotal) {
+    console.error('Elements for the summary not found');
+    return;
+  }
+
+  if (carrito.length === 0) {
+    resumenProductos.innerHTML = '<p class="carrito-vacio">No hay productos en el carrito</p>';
+    resumenTotal.textContent = '$U 0';
+    return;
+  }
+
+  let html = '';
+  let subtotal = 0;
+
+  carrito.forEach(item => {
+    const itemTotal = item.precio * item.cantidad;
+    subtotal += itemTotal;
+    html += `
+      <div class="resumen-item">
+        <span>${item.nombre} x${item.cantidad}</span>
+        <span>$U ${itemTotal.toLocaleString('es-UY')}</span>
+      </div>
+    `;
+  });
+
+  const envioSelect = document.getElementById('select-envio');
+  const metodoEnvio = envioSelect ? envioSelect.value : 'retiro';
+  let costoEnvio = 0;
+
+  if (metodoEnvio === 'montevideo') {
+    costoEnvio = 150;
+  } else if (metodoEnvio === 'interior') {
+    costoEnvio = 300;
+  }
+
+  html += `
+    <div class="resumen-item resumen-subtotal">
+      <span>Subtotal:</span>
+      <span>$U ${subtotal.toLocaleString('es-UY')}</span>
+    </div>
+    ${metodoEnvio !== 'retiro' ? `
+    <div class="resumen-item resumen-envio">
+      <span>Envío (${metodoEnvio === 'montevideo' ? 'Montevideo' : 'Interior'}):</span>
+      <span>$U ${costoEnvio.toLocaleString('es-UY')}</span>
+    </div>
+    ` : ''}
+  `;
+
+  resumenProductos.innerHTML = html;
+  const total = subtotal + costoEnvio;
+  resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
+
+  // Toggle direction input visibility based on shipping method
+  const grupoDireccion = document.getElementById('grupo-direccion');
+  const inputDireccion = document.getElementById('input-direccion');
+  if (grupoDireccion && inputDireccion) {
+    if (metodoEnvio === 'retiro') {
+      grupoDireccion.style.display = 'none';
+      inputDireccion.required = false;
+    } else {
+      grupoDireccion.style.display = 'flex';
+      inputDireccion.required = true;
+    }
+  }
+}
+
+// Cerrar modal de envío
+document.getElementById('btn-cerrar-modal-envio')?.addEventListener('click', function() {
+  const modalEnvio = document.getElementById('modal-datos-envio');
+  modalEnvio.classList.remove('visible');
+  modalEnvio.setAttribute('aria-hidden', 'true');
+  setTimeout(() => {
+    modalEnvio.style.display = 'none';
+  }, 300);
+});
+
+
+// Validar y enviar por WhatsApp
+document.getElementById('form-envio')?.addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  const nombre = document.getElementById('input-nombre').value.trim();
+  const apellido = document.getElementById('input-apellido').value.trim();
+  const telefono = document.getElementById('input-telefono').value.trim();
+  const envio = document.getElementById('select-envio').value;
+  const direccion = envio !== 'retiro' ? document.getElementById('input-direccion').value.trim() : '';
+  const notas = document.getElementById('input-notas').value.trim();
+
+  if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
+    mostrarNotificacion('Por favor complete todos los campos obligatorios', 'error');
+    return;
+  }
+
+  // Double check stock before sending order
+  for (const item of carrito) {
+    const productoReal = productos.find(p => p.id === item.id);
+    if (!productoReal || productoReal.stock < item.cantidad) {
+      mostrarNotificacion(`Stock insuficiente para "${item.nombre}". Por favor, actualice su carrito.`, 'error');
+      return; // Stop the process
+    }
+  }
+
+  let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n`;
+  mensaje += `*📋 Detalles del pedido:*\n`;
+
+  carrito.forEach(item => {
+    mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}\n`;
+  });
+
+  const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+  const costoEnvio = envio === 'montevideo' ? 150 : envio === 'interior' ? 300 : 0;
+  const total = subtotal + costoEnvio;
+
+  mensaje += `\n*💰 Total:*\n`;
+  mensaje += `Subtotal: $U ${subtotal.toLocaleString('es-UY')}\n`;
+  mensaje += `Envío: $U ${costoEnvio.toLocaleString('es-UY')}\n`;
+  mensaje += `*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
+
+  mensaje += `*👤 Datos del cliente:*\n`;
+  mensaje += `Nombre: ${nombre} ${apellido}\n`;
+  mensaje += `Teléfono: ${telefono}\n`;
+  mensaje += `Método de envío: ${envio === 'montevideo' ? 'Envío Montevideo ($150)' : envio === 'interior' ? 'Envío Interior ($300)' : 'Retiro en local (Gratis)'}\n`;
+
+  if (envio !== 'retiro') {
+    mensaje += `Dirección: ${direccion}\n`;
+  }
+
+  if (notas) {
+    mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
+  }
+
+  const numeroWhatsApp = '59893566283'; // Your WhatsApp number
+  sessionStorage.setItem('ultimoPedidoWhatsApp', mensaje); // Save for potential recovery
+
+  const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
+
+  // Try opening in new tab, fall back to current tab if blocked by browser
+  const nuevaPestaña = window.open(urlWhatsApp, '_blank');
+  if (!nuevaPestaña || nuevaPestaña.closed || typeof nuevaPestaña.closed == 'undefined') {
+    // Fallback if popup is blocked
+    window.location.href = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${encodeURIComponent(mensaje)}`;
+  }
+
+  // Clear cart and UI after a small delay, assuming user proceeds to WhatsApp
+  setTimeout(() => {
+    document.getElementById('modal-datos-envio').classList.remove('visible');
+    document.getElementById('modal-datos-envio').setAttribute('aria-hidden', 'true');
+    setTimeout(() => {
+      document.getElementById('modal-datos-envio').style.display = 'none';
+      carrito = []; // Clear local cart
+      guardarCarrito(); // Update localStorage
+      actualizarUI(); // Re-render cart counter and other UI
+      mostrarNotificacion('Pedido listo para enviar por WhatsApp', 'exito');
+      document.getElementById('form-envio').reset(); // Reset the form
+    }, 300);
+  }, 1000);
+});
+
+// ===============================
+// CONTROLADORES PARA LOS SLIDERS DE PRECIO
+// ===============================
+const minSlider = document.getElementById('min-slider');
+const maxSlider = document.getElementById('max-slider');
+const minPriceSpan = document.getElementById('min-price');
+const maxPriceSpan = document.getElementById('max-price');
+const range = document.querySelector('.range');
+
+function updateRange() {
+  if (!minSlider || !maxSlider || !minPriceSpan || !maxPriceSpan || !range) return;
+
+  let minVal = parseInt(minSlider.value);
+  let maxVal = parseInt(maxSlider.value);
+
+  // Ensure minVal is always less than or equal to maxVal
+  if (minVal > maxVal) {
+    // Swap values and update slider positions
+    [minVal, maxVal] = [maxVal, minVal];
+    minSlider.value = minVal;
+    maxSlider.value = maxVal;
+  }
+
+  const sliderMax = parseInt(minSlider.max); // Both sliders should have the same max
+  const porcentajeMin = (minVal / sliderMax) * 100;
+  const porcentajeMax = (maxVal / sliderMax) * 100;
+
+  range.style.left = porcentajeMin + '%';
+  range.style.width = (porcentajeMax - porcentajeMin) + '%';
+
+  minPriceSpan.textContent = `$U${minVal}`;
+  maxPriceSpan.textContent = `$U${maxVal}`;
+}
+
+// Initial update for sliders and their display
+if (minSlider && maxSlider) {
+  minSlider.addEventListener('input', updateRange);
+  maxSlider.addEventListener('input', updateRange);
+  updateRange(); // Call once on load to set initial state
+}
+
+
+function preguntarStock(nombreProducto) {
+  const asunto = encodeURIComponent(`Consulta sobre disponibilidad de "${nombreProducto}"`);
+  const cuerpo = encodeURIComponent(`Hola Patofelting,\n\nMe gustaría saber cuándo estará disponible el producto: ${nombreProducto}\n\nSaludos cordiales,\n[Nombre del Cliente]`);
+  window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
+}
+
+// Attach init to DOMContentLoaded (already done at the top, moved down for logical flow)
+// document.addEventListener('DOMContentLoaded', init);
+
+function verDetalle(id) {
+  const producto = productos.find(p => p.id === id);
+  if (producto) {
+    mostrarModalProducto(producto);
+  } else {
+    mostrarNotificacion("Producto no encontrado", "error");
+  }
+}
+
+// Expose functions to global scope if they are called from inline HTML event handlers (e.g., onclick)
+window.verDetalle = verDetalle;
+window.agregarAlCarrito = agregarAlCarrito;
+window.aplicarRango = aplicarRango; // Expose aplicarRango if needed by HTML button
+window.preguntarStock = preguntarStock;
