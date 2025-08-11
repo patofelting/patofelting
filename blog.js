@@ -1,103 +1,97 @@
 /* =========================================================
-   Blog "El Cuaderno de Patofelting"
-   - CSV → UI
-   - Reacciones + Favoritos
-   - Post-its (mover, color, borrar, persistencia)
-   - Comentarios (con eliminación para admin)
-   - Lazy images + SEO JSON-LD
-   - Firebase (compat) opcional; fallback a localStorage
+   Blog Patofelting — CSV → UI + Post-its + Reacciones + Comentarios
+   - Funciona con Firebase (compat) si está configurado
+   - Si no hay Firebase, usa localStorage (todos los features siguen andando)
 ========================================================= */
 
-/* ============================ CONFIG ============================ */
-// Detecta Firebase compat SOLO si hay projectId (evita fatal error)
-const FB_PROJECT_ID =
-  (window.firebase?.apps?.[0]?.options?.projectId) ||
-  (window.firebaseApp?.options?.projectId) ||
-  (window.firebaseConfig?.projectId);
+/* ---------- CONFIG ---------- */
+const CSV_URL =
+  window.BLOG_CSV_URL ||
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?gid=127717360&single=true&output=csv';
 
-const HAS_FIREBASE = !!(
-  window.firebaseCompatDb &&
-  window.firebaseCompatAuth &&
-  FB_PROJECT_ID
-);
-
-// Activa modo admin con window.PF_IS_ADMIN = true
-// o agregando ?pfadmin=1 a la URL (se guarda en localStorage)
-if (new URLSearchParams(location.search).get('pfadmin') === '1') {
-  localStorage.setItem('pf_admin', '1');
-}
-const IS_ADMIN = !!window.PF_IS_ADMIN || localStorage.getItem('pf_admin') === '1';
+const HAS_FIREBASE = !!(window.firebaseCompatDb && window.firebaseCompatAuth);
+const ADMIN = (() => {
+  const q = new URLSearchParams(location.search);
+  if (q.has('pfadmin')) {
+    const on = q.get('pfadmin') === '1';
+    localStorage.setItem('pf_admin', on ? '1' : '0');
+    return on;
+  }
+  return localStorage.getItem('pf_admin') === '1';
+})();
 
 const LS_KEYS = {
   reactions: 'pf_reactions_v2',
-  postits: 'pf_postits_v2',
+  postits: 'pf_postits_v2', // ← necesaria para persistir post-its
   comments: (id) => `pf_comments_${id}_v2`,
   lastCommentAt: 'pf_last_comment_ts'
 };
 
 const PATHS = {
-  reactions: (id) => `/blog/reactions/${id}`,                        // counts { "🧶": n, "✨": m }
-  reactionsByUser: (id, uid) => `/blog/reactionsByUser/${id}/${uid}`,// { "🧶": true }
-  favorites: (id, uid) => `/blog/favorites/${id}/${uid}`,            // true/false
-  comments: (id) => `/blog/comments/${id}`                           // { commentId: {id,name,text,ts,uid} }
+  reactions: (id) => `/blog/reactions/${id}`,
+  reactionsByUser: (id, uid) => `/blog/reactionsByUser/${id}/${uid}`,
+  favorites: (id, uid) => `/blog/favorites/${id}/${uid}`,
+  comments: (id) => `/blog/comments/${id}`
 };
 
-/* ============================ UTILS ============================ */
-class BlogUtils {
-  static formatearFecha(fecha) {
+/* ---------- UTILS ---------- */
+const BlogUtils = {
+  formatearFecha(fecha) {
     if (!fecha) return '';
-    const [day, month, year] = fecha.split('/');
-    return `${day}/${month}/${year}`;
-  }
-  static mostrarMensajeError() {
-    const contenedor = document.getElementById('main-content');
-    if (!contenedor) return;
-    contenedor.innerHTML = `
+    const [d, m, y] = fecha.split('/');
+    return `${d}/${m}/${y}`;
+  },
+  mostrarMensajeError() {
+    const c = document.getElementById('main-content');
+    if (!c) return;
+    c.innerHTML = `
       <div class="blog-error" style="padding:2rem;text-align:center">
-        <div class="error-message">Hubo un error al cargar las entradas.
+        <div class="error-message">
+          Hubo un error al cargar las entradas.
           <button class="retry-button" onclick="window.recargarBlog()">Reintentar</button>
         </div>
       </div>`;
-  }
-  static mostrarMensajeVacio() {
-    const contenedor = document.getElementById('main-content');
-    if (!contenedor) return;
-    contenedor.innerHTML = `
+  },
+  mostrarMensajeVacio() {
+    const c = document.getElementById('main-content');
+    if (!c) return;
+    c.innerHTML = `
       <div class="blog-error" style="padding:2rem;text-align:center">
         <div class="error-message">No hay historias para mostrar aún. ¡Vuelve pronto!</div>
       </div>`;
-  }
-  static limpiarURLs(urls) {
+  },
+  limpiarURLs(urls) {
     return (urls || '').split(',').map(u => u.trim()).filter(Boolean);
-  }
-  static calculateReadingTime() {
+  },
+  calculateReadingTime() {
     const blogMain = document.querySelector('.blog-main');
     if (!blogMain) return 1;
     const text = blogMain.textContent || '';
     const words = text.trim().split(/\s+/).length;
     return Math.max(1, Math.ceil(words / 200));
-  }
-  static initCarousel(mediaBook, images) {
-    if (!mediaBook || !images?.length) return;
-    const carousel = mediaBook.querySelector('.carousel');
+  },
+  sanitize(s) {
+    return (s || '').replace(/[<>]/g, '');
+  },
+  initCarousel(container) {
+    const carousel = container.querySelector('.carousel');
     if (!carousel) return;
     const items = carousel.querySelectorAll('.carousel-item');
     const prev = carousel.querySelector('.carousel-prev');
     const next = carousel.querySelector('.carousel-next');
-    let current = 0;
-    const show = (i) => items.forEach((it, idx) => it.classList.toggle('active', idx === i));
-    prev?.addEventListener('click', () => { current = (current - 1 + items.length) % items.length; show(current); });
-    next?.addEventListener('click', () => { current = (current + 1) % items.length; show(current); });
-    show(current);
+    let i = 0;
+    const show = (k) => items.forEach((it, idx) => it.classList.toggle('active', idx === k));
+    prev?.addEventListener('click', () => { i = (i - 1 + items.length) % items.length; show(i); });
+    next?.addEventListener('click', () => { i = (i + 1) % items.length; show(i); });
+    show(i);
   }
-  static sanitize(s){ return (s || '').replace(/[<>]/g, ''); }
-}
+};
 
-/* ============================ CORE ============================ */
+/* ---------- BLOG MANAGER ---------- */
 class BlogManager {
   constructor() {
+    this.uid = null;
     this.entradas = [];
-    this.uid = null; // auth uid (anónimo si Firebase compat está activo)
     this.init();
   }
 
@@ -110,30 +104,32 @@ class BlogManager {
     this.addImageLazyLoading();
     this.addVideoPlayPause();
     this.buildIndex();
-    this.ensurePerEntryUI();     // asegura contenedores (reacciones / postits / comentarios)
     this.initReactions();
     this.enablePostits();
     this.initCommentsAll();
     this.injectJSONLD();
     this.wireIndexMobile();
 
+    // Tiempo de lectura
     setTimeout(() => {
-      const readingTime = BlogUtils.calculateReadingTime();
-      const timeElement = document.createElement('div');
-      timeElement.className = 'reading-time';
-      timeElement.innerHTML = `<span>📖 Tiempo de lectura: ${readingTime} min</span>`;
-      Object.assign(timeElement.style, {
-        position:'fixed',bottom:'20px',left:'20px',background:'white',padding:'0.5rem 1rem',
-        borderRadius:'25px',boxShadow:'0 4px 15px rgba(0,0,0,0.1)',fontSize:'.9rem',color:'var(--pencil-gray)',zIndex:1000
+      const t = BlogUtils.calculateReadingTime();
+      const el = document.createElement('div');
+      el.className = 'reading-time';
+      el.innerHTML = `<span>📖 Tiempo de lectura: ${t} min</span>`;
+      Object.assign(el.style, {
+        position: 'fixed', bottom: '20px', left: '20px', background: 'white',
+        padding: '0.5rem 1rem', borderRadius: '25px',
+        boxShadow: '0 4px 15px rgba(0,0,0,0.1)', fontSize: '.9rem',
+        color: 'var(--pencil-gray)', zIndex: 1000
       });
-      document.body.appendChild(timeElement);
-    }, 800);
+      document.body.appendChild(el);
+    }, 600);
   }
 
-  /* =============== Datos (CSV) =============== */
+  /* ===== DATOS ===== */
   async cargarEntradasDesdeCSV() {
     try {
-      const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?gid=127717360&single=true&output=csv';
+      if (!window.Papa) throw new Error('PapaParse no está cargado');
       const resp = await fetch(CSV_URL, { cache: 'reload' });
       if (!resp.ok) throw new Error(`HTTP ${resp.status} - ${resp.statusText}`);
       const texto = await resp.text();
@@ -152,173 +148,194 @@ class BlogManager {
           postit: f.postit || '',
           ordenpostit: parseInt(f.ordenpostit) || 0
         }))
-        .sort((a,b)=>a.orden-b.orden);
+        .sort((a, b) => a.orden - b.orden);
 
       this.renderizarBlog();
     } catch (e) {
-      console.error(e);
+      console.error('CSV error:', e);
       BlogUtils.mostrarMensajeError();
     }
   }
 
-  /* =============== Render =============== */
+  /* ===== RENDER ===== */
   renderizarBlog() {
-    const contenedor = document.getElementById('blog-entries');
-    const template = document.getElementById('entry-template');
+    const wrap = document.getElementById('blog-entries');
+    const tmpl = document.getElementById('entry-template');
     const loader = document.getElementById('blog-loading');
-    if (!contenedor || !template?.content) return;
+    if (!wrap || !tmpl?.content) return;
 
     if (loader) loader.style.display = 'none';
-    contenedor.innerHTML = '';
+    wrap.innerHTML = '';
 
     if (!this.entradas.length) { BlogUtils.mostrarMensajeVacio(); return; }
 
     this.entradas.forEach((entrada) => {
-      const clone = template.content.cloneNode(true);
-      const entry = clone.querySelector('.blog-entry');
+      const frag = tmpl.content.cloneNode(true);
+      const entry = frag.querySelector('.blog-entry');
       entry.setAttribute('data-entry-id', entrada.id);
       entry.id = `entry-${entrada.id}`;
 
-      // fecha + título
-      clone.querySelector('.entry-title').textContent = entrada.titulo;
-      clone.querySelector('.entry-date').textContent = BlogUtils.formatearFecha(entrada.fecha);
+      // Fecha + título
+      frag.querySelector('.entry-title').textContent = entrada.titulo;
+      frag.querySelector('.entry-date').textContent = BlogUtils.formatearFecha(entrada.fecha);
 
-      // contenido
-      const textoContainer = clone.querySelector('.entry-text');
+      // Contenido
+      const texto = frag.querySelector('.entry-text');
       entrada.contenido.split('\n').forEach(linea => {
-        if (!linea.trim()) return;
+        const t = linea.trim();
+        if (!t) return;
         const p = document.createElement('p');
         p.className = 'notebook-line';
-        p.textContent = linea.trim();
-        textoContainer.appendChild(p);
+        p.textContent = t;
+        texto.appendChild(p);
       });
 
-      // media book
-      let mediaBook = clone.querySelector('.media-book');
-      if (!mediaBook) {
-        mediaBook = document.createElement('div');
-        mediaBook.className = 'media-book';
-        textoContainer.after(mediaBook);
+      // --- Asegurar contenedores (si faltan en el template, los creo)
+      const content = frag.querySelector('.entry-content');
+
+      // Media
+      let media = content.querySelector('.media-gallery');
+      if (!media) {
+        media = document.createElement('div');
+        media.className = 'media-gallery';
+        content.appendChild(media);
       }
 
-      // imágenes
-      if (entrada.imagenes?.length) {
-        const carousel = document.createElement('div');
-        carousel.className = 'carousel';
-        entrada.imagenes.forEach((url, i) => {
-          const item = document.createElement('div');
-          item.className = `carousel-item ${i===0?'active':''}`;
-          const polaroid = document.createElement('div'); polaroid.className='photo-polaroid';
-          const img = document.createElement('img');
-          img.src=url; img.alt=`${entrada.titulo} — imagen ${i+1}`; img.loading='lazy'; img.classList.add('entrada-imagen');
-          polaroid.appendChild(img); item.appendChild(polaroid); carousel.appendChild(item);
-        });
-        if (entrada.imagenes.length>1){
-          const prev=document.createElement('button');prev.className='carousel-prev';prev.innerHTML='◄';
-          const next=document.createElement('button');next.className='carousel-next';next.innerHTML='►';
-          carousel.appendChild(prev); carousel.appendChild(next);
-        }
-        mediaBook.appendChild(carousel);
-      }
-
-      // videos
-      if (entrada.videos?.length) {
-        entrada.videos.forEach(url=>{
-          const video=document.createElement('iframe');
-          video.src=url; video.className='entrada-video'; video.loading='lazy';
-          video.allowFullscreen = true; video.setAttribute('title', entrada.titulo);
-          mediaBook.appendChild(video);
-        });
-      }
-
-      // Post-its (crear contenedor si falta)
-      let postitBox = clone.querySelector('.postit-container');
+      // Post-it
+      let postitBox = content.querySelector('.postit-container');
       if (!postitBox) {
         postitBox = document.createElement('div');
         postitBox.className = 'postit-container';
-        postitBox.style.position = 'relative';
-        textoContainer.after(postitBox);
-      }
-      if (entrada.postit) {
-        const p = { id: crypto.randomUUID(), text: entrada.postit, x: 8, y: 6, color:'#ffeb3b', w: 220, h: 150 };
-        postitBox.appendChild(this._renderPostit(postitBox, p, entry)); // ← usa el contenedor del clone
+        postitBox.style.position = 'relative'; // Necesario para drag absoluto
+        content.appendChild(postitBox);
       }
 
       // Reacciones
-      if (!clone.querySelector('.entry-reactions')) {
-        const react = document.createElement('div');
-        react.className = 'entry-reactions';
-        react.innerHTML = `
-          <button class="reaction-btn" data-emoji="🧶" aria-pressed="false" title="Reaccionar con lana">🧶 <span>0</span></button>
-          <button class="reaction-btn" data-emoji="✨" aria-pressed="false" title="¡Me encanta!">✨ <span>0</span></button>
-          <button class="entry-fav" aria-pressed="false" title="Guardar en favoritos">❤</button>
-        `;
-        mediaBook.after(react);
+      let reactions = content.querySelector('.entry-reactions');
+      if (!reactions) {
+        reactions = document.createElement('div');
+        reactions.className = 'entry-reactions';
+        reactions.innerHTML = `
+          <div class="reactions-row" role="group" aria-label="Reacciones">
+            <button class="reaction-btn" data-emoji="🧶" aria-pressed="false" title="Me encanta (lana)">🧶 <span>0</span></button>
+            <button class="reaction-btn" data-emoji="✨" aria-pressed="false" title="Brilló">✨ <span>0</span></button>
+            <button class="entry-fav" aria-pressed="false" title="Guardar en favoritos">★</button>
+          </div>`;
+        content.appendChild(reactions);
       }
 
       // Comentarios
-      if (!clone.querySelector('.entry-comments')) {
-        const comments = document.createElement('section');
+      let comments = content.querySelector('.entry-comments');
+      if (!comments) {
+        comments = document.createElement('section');
         comments.className = 'entry-comments';
         comments.innerHTML = `
           <ul class="comments-list"></ul>
-          <form class="comment-form">
-            <input name="name" class="comment-name" placeholder="Tu nombre" autocomplete="name">
-            <textarea name="text" class="comment-textarea" placeholder="Escribe tu comentario…" required></textarea>
-            <button type="submit">Publicar</button>
-          </form>
-        `;
-        mediaBook.after(comments);
+          <form class="comment-form" autocomplete="off">
+            <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+              <input type="text" name="name" placeholder="Tu nombre" class="comment-name" style="flex:1;min-width:160px">
+              <textarea name="text" placeholder="Escribe tu comentario…" class="comment-text" style="flex:2;min-width:220px" rows="2"></textarea>
+              <button type="submit" class="comment-send">Publicar</button>
+            </div>
+          </form>`;
+        content.appendChild(comments);
       }
 
-      contenedor.appendChild(clone);
+      // Imágenes → carrusel
+      if (entrada.imagenes?.length) {
+        const c = document.createElement('div');
+        c.className = 'carousel';
+        entrada.imagenes.forEach((url, i) => {
+          const it = document.createElement('div');
+          it.className = `carousel-item ${i === 0 ? 'active' : ''}`;
+          const pol = document.createElement('div'); pol.className = 'photo-polaroid';
+          const img = document.createElement('img');
+          img.className = 'entrada-imagen';
+          img.src = url;
+          img.alt = `${entrada.titulo} — imagen ${i + 1}`;
+          img.loading = 'lazy';
+          pol.appendChild(img);
+          it.appendChild(pol);
+          c.appendChild(it);
+        });
+        if (entrada.imagenes.length > 1) {
+          const prev = document.createElement('button'); prev.className = 'carousel-prev'; prev.textContent = '◄';
+          const next = document.createElement('button'); next.className = 'carousel-next'; next.textContent = '►';
+          c.appendChild(prev); c.appendChild(next);
+        }
+        media.appendChild(c);
+      }
 
-      // activar carrusel
-      if (entrada.imagenes?.length) BlogUtils.initCarousel(mediaBook, entrada.imagenes);
+      // Videos
+      if (entrada.videos?.length) {
+        entrada.videos.forEach(url => {
+          const v = document.createElement('iframe');
+          v.className = 'entrada-video';
+          v.src = url;
+          v.loading = 'lazy';
+          v.allowFullscreen = true;
+          v.setAttribute('title', entrada.titulo);
+          media.appendChild(v);
+        });
+      }
+
+      // Post-it inicial desde CSV (si hay)
+      if (entrada.postit) {
+        const p = { id: crypto.randomUUID(), text: entrada.postit, x: 8, y: 6, color: '#ffeb3b', w: 220, h: 150 };
+        postitBox.appendChild(this._renderPostit(postitBox, p, entry));
+      }
+
+      wrap.appendChild(frag);
+
+      // Activar carrusel después de insertar
+      BlogUtils.initCarousel(content);
     });
+
+    // Extras tras render
+    this.addImageLazyLoading();
+    this.addVideoPlayPause();
+    this.buildIndex();
+    this.initReactions();
+    this.enablePostits();
+    this.initCommentsAll();
+    this.injectJSONLD();
   }
 
-  /* =============== TOC =============== */
+  /* ===== ÍNDICE ===== */
   buildIndex() {
-    const index = document.getElementById('blog-index');
-    if (!index) return;
+    const nav = document.getElementById('blog-index');
+    if (!nav) return;
     const entries = document.querySelectorAll('.blog-entry');
     const ul = document.createElement('ul');
-    entries.forEach((art,i)=>{
-      const id = art.getAttribute('data-entry-id') || `e${i}`;
-      const t = art.querySelector('.entry-title')?.textContent?.trim() || `Entrada ${i+1}`;
-      const li=document.createElement('li'); const a=document.createElement('a');
-      a.href=`#entry-${id}`; a.textContent=t;
-      a.addEventListener('click',(e)=>{e.preventDefault();document.querySelector(a.getAttribute('href'))?.scrollIntoView({behavior:'smooth'})});
+    entries.forEach((e, i) => {
+      const id = e.getAttribute('data-entry-id') || `e${i}`;
+      const t = e.querySelector('.entry-title')?.textContent?.trim() || `Entrada ${i + 1}`;
+      const li = document.createElement('li'); const a = document.createElement('a');
+      a.href = `#entry-${id}`; a.textContent = t;
+      a.addEventListener('click', (ev) => { ev.preventDefault(); document.querySelector(a.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth' }); });
       li.appendChild(a); ul.appendChild(li);
     });
-    index.innerHTML=''; index.appendChild(ul);
+    nav.innerHTML = ''; nav.appendChild(ul);
   }
   wireIndexMobile() {
-    const btn=document.querySelector('.index-toggle');
-    const index=document.getElementById('blog-index');
-    const overlay=document.getElementById('blog-index-overlay');
-    if(!btn||!index||!overlay) return;
-    const toggle=(open)=>{
-      index.classList.toggle('menu-mobile-open',open);
-      overlay.classList.toggle('hidden',!open);
+    const btn = document.querySelector('.index-toggle');
+    const index = document.getElementById('blog-index');
+    const overlay = document.getElementById('blog-index-overlay');
+    if (!btn || !index || !overlay) return;
+    const toggle = (open) => {
+      index.classList.toggle('menu-mobile-open', open);
+      overlay.classList.toggle('hidden', !open);
       btn.setAttribute('aria-expanded', String(open));
     };
-    btn.addEventListener('click',()=>toggle(!index.classList.contains('menu-mobile-open')));
-    overlay.addEventListener('click',()=>toggle(false));
+    btn.addEventListener('click', () => toggle(!index.classList.contains('menu-mobile-open')));
+    overlay.addEventListener('click', () => toggle(false));
   }
 
-  ensurePerEntryUI(){
-    document.querySelectorAll('.blog-entry').forEach(entry=>{
-      entry.querySelector('.postit-container')?.style.setProperty('position','relative');
-    });
-  }
-
-  /* =============== Reacciones / Favoritos =============== */
+  /* ===== REACCIONES ===== */
   initReactions() {
     const cache = JSON.parse(localStorage.getItem(LS_KEYS.reactions) || '{}');
 
-    document.querySelectorAll('.blog-entry').forEach(entry=>{
+    document.querySelectorAll('.blog-entry').forEach(entry => {
       const id = entry.getAttribute('data-entry-id');
       const wrap = entry.querySelector('.entry-reactions');
       if (!wrap) return;
@@ -327,148 +344,180 @@ class BlogManager {
       const favBtn = wrap.querySelector('.entry-fav');
 
       if (HAS_FIREBASE) {
-        window.firebaseCompatDb.ref(PATHS.reactions(id)).on('value', snap=>{
+        // Contadores live
+        window.firebaseCompatDb.ref(PATHS.reactions(id)).on('value', snap => {
           const counts = snap.val() || {};
-          emojiBtns.forEach(btn=>{
+          emojiBtns.forEach(btn => {
             const emoji = btn.dataset.emoji;
             btn.querySelector('span').textContent = counts[emoji] || 0;
           });
         });
 
-        const attachUserUI = ()=>{
-          const uid = this.uid; if (!uid) return;
-          window.firebaseCompatDb.ref(PATHS.reactionsByUser(id, uid)).on('value', s => {
-            const flags = s.val() || {};
-            emojiBtns.forEach(btn=>{
-              const emoji = btn.dataset.emoji;
-              btn.setAttribute('aria-pressed', String(!!flags[emoji]));
-            });
-          });
-          window.firebaseCompatDb.ref(PATHS.favorites(id, uid)).on('value', s => {
-            const isFav = !!s.val();
-            favBtn?.classList.toggle('active', isFav);
-            favBtn?.setAttribute('aria-pressed', String(isFav));
+        const setPressed = (flags = {}) => {
+          emojiBtns.forEach(btn => {
+            const emoji = btn.dataset.emoji;
+            btn.setAttribute('aria-pressed', String(!!flags[emoji]));
           });
         };
-        attachUserUI();
-        if (!this.uid) window.firebaseCompatAuth.onAuthStateChanged(()=> attachUserUI());
+        const setFav = (v) => {
+          favBtn?.classList.toggle('active', !!v);
+          favBtn?.setAttribute('aria-pressed', String(!!v));
+        };
 
-        emojiBtns.forEach(btn=>{
-          btn.addEventListener('click', async ()=>{
+        const attachUser = () => {
+          const uid = this.uid;
+          if (!uid) return;
+          window.firebaseCompatDb.ref(PATHS.reactionsByUser(id, uid)).on('value', s => setPressed(s.val() || {}));
+          window.firebaseCompatDb.ref(PATHS.favorites(id, uid)).on('value', s => setFav(!!s.val()));
+        };
+        attachUser();
+        if (!this.uid) window.firebaseCompatAuth.onAuthStateChanged(() => attachUser());
+
+        // Clicks
+        emojiBtns.forEach(btn => {
+          btn.addEventListener('click', async () => {
             const emoji = btn.dataset.emoji;
             const uid = this.uid;
-            if (!uid) { alert('Reintentá en 1 segundo… (conectando)'); return; }
+            if (!uid) { alert('Conectando… probá en 1 segundo'); return; }
             const byUserRef = window.firebaseCompatDb.ref(`${PATHS.reactionsByUser(id, uid)}/${emoji}`);
             const exists = (await byUserRef.get()).exists();
             if (exists) return;
             const countRef = window.firebaseCompatDb.ref(`${PATHS.reactions(id)}/${emoji}`);
-            await countRef.transaction(n => (typeof n==='number' ? n : 0) + 1);
+            await countRef.transaction(n => (typeof n === 'number' ? n : 0) + 1);
             await byUserRef.set(true);
-            btn.animate([{transform:'scale(1)'},{transform:'scale(1.15)'},{transform:'scale(1)'}],{duration:180});
+            btn.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.15)' }, { transform: 'scale(1)' }], { duration: 180 });
           });
         });
 
-        favBtn?.addEventListener('click', async ()=>{
+        favBtn?.addEventListener('click', async () => {
           const uid = this.uid;
-          if (!uid) { alert('Reintentá en 1 segundo… (conectando)'); return; }
+          if (!uid) { alert('Conectando… probá en 1 segundo'); return; }
           const ref = window.firebaseCompatDb.ref(PATHS.favorites(id, uid));
           const cur = (await ref.get()).val();
           await ref.set(!cur);
         });
 
       } else {
-        // LocalStorage fallback
-        const state = cache[id] || { '🧶':0, '✨':0, fav:false };
-        emojiBtns.forEach(btn=>{
+        // Fallback local
+        const state = cache[id] || { '🧶': 0, '✨': 0, fav: false };
+        emojiBtns.forEach(btn => {
           const emoji = btn.dataset.emoji;
           btn.querySelector('span').textContent = state[emoji] || 0;
-          btn.addEventListener('click', ()=>{
-            state[emoji]=(state[emoji]||0)+1;
-            btn.querySelector('span').textContent=state[emoji];
-            cache[id]=state; localStorage.setItem(LS_KEYS.reactions, JSON.stringify(cache));
-            btn.animate([{transform:'scale(1)'},{transform:'scale(1.15)'},{transform:'scale(1)'}],{duration:180});
+          btn.addEventListener('click', () => {
+            state[emoji] = (state[emoji] || 0) + 1;
+            btn.querySelector('span').textContent = state[emoji];
+            cache[id] = state;
+            localStorage.setItem(LS_KEYS.reactions, JSON.stringify(cache));
+            btn.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.15)' }, { transform: 'scale(1)' }], { duration: 180 });
           });
         });
-        if (favBtn){
+        if (favBtn) {
           favBtn.classList.toggle('active', !!state.fav);
           favBtn.setAttribute('aria-pressed', String(!!state.fav));
-          favBtn.addEventListener('click', ()=>{
-            state.fav=!state.fav;
+          favBtn.addEventListener('click', () => {
+            state.fav = !state.fav;
             favBtn.classList.toggle('active', state.fav);
             favBtn.setAttribute('aria-pressed', String(state.fav));
-            cache[id]=state; localStorage.setItem(LS_KEYS.reactions, JSON.stringify(cache));
+            cache[id] = state;
+            localStorage.setItem(LS_KEYS.reactions, JSON.stringify(cache));
           });
         }
       }
     });
   }
 
-  /* =============== Post-its =============== */
+  /* ===== POST-ITS ===== */
   enablePostits() {
     const store = JSON.parse(localStorage.getItem(LS_KEYS.postits) || '{}');
 
-    document.querySelectorAll('.blog-entry').forEach(entry=>{
+    document.querySelectorAll('.blog-entry').forEach(entry => {
       const id = entry.getAttribute('data-entry-id');
       const box = entry.querySelector('.postit-container');
-      if(!box) return;
-      box.style.position = 'relative';
+      if (!box) return;
 
-      // restaurar
-      (store[id] || []).forEach(p=> box.appendChild(this._renderPostit(box, p, entry)));
+      box.style.position = box.style.position || 'relative';
 
-      // botón crear
-      if (!box.querySelector('.postit-add')){
+      // Restaurar guardados
+      (store[id] || []).forEach(p => box.appendChild(this._renderPostit(box, p, entry)));
+
+      // Botón para crear
+      if (!box.querySelector('.postit-add')) {
         const add = document.createElement('button');
-        add.textContent='➕ Post-it';
-        add.className='postit-add';
-        add.addEventListener('click', ()=>{
-          const p = { id: crypto.randomUUID(), text:'Escribe aquí…', x: 6+Math.random()*40, y: 4+Math.random()*30, color:'#ffeb3b', w:220, h:150 };
+        add.textContent = '➕ Post-it';
+        add.className = 'postit-add';
+        add.addEventListener('click', () => {
+          const p = { id: crypto.randomUUID(), text: 'Escribe aquí…', x: 6 + Math.random() * 40, y: 4 + Math.random() * 30, color: '#ffeb3b', w: 220, h: 150 };
           box.appendChild(this._renderPostit(box, p, entry));
           this._persistPostits(entry);
         });
         box.appendChild(add);
       }
-
-      // persistir cambios
-      ['pointerup','keyup','blur'].forEach(evt=> box.addEventListener(evt, ()=>this._persistPostits(entry)));
-      window.addEventListener('beforeunload', ()=>this._persistPostits(entry), { once:true });
     });
   }
 
-  _renderPostit(container, p, entryEl){
+  _renderPostit(container, p, entryEl) {
     const el = document.createElement('div');
     el.className = 'postit';
     el.dataset.pid = p.id;
     el.style.position = 'absolute';
+    el.style.zIndex = '20';
+    el.style.cursor = 'grab';
     el.style.background = p.color || '#ffeb3b';
-    el.style.left  = (typeof p.x === 'number' ? p.x + '%' : p.x || '6%');
-    el.style.top   = (typeof p.y === 'number' ? p.y + '%' : p.y || '6%');
-    if (p.w) el.style.width  = (typeof p.w === 'number' ? p.w + 'px' : p.w);
+    el.style.left = (typeof p.x === 'number' ? p.x + '%' : p.x || '6%');
+    el.style.top = (typeof p.y === 'number' ? p.y + '%' : p.y || '6%');
+    if (p.w) el.style.width = (typeof p.w === 'number' ? p.w + 'px' : p.w);
     if (p.h) el.style.height = (typeof p.h === 'number' ? p.h + 'px' : p.h);
 
-    // barra
+    // Barra
     const bar = document.createElement('div');
     bar.className = 'postit-bar';
+    bar.style.display = 'flex';
+    bar.style.alignItems = 'center';
+    bar.style.justifyContent = 'space-between';
+    bar.style.gap = '.5rem';
+    bar.style.padding = '.25rem .4rem';
+    bar.style.cursor = 'grab';
+    bar.style.userSelect = 'none';
     bar.style.touchAction = 'none';
-    const title = document.createElement('span'); title.className = 'title'; title.textContent = 'Nota';
 
-    const tools = document.createElement('div'); tools.className = 'tools';
+    const title = document.createElement('span');
+    title.className = 'title';
+    title.textContent = 'Nota';
 
-    // paleta
-    const palette = document.createElement('div'); palette.className = 'postit-color-options';
-    ['#f5eead','#fca8c4','#b8f1bb','#42a5f5'].forEach(c=>{
-      const dot = document.createElement('span'); dot.className = 'color-option'; dot.style.background = c;
-      dot.addEventListener('click', (e)=>{ e.stopPropagation(); el.style.background = c; });
+    const tools = document.createElement('div');
+    tools.className = 'tools';
+    tools.style.display = 'flex';
+    tools.style.alignItems = 'center';
+    tools.style.gap = '.35rem';
+
+    const palette = document.createElement('div');
+    palette.className = 'postit-color-options';
+    palette.style.display = 'inline-flex';
+    palette.style.gap = '.25rem';
+
+    ['#f5eead', '#fca8c4', '#b8f1bb', '#42a5f5'].forEach(c => {
+      const dot = document.createElement('span');
+      dot.className = 'color-option';
+      Object.assign(dot.style, {
+        width: '14px', height: '14px', borderRadius: '999px',
+        border: '2px solid #fff', boxShadow: '0 0 0 1px rgba(0,0,0,.1)',
+        background: c, display: 'inline-block'
+      });
+      dot.addEventListener('pointerdown', e => e.stopPropagation()); // no empezar drag
+      dot.addEventListener('click', (e) => { e.stopPropagation(); el.style.background = c; this._persistPostits(entryEl); });
       palette.appendChild(dot);
     });
 
-    // borrar
     const btnDel = document.createElement('button');
     btnDel.type = 'button';
     btnDel.title = 'Eliminar';
-    btnDel.setAttribute('aria-label','Eliminar nota');
-    btnDel.innerHTML = '🗑️';
-    btnDel.addEventListener('click', (e)=>{
+    btnDel.setAttribute('aria-label', 'Eliminar nota');
+    btnDel.textContent = '🗑️';
+    btnDel.style.background = 'none';
+    btnDel.style.border = '0';
+    btnDel.style.cursor = 'pointer';
+    btnDel.addEventListener('pointerdown', e => e.stopPropagation());
+    btnDel.addEventListener('click', (e) => {
       e.stopPropagation();
       el.remove();
       this._persistPostits(entryEl);
@@ -479,57 +528,59 @@ class BlogManager {
     bar.appendChild(title);
     bar.appendChild(tools);
 
-    // contenido
     const content = document.createElement('div');
     content.className = 'postit-content';
     content.contentEditable = true;
     content.textContent = p.text || '';
+    content.style.padding = '.5rem .6rem .7rem';
+    content.style.minHeight = '110px';
+    content.style.lineHeight = '1.25';
+    content.addEventListener('input', () => this._persistPostits(entryEl));
 
     el.appendChild(bar);
     el.appendChild(content);
 
-    // ===== DRAG relativo al contenedor =====
+    // Drag limitado al contenedor
     let dragging = false, offsetX = 0, offsetY = 0;
+    const crect = () => container.getBoundingClientRect();
 
-    const getContainerRect = () => container.getBoundingClientRect();
-
-    const onDown = (e)=>{
+    bar.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.tools')) return; // si tocó paleta/borrar, no drag
       dragging = true;
       el.classList.add('dragging');
       bar.setPointerCapture?.(e.pointerId);
-      const rect = el.getBoundingClientRect();
-      offsetX = e.clientX - rect.left;
-      offsetY = e.clientY - rect.top;
-    };
-    const onMove = (e)=>{
+      const r = el.getBoundingClientRect();
+      offsetX = e.clientX - r.left;
+      offsetY = e.clientY - r.top;
+    });
+
+    bar.addEventListener('pointermove', (e) => {
       if (!dragging) return;
-      const crect = getContainerRect();
-      let left = e.clientX - crect.left - offsetX;
-      let top  = e.clientY - crect.top  - offsetY;
-      left = Math.max(0, Math.min(left, crect.width  - el.offsetWidth));
-      top  = Math.max(0, Math.min(top,  crect.height - el.offsetHeight));
-      el.style.left = (left / crect.width) * 100 + '%';
-      el.style.top  = (top  / crect.height) * 100 + '%';
-    };
-    const onUp = (e)=>{
+      const c = crect();
+      let left = e.clientX - c.left - offsetX;
+      let top = e.clientY - c.top - offsetY;
+      left = Math.max(0, Math.min(left, c.width - el.offsetWidth));
+      top = Math.max(0, Math.min(top, c.height - el.offsetHeight));
+      el.style.left = (left / c.width) * 100 + '%';
+      el.style.top = (top / c.height) * 100 + '%';
+    });
+
+    const stop = (e) => {
       if (!dragging) return;
       dragging = false;
       el.classList.remove('dragging');
       bar.releasePointerCapture?.(e.pointerId);
       this._persistPostits(entryEl);
     };
-
-    bar.addEventListener('pointerdown', onDown);
-    bar.addEventListener('pointermove', onMove);
-    bar.addEventListener('pointerup', onUp);
-    bar.addEventListener('pointercancel', onUp);
+    bar.addEventListener('pointerup', stop);
+    bar.addEventListener('pointercancel', stop);
 
     return el;
   }
 
-  _persistPostits(entry){
-    const id = entry.getAttribute('data-entry-id');
-    const list = [...entry.querySelectorAll('.postit')].map(el=>{
+  _persistPostits(entryEl) {
+    const id = entryEl.getAttribute('data-entry-id');
+    const list = [...entryEl.querySelectorAll('.postit')].map(el => {
       const style = getComputedStyle(el);
       return {
         id: el.dataset.pid,
@@ -537,8 +588,8 @@ class BlogManager {
         color: style.backgroundColor,
         x: parseFloat(style.left),   // en %
         y: parseFloat(style.top),    // en %
-        w: parseInt(style.width,10),
-        h: parseInt(style.height,10)
+        w: parseInt(style.width, 10),
+        h: parseInt(style.height, 10)
       };
     });
     const store = JSON.parse(localStorage.getItem(LS_KEYS.postits) || '{}');
@@ -546,42 +597,56 @@ class BlogManager {
     localStorage.setItem(LS_KEYS.postits, JSON.stringify(store));
   }
 
-  /* =============== Comentarios (con borrar para admin) =============== */
-  initCommentsAll(){
-    document.querySelectorAll('.blog-entry').forEach(entry=>{
+  /* ===== COMENTARIOS ===== */
+  initCommentsAll() {
+    document.querySelectorAll('.blog-entry').forEach(entry => {
       const id = entry.getAttribute('data-entry-id');
       const section = entry.querySelector('.entry-comments');
-      if (!section) return;
       const list = section.querySelector('.comments-list');
       const form = section.querySelector('.comment-form');
-      if (!list || !form) return;
 
-      const render = (comments)=>{
-        if (!Array.isArray(comments) || !comments.length){
+      const render = (comments) => {
+        const arr = Array.isArray(comments) ? comments.slice().sort((a, b) => a.ts - b.ts) : [];
+        if (!arr.length) {
           list.innerHTML = '<li class="comment-item"><div class="comment-text">Sé el primero en comentar ✨</div></li>';
           return;
         }
-        list.innerHTML = comments
-          .sort((a,b)=>a.ts-b.ts)
-          .map(c=>`
-            <li class="comment-item" data-id="${c.id}">
-              <div class="comment-meta">
-                <span class="comment-name">${c.name || 'Anónimo'}</span>
-                <span>•</span>
-                <time datetime="${new Date(c.ts).toISOString()}">${new Date(c.ts).toLocaleString()}</time>
-                ${IS_ADMIN ? '<button class="comment-del" title="Eliminar">🗑️</button>' : ''}
-              </div>
-              <div class="comment-text">${c.text}</div>
-            </li>
-          `).join('');
+        list.innerHTML = arr.map(c => `
+          <li class="comment-item" data-id="${c.id}">
+            <div class="comment-meta">
+              <span class="comment-name">${c.name || 'Anónimo'}</span>
+              <span>•</span>
+              <time datetime="${new Date(c.ts).toISOString()}">${new Date(c.ts).toLocaleString()}</time>
+              ${ADMIN ? `<button class="comment-del" data-id="${c.id}" title="Eliminar">🗑️</button>` : ''}
+            </div>
+            <div class="comment-text">${c.text}</div>
+          </li>
+        `).join('');
+
+        if (ADMIN) {
+          list.querySelectorAll('.comment-del').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              const cid = btn.dataset.id;
+              if (!confirm('¿Eliminar comentario?')) return;
+              if (HAS_FIREBASE) {
+                await window.firebaseCompatDb.ref(`${PATHS.comments(id)}/${cid}`).remove().catch(console.error);
+              } else {
+                const key = LS_KEYS.comments(id);
+                const current = JSON.parse(localStorage.getItem(key) || '[]').filter(c => c.id !== cid);
+                localStorage.setItem(key, JSON.stringify(current));
+                render(current);
+              }
+            });
+          });
+        }
       };
 
+      // Suscripción / carga
       if (HAS_FIREBASE) {
-        window.firebaseCompatDb.ref(PATHS.comments(id)).on('value', snap=>{
-          const val = snap.val() || {};
-          render(Object.values(val));
-        }, err=>{
-          console.warn('FB comments error:', err);
+        window.firebaseCompatDb.ref(PATHS.comments(id)).on('value', snap => {
+          render(Object.values(snap.val() || {}));
+        }, err => {
+          console.warn('Firebase comments error:', err);
           const ls = JSON.parse(localStorage.getItem(LS_KEYS.comments(id)) || '[]');
           render(ls);
         });
@@ -590,22 +655,24 @@ class BlogManager {
         render(ls);
       }
 
-      form.addEventListener('submit', async (e)=>{
+      // Publicar
+      form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const name = BlogUtils.sanitize((form.name?.value || 'Anónimo').trim());
-        const text = BlogUtils.sanitize((form.text?.value || '').trim());
+        const name = BlogUtils.sanitize((form.name.value || 'Anónimo').trim());
+        const text = BlogUtils.sanitize((form.text.value || '').trim());
         if (!text) return;
 
+        // Anti-spam simple: 10s
         const last = Number(localStorage.getItem(LS_KEYS.lastCommentAt) || 0);
-        if (Date.now() - last < 10_000) { alert('Esperá unos segundos antes de comentar otra vez 🙏'); return; }
+        if (Date.now() - last < 10_000) { alert('Esperá unos segundos antes de comentar de nuevo 🙏'); return; }
 
         const comment = { id: crypto.randomUUID(), name, text, ts: Date.now(), uid: this.uid || null };
 
         if (HAS_FIREBASE) {
           try {
             await window.firebaseCompatDb.ref(`${PATHS.comments(id)}/${comment.id}`).set(comment);
-          } catch(e) {
-            console.warn('FB write fail, saving LS', e);
+          } catch (e) {
+            // Fallback local si falla
             const key = LS_KEYS.comments(id);
             const arr = JSON.parse(localStorage.getItem(key) || '[]'); arr.push(comment);
             localStorage.setItem(key, JSON.stringify(arr));
@@ -614,109 +681,66 @@ class BlogManager {
           const key = LS_KEYS.comments(id);
           const arr = JSON.parse(localStorage.getItem(key) || '[]'); arr.push(comment);
           localStorage.setItem(key, JSON.stringify(arr));
-          const ls = JSON.parse(localStorage.getItem(key) || '[]'); render(ls);
+          render(arr);
         }
 
         form.reset();
         localStorage.setItem(LS_KEYS.lastCommentAt, String(Date.now()));
       });
-
-      // eliminar (solo admin)
-      list.addEventListener('click', async (e)=>{
-        const btn = e.target.closest('.comment-del');
-        if (!btn || !IS_ADMIN) return;
-        const li = btn.closest('.comment-item');
-        const cid = li?.dataset.id;
-        if (!cid) return;
-        if (!confirm('¿Eliminar este comentario?')) return;
-
-        if (HAS_FIREBASE) {
-          try { await window.firebaseCompatDb.ref(`${PATHS.comments(id)}/${cid}`).remove(); }
-          catch (err) { alert('No se pudo eliminar en servidor.'); console.warn(err); }
-        } else {
-          const key = LS_KEYS.comments(id);
-          const arr = JSON.parse(localStorage.getItem(key) || '[]').filter(c=>c.id !== cid);
-          localStorage.setItem(key, JSON.stringify(arr));
-          render(arr);
-        }
-      });
     });
   }
 
-  /* =============== Lazy / Videos =============== */
+  /* ===== LAZY / VIDEOS ===== */
   addImageLazyLoading() {
     const imgs = document.querySelectorAll('.entrada-imagen');
     if (!imgs.length) return;
-    const io = new IntersectionObserver((entries, obs)=>{
-      entries.forEach(e=>{
-        if(!e.isIntersecting) return;
-        const img=e.target; img.decode?.().catch(()=>{}).finally(()=> img.style.opacity=1);
+    const io = new IntersectionObserver((entries, obs) => {
+      entries.forEach(e => {
+        if (!e.isIntersecting) return;
+        const img = e.target;
+        img.decode?.().catch(() => { }).finally(() => img.style.opacity = 1);
         obs.unobserve(img);
       });
-    },{rootMargin:'200px 0px 200px 0px'});
-    imgs.forEach(i=>{ i.style.opacity=.001; io.observe(i); });
+    }, { rootMargin: '200px 0px 200px 0px' });
+    imgs.forEach(i => { i.style.opacity = .001; io.observe(i); });
   }
   addVideoPlayPause() {
     const iframes = document.querySelectorAll('.entrada-video');
     if (!iframes.length) return;
-    const io = new IntersectionObserver((entries)=>{
-      entries.forEach(({isIntersecting,target})=>{
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(({ isIntersecting, target }) => {
         if (!/youtube|vimeo/.test(target.src)) return;
-        const cmd = JSON.stringify({ event:'command', func: isIntersecting ? 'playVideo' : 'pauseVideo' });
+        const cmd = JSON.stringify({ event: 'command', func: isIntersecting ? 'playVideo' : 'pauseVideo' });
         target.contentWindow?.postMessage(cmd, '*');
       });
-    },{threshold:.3});
-    iframes.forEach(v=>io.observe(v));
+    }, { threshold: .3 });
+    iframes.forEach(v => io.observe(v));
   }
 
-  /* =============== SEO =============== */
-  injectJSONLD(){
-    const slot=document.getElementById('jsonld-slot'); if(!slot) return;
-    const items=[...document.querySelectorAll('.blog-entry')].map(e=>{
-      const name=e.querySelector('.entry-title')?.textContent?.trim();
-      const dateTxt=e.querySelector('.entry-date')?.textContent?.trim();
-      const img=e.querySelector('.entrada-imagen')?.src;
-      const text=e.querySelector('.entry-text')?.innerText?.trim();
-      const dateISO=dateTxt?.split('/')?.reverse()?.join('-');
-      return {"@type":"BlogPosting","headline":name,"image":img?[img]:undefined,"datePublished":dateISO,"articleBody":text,"author":{"@type":"Person","name":"Patofelting"}};
+  /* ===== SEO ===== */
+  injectJSONLD() {
+    const slot = document.getElementById('jsonld-slot'); if (!slot) return;
+    const items = [...document.querySelectorAll('.blog-entry')].map(e => {
+      const name = e.querySelector('.entry-title')?.textContent?.trim();
+      const dateTxt = e.querySelector('.entry-date')?.textContent?.trim();
+      const img = e.querySelector('.entrada-imagen')?.src;
+      const text = e.querySelector('.entry-text')?.innerText?.trim();
+      const dateISO = dateTxt?.split('/')?.reverse()?.join('-');
+      return { "@type": "BlogPosting", "headline": name, "image": img ? [img] : undefined, "datePublished": dateISO, "articleBody": text, "author": { "@type": "Person", "name": "Patofelting" } };
     });
-    slot.textContent=JSON.stringify({"@context":"https://schema.org","@graph":items});
+    slot.textContent = JSON.stringify({ "@context": "https://schema.org", "@graph": items });
   }
 
-  recargar(){ this.cargarEntradasDesdeCSV(); }
+  recargar() { this.cargarEntradasDesdeCSV(); }
 }
 
-/* ============================ Ecommerce hooks (opcional) ============================ */
-class BlogEcommerceIntegration{
-  constructor(){ this.addProductLinks(); this.addCallToActionTracking(); }
-  addProductLinks(){
-    document.querySelectorAll('[data-product]').forEach(m=>{
-      const id=m.dataset.product;
-      m.addEventListener('click',()=>{ window.location.href=`index.html#productos?highlight=${id}`; });
-      Object.assign(m.style,{cursor:'pointer',textDecoration:'underline',color:'var(--primary-green)'});
-    });
-  }
-  addCallToActionTracking(){
-    document.querySelectorAll('.cta-button-blog').forEach(cta=>{
-      cta.addEventListener('click',(e)=>{
-        const action=e.target.textContent.trim();
-        if(typeof gtag!=='undefined'){ gtag('event','blog_cta_click',{event_category:'Blog',event_label:action}); }
-      });
-    });
-  }
-}
-
-/* ============================ Arranque ============================ */
-let blogManager;
-document.addEventListener('DOMContentLoaded',()=>{
-  blogManager = new BlogManager();
-  new BlogEcommerceIntegration();
-  const y=document.getElementById('current-year'); if(y) y.textContent=new Date().getFullYear();
-});
-
-// helpers admin
-window.enableBlogAdmin = () => { localStorage.setItem('pf_admin','1'); location.reload(); };
-window.disableBlogAdmin = () => { localStorage.removeItem('pf_admin'); location.reload(); };
-
-// Reintento público
+/* ---------- EXPOSE ---------- */
 window.recargarBlog = () => window.blogManager?.recargar();
+
+/* ---------- Arranque ---------- */
+let blogManager;
+document.addEventListener('DOMContentLoaded', () => {
+  blogManager = new BlogManager();
+  const y = document.getElementById('current-year');
+  if (y) y.textContent = new Date().getFullYear();
+});
