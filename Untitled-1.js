@@ -368,3 +368,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 window.recargarBlog = () => {
   if (blogManager) blogManager.recargar();
 };
+
+
+const loader = document.getElementById('blog-loading'); if (loader) loader.style.display = 'none';
