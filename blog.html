@@ -6,14 +6,16 @@
   <meta name="description" content="El cuaderno de bitácora de Patofelting - Historias sobre fibras, agujas y creaciones artesanales" />
   <title>El Cuaderno de Patofelting - Mi Historia con las Fibras</title>
 
-  <!-- Tipografías -->
+  <!-- Tipografías con preload optimizado -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Nunito:wght@400;600&family=Kalam:wght@300;400;700&display=swap" rel="stylesheet" />
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Nunito:wght@400;600&family=Kalam:wght@300;400;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Nunito:wght@400;600&family=Kalam:wght@300;400;700&display=swap" /></noscript>
 
-  <!-- Favicon -->
-  <link rel="icon" href="favicon.ico" type="image/x-icon" />
-  <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
+  <!-- Favicon optimizado -->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="img/patofelting.jpg" type="image/jpeg" />
+  <link rel="apple-touch-icon" href="img/patofelting.jpg" />
 
   <!-- Estilos -->
   <link rel="stylesheet" href="blog.css" />
@@ -117,11 +119,27 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
   <!-- Configuración Firebase -->
   <script src="firebase-config.js"></script>
 
   <!-- Aplicación -->
   <script src="blog.js"></script>
+
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(registration => {
+            console.log('Service Worker registrado exitosamente:', registration.scope);
+          })
+          .catch(error => {
+            console.log('Error registrando Service Worker:', error);
+          });
+      });
+    }
+  </script>
 </body>
 </html>

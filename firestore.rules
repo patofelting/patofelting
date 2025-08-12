@@ -1,0 +1,36 @@
+// Reglas de seguridad de Firestore para los comentarios del blog
+// Estas reglas deben configurarse en la consola de Firebase
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Colección de comentarios - lectura pública, escritura autenticada
+    match /comments/{commentId} {
+      // Permite leer todos los comentarios (comentarios públicos)
+      allow read: if true;
+      
+      // Permite crear nuevos comentarios si el usuario está autenticado
+      allow create: if request.auth != null
+        && resource == null
+        && request.resource.data.keys().hasAll(['id', 'postId', 'name', 'text', 'timestamp', 'uid'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.name.size() <= 50
+        && request.resource.data.text is string  
+        && request.resource.data.text.size() >= 1
+        && request.resource.data.text.size() <= 600
+        && request.resource.data.timestamp is number
+        && request.resource.data.uid == request.auth.uid;
+      
+      // Permite eliminar comentarios si es el autor o es admin
+      allow delete: if request.auth != null
+        && (resource.data.uid == request.auth.uid 
+            || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    
+    // Colección de administradores (solo lectura para verificación)
+    match /admins/{adminId} {
+      allow read: if request.auth != null && request.auth.uid == adminId;
+    }
+  }
+}

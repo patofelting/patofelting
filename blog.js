@@ -7,7 +7,7 @@
 /* ---------- CONFIG ---------- */
 const CSV_URL = window.BLOG_CSV_URL || 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?gid=127717360&single=true&output=csv';
 
-const HAS_FIREBASE = !!(window.firebaseCompatDb && window.firebaseCompatAuth);
+const HAS_FIREBASE = !!(window.firebaseCompatDb && window.firebaseCompatAuth && window.firebaseFirestore);
 const ADMIN = (() => {
   const q = new URLSearchParams(location.search);
   if (q.has('pfadmin')) {
@@ -29,7 +29,9 @@ const PATHS = {
   reactions: (id) => `/blog/reactions/${id}`,
   reactionsByUser: (id, uid) => `/blog/reactionsByUser/${id}/${uid}`,
   favorites: (id, uid) => `/blog/favorites/${id}/${uid}`,
-  comments: (id) => `/blog/comments/${id}`
+  comments: (id) => `/blog/comments/${id}`,
+  // Firestore collections
+  firestoreComments: 'comments'
 };
 
 /* ---------- UTILS ---------- */
@@ -153,7 +155,31 @@ class BlogManager {
       const comments = JSON.parse(localStorage.getItem(key) || '[]');
       if (comments.length) all[entrada.id] = comments;
     });
-    console.log('Todos los comentarios:', all);
+    
+    // Si hay Firebase, también exportar comentarios de Firestore
+    if (HAS_FIREBASE) {
+      console.log('Exportando comentarios desde Firestore...');
+      window.firebaseFirestore.collection(PATHS.firestoreComments)
+        .get()
+        .then(snapshot => {
+          const firestoreComments = {};
+          snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            if (!firestoreComments[data.postId]) {
+              firestoreComments[data.postId] = [];
+            }
+            firestoreComments[data.postId].push({
+              id: doc.id,
+              ...data
+            });
+          });
+          console.log('Comentarios de Firestore:', firestoreComments);
+          console.log('Comentarios de localStorage:', all);
+        })
+        .catch(console.error);
+    }
+    
+    console.log('Todos los comentarios (localStorage):', all);
     return all;
   }
 
@@ -598,7 +624,7 @@ class BlogManager {
     localStorage.setItem(LS_KEYS.postits, JSON.stringify(store));
   }
 
-  /* ===== COMENTARIOS ===== */
+  /* ===== COMENTARIOS (Firestore) ===== */
   initCommentsAll() {
     document.querySelectorAll('.blog-entry').forEach(entry => {
       const id = entry.getAttribute('data-entry-id');
@@ -607,7 +633,7 @@ class BlogManager {
       const form = section.querySelector('.comment-form');
 
       const render = (comments) => {
-        const arr = Array.isArray(comments) ? comments.slice().sort((a, b) => a.ts - b.ts) : [];
+        const arr = Array.isArray(comments) ? comments.slice().sort((a, b) => a.timestamp - b.timestamp) : [];
         if (!arr.length) {
           list.innerHTML = '<li class="comment-item"><div class="comment-text">Sé el primero en comentar ✨</div></li>';
           return;
@@ -617,7 +643,7 @@ class BlogManager {
             <div class="comment-meta">
               <span class="comment-name">${c.name || 'Anónimo'}</span>
               <span>•</span>
-              <time datetime="${new Date(c.ts).toISOString()}">${new Date(c.ts).toLocaleString()}</time>
+              <time datetime="${new Date(c.timestamp).toISOString()}">${new Date(c.timestamp).toLocaleString()}</time>
               ${ADMIN ? `<button class="comment-del" data-id="${c.id}" title="Eliminar">🗑️</button>` : ''}
             </div>
             <div class="comment-text">${c.text}</div>
@@ -630,7 +656,17 @@ class BlogManager {
               const cid = btn.dataset.id;
               if (!confirm('¿Eliminar comentario?')) return;
               if (HAS_FIREBASE) {
-                await window.firebaseCompatDb.ref(`${PATHS.comments(id)}/${cid}`).remove().catch(console.error);
+                try {
+                  await window.firebaseFirestore.collection(PATHS.firestoreComments)
+                    .where('postId', '==', id)
+                    .where('id', '==', cid)
+                    .get()
+                    .then(snapshot => {
+                      snapshot.docs[0]?.ref.delete();
+                    });
+                } catch (error) {
+                  console.error('Error eliminando comentario de Firestore:', error);
+                }
               } else {
                 const key = LS_KEYS.comments(id);
                 const current = JSON.parse(localStorage.getItem(key) || '[]').filter(c => c.id !== cid);
@@ -642,22 +678,35 @@ class BlogManager {
         }
       };
 
-      // Suscripción / carga
+      // Suscripción / carga con Firestore
       if (HAS_FIREBASE) {
-        window.firebaseCompatDb.ref(PATHS.comments(id)).on('value', snap => {
-          console.log('Comentarios recibidos de Firebase:', snap.val());
-          render(Object.values(snap.val() || {}));
-        }, err => {
-          console.warn('Firebase comments error:', err);
+        try {
+          window.firebaseFirestore.collection(PATHS.firestoreComments)
+            .where('postId', '==', id)
+            .orderBy('timestamp', 'asc')
+            .onSnapshot(snapshot => {
+              const comments = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+              }));
+              console.log('Comentarios recibidos de Firestore:', comments);
+              render(comments);
+            }, err => {
+              console.warn('Firestore comments error, fallback to localStorage:', err);
+              const ls = JSON.parse(localStorage.getItem(LS_KEYS.comments(id)) || '[]');
+              render(ls);
+            });
+        } catch (error) {
+          console.warn('Error inicializando Firestore comments, usando localStorage:', error);
           const ls = JSON.parse(localStorage.getItem(LS_KEYS.comments(id)) || '[]');
           render(ls);
-        });
+        }
       } else {
         const ls = JSON.parse(localStorage.getItem(LS_KEYS.comments(id)) || '[]');
         render(ls);
       }
 
-      // Publicar
+      // Publicar comentario
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const name = BlogUtils.sanitize((form.name.value || 'Anónimo').trim());
@@ -672,10 +721,11 @@ class BlogManager {
         }
 
         const comment = { 
-          id: crypto.randomUUID(), 
+          id: crypto.randomUUID(),
+          postId: id,
           name, 
           text, 
-          ts: Date.now(), 
+          timestamp: Date.now(),
           uid: this.uid || null 
         };
 
@@ -683,9 +733,11 @@ class BlogManager {
 
         if (HAS_FIREBASE) {
           try {
-            await window.firebaseCompatDb.ref(`${PATHS.comments(id)}/${comment.id}`).set(comment);
+            // Guardar en Firestore
+            await window.firebaseFirestore.collection(PATHS.firestoreComments).add(comment);
+            console.log('Comentario guardado en Firestore exitosamente');
           } catch (e) {
-            console.error('Error al guardar en Firebase, usando localStorage:', e);
+            console.error('Error al guardar en Firestore, usando localStorage:', e);
             const key = LS_KEYS.comments(id);
             const arr = JSON.parse(localStorage.getItem(key) || '[]'); 
             arr.push(comment);
