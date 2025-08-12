@@ -5,14 +5,15 @@
 ========================================================= */
 
 /* ========= CONFIG FIREBASE (rellena con tus credenciales) ========= */
-const FIREBASE_CONFIG = {
-  apiKey: "TU_APIKEY",
-  authDomain: "TU_AUTH_DOMAIN",
-  projectId: "TU_PROJECT_ID",
-  storageBucket: "TU_BUCKET",
-  messagingSenderId: "TU_SENDER_ID",
-  appId: "TU_APP_ID"
-};
+  const cfg = {
+    apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
+    authDomain: "patofelting-b188f.firebaseapp.com",
+    databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
+    projectId: "patofelting-b188f",
+    storageBucket: "patofelting-b188f.appspot.com",
+    messagingSenderId: "858377467588",
+    appId: "1:858377467588:web:cade9de05ebccc17f87b91"
+  };
 /* ================================================================ */
 
 /* ========= URL del CSV (tu Google Sheets) ========= */
@@ -520,3 +521,4 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 // Exponer helpers
 window.BlogUtils = BlogUtils;
 window.recargarBlog = ()=> blogManager && blogManager.recargar();
+
