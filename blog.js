@@ -1,42 +1,59 @@
 /* =========================================================
-   Patofelting · blog.js (experiencia premiada)
-   - Mantiene tu estructura HTML (no se toca blog.html)
-   - Solo requiere configurar FIREBASE_CONFIG
+   Patofelting · blog.js (edición limpia y premiable)
+   - Respeta tu estética original (cuaderno)
+   - Sin tocar blog.html / blog.css
+   - Añade: Firestore comentarios + votos, UX suave y robustez
+   - Carga CSV con reintentos y timeout
 ========================================================= */
 
-/* ========= CONFIG FIREBASE (rellena con tus credenciales) ========= */
-  const cfg = {
-    apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
-    authDomain: "patofelting-b188f.firebaseapp.com",
-    databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
-    projectId: "patofelting-b188f",
-    storageBucket: "patofelting-b188f.appspot.com",
-    messagingSenderId: "858377467588",
-    appId: "1:858377467588:web:cade9de05ebccc17f87b91"
-  };
-/* ================================================================ */
+/* ==== Firebase config (tu proyecto) ==== */
+const cfg = {
+  apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
+  authDomain: "patofelting-b188f.firebaseapp.com",
+  databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
+  projectId: "patofelting-b188f",
+  storageBucket: "patofelting-b188f.appspot.com",
+  messagingSenderId: "858377467588",
+  appId: "1:858377467588:web:cade9de05ebccc17f87b91"
+};
 
-/* ========= URL del CSV (tu Google Sheets) ========= */
+/* ==== Fuente de datos (tu Google Sheets) ==== */
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?gid=127717360&single=true&output=csv';
 
-/* ========= Utilidades ========= */
+/* =========================================================
+   Utilidades
+========================================================= */
 class BlogUtils {
   static formatearFecha(fecha) {
     if (!fecha) return '';
     const [d,m,y] = fecha.split('/');
     return `${d}/${m}/${y}`;
   }
-  static mostrarMensajeError() {
+
+  static limpiarURLs(urls) {
+    if (!urls) return [];
+    return urls.split(',').map(u=>u.trim()).filter(Boolean);
+  }
+
+  static calculateReadingTime(rootSel='.blog-main') {
+    const el = document.querySelector(rootSel);
+    if (!el) return 1;
+    const words = el.textContent.trim().split(/\s+/).length;
+    return Math.max(1, Math.ceil(words/200));
+  }
+
+  static showError(message='Hubo un error al cargar las entradas. Intenta de nuevo.') {
     const c = document.getElementById('main-content');
     if (!c) return;
     c.innerHTML = `
       <div class="blog-error" role="alert">
         <span class="error-icon">❌</span>
-        <div class="error-message">Hubo un error al cargar las entradas. Por favor, intenta de nuevo.</div>
+        <div class="error-message">${message}</div>
         <button class="retry-button" onclick="window.recargarBlog()">Reintentar</button>
       </div>`;
   }
-  static mostrarMensajeVacio() {
+
+  static showEmpty() {
     const c = document.getElementById('main-content');
     if (!c) return;
     c.innerHTML = `
@@ -45,93 +62,17 @@ class BlogUtils {
         <div class="error-message">No hay historias para mostrar aún. ¡Vuelve pronto!</div>
       </div>`;
   }
-  static limpiarURLs(urls) {
-    if (!urls) return [];
-    return urls.split(',').map(s=>s.trim()).filter(Boolean);
-  }
-  static calculateReadingTime() {
-    const el = document.querySelector('.blog-main');
-    if (!el) return 1;
-    const words = el.textContent.trim().split(/\s+/).length;
-    return Math.max(1, Math.ceil(words/200));
-  }
+
   static preload(href, as, type){
-    const l = document.createElement('link');
-    l.rel = 'preload'; l.href = href; l.as = as;
+    const l = document.createElement('link'); l.rel='preload'; l.href=href; l.as=as;
     if (type) l.type = type;
     document.head.appendChild(l);
   }
 }
 
-/* ========= MICRO: Luz del día (sombras por hora) ========= */
-function applySunlightShadows(){
-  const now = new Date();
-  const h = now.getHours(); // 0..23
-  const x = (h-12)*1.2;                            // px (izq/der)
-  const y = Math.max(4, 14 - Math.abs(12-h)*.6);   // px (altura)
-  const blur = 18 + Math.abs(12-h)*.8;             // px
-  const alpha = (h>=7 && h<=19)? .16 : .28;
-  const r = document.documentElement.style;
-  r.setProperty('--shadow-x', `${x}px`);
-  r.setProperty('--shadow-y', `${y}px`);
-  r.setProperty('--shadow-blur', `${blur}px`);
-  r.setProperty('--shadow-alpha', alpha.toString());
-}
-
-/* ========= MICRO: Lana al scrollear ========= */
-function attachYarnScroll(){
-  const onScroll=()=>{
-    const y = window.scrollY || 0;
-    document.documentElement.style.setProperty('--yarn-offset', `${y}px`);
-  };
-  onScroll();
-  window.addEventListener('scroll', onScroll, {passive:true});
-}
-
-/* ========= Skins / Alto contraste (solo CSS variables) ========= */
-const Skin = {
-  init(){
-    const root = document.documentElement;
-    const saved = localStorage.getItem('skin') || 'cuaderno';
-    const contrast = localStorage.getItem('contrast') || 'normal';
-    root.dataset.skin = (saved==='cuaderno') ? '' : saved;
-    if (contrast==='high') root.dataset.contrast='high'; else root.removeAttribute('data-contrast');
-    this.mountQuickBar();
-  },
-  set(name){
-    const root = document.documentElement;
-    if (name==='cuaderno') root.removeAttribute('data-skin'); else root.dataset.skin=name;
-    localStorage.setItem('skin', name);
-  },
-  toggleContrast(){
-    const root = document.documentElement;
-    const active = root.dataset.contrast === 'high';
-    if (active){ root.removeAttribute('data-contrast'); localStorage.setItem('contrast','normal'); }
-    else { root.dataset.contrast='high'; localStorage.setItem('contrast','high'); }
-  },
-  mountQuickBar(){
-    if (document.getElementById('blog-quickbar')) return;
-    const bar = document.createElement('div');
-    bar.id = 'blog-quickbar';
-    bar.innerHTML = `
-      <button class="quick-btn" id="btn-skin-cuaderno" title="Skin cuaderno">📓</button>
-      <button class="quick-btn" id="btn-skin-acuarela" title="Skin acuarela">🎨</button>
-      <button class="quick-btn" id="btn-skin-tejido"   title="Skin tejido">🧵</button>
-      <button class="quick-btn secondary" id="btn-contrast" title="Alto contraste (Alt+H)">🔆</button>
-      <button class="quick-btn" id="btn-voice" title='Voz: "Patofelting, lee los últimos posts"'>🗣️</button>
-    `;
-    document.body.appendChild(bar);
-    document.getElementById('btn-skin-cuaderno').onclick=()=>Skin.set('cuaderno');
-    document.getElementById('btn-skin-acuarela').onclick=()=>Skin.set('acuarela');
-    document.getElementById('btn-skin-tejido').onclick=()=>Skin.set('tejido');
-    document.getElementById('btn-contrast').onclick=()=>Skin.toggleContrast();
-    document.getElementById('btn-voice').onclick=Voice.toggle();
-    // Acceso rápido: Alt+H alto contraste
-    window.addEventListener('keydown',e=>{ if(e.altKey && e.key.toLowerCase()==='h'){Skin.toggleContrast();} });
-  }
-};
-
-/* ========= Firebase (Firestore) ========= */
+/* =========================================================
+   Firebase (Auth anónima + Firestore)
+========================================================= */
 let app, db, auth;
 async function ensureFirebase(){
   if (db) return db;
@@ -141,384 +82,344 @@ async function ensureFirebase(){
   const { getAuth, signInAnonymously, onAuthStateChanged } =
     await import('https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js');
 
-  app = initializeApp(FIREBASE_CONFIG);
+  app = initializeApp(cfg);
   db = getFirestore(app);
   auth = getAuth(app);
   await signInAnonymously(auth);
-  onAuthStateChanged(auth, user=>{ if (user) { window.PATO_USER_ID=user.uid; } });
+  onAuthStateChanged(auth, u=>{ if (u) window.PATO_USER_ID = u.uid; });
 
-  // Exponemos helpers para reuso
-  window.PATO_FB = { collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp, doc, updateDoc, increment };
+  // Exponer helpers internos (solo dentro de la página)
+  window._FB = { collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp, doc, updateDoc, increment };
   return db;
 }
 
-/* ========= Gamificación ========= */
-const Gamification = {
-  async addPoints(uid, delta=1){
-    await ensureFirebase();
-    const { doc, updateDoc, increment } = window.PATO_FB;
-    const ref = doc(db, 'users', uid);
-    try { await updateDoc(ref, { points: increment(delta) }); } catch(e){ /* usuario inexistente: ignorar (puede crearse en otro flujo) */ }
-  },
-  badgeFor(points){
-    if (points>=100) return 'Maestro del Telar 🧶👑';
-    if (points>=50)  return 'Hilador Experto 🧵✨';
-    if (points>=5)   return 'Tejedor Ávido 🧶';
-    return null;
-  }
-};
-
-/* ========= Comentarios, votos y Post‑its ========= */
+/* =========================================================
+   Comentarios + votos (UI sobria, acorde al cuaderno)
+========================================================= */
 class CommentsModule{
   constructor(entryId, mountEl){
     this.entryId = entryId;
-    this.mountEl = mountEl;
-    this.renderShell();
-    this.listen();
+    this.mountEl = mountEl;   // elemento dentro de .entry-content
+    this._renderShell();
+    this._listen();
   }
-  ui(){
-    const wrap=document.createElement('section');
-    wrap.className='comments';
+
+  _renderShell(){
+    const wrap = document.createElement('section');
+    wrap.className = 'comments';
+    wrap.setAttribute('aria-label','Sección de comentarios');
     wrap.innerHTML = `
-      <h3 style="font-family:var(--font-cursive);color:var(--dark-green);margin:1rem 0;">Comentarios</h3>
-      <form class="comment-form" aria-label="Agregar comentario">
-        <input name="name" required placeholder="Tu nombre" aria-label="Nombre" />
-        <textarea name="text" required placeholder="Escribe un comentario..." rows="3" aria-label="Comentario"></textarea>
-        <button type="submit" class="quick-btn">Publicar</button>
+      <h3 style="font-family:var(--font-cursive);color:var(--dark-green);margin:1.25rem 0 .5rem;">Comentarios</h3>
+      <form class="comment-form" aria-label="Agregar comentario" style="display:grid;gap:.5rem;margin:.6rem 0;">
+        <input name="name" required placeholder="Tu nombre" aria-label="Nombre"
+               style="padding:.6rem;border-radius:10px;border:2px dashed rgba(0,0,0,.08);font-family:var(--font-system)"/>
+        <textarea name="text" required placeholder="Escribe un comentario..." rows="3" aria-label="Comentario"
+               style="padding:.6rem;border-radius:10px;border:2px dashed rgba(0,0,0,.08);font-family:var(--font-system)"></textarea>
+        <div style="display:flex;gap:.5rem;align-items:center;justify-content:flex-start">
+          <button type="submit" class="btn-pato">Publicar</button>
+          <small style="color:var(--pencil-gray)">Sé amable ♥</small>
+        </div>
       </form>
-      <ul class="comment-list" aria-live="polite"></ul>
+      <ul class="comment-list" aria-live="polite" style="list-style:none;display:grid;gap:.6rem;margin-top:.8rem"></ul>
     `;
-    // estilos mínimos inyectados
-    const s = document.createElement('style');
-    s.textContent = `
-      .comment-form{display:grid;gap:.5rem;margin:.6rem 0;}
-      .comment-form input,.comment-form textarea{padding:.6rem;border-radius:10px;border:2px dashed rgba(0,0,0,.08);font-family:var(--font-system)}
-      .comment-list{list-style:none;display:grid;gap:.6rem;margin-top:.8rem}
-      .comment{background:var(--paper);border-radius:12px;padding:.7rem .8rem;position:relative}
-      .vote{position:absolute;right:.6rem;top:.5rem;cursor:pointer}
-      .yarn{filter:drop-shadow(0 2px 4px rgba(0,0,0,.2))}
+    // Botón con estética del blog (sin tocar CSS global)
+    const styleBtn = document.createElement('style');
+    styleBtn.textContent = `
+      .btn-pato{
+        background: var(--primary-green); color:#fff; border:0; border-radius:999px;
+        padding:.55rem 1rem; font:600 14px/1 var(--font-system);
+        box-shadow:0 6px 18px rgba(0,0,0,.12); cursor:pointer; transition:transform .15s;
+      }
+      .btn-pato:hover{ transform:translateY(-1px) }
+      .comment-item{
+        background: var(--paper-white); border-radius:12px; padding:.75rem .85rem; position:relative;
+        box-shadow: 0 2px 10px rgba(0,0,0,.05);
+      }
+      .comment-item p{ margin:.35rem 0 0; }
+      .vote-btn{
+        position:absolute; right:.55rem; top:.5rem; display:inline-flex; align-items:center; gap:.35rem;
+        background:transparent; border:0; cursor:pointer; color:var(--dark-green); font-weight:600;
+      }
+      .vote-btn:focus-visible{ outline:2px dashed var(--red-margin); outline-offset:2px; border-radius:6px; }
     `;
-    document.head.appendChild(s);
-    return wrap;
-  }
-  renderShell(){
-    const ui = this.ui();
-    this.mountEl.appendChild(ui);
-    const form = ui.querySelector('.comment-form');
+    document.head.appendChild(styleBtn);
+    this.mountEl.appendChild(wrap);
+
+    // submit
+    const form = wrap.querySelector('.comment-form');
     form.addEventListener('submit', async (e)=>{
       e.preventDefault();
       const fd = new FormData(form);
       const name = (fd.get('name')||'').toString().trim();
       const text = (fd.get('text')||'').toString().trim();
-      if(!name || !text) return;
-      const uid = window.PATO_USER_ID || 'anon';
+      if (!name || !text) return;
       await ensureFirebase();
-      const { addDoc, collection, serverTimestamp } = window.PATO_FB;
+      const { addDoc, collection, serverTimestamp } = window._FB;
       await addDoc(collection(db,'comments'),{
-        entryId:this.entryId, name, text, votes:0, createdAt:serverTimestamp(), uid
+        entryId: this.entryId,
+        name, text,
+        votes: 0,
+        createdAt: serverTimestamp(),
+        uid: window.PATO_USER_ID || 'anon'
       });
       form.reset();
-      Gamification.addPoints(uid, 2); // +2 por comentar
     });
-    this.listEl = ui.querySelector('.comment-list');
+
+    this.listEl = wrap.querySelector('.comment-list');
   }
-  async listen(){
+
+  async _listen(){
     await ensureFirebase();
-    const { onSnapshot, collection, query, where, orderBy } = window.PATO_FB;
+    const { onSnapshot, collection, query, where, orderBy } = window._FB;
     const q = query(collection(db,'comments'),
                     where('entryId','==',this.entryId),
-                    orderBy('votes','desc'), orderBy('createdAt','asc'));
+                    orderBy('votes','desc'),
+                    orderBy('createdAt','asc'));
     onSnapshot(q, snap=>{
       this.listEl.innerHTML='';
       snap.forEach(docSnap=>{
         const c = docSnap.data();
         const li = document.createElement('li');
-        li.className='comment';
+        li.className='comment-item';
         li.innerHTML = `
-          <strong>${c.name}</strong>
-          <p>${c.text}</p>
-          <button class="vote" title="Votar comentario destacado">
-            <span class="yarn" aria-hidden="true">🧶</span> <span class="v">${c.votes||0}</span>
+          <strong>${escapeHtml(c.name||'Anónimo')}</strong>
+          <button class="vote-btn" title="Votar comentario">
+            <span aria-hidden="true">🧶</span><span class="v">${c.votes||0}</span>
           </button>
-          <button class="quick-btn secondary" data-postit>Post‑it</button>
+          <p>${escapeHtml(c.text||'')}</p>
         `;
-        // votar
-        li.querySelector('.vote').onclick = async ()=>{
-          await ensureFirebase();
-          const { doc, updateDoc, increment } = window.PATO_FB;
-          await updateDoc(doc(db,'comments',docSnap.id),{ votes: increment(1) });
-          Gamification.addPoints(window.PATO_USER_ID, 1); // +1 por votar
-        };
-        // convertir a post-it colocable
-        li.querySelector('[data-postit]').onclick = ()=> this.spawnPostit(c, docSnap.id);
+        li.querySelector('.vote-btn').addEventListener('click', ()=> this._vote(docSnap.id));
         this.listEl.appendChild(li);
       });
     });
   }
-  async spawnPostit(comment, id){
-    // crear nota arrastrable sobre la entrada
-    const note = document.createElement('div');
-    note.className='postit';
-    note.tabIndex=0;
-    note.textContent = comment.text;
-    note.style.position='absolute';
-    note.style.left='20px'; note.style.top='20px';
-    // contenedor seguro:
-    const container = this.mountEl.closest('.notebook-page') || this.mountEl;
-    container.style.position='relative';
-    container.appendChild(note);
-    note.focus();
-    // arrastre básico
-    let drag=false, offX=0, offY=0;
-    note.addEventListener('mousedown',e=>{drag=true;offX=e.offsetX;offY=e.offsetY; note.classList.add('wiggle');});
-    window.addEventListener('mouseup',()=>{drag=false; note.classList.remove('wiggle');});
-    window.addEventListener('mousemove',async e=>{
-      if(!drag) return;
-      const rect = container.getBoundingClientRect();
-      note.style.left = (e.pageX - rect.left - offX) + 'px';
-      note.style.top  = (e.pageY - rect.top  - offY + window.scrollY) + 'px';
-    }, {passive:true});
-    // persistir posición/color en Firestore
+
+  async _vote(id){
     await ensureFirebase();
-    const { doc, updateDoc } = window.PATO_FB;
-    note.addEventListener('mouseup', async ()=>{
-      const color = getComputedStyle(note).backgroundColor;
-      await updateDoc(doc(db,'comments',id),{ postit: { left:note.style.left, top:note.style.top, color }});
-    });
-  }
-}
-
-/* ========= Voz: lectura + comando ========= */
-const Voice = (()=>{
-  let listening = false, recog=null;
-  const canRead = 'speechSynthesis' in window;
-  const canRec  = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
-
-  function readLatest(){
-    if(!canRead) return alert('Tu navegador no soporta lectura en voz.');
-    const titles = [...document.querySelectorAll('.entry-title')].slice(0,3).map(e=>e.textContent.trim());
-    const text = titles.length ? `Últimos posts: ${titles.join('. ')}.` : 'No hay posts para leer por ahora.';
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang='es-ES'; u.rate=1; u.pitch=1;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
-  }
-  function startCmd(){
-    if(!canRec) return alert('Comandos de voz no soportados.');
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recog = new SR(); recog.lang='es-ES'; recog.continuous=false; recog.interimResults=false;
-    recog.onresult = e=>{
-      const phrase = (e.results[0][0].transcript||'').toLowerCase();
-      if (phrase.includes('patofelting') && phrase.includes('lee los últimos posts')) readLatest();
-    };
-    recog.onend = ()=> listening=false;
-    recog.start(); listening=true;
-  }
-  return {
-    toggle(){ listening ? window.speechSynthesis.cancel() : startCmd(); },
-    readLatest
-  };
-})();
-
-/* ========= Transcripción automática (best-effort) ========= */
-async function attachTranscriptionButtons(){
-  const videos = document.querySelectorAll('iframe.entrada-video, video.entrada-video');
-  videos.forEach(v=>{
-    const btn = document.createElement('button');
-    btn.className='quick-btn secondary';
-    btn.textContent='Transcribir video';
-    btn.style.margin='8px 0';
-    btn.onclick=()=>transcribeVideo(v);
-    v.insertAdjacentElement('afterend', btn);
-  });
-}
-async function transcribeVideo(videoEl){
-  const canRec = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
-  if(!canRec) return alert('Transcripción no soportada en este navegador.');
-  try{
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recog = new SR(); recog.lang='es-ES'; recog.continuous=true;
-    let text = '';
-    recog.onresult = e=>{
-      for(let i=e.resultIndex;i<e.results.length;i++){
-        if(e.results[i].isFinal) text += e.results[i][0].transcript + ' ';
-      }
-    };
-    recog.onend = ()=>{
-      const pre = document.createElement('pre');
-      pre.style.whiteSpace='pre-wrap'; pre.style.background='var(--paper)'; pre.style.padding='8px'; pre.style.borderRadius='10px';
-      pre.textContent = text.trim() || 'No se capturó audio. (Consejo: acerca el micrófono al altavoz).';
-      videoEl.insertAdjacentElement('afterend', pre);
-    };
-    recog.start();
-    alert('Transcripción en curso. Habla cerca del audio si es necesario.');
-  }catch(e){ alert('No fue posible transcribir automáticamente en este entorno.'); }
-}
-
-/* ========= E‑commerce (tu integración existente) ========= */
-class BlogEcommerceIntegration {
-  constructor(){ this.addProductLinks(); this.addCallToActionTracking(); }
-  addProductLinks(){
-    document.querySelectorAll('[data-product]').forEach(mention=>{
-      const productId = mention.dataset.product;
-      mention.addEventListener('click',()=>{ window.location.href=`index.html#productos?highlight=${productId}`;});
-      mention.style.cssText='cursor:pointer;text-decoration:underline;color:var(--primary-green)';
-    });
-  }
-  addCallToActionTracking(){
-    document.querySelectorAll('.cta-button-blog').forEach(cta=>{
-      cta.addEventListener('click', e=>{
-        const action = e.target.textContent.trim();
-        if (typeof gtag !== 'undefined'){ gtag('event','blog_cta_click',{event_category:'Blog',event_label:action});}
-      });
-    });
-  }
-}
-
-/* ========= Gestor principal del blog ========= */
-class BlogManager {
-  constructor(){ this.entradas=[]; this.init(); }
-  async init(){
-    await this.cargarEntradasDesdeCSV();
-    this.renderEnhancements();
-  }
-  async cargarEntradasDesdeCSV(){
+    const { doc, updateDoc, increment } = window._FB;
     try{
-      const resp = await fetch(CSV_URL,{cache:'reload'});
-      if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const texto = await resp.text();
-      const resultado = Papa.parse(texto,{ header:true, skipEmptyLines:true, transform:v=>v.trim() });
-      this.entradas = resultado.data
-        .filter(f=>f.titulo && f.contenido)
-        .map((f,i)=>({
-          id: f.id || i.toString(),
-          fecha: f.fecha || '',
-          titulo: f.titulo,
-          contenido: f.contenido,
-          imagenes: BlogUtils.limpiarURLs(f.imagenPrincipal || ''),
-          videos:   BlogUtils.limpiarURLs(f.videoURL || ''),
-          orden: parseInt(f.orden)||0,
-          postit: f.postit || '',
-          ordenpostit: parseInt(f.ordenpostit)||0,
-        }))
-        .sort((a,b)=>a.orden-b.orden);
-      this.renderizarBlog();
-    }catch(e){
-      console.error('CSV error', e);
-      BlogUtils.mostrarMensajeError();
+      await updateDoc(doc(db,'comments',id),{ votes: increment(1) });
+    }catch(err){
+      console.warn('No se pudo votar:', err?.message||err);
     }
   }
-  renderizarBlog(){
-    const cont = document.getElementById('main-content');
-    const tpl  = document.getElementById('entry-template');
-    const loader = document.getElementById('blog-loading');
-    if(loader) loader.style.display='none';
-    cont.innerHTML='';
-    if(!this.entradas.length){ BlogUtils.mostrarMensajeVacio(); return; }
+}
+
+/* =========================================================
+   Gestor principal (usa tu estructura intacta)
+========================================================= */
+class BlogManager {
+  constructor(){
+    this.entradas = [];
+    this._container = document.getElementById('blog-entries') || document.getElementById('main-content');
+    this._loader = document.getElementById('blog-loading');
+    this.init();
+  }
+
+  async init(){
+    await this._cargarEntradasConReintentos();
+    this._render();
+    this._uxSuave();
+  }
+
+  async _cargarEntradasConReintentos(max=3){
+    let intento=0, ultimaEx=null;
+    while(intento<max){
+      try{
+        this.entradas = await this._cargarEntradasDesdeCSV();
+        return;
+      }catch(e){
+        ultimaEx=e; intento++;
+        await new Promise(r=>setTimeout(r, 300 * Math.pow(2,intento-1))); // backoff: 300ms, 600ms, 1200ms
+      }
+    }
+    console.error('Error CSV:', ultimaEx);
+    BlogUtils.showError('No pudimos cargar las historias. Revisa tu conexión e intenta nuevamente.');
+  }
+
+  async _cargarEntradasDesdeCSV(){
+    const controller = new AbortController();
+    const t = setTimeout(()=>controller.abort(), 10000); // 10s timeout
+    const resp = await fetch(CSV_URL, { cache:'no-store', signal: controller.signal });
+    clearTimeout(t);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const texto = await resp.text();
+
+    const parsed = Papa.parse(texto,{ header:true, skipEmptyLines:true, transform:v=>v.trim() });
+    const data = parsed.data || [];
+    const entradas = data
+      .filter(f=>f.titulo && f.contenido)
+      .map((f,i)=>({
+        id: f.id || i.toString(),
+        fecha: f.fecha || '',
+        titulo: f.titulo,
+        contenido: f.contenido,
+        imagenes: BlogUtils.limpiarURLs(f.imagenPrincipal || ''),
+        videos:   BlogUtils.limpiarURLs(f.videoURL || ''),
+        orden: parseInt(f.orden)||0
+      }))
+      .sort((a,b)=>a.orden-b.orden);
+
+    if (!entradas.length) throw new Error('CSV vacío o sin filas válidas');
+    return entradas;
+  }
+
+  _render(){
+    if (this._loader) this._loader.style.display='none';
+    if (!this._container){ console.error('No hay contenedor #blog-entries / #main-content'); return; }
+    this._container.innerHTML='';
+
+    const tpl = document.getElementById('entry-template');
+    if (!tpl || !tpl.content){ BlogUtils.showError('Falta el template de entradas en el HTML.'); return; }
 
     this.entradas.forEach(ent=>{
-      const clone = tpl.content.cloneNode(true);
-      const entry = clone.querySelector('.blog-entry');
+      const dom = tpl.content.cloneNode(true);
+      const entry = dom.querySelector('.blog-entry');
+      const contentEl = dom.querySelector('.entry-content');
       entry.setAttribute('data-entry-id', ent.id);
-      const titleEl = clone.querySelector('.entry-title');
-      titleEl.innerHTML = `${ent.titulo}<span class="stitch" aria-hidden="true"></span>`;
-      clone.querySelector('.entry-date').textContent = BlogUtils.formatearFecha(ent.fecha);
 
-      // Texto
-      const txt = clone.querySelector('.entry-text');
+      // Título y fecha
+      dom.querySelector('.entry-title').textContent = ent.titulo;
+      dom.querySelector('.entry-date').textContent  = BlogUtils.formatearFecha(ent.fecha);
+
+      // Texto (líneas sobre renglones del cuaderno)
+      const txt = dom.querySelector('.entry-text');
       ent.contenido.split('\n').forEach(line=>{
-        if(!line.trim()) return;
+        if (!line.trim()) return;
         const p = document.createElement('p');
         p.className='notebook-line';
-        p.textContent=line.trim();
+        p.textContent = line.trim();
         txt.appendChild(p);
       });
 
-      // Media
-      let gallery = clone.querySelector('.media-gallery');
-      if(!gallery){
-        gallery = document.createElement('div'); gallery.className='media-gallery';
-        clone.querySelector('.entry-content').appendChild(gallery);
-      }
+      // Media (usa tu .media-gallery)
+      const gal = dom.querySelector('.media-gallery');
       ent.imagenes.forEach(url=>{
-        const fig=document.createElement('figure'); fig.className='photo-polaroid';
-        const img=new Image(); img.src=url; img.alt=ent.titulo; img.loading='lazy'; img.className='entrada-imagen';
-        img.onerror=()=>{ fig.classList.add('image-error'); fig.innerHTML='<div style="padding:10px;color:#999">Imagen no disponible</div>'; };
-        fig.appendChild(img); gallery.appendChild(fig);
+        const fig = document.createElement('figure');
+        fig.className='photo-polaroid';
+        const img = new Image();
+        img.src = url;
+        img.alt = ent.titulo;
+        img.loading='lazy';
+        img.className='entrada-imagen';
+        img.onerror = ()=>{ fig.classList.add('image-error'); fig.innerHTML='<div style="padding:10px;color:#999">Imagen no disponible</div>'; };
+        fig.appendChild(img);
+        gal.appendChild(fig);
+        // Preload sutil para la primera imagen
+        try{ BlogUtils.preload(url,'image'); }catch{}
       });
+
       ent.videos.forEach(url=>{
-        const iframe=document.createElement('iframe');
-        iframe.src=url; iframe.className='entrada-video'; iframe.allowFullscreen=true; iframe.loading='lazy';
-        gallery.appendChild(iframe);
+        const iframe = document.createElement('iframe');
+        iframe.src = url;
+        iframe.className='entrada-video';
+        iframe.setAttribute('allowfullscreen','true');
+        iframe.loading='lazy';
+        gal.appendChild(iframe);
       });
 
-      // Comentarios + post-its
+      // Comentarios (montaje al final del contenido)
       const commentsMount = document.createElement('div');
-      commentsMount.className='comments-mount';
-      clone.querySelector('.entry-content').appendChild(commentsMount);
+      commentsMount.style.marginTop = '1rem';
+      contentEl.appendChild(commentsMount);
+      this._container.appendChild(dom);
 
-      cont.appendChild(clone);
+      // Instanciar comentarios
       new CommentsModule(ent.id, commentsMount);
     });
-
-    // Colores de post-its ya se manejan en CommentsModule al crear
   }
-  renderEnhancements(){
-    // Tiempo de lectura
+
+  _uxSuave(){
+    // Año del footer
+    const y = document.getElementById('current-year');
+    if (y) y.textContent = String(new Date().getFullYear());
+
+    // Indicador de tiempo de lectura discreto
     setTimeout(()=>{
-      const rt = BlogUtils.calculateReadingTime();
-      const el = document.createElement('div');
-      el.className='reading-time';
-      el.innerHTML = `<span>📖 Tiempo de lectura: ${rt} min</span>`;
-      Object.assign(el.style,{
-        position:'fixed',bottom:'20px',left:'20px',background:'white',
-        padding:'0.5rem 1rem',borderRadius:'25px',boxShadow:'0 4px 15px rgba(0,0,0,.1)',
-        fontSize:'0.9rem',color:'var(--ink)',zIndex:'1000'
+      const mins = BlogUtils.calculateReadingTime('.blog-main');
+      const pill = document.createElement('div');
+      pill.setAttribute('aria-label',`Tiempo de lectura aproximado: ${mins} minutos`);
+      pill.style.cssText = `
+        position:fixed; bottom:20px; left:20px; background:#fff; color:var(--pencil-gray);
+        padding:.45rem .9rem; border-radius:999px; font:600 12px/1 var(--font-system);
+        box-shadow:0 4px 12px rgba(0,0,0,.08); z-index:1000`;
+      pill.textContent = `📖 ${mins} min`;
+      document.body.appendChild(pill);
+      setTimeout(()=> pill.remove(), 7000);
+    }, 1000);
+
+    // Barra de progreso de lectura (2px, muy sutil)
+    const bar = document.createElement('div');
+    bar.id='reading-progress';
+    bar.style.cssText = `
+      position:fixed; top:0; left:0; height:2px; width:0%;
+      background: linear-gradient(90deg, var(--soft-green), var(--primary-green));
+      z-index:2000; transition:width .08s ease;`;
+    document.body.appendChild(bar);
+    const onScroll=()=>{
+      const h = document.documentElement;
+      const max = (h.scrollHeight - h.clientHeight) || 1;
+      bar.style.width = Math.min(100, (h.scrollTop / max)*100) + '%';
+    };
+    document.addEventListener('scroll', onScroll, {passive:true});
+    onScroll();
+  }
+
+  recargar(){ return this.init(); }
+}
+
+/* =========================================================
+   Integración e‑commerce (tal como tenías, con toques mínimos)
+========================================================= */
+class BlogEcommerceIntegration {
+  constructor(){ this._wireProductLinks(); this._wireCtas(); }
+  _wireProductLinks(){
+    document.querySelectorAll('[data-product]').forEach(el=>{
+      const id = el.dataset.product;
+      el.style.cursor='pointer';
+      el.style.textDecoration='underline';
+      el.style.color='var(--primary-green)';
+      el.addEventListener('click', ()=>{ window.location.href=`index.html#productos?highlight=${id}`; });
+    });
+  }
+  _wireCtas(){
+    document.querySelectorAll('.cta-button-blog').forEach(cta=>{
+      cta.addEventListener('click', e=>{
+        const action = e.currentTarget.textContent.trim();
+        if (typeof gtag !== 'undefined'){ gtag('event','blog_cta_click',{event_category:'Blog',event_label:action}); }
       });
-      document.body.appendChild(el);
-    }, 1200);
-
-    // Micro‑interacciones
-    attachYarnScroll();
-    applySunlightShadows();
-    setInterval(applySunlightShadows, 60*1000);
-
-    // Botones de transcribir (best‑effort)
-    attachTranscriptionButtons();
-
-    // Preloads básicos
-    BlogUtils.preload('https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Dancing+Script:wght@400;500;600;700&display=swap','style');
-    document.querySelectorAll('img[loading="lazy"]').forEach(img=>{ if (img.src) BlogUtils.preload(img.src,'image'); });
-  }
-  recargar(){ return this.cargarEntradasDesdeCSV(); }
-}
-
-/* ========= Service Worker ========= */
-async function registerSW(){
-  if ('serviceWorker' in navigator){
-    try{ await navigator.serviceWorker.register('/sw.js'); }
-    catch(e){ console.warn('SW fail', e); }
+    });
   }
 }
 
-/* ========= Boot ========= */
+/* =========================================================
+   Helpers
+========================================================= */
+function escapeHtml(s){
+  return String(s)
+   .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+   .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+   .replace(/'/g,'&#039;');
+}
+
+/* =========================================================
+   Boot
+========================================================= */
 let blogManager;
-document.addEventListener('DOMContentLoaded', async ()=>{
-  // Skins y accesibilidad
-  Skin.init();
+document.addEventListener('DOMContentLoaded', ()=>{
+  // Asegurar Papa.parse disponible (ya se carga en tu HTML)
+  if (typeof Papa === 'undefined'){
+    console.error('PapaParse no está disponible. Verifica el <script> en el HTML.');
+    BlogUtils.showError('Error de inicialización. (Parser no disponible)');
+    return;
+  }
 
-  // Carga blog + ecomm
   blogManager = new BlogManager();
   new BlogEcommerceIntegration();
 
-  // Voz: comando rápido desde quickbar
-  registerSW();
-
-  // Recarga cada 60s (progresivo)
-  setInterval(()=>{ if (blogManager && blogManager.entradas.length>0){ blogManager.recargar(); } }, 60000);
+  // Recarga periódica (progresiva, no intrusiva)
+  setInterval(()=>{ if (blogManager && blogManager.entradas?.length){ blogManager.recargar(); } }, 60_000);
 });
 
-// Exponer helpers
-window.BlogUtils = BlogUtils;
+// Exponer para el botón "Reintentar"
 window.recargarBlog = ()=> blogManager && blogManager.recargar();
-
