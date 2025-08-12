@@ -2,24 +2,19 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="El cuaderno de bitácora de Patofelting - Historias sobre fibras, agujas y creaciones artesanales" />
   <title>El Cuaderno de Patofelting - Mi Historia con las Fibras</title>
 
-  <!-- Tipografías -->
+  <link rel="stylesheet" href="blog.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Nunito:wght@400;600&family=Kalam:wght@300;400;700&display=swap" rel="stylesheet" />
-
-  <!-- Favicon -->
+  <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Dancing+Script:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="icon" href="favicon.ico" type="image/x-icon" />
   <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
-
-  <!-- Estilos -->
-  <link rel="stylesheet" href="blog.css" />
 </head>
 <body>
-  <!-- Template de cada entrada -->
+  <!-- Template de entrada -->
   <template id="entry-template">
     <article class="blog-entry" tabindex="0">
       <div class="notebook-page">
@@ -28,32 +23,9 @@
           <div class="entry-date"></div>
           <h2 class="entry-title"></h2>
           <div class="entry-text"></div>
-
-          <!-- Galería -->
           <div class="media-gallery"></div>
-
-          <!-- Post-its -->
-          <div class="postit-container" aria-label="Notas rápidas"></div>
-
-          <!-- Reacciones -->
-          <div class="entry-reactions" role="group" aria-label="Reacciones">
-            <button class="reaction-btn" data-emoji="🧶" aria-pressed="false" title="Me encanta (lana)">🧶 <span>0</span></button>
-            <button class="reaction-btn" data-emoji="✨" aria-pressed="false" title="Brilló">✨ <span>0</span></button>
-            <button class="entry-fav" aria-pressed="false" title="Guardar en favoritos">★</button>
-          </div>
-
-          <!-- Comentarios -->
-          <section class="entry-comments" aria-label="Comentarios">
-            <h3>Comentarios</h3>
-            <ul class="comments-list" role="list"></ul>
-            <form class="comment-form" autocomplete="off">
-              <div style="display:flex;gap:.75rem;flex-wrap:wrap">
-                <input type="text" name="name" placeholder="Tu nombre" class="comment-name" style="flex:1;min-width:160px">
-                <textarea name="text" placeholder="Escribe tu comentario…" class="comment-text" style="flex:2;min-width:220px" rows="2"></textarea>
-                <button type="submit" class="comment-send">Publicar</button>
-              </div>
-            </form>
-          </section>
+          <!-- Aquí montamos comentarios dinámicamente -->
+          <div class="comments-mount"></div>
         </div>
       </div>
     </article>
@@ -63,7 +35,9 @@
   <nav class="blog-nav" aria-label="Navegación principal">
     <div class="nav-container">
       <a href="index.html" class="back-home" aria-label="Volver a la tienda principal">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
         Volver a la tienda
       </a>
       <div class="blog-logo">
@@ -73,17 +47,7 @@
     </div>
   </nav>
 
-  <!-- Header / Índice -->
-  <header class="blog-header">
-    <h1 class="blog-title">El Cuaderno de Patofelting</h1>
-    <p class="blog-subtitle">Historias, trucos y procesos con fibras — hecho a mano ♥</p>
-
-    <button class="index-toggle" aria-controls="blog-index" aria-expanded="false">📚 Índice</button>
-    <nav id="blog-index" class="hidden" aria-label="Índice de entradas"></nav>
-    <div id="blog-index-overlay" class="hidden" aria-hidden="true"></div>
-  </header>
-
-  <!-- Main -->
+  <!-- Contenido -->
   <main class="blog-main" id="main-content">
     <div class="blog-loading" id="blog-loading" aria-live="polite">
       <div class="loading-animation">
@@ -109,19 +73,7 @@
     </div>
   </footer>
 
-  <!-- JSON-LD -->
-  <script id="jsonld-slot" type="application/ld+json"></script>
-
-  <!-- Dependencias -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-
-  <!-- Configuración Firebase -->
-  <script src="firebase-config.js"></script>
-
-  <!-- Aplicación -->
-  <script src="blog.js"></script>
+  <script src="blog.js" defer></script>
 </body>
 </html>
