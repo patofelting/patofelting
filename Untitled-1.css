@@ -2743,3 +2743,19 @@ blockquote {
     padding: 15px;
   }
 }
+
+/* Gatito contacto */
+.gatito-contacto {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 9999;
+  max-width: 150px;
+  transition: opacity 0.3s ease;
+}
+
+.gatito-contacto.oculto {
+  opacity: 0;
+  pointer-events: none;
+}
+
