@@ -1,27 +1,29 @@
 // Configuración de Firebase
-  const cfg = {
-    apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
-    authDomain: "patofelting-b188f.firebaseapp.com",
-    databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
-    projectId: "patofelting-b188f",
-    storageBucket: "patofelting-b188f.appspot.com",
-    messagingSenderId: "858377467588",
-    appId: "1:858377467588:web:cade9de05ebccc17f87b91"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
+  authDomain: "patofelting-b188f.firebaseapp.com",
+  databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
+  projectId: "patofelting-b188f",
+  storageBucket: "patofelting-b188f.appspot.com",
+  messagingSenderId: "858377467588",
+  appId: "1:858377467588:web:cade9de05ebccc17f87b91"
+};
 
 // Inicialización con compatibilidad
-if (!firebase.apps.length) {
+if (typeof firebase !== 'undefined' && !firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
+  
+  // Exporta las instancias compatibles
+  window.firebaseCompatDb = firebase.database();
+  window.firebaseCompatAuth = firebase.auth();
+
+  // Listener para estado de autenticación
+  window.firebaseCompatAuth.onAuthStateChanged(user => {
+    console.log('Usuario Firebase:', user ? 'Conectado' : 'Desconectado');
+  });
+} else {
+  console.log('Firebase no disponible, usando localStorage como fallback');
 }
-
-// Exporta las instancias compatibles
-window.firebaseCompatDb = firebase.database();
-window.firebaseCompatAuth = firebase.auth();
-
-// Listener para estado de autenticación
-window.firebaseCompatAuth.onAuthStateChanged(user => {
-  console.log('Usuario Firebase:', user ? 'Conectado' : 'Desconectado');
-});
 
 {
   "rules": {

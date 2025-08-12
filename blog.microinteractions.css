@@ -1,0 +1,433 @@
+/* =========================================================
+   Blog Patofelting - Micro-interacciones Premium
+   Efectos de aguja cosiendo, lana desenrollándose, sombras dinámicas
+========================================================= */
+
+/* ===== VARIABLES PARA MICRO-INTERACCIONES ===== */
+:root {
+  --needle-color: #c0c0c0;
+  --thread-color: var(--primary-green);
+  --yarn-primary: #ff6b6b;
+  --yarn-secondary: #4ecdc4;
+  --shadow-natural-morning: rgba(255, 220, 177, 0.3);
+  --shadow-natural-noon: rgba(0, 0, 0, 0.1);
+  --shadow-natural-evening: rgba(255, 149, 102, 0.4);
+  --shadow-natural-night: rgba(0, 0, 0, 0.6);
+}
+
+/* ===== EFECTO AGUJA COSIENDO EN TÍTULOS ===== */
+.entry-title {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.entry-title::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -50px;
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--needle-color) 0%, var(--needle-color) 60%, var(--thread-color) 60%, var(--thread-color) 100%);
+  transform: translateY(-50%) rotate(15deg);
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  z-index: 5;
+}
+
+.entry-title::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -20px;
+  width: 0;
+  height: 1px;
+  background: var(--thread-color);
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: all 0.6s ease-out 0.2s;
+  z-index: 4;
+}
+
+.entry-title:hover::before {
+  left: calc(100% + 10px);
+  opacity: 1;
+  animation: needleStitch 0.8s ease-in-out;
+}
+
+.entry-title:hover::after {
+  width: calc(100% + 40px);
+  opacity: 0.7;
+}
+
+@keyframes needleStitch {
+  0%, 100% { transform: translateY(-50%) rotate(15deg); }
+  25% { transform: translateY(-60%) rotate(10deg); }
+  50% { transform: translateY(-40%) rotate(20deg); }
+  75% { transform: translateY(-55%) rotate(8deg); }
+}
+
+/* Efecto de puntadas que quedan */
+.entry-title:hover {
+  background-image: 
+    linear-gradient(90deg, transparent 10%, var(--thread-color) 10.5%, var(--thread-color) 11%, transparent 11.5%),
+    linear-gradient(90deg, transparent 25%, var(--thread-color) 25.5%, var(--thread-color) 26%, transparent 26.5%),
+    linear-gradient(90deg, transparent 40%, var(--thread-color) 40.5%, var(--thread-color) 41%, transparent 41.5%),
+    linear-gradient(90deg, transparent 55%, var(--thread-color) 55.5%, var(--thread-color) 56%, transparent 56.5%),
+    linear-gradient(90deg, transparent 70%, var(--thread-color) 70.5%, var(--thread-color) 71%, transparent 71.5%),
+    linear-gradient(90deg, transparent 85%, var(--thread-color) 85.5%, var(--thread-color) 86%, transparent 86.5%);
+  background-size: 100% 2px;
+  background-position: 0 105%;
+  background-repeat: no-repeat;
+  animation: stitchAppear 0.8s ease-out 0.4s both;
+}
+
+@keyframes stitchAppear {
+  from { background-size: 0% 2px; }
+  to { background-size: 100% 2px; }
+}
+
+/* ===== ANIMACIÓN DE LANA DESENROLLÁNDOSE AL SCROLL ===== */
+.yarn-scroll-indicator {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, var(--yarn-primary) 0%, var(--yarn-secondary) 50%, var(--primary-green) 100%);
+  transform-origin: left center;
+  scale: 0 1;
+  z-index: 1100;
+  transition: scale 0.3s ease-out;
+}
+
+.yarn-scroll-indicator::before {
+  content: '🧶';
+  position: absolute;
+  right: -20px;
+  top: -8px;
+  font-size: 16px;
+  animation: yarnBounce 2s ease-in-out infinite;
+}
+
+@keyframes yarnBounce {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-3px) rotate(5deg); }
+}
+
+/* Animación del ovillo que se desenrolla */
+.yarn-ball-unwinding {
+  position: fixed;
+  top: 10px;
+  right: 20px;
+  width: 30px;
+  height: 30px;
+  background: radial-gradient(circle, var(--yarn-primary) 0%, var(--yarn-secondary) 100%);
+  border-radius: 50%;
+  z-index: 1100;
+  opacity: 0.8;
+  animation: yarnUnwind 2s linear infinite;
+}
+
+@keyframes yarnUnwind {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(0.9); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+/* Hilo que sale del ovillo */
+.yarn-ball-unwinding::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: var(--yarn-trail-length, 0px);
+  height: 2px;
+  background: linear-gradient(90deg, var(--yarn-primary), transparent);
+  transform: translateY(-50%);
+  transition: width 0.1s ease-out;
+}
+
+/* ===== SOMBRAS DINÁMICAS SEGÚN HORA DEL DÍA ===== */
+.notebook-page {
+  transition: box-shadow 0.5s ease-out;
+}
+
+/* Clases que se aplicarán dinámicamente según la hora */
+.time-morning .notebook-page {
+  box-shadow: 
+    15px 10px 30px var(--shadow-natural-morning),
+    0 8px 25px rgba(0,0,0,.08),
+    inset 0 0 0 1px rgba(0,0,0,.04);
+}
+
+.time-noon .notebook-page {
+  box-shadow: 
+    0 15px 20px var(--shadow-natural-noon),
+    0 8px 25px rgba(0,0,0,.08),
+    inset 0 0 0 1px rgba(0,0,0,.04);
+}
+
+.time-evening .notebook-page {
+  box-shadow: 
+    -10px 15px 35px var(--shadow-natural-evening),
+    0 8px 25px rgba(0,0,0,.08),
+    inset 0 0 0 1px rgba(0,0,0,.04);
+}
+
+.time-night .notebook-page {
+  box-shadow: 
+    -5px 20px 40px var(--shadow-natural-night),
+    0 8px 25px rgba(0,0,0,.08),
+    inset 0 0 0 1px rgba(0,0,0,.04);
+}
+
+/* Efecto de luz en el papel */
+.time-morning .notebook-page::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255, 220, 177, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.time-evening .notebook-page::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: -20px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255, 149, 102, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ===== INTERACCIÓN VISUAL PARA VOTACIÓN CON OVILLOS ===== */
+.reaction-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.reaction-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: radial-gradient(circle, var(--primary-green) 0%, transparent 70%);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: all 0.4s ease-out;
+  z-index: -1;
+}
+
+.reaction-btn:hover::before,
+.reaction-btn:focus::before {
+  width: 100%;
+  height: 100%;
+  opacity: 0.2;
+}
+
+.reaction-btn:active {
+  animation: reactionPulse 0.6s ease-out;
+}
+
+@keyframes reactionPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+/* Efecto de ovillo flotante al hacer click */
+.reaction-btn.clicked::after {
+  content: '🧶';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.2em;
+  opacity: 1;
+  animation: yarnFloat 1s ease-out forwards;
+  pointer-events: none;
+  z-index: 10;
+}
+
+@keyframes yarnFloat {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -150%) scale(1.5);
+  }
+}
+
+/* ===== COMENTARIOS COMO POST-ITS MOVIBLES MEJORADOS ===== */
+.comment-item {
+  position: relative;
+  transform: rotate(0deg);
+  transition: all 0.3s ease-out;
+  cursor: pointer;
+}
+
+.comment-item:nth-child(odd) {
+  transform: rotate(-0.5deg);
+  background: linear-gradient(135deg, #fff9c4 0%, #fff9c4 100%);
+  border-left: 4px solid #f9ca24;
+}
+
+.comment-item:nth-child(even) {
+  transform: rotate(0.5deg);
+  background: linear-gradient(135deg, #e8f5e8 0%, #e8f5e8 100%);
+  border-left: 4px solid var(--primary-green);
+}
+
+.comment-item:nth-child(3n) {
+  transform: rotate(-0.3deg);
+  background: linear-gradient(135deg, #ffeaa7 0%, #ffeaa7 100%);
+  border-left: 4px solid #fdcb6e;
+}
+
+.comment-item::before {
+  content: '📌';
+  position: absolute;
+  top: -5px;
+  right: 10px;
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.comment-item:hover {
+  transform: rotate(0deg) translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  z-index: 5;
+}
+
+/* Efecto de escritura a mano */
+.comment-item:hover .comment-text {
+  animation: handwritingEffect 0.5s ease-out;
+}
+
+@keyframes handwritingEffect {
+  0% { opacity: 0.7; transform: translateX(-2px); }
+  50% { opacity: 1; transform: translateX(1px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+/* ===== EFECTOS DE CARGA MEJORADOS ===== */
+.yarn-ball {
+  position: relative;
+}
+
+.yarn-ball::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    var(--yarn-primary) 0deg,
+    var(--yarn-secondary) 60deg,
+    var(--primary-green) 120deg,
+    #ffd93d 180deg,
+    var(--yarn-primary) 240deg,
+    var(--yarn-secondary) 300deg,
+    var(--yarn-primary) 360deg
+  );
+  animation: yarnSpin 3s linear infinite;
+  z-index: -1;
+}
+
+@keyframes yarnSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ===== MICROINTERACCIONES EN NAVEGACIÓN ===== */
+.back-home {
+  position: relative;
+  overflow: hidden;
+}
+
+.back-home::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(67, 193, 96, 0.2), transparent);
+  transition: left 0.5s ease-out;
+}
+
+.back-home:hover::before {
+  left: 100%;
+}
+
+/* ===== EFECTOS EN GALERÍA DE FOTOS ===== */
+.photo-polaroid:hover {
+  animation: photoWiggle 0.5s ease-in-out;
+}
+
+@keyframes photoWiggle {
+  0%, 100% { transform: rotate(-1.5deg); }
+  25% { transform: rotate(-2deg) scale(1.02); }
+  75% { transform: rotate(-1deg) scale(1.02); }
+}
+
+/* ===== RESPONSIVE MICRO-INTERACCIONES ===== */
+@media (max-width: 768px) {
+  .yarn-scroll-indicator::before {
+    font-size: 14px;
+    right: -15px;
+  }
+  
+  .yarn-ball-unwinding {
+    width: 25px;
+    height: 25px;
+    top: 5px;
+    right: 10px;
+  }
+  
+  .comment-item:hover {
+    transform: rotate(0deg) translateY(-1px);
+  }
+}
+
+/* ===== ACCESIBILIDAD PARA MICRO-INTERACCIONES ===== */
+@media (prefers-reduced-motion: reduce) {
+  .entry-title:hover::before,
+  .entry-title:hover::after {
+    animation: none;
+    transition: none;
+  }
+  
+  .yarn-ball-unwinding {
+    animation: none;
+  }
+  
+  .yarn-scroll-indicator::before {
+    animation: none;
+  }
+  
+  .comment-item {
+    transform: none;
+  }
+  
+  .comment-item:hover {
+    transform: none;
+  }
+}

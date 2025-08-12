@@ -1,0 +1,277 @@
+/* =========================================================
+   Blog Patofelting - Sistema de Skins Intercambiables
+   Skins: acuarela, cuaderno, tejido
+   Usa solo variables CSS para cambios no-invasivos
+========================================================= */
+
+/* Base skin variables - inherit from blog.css */
+:root {
+  /* Skin state */
+  --current-skin: 'cuaderno'; /* default skin */
+  
+  /* Skin-specific textures and patterns */
+  --skin-texture-overlay: none;
+  --skin-pattern-lines: repeating-linear-gradient(transparent,transparent calc(var(--line-height-notebook) - 1px),var(--line-blue) var(--line-height-notebook));
+  --skin-shadow-depth: 0 8px 25px rgba(0,0,0,.08);
+  --skin-border-style: solid;
+  --skin-border-width: 1px;
+}
+
+/* ===== SKIN: ACUARELA ===== */
+[data-skin="acuarela"] {
+  --notebook-bg: #f0f8f5;
+  --paper-white: #fcfffd;
+  --line-blue: rgba(102, 181, 255, 0.3);
+  --red-margin: #ff8a80;
+  
+  --primary-green: #4db6ac;
+  --soft-green: #b2dfdb;
+  --dark-green: #00695c;
+  
+  --ink-blue: #1565c0;
+  --ink-black: #263238;
+  --pencil-gray: #607d8b;
+  
+  /* Texturas de acuarela */
+  --skin-texture-overlay: 
+    radial-gradient(ellipse 200px 100px at 20% 30%, rgba(102, 181, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse 150px 80px at 80% 70%, rgba(255, 138, 128, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 300px 200px at 50% 50%, rgba(77, 182, 172, 0.05) 0%, transparent 70%);
+  
+  --skin-pattern-lines: 
+    repeating-linear-gradient(transparent,transparent calc(var(--line-height-notebook) - 1px), rgba(102, 181, 255, 0.25) var(--line-height-notebook));
+  
+  --skin-shadow-depth: 0 6px 20px rgba(77, 182, 172, 0.15);
+  --skin-border-style: solid;
+  --skin-border-width: 0px;
+}
+
+[data-skin="acuarela"] body {
+  background: 
+    var(--skin-texture-overlay),
+    repeating-linear-gradient(0deg, #f7fffe 0 28px, #e8f5f2 29px),
+    var(--notebook-bg);
+  background-attachment: fixed;
+}
+
+[data-skin="acuarela"] .notebook-page {
+  background: var(--paper-white);
+  background-image: 
+    var(--skin-texture-overlay),
+    var(--skin-pattern-lines);
+  background-size: 100% 100%, 100% var(--line-height-notebook);
+  border: var(--skin-border-width) var(--skin-border-style) rgba(77, 182, 172, 0.2);
+  box-shadow: var(--skin-shadow-depth), inset 0 0 0 1px rgba(77, 182, 172, 0.1);
+}
+
+[data-skin="acuarela"] .photo-polaroid {
+  box-shadow: 
+    0 4px 15px rgba(77, 182, 172, 0.2), 
+    inset 0 0 0 2px rgba(255, 138, 128, 0.15);
+  transform: rotate(-1deg);
+}
+
+[data-skin="acuarela"] .postit {
+  background: rgba(255, 235, 59, 0.9);
+  border: 2px dashed rgba(77, 182, 172, 0.4);
+  box-shadow: 0 4px 12px rgba(77, 182, 172, 0.15);
+}
+
+/* ===== SKIN: CUADERNO ===== */
+[data-skin="cuaderno"] {
+  /* Mantiene los valores por defecto del :root en blog.css */
+  --skin-texture-overlay: none;
+  --skin-pattern-lines: repeating-linear-gradient(transparent,transparent calc(var(--line-height-notebook) - 1px),var(--line-blue) var(--line-height-notebook));
+  --skin-shadow-depth: 0 8px 25px rgba(0,0,0,.08);
+}
+
+/* ===== SKIN: TEJIDO ===== */
+[data-skin="tejido"] {
+  --notebook-bg: #f5f2ec;
+  --paper-white: #faf8f3;
+  --line-blue: #d4af37;
+  --red-margin: #cd853f;
+  
+  --primary-green: #8b4513;
+  --soft-green: #deb887;
+  --dark-green: #654321;
+  
+  --ink-blue: #2f1b14;
+  --ink-black: #3e2723;
+  --pencil-gray: #8d6e63;
+  
+  /* Patrón de tejido */
+  --skin-texture-overlay: 
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 2px,
+      rgba(139, 69, 19, 0.03) 2px,
+      rgba(139, 69, 19, 0.03) 4px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 2px,
+      rgba(205, 133, 63, 0.03) 2px,
+      rgba(205, 133, 63, 0.03) 4px
+    );
+  
+  --skin-pattern-lines: 
+    repeating-linear-gradient(transparent,transparent calc(var(--line-height-notebook) - 1px), rgba(212, 175, 55, 0.6) var(--line-height-notebook));
+  
+  --skin-shadow-depth: 0 8px 25px rgba(139, 69, 19, 0.15);
+  --skin-border-style: solid;
+  --skin-border-width: 2px;
+}
+
+[data-skin="tejido"] body {
+  background: 
+    var(--skin-texture-overlay),
+    repeating-linear-gradient(0deg, #faf8f3 0 28px, #f0ede6 29px),
+    var(--notebook-bg);
+  background-attachment: fixed;
+}
+
+[data-skin="tejido"] .notebook-page {
+  background: var(--paper-white);
+  background-image: 
+    var(--skin-texture-overlay),
+    var(--skin-pattern-lines);
+  background-size: 8px 8px, 100% var(--line-height-notebook);
+  border: var(--skin-border-width) var(--skin-border-style) rgba(139, 69, 19, 0.2);
+  box-shadow: var(--skin-shadow-depth), inset 0 0 0 1px rgba(212, 175, 55, 0.1);
+}
+
+[data-skin="tejido"] .red-margin {
+  background: var(--red-margin);
+  width: 3px;
+  opacity: 0.8;
+}
+
+[data-skin="tejido"] .photo-polaroid {
+  box-shadow: 
+    0 4px 15px rgba(139, 69, 19, 0.2), 
+    inset 0 0 0 2px rgba(205, 133, 63, 0.25);
+  transform: rotate(-0.5deg);
+}
+
+[data-skin="tejido"] .postit {
+  background: rgba(222, 184, 135, 0.9);
+  border: 2px solid rgba(139, 69, 19, 0.3);
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.15);
+}
+
+[data-skin="tejido"] .postit-bar {
+  background: rgba(205, 133, 63, 0.8);
+  border-bottom: 1px solid rgba(139, 69, 19, 0.3);
+}
+
+/* ===== SKIN SELECTOR COMPONENT ===== */
+.skin-selector {
+  position: fixed;
+  top: 90px;
+  right: 20px;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 0.75rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 120px;
+}
+
+.skin-selector-label {
+  font-family: var(--font-handwritten);
+  font-size: 0.9rem;
+  color: var(--dark-green);
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.25rem;
+}
+
+.skin-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-black);
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.skin-option:hover {
+  background: rgba(67, 193, 96, 0.1);
+  transform: translateY(-1px);
+}
+
+.skin-option.active {
+  background: var(--primary-green);
+  color: white;
+  border-color: var(--dark-green);
+}
+
+.skin-preview {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.skin-preview.acuarela {
+  background: linear-gradient(135deg, #f0f8f5 0%, #b2dfdb 50%, #4db6ac 100%);
+}
+
+.skin-preview.cuaderno {
+  background: linear-gradient(135deg, #f8f6f0 0%, #a8d0ff 50%, #43c160 100%);
+}
+
+.skin-preview.tejido {
+  background: linear-gradient(135deg, #f5f2ec 0%, #deb887 50%, #8b4513 100%);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .skin-selector {
+    top: 70px;
+    right: 10px;
+    padding: 0.5rem;
+    min-width: 100px;
+  }
+  
+  .skin-option {
+    padding: 0.3rem 0.4rem;
+    font-size: 0.8rem;
+  }
+  
+  .skin-preview {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* Animation transitions when changing skins */
+[data-skin-transitioning="true"] .notebook-page {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-skin-transitioning="true"] body {
+  transition: background 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-skin-transitioning="true"] .photo-polaroid {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-skin-transitioning="true"] .postit {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
