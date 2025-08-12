@@ -1,9 +1,10 @@
 /* =========================================================
    Patofelting · blog.js (TODO en un solo archivo)
    - Estética cuaderno intacta
-   - Galería fluida (.media-gallery)
+   - Galería fluida (.media-gallery) sin recortes
    - Comentarios Firestore + votos (ovillos)
-   - UI de comentarios inyectada por JS (no toca blog.css)
+   - Realtime robusto: long-polling + fallback por polling
+   - UI de comentarios inyectada por JS (no rompe tu CSS)
    - Barra de progreso + preloads
    - Service Worker inline (sin sw.js separado)
 ========================================================= */
@@ -23,7 +24,7 @@ const cfg = {
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?gid=127717360&single=true&output=csv';
 
 /* =========================================================
-   CSS INYECTADO (parches y comentarios) — no rompe tu hoja
+   CSS INYECTADO (parches puntuales) — sin romper tu hoja
 ========================================================= */
 function addGlobalStyles(){
   if (document.getElementById('pato-inline-styles')) return;
@@ -78,35 +79,53 @@ class BlogUtils {
 }
 
 /* =========================================================
-   Firebase (Auth anónima + Firestore)
+   Firebase (Auth anónima + Firestore) con long‑polling
 ========================================================= */
 let app, db, auth;
 async function ensureFirebase(){
   if (db) return db;
+
   const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js');
-  const { getFirestore, collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp, doc, updateDoc, increment } =
-    await import('https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js');
+
+  // initializeFirestore para setear flags de transporte
+  const {
+    initializeFirestore,
+    collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp, doc,
+    updateDoc, increment, getDocs
+  } = await import('https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js');
+
   const { getAuth, signInAnonymously, onAuthStateChanged } =
     await import('https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js');
 
   app = initializeApp(cfg);
-  db = getFirestore(app);
+
+  // 🔧 Flags que evitan 400 en Listen/channel (proxys/ad-blocks)
+  db = initializeFirestore(app, {
+    experimentalAutoDetectLongPolling: true, // detecta y usa long‑polling cuando hace falta
+    useFetchStreams: false                   // evita fetch streams problemáticos
+  });
+
   auth = getAuth(app);
   await signInAnonymously(auth);
   onAuthStateChanged(auth, u=>{ if (u) window.PATO_USER_ID=u.uid; });
 
-  // helpers internos
-  window._FB = { collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp, doc, updateDoc, increment };
+  // helpers a mano
+  window._FB = {
+    collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp, doc,
+    updateDoc, increment, getDocs
+  };
   return db;
 }
 
 /* =========================================================
-   Comentarios + votos
+   Comentarios + votos (con fallback por polling)
 ========================================================= */
 class CommentsModule{
   constructor(entryId, mountEl){
     this.entryId = entryId;
     this.mountEl = mountEl;
+    this._unsubscribe = null;
+    this._pollTimer = null;
     this.render();
     this.listen();
   }
@@ -148,17 +167,29 @@ class CommentsModule{
 
   async listen(){
     await ensureFirebase();
-    const { onSnapshot, collection, query, where, orderBy } = window._FB;
-    const q = query(collection(db,'comments'),
-                    where('entryId','==',this.entryId),
-                    orderBy('votes','desc'),
-                    orderBy('createdAt','asc'));
-    onSnapshot(q, snap=>{
-      this.listEl.innerHTML='';
-      snap.forEach(docSnap=>{
-        const c=docSnap.data();
-        const li=document.createElement('li');
-        li.className='comment-item';
+    const { onSnapshot, collection, query, where, orderBy, getDocs } = window._FB;
+
+    // Consulta simple (menos exigente con índices). Orden final por votos en cliente.
+    const q = query(
+      collection(db,'comments'),
+      where('entryId','==',this.entryId),
+      orderBy('createdAt','asc')
+    );
+
+    const renderSnap = (snap) => {
+      const items = [];
+      snap.forEach(d => items.push({ id:d.id, ...d.data() }));
+      // Primero más votados; desempate por fecha
+      items.sort((a,b)=>{
+        if ((b.votes||0) !== (a.votes||0)) return (b.votes||0)-(a.votes||0);
+        const ta = a.createdAt?.seconds||0, tb=b.createdAt?.seconds||0;
+        return ta - tb;
+      });
+
+      this.listEl.innerHTML = '';
+      for (const c of items) {
+        const li = document.createElement('li');
+        li.className = 'comment-item';
         li.innerHTML = `
           <strong>${escapeHtml(c.name||'Anónimo')}</strong>
           <button class="vote-btn" title="Votar comentario">
@@ -166,10 +197,39 @@ class CommentsModule{
           </button>
           <p>${escapeHtml(c.text||'')}</p>
         `;
-        li.querySelector('.vote-btn').addEventListener('click',()=>this.vote(docSnap.id));
+        li.querySelector('.vote-btn').addEventListener('click', ()=> this.vote(c.id));
         this.listEl.appendChild(li);
-      });
-    });
+      }
+    };
+
+    // 🔴 Fallback por polling si el stream falla
+    const startPolling = async () => {
+      try { const s = await getDocs(q); renderSnap(s); } catch(e){ console.warn('Polling inicial falló:', e); }
+      this._pollTimer && clearInterval(this._pollTimer);
+      this._pollTimer = setInterval(async ()=>{
+        try { const s = await getDocs(q); renderSnap(s); } catch(e){ /* silent */ }
+      }, 5000);
+    };
+
+    // Intento realtime
+    try{
+      this._unsubscribe && this._unsubscribe();
+      this._unsubscribe = onSnapshot(
+        q,
+        { includeMetadataChanges: true },
+        (snap)=> {
+          if (this._pollTimer) { clearInterval(this._pollTimer); this._pollTimer = null; }
+          renderSnap(snap);
+        },
+        (err)=> {
+          console.warn('onSnapshot falló, uso polling:', err?.code || err?.message || err);
+          startPolling();
+        }
+      );
+    }catch(err){
+      console.warn('Listen lanzó excepción, uso polling:', err);
+      startPolling();
+    }
   }
 
   async vote(id){
@@ -250,7 +310,7 @@ class BlogManager{
       ent.imagenes.forEach(url=>{
         const fig=document.createElement('figure'); fig.className='photo-polaroid';
         const img=new Image(); img.src=url; img.alt=ent.titulo; img.loading='lazy'; img.className='entrada-imagen';
-        img.removeAttribute('height');
+        img.removeAttribute('height'); // por si vienen alturas inline
         img.onerror = ()=>{ fig.classList.add('image-error'); fig.innerHTML='<div style="padding:10px;color:#999">Imagen no disponible</div>'; };
         fig.appendChild(img); gallery.appendChild(fig);
         BlogUtils.preload(url,'image');
@@ -301,10 +361,11 @@ class BlogEcommerceIntegration{
 function registerInlineSW(){
   if (!('serviceWorker' in navigator)) return;
   const code = `
-    const VERSION='pato-v1.0.2';
+    const VERSION='pato-v1.0.3';
     const CORE=['/','/blog.html','/blog.css','/blog.js','https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js'];
     self.addEventListener('install',e=>{e.waitUntil(caches.open(VERSION).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()))});
     self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==VERSION).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
+    // Stale-While-Revalidate
     self.addEventListener('fetch',e=>{
       const req=e.request;
       e.respondWith((async()=>{const cache=await caches.open(VERSION);const cached=await cache.match(req);
@@ -329,7 +390,11 @@ let blogManager;
 document.addEventListener('DOMContentLoaded', async ()=>{
   addGlobalStyles();
 
-  if (typeof Papa === 'undefined'){ console.error('PapaParse no está disponible.'); BlogUtils.showError('Error de inicialización.'); return; }
+  if (typeof Papa === 'undefined'){
+    console.error('PapaParse no está disponible.');
+    BlogUtils.showError('Error de inicialización.');
+    return;
+  }
 
   try{
     blogManager = new BlogManager();
