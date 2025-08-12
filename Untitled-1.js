@@ -1029,3 +1029,19 @@ function verDetalle(id) {
 window.verDetalle = verDetalle;
 window.agregarAlCarrito = agregarAlCarrito;
 window.preguntarStock = preguntarStock;
+
+
+
+// Mostrar/ocultar gatito según la sección visible
+document.addEventListener("scroll", () => {
+  const gatito = document.getElementById("gatito-widget");
+  const productos = document.getElementById("productos");
+
+  if (!gatito || !productos) return;
+
+  const productosRect = productos.getBoundingClientRect();
+  const isProductosVisible = productosRect.top < window.innerHeight && productosRect.bottom > 0;
+
+  gatito.classList.toggle("oculto", isProductosVisible);
+});
+
