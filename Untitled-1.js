@@ -11,7 +11,8 @@ import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/1
 import { ref, runTransaction, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const db = window.firebaseDatabase;
-const auth = getAuth(window.firebaseApp);
+// FIX: usar la app por defecto (no dependemos de window.firebaseApp)
+const auth = getAuth();
 
 // ===============================
 // ESTADO GLOBAL
@@ -70,8 +71,8 @@ const elementos = {
   carritoBtnMain: $('carrito-btn-main'),
   carritoPanel: $('carrito-panel'),
   carritoOverlay: document.querySelector('.carrito-overlay'),
-  btnVaciarCarrito: document.querySelector('.boton-vaciar-carrito'),
-  btnFinalizarCompra: document.querySelector('.boton-finalizar-compra'),
+  btnVaciarCarrito: $('boton-vaciar-carrito'),
+  btnFinalizarCompra: $('boton-finalizar-compra'),
   btnCerrarCarrito: document.querySelector('.cerrar-carrito'),
   avisoPreCompraModal: $('aviso-pre-compra-modal'),
   btnEntendidoAviso: $('btn-entendido-aviso'),
@@ -383,7 +384,6 @@ function renderizarPaginacion(totalProductos) {
     pageButton.addEventListener('click', () => {
       paginaActual = i;
       renderizarProductos();
-      // Solo desplazamos si estás por encima de la galería (evita “subir” la página)
       const targetTop = elementos.galeriaProductos.offsetTop - 100;
       if (window.scrollY + 10 < targetTop) {
         window.scrollTo({ top: targetTop, behavior: 'smooth' });
@@ -409,16 +409,13 @@ function ensureProductModal() {
     `;
     document.body.appendChild(modal);
   }
-  // refrescamos refs
   elementos.productoModal = document.getElementById('producto-modal');
   elementos.modalContenido = document.getElementById('modal-contenido');
 
-  // cerrar por backdrop
   elementos.productoModal.addEventListener('click', (e) => {
     if (e.target?.dataset?.close === '1') cerrarModal();
   });
 
-  // cerrar por ESC (usa .visible, no .active)
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && elementos.productoModal.classList.contains('visible')) {
       cerrarModal();
@@ -483,7 +480,7 @@ function mostrarModalProducto(producto) {
           </div>
         </div>
       </div>
-    `;
+    """
 
     const btnPrev = contenido.querySelector('.modal-prev');
     const btnNext = contenido.querySelector('.modal-next');
@@ -505,14 +502,13 @@ function mostrarModalProducto(producto) {
   }
 
   renderCarruselAndContent();
-  // ⬇⬇⬇ importante: usamos .visible (no .active) para que el CSS lo muestre
   modal.classList.add('visible');
   document.body.classList.add('no-scroll');
 }
 
 function cerrarModal() {
   if (elementos.productoModal) {
-    elementos.productoModal.classList.remove('visible'); // ← coincide con CSS
+    elementos.productoModal.classList.remove('visible');
     document.body.classList.remove('no-scroll');
   }
 }
@@ -667,7 +663,8 @@ function inicializarMenuHamburguesa() {
 // CONTACTO (EmailJS opcional)
 // ===============================
 function setupContactForm() {
-  const formContacto = document.getElementById('formContacto');
+  // FIX: coincide con tu HTML (id="formulario-contacto")
+  const formContacto = document.getElementById('formulario-contacto');
   const successMessage = document.getElementById('successMessage');
   const errorMessage = document.getElementById('errorMessage');
 
@@ -769,7 +766,6 @@ function inicializarEventos() {
     aplicarFiltros();
   });
 
-  // Delegación robusta de la galería (un solo listener, admite clicks en iconos/spans dentro de botones)
   const root = elementos.galeriaProductos;
   if (root) {
     if (root._pfDelegationHandler) {
@@ -785,7 +781,6 @@ function inicializarEventos() {
       const producto = productos.find(p => p.id === id);
       if (!producto) return;
 
-      // qué fue lo que se clickeó (button/a o [data-action])
       const trigger = e.target.closest('[data-action], button, a');
       if (!trigger) return;
 
@@ -816,7 +811,6 @@ function inicializarEventos() {
     root.addEventListener('click', handler, { passive: false });
     root._pfDelegationHandler = handler;
 
-    // Accesibilidad: Enter/Espacio “click”
     root.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
       const btn = e.target.closest('.boton-detalles, .boton-agregar, .boton-aviso-stock, [data-action]');
@@ -1019,29 +1013,25 @@ function preguntarStock(nombreProducto) {
 function verDetalle(id) {
   const producto = productos.find(p => p.id === id);
   if (producto) {
-    mostrarModalProducto(producto); // abre el modal (usa .visible)
+    mostrarModalProducto(producto);
   } else {
     mostrarNotificacion("Producto no encontrado", "error");
   }
 }
 
-// Exponer helpers globales si los usás en atributos HTML
 window.verDetalle = verDetalle;
 window.agregarAlCarrito = agregarAlCarrito;
 window.preguntarStock = preguntarStock;
 
-
-
-// Mostrar/ocultar gatito según la sección visible
+// ===============================
+// GATITO: ocultar cuando “Productos” está visible
+// ===============================
 document.addEventListener("scroll", () => {
   const gatito = document.getElementById("gatito-widget");
   const productos = document.getElementById("productos");
-
   if (!gatito || !productos) return;
 
   const productosRect = productos.getBoundingClientRect();
   const isProductosVisible = productosRect.top < window.innerHeight && productosRect.bottom > 0;
-
   gatito.classList.toggle("oculto", isProductosVisible);
 });
-
