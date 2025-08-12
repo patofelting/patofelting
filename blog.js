@@ -1,771 +1,522 @@
 /* =========================================================
-   Blog Patofelting — CSV → UI + Post-its + Reacciones + Comentarios
-   - Funciona con Firebase (compat) si está configurado
-   - Si no hay Firebase, usa localStorage (todos los features siguen andando)
+   Patofelting · blog.js (experiencia premiada)
+   - Mantiene tu estructura HTML (no se toca blog.html)
+   - Solo requiere configurar FIREBASE_CONFIG
 ========================================================= */
 
-/* ---------- CONFIG ---------- */
-const CSV_URL = window.BLOG_CSV_URL || 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?gid=127717360&single=true&output=csv';
-
-const HAS_FIREBASE = !!(window.firebaseCompatDb && window.firebaseCompatAuth);
-const ADMIN = (() => {
-  const q = new URLSearchParams(location.search);
-  if (q.has('pfadmin')) {
-    const on = q.get('pfadmin') === '1';
-    localStorage.setItem('pf_admin', on ? '1' : '0');
-    return on;
-  }
-  return localStorage.getItem('pf_admin') === '1';
-})();
-
-const LS_KEYS = {
-  reactions: 'pf_reactions_v2',
-  postits: 'pf_postits_v2',
-  comments: (id) => `pf_comments_${id}_v2`,
-  lastCommentAt: 'pf_last_comment_ts'
+/* ========= CONFIG FIREBASE (rellena con tus credenciales) ========= */
+const FIREBASE_CONFIG = {
+  apiKey: "TU_APIKEY",
+  authDomain: "TU_AUTH_DOMAIN",
+  projectId: "TU_PROJECT_ID",
+  storageBucket: "TU_BUCKET",
+  messagingSenderId: "TU_SENDER_ID",
+  appId: "TU_APP_ID"
 };
+/* ================================================================ */
 
-const PATHS = {
-  reactions: (id) => `/blog/reactions/${id}`,
-  reactionsByUser: (id, uid) => `/blog/reactionsByUser/${id}/${uid}`,
-  favorites: (id, uid) => `/blog/favorites/${id}/${uid}`,
-  comments: (id) => `/blog/comments/${id}`
-};
+/* ========= URL del CSV (tu Google Sheets) ========= */
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?gid=127717360&single=true&output=csv';
 
-/* ---------- UTILS ---------- */
-const BlogUtils = {
-  formatearFecha(fecha) {
+/* ========= Utilidades ========= */
+class BlogUtils {
+  static formatearFecha(fecha) {
     if (!fecha) return '';
-    const [d, m, y] = fecha.split('/');
+    const [d,m,y] = fecha.split('/');
     return `${d}/${m}/${y}`;
-  },
-  mostrarMensajeError() {
+  }
+  static mostrarMensajeError() {
     const c = document.getElementById('main-content');
     if (!c) return;
     c.innerHTML = `
-      <div class="blog-error" style="padding:2rem;text-align:center">
-        <div class="error-message">
-          Hubo un error al cargar las entradas.
-          <button class="retry-button" onclick="window.recargarBlog()">Reintentar</button>
-        </div>
+      <div class="blog-error" role="alert">
+        <span class="error-icon">❌</span>
+        <div class="error-message">Hubo un error al cargar las entradas. Por favor, intenta de nuevo.</div>
+        <button class="retry-button" onclick="window.recargarBlog()">Reintentar</button>
       </div>`;
-  },
-  mostrarMensajeVacio() {
+  }
+  static mostrarMensajeVacio() {
     const c = document.getElementById('main-content');
     if (!c) return;
     c.innerHTML = `
-      <div class="blog-error" style="padding:2rem;text-align:center">
+      <div class="blog-error">
+        <span class="error-icon">📝</span>
         <div class="error-message">No hay historias para mostrar aún. ¡Vuelve pronto!</div>
       </div>`;
+  }
+  static limpiarURLs(urls) {
+    if (!urls) return [];
+    return urls.split(',').map(s=>s.trim()).filter(Boolean);
+  }
+  static calculateReadingTime() {
+    const el = document.querySelector('.blog-main');
+    if (!el) return 1;
+    const words = el.textContent.trim().split(/\s+/).length;
+    return Math.max(1, Math.ceil(words/200));
+  }
+  static preload(href, as, type){
+    const l = document.createElement('link');
+    l.rel = 'preload'; l.href = href; l.as = as;
+    if (type) l.type = type;
+    document.head.appendChild(l);
+  }
+}
+
+/* ========= MICRO: Luz del día (sombras por hora) ========= */
+function applySunlightShadows(){
+  const now = new Date();
+  const h = now.getHours(); // 0..23
+  const x = (h-12)*1.2;                            // px (izq/der)
+  const y = Math.max(4, 14 - Math.abs(12-h)*.6);   // px (altura)
+  const blur = 18 + Math.abs(12-h)*.8;             // px
+  const alpha = (h>=7 && h<=19)? .16 : .28;
+  const r = document.documentElement.style;
+  r.setProperty('--shadow-x', `${x}px`);
+  r.setProperty('--shadow-y', `${y}px`);
+  r.setProperty('--shadow-blur', `${blur}px`);
+  r.setProperty('--shadow-alpha', alpha.toString());
+}
+
+/* ========= MICRO: Lana al scrollear ========= */
+function attachYarnScroll(){
+  const onScroll=()=>{
+    const y = window.scrollY || 0;
+    document.documentElement.style.setProperty('--yarn-offset', `${y}px`);
+  };
+  onScroll();
+  window.addEventListener('scroll', onScroll, {passive:true});
+}
+
+/* ========= Skins / Alto contraste (solo CSS variables) ========= */
+const Skin = {
+  init(){
+    const root = document.documentElement;
+    const saved = localStorage.getItem('skin') || 'cuaderno';
+    const contrast = localStorage.getItem('contrast') || 'normal';
+    root.dataset.skin = (saved==='cuaderno') ? '' : saved;
+    if (contrast==='high') root.dataset.contrast='high'; else root.removeAttribute('data-contrast');
+    this.mountQuickBar();
   },
-  limpiarURLs(urls) {
-    return (urls || '').split(',').map(u => u.trim()).filter(Boolean);
+  set(name){
+    const root = document.documentElement;
+    if (name==='cuaderno') root.removeAttribute('data-skin'); else root.dataset.skin=name;
+    localStorage.setItem('skin', name);
   },
-  calculateReadingTime() {
-    const blogMain = document.querySelector('.blog-main');
-    if (!blogMain) return 1;
-    const text = blogMain.textContent || '';
-    const words = text.trim().split(/\s+/).length;
-    return Math.max(1, Math.ceil(words / 200));
+  toggleContrast(){
+    const root = document.documentElement;
+    const active = root.dataset.contrast === 'high';
+    if (active){ root.removeAttribute('data-contrast'); localStorage.setItem('contrast','normal'); }
+    else { root.dataset.contrast='high'; localStorage.setItem('contrast','high'); }
   },
-  sanitize(s) {
-    return (s || '').replace(/[<>]/g, '');
-  },
-  initCarousel(container) {
-    const carousel = container.querySelector('.carousel');
-    if (!carousel) return;
-    const items = carousel.querySelectorAll('.carousel-item');
-    const prev = carousel.querySelector('.carousel-prev');
-    const next = carousel.querySelector('.carousel-next');
-    let i = 0;
-    const show = (k) => items.forEach((it, idx) => it.classList.toggle('active', idx === k));
-    prev?.addEventListener('click', () => { i = (i - 1 + items.length) % items.length; show(i); });
-    next?.addEventListener('click', () => { i = (i + 1) % items.length; show(i); });
-    show(i);
+  mountQuickBar(){
+    if (document.getElementById('blog-quickbar')) return;
+    const bar = document.createElement('div');
+    bar.id = 'blog-quickbar';
+    bar.innerHTML = `
+      <button class="quick-btn" id="btn-skin-cuaderno" title="Skin cuaderno">📓</button>
+      <button class="quick-btn" id="btn-skin-acuarela" title="Skin acuarela">🎨</button>
+      <button class="quick-btn" id="btn-skin-tejido"   title="Skin tejido">🧵</button>
+      <button class="quick-btn secondary" id="btn-contrast" title="Alto contraste (Alt+H)">🔆</button>
+      <button class="quick-btn" id="btn-voice" title='Voz: "Patofelting, lee los últimos posts"'>🗣️</button>
+    `;
+    document.body.appendChild(bar);
+    document.getElementById('btn-skin-cuaderno').onclick=()=>Skin.set('cuaderno');
+    document.getElementById('btn-skin-acuarela').onclick=()=>Skin.set('acuarela');
+    document.getElementById('btn-skin-tejido').onclick=()=>Skin.set('tejido');
+    document.getElementById('btn-contrast').onclick=()=>Skin.toggleContrast();
+    document.getElementById('btn-voice').onclick=Voice.toggle();
+    // Acceso rápido: Alt+H alto contraste
+    window.addEventListener('keydown',e=>{ if(e.altKey && e.key.toLowerCase()==='h'){Skin.toggleContrast();} });
   }
 };
 
-/* ---------- BLOG MANAGER ---------- */
-class BlogManager {
-  constructor() {
-    this.uid = null;
-    this.entradas = [];
-    this.init();
+/* ========= Firebase (Firestore) ========= */
+let app, db, auth;
+async function ensureFirebase(){
+  if (db) return db;
+  const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js');
+  const { getFirestore, collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp, doc, updateDoc, increment } =
+    await import('https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js');
+  const { getAuth, signInAnonymously, onAuthStateChanged } =
+    await import('https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js');
+
+  app = initializeApp(FIREBASE_CONFIG);
+  db = getFirestore(app);
+  auth = getAuth(app);
+  await signInAnonymously(auth);
+  onAuthStateChanged(auth, user=>{ if (user) { window.PATO_USER_ID=user.uid; } });
+
+  // Exponemos helpers para reuso
+  window.PATO_FB = { collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp, doc, updateDoc, increment };
+  return db;
+}
+
+/* ========= Gamificación ========= */
+const Gamification = {
+  async addPoints(uid, delta=1){
+    await ensureFirebase();
+    const { doc, updateDoc, increment } = window.PATO_FB;
+    const ref = doc(db, 'users', uid);
+    try { await updateDoc(ref, { points: increment(delta) }); } catch(e){ /* usuario inexistente: ignorar (puede crearse en otro flujo) */ }
+  },
+  badgeFor(points){
+    if (points>=100) return 'Maestro del Telar 🧶👑';
+    if (points>=50)  return 'Hilador Experto 🧵✨';
+    if (points>=5)   return 'Tejedor Ávido 🧶';
+    return null;
   }
+};
 
-  async init() {
-    if (HAS_FIREBASE) {
-      window.firebaseCompatAuth.onAuthStateChanged(user => { 
-        this.uid = user ? user.uid : null;
-        console.log('Usuario Firebase:', this.uid ? 'Conectado' : 'Desconectado');
-      });
-    }
-
-    await this.cargarEntradasDesdeCSV();
-    this.addImageLazyLoading();
-    this.addVideoPlayPause();
-    this.buildIndex();
-    this.initReactions();
-    this.enablePostits();
-    this.initCommentsAll();
-    this.injectJSONLD();
-    this.wireIndexMobile();
-
-    // Tiempo de lectura
-    setTimeout(() => {
-      const t = BlogUtils.calculateReadingTime();
-      const el = document.createElement('div');
-      el.className = 'reading-time';
-      el.innerHTML = `<span>📖 Tiempo de lectura: ${t} min</span>`;
-      Object.assign(el.style, {
-        position: 'fixed', bottom: '20px', left: '20px', background: 'white',
-        padding: '0.5rem 1rem', borderRadius: '25px',
-        boxShadow: '0 4px 15px rgba(0,0,0,0.1)', fontSize: '.9rem',
-        color: 'var(--pencil-gray)', zIndex: 1000
-      });
-      document.body.appendChild(el);
-    }, 600);
-
-    // Botón de exportación para admin
-    if (ADMIN) {
-      const adminBtn = document.createElement('button');
-      adminBtn.textContent = '📤 Exportar comentarios';
-      adminBtn.style.position = 'fixed';
-      adminBtn.style.bottom = '60px';
-      adminBtn.style.right = '20px';
-      adminBtn.style.zIndex = '1000';
-      adminBtn.style.padding = '0.5rem 1rem';
-      adminBtn.style.background = '#fff';
-      adminBtn.style.borderRadius = '25px';
-      adminBtn.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
-      adminBtn.addEventListener('click', () => {
-        const comments = this.exportAllComments();
-        prompt('Copia todos los comentarios (JSON):', JSON.stringify(comments, null, 2));
-      });
-      document.body.appendChild(adminBtn);
-    }
+/* ========= Comentarios, votos y Post‑its ========= */
+class CommentsModule{
+  constructor(entryId, mountEl){
+    this.entryId = entryId;
+    this.mountEl = mountEl;
+    this.renderShell();
+    this.listen();
   }
-
-  exportAllComments() {
-    const all = {};
-    this.entradas.forEach(entrada => {
-      const key = LS_KEYS.comments(entrada.id);
-      const comments = JSON.parse(localStorage.getItem(key) || '[]');
-      if (comments.length) all[entrada.id] = comments;
+  ui(){
+    const wrap=document.createElement('section');
+    wrap.className='comments';
+    wrap.innerHTML = `
+      <h3 style="font-family:var(--font-cursive);color:var(--dark-green);margin:1rem 0;">Comentarios</h3>
+      <form class="comment-form" aria-label="Agregar comentario">
+        <input name="name" required placeholder="Tu nombre" aria-label="Nombre" />
+        <textarea name="text" required placeholder="Escribe un comentario..." rows="3" aria-label="Comentario"></textarea>
+        <button type="submit" class="quick-btn">Publicar</button>
+      </form>
+      <ul class="comment-list" aria-live="polite"></ul>
+    `;
+    // estilos mínimos inyectados
+    const s = document.createElement('style');
+    s.textContent = `
+      .comment-form{display:grid;gap:.5rem;margin:.6rem 0;}
+      .comment-form input,.comment-form textarea{padding:.6rem;border-radius:10px;border:2px dashed rgba(0,0,0,.08);font-family:var(--font-system)}
+      .comment-list{list-style:none;display:grid;gap:.6rem;margin-top:.8rem}
+      .comment{background:var(--paper);border-radius:12px;padding:.7rem .8rem;position:relative}
+      .vote{position:absolute;right:.6rem;top:.5rem;cursor:pointer}
+      .yarn{filter:drop-shadow(0 2px 4px rgba(0,0,0,.2))}
+    `;
+    document.head.appendChild(s);
+    return wrap;
+  }
+  renderShell(){
+    const ui = this.ui();
+    this.mountEl.appendChild(ui);
+    const form = ui.querySelector('.comment-form');
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const fd = new FormData(form);
+      const name = (fd.get('name')||'').toString().trim();
+      const text = (fd.get('text')||'').toString().trim();
+      if(!name || !text) return;
+      const uid = window.PATO_USER_ID || 'anon';
+      await ensureFirebase();
+      const { addDoc, collection, serverTimestamp } = window.PATO_FB;
+      await addDoc(collection(db,'comments'),{
+        entryId:this.entryId, name, text, votes:0, createdAt:serverTimestamp(), uid
+      });
+      form.reset();
+      Gamification.addPoints(uid, 2); // +2 por comentar
     });
-    console.log('Todos los comentarios:', all);
-    return all;
+    this.listEl = ui.querySelector('.comment-list');
   }
+  async listen(){
+    await ensureFirebase();
+    const { onSnapshot, collection, query, where, orderBy } = window.PATO_FB;
+    const q = query(collection(db,'comments'),
+                    where('entryId','==',this.entryId),
+                    orderBy('votes','desc'), orderBy('createdAt','asc'));
+    onSnapshot(q, snap=>{
+      this.listEl.innerHTML='';
+      snap.forEach(docSnap=>{
+        const c = docSnap.data();
+        const li = document.createElement('li');
+        li.className='comment';
+        li.innerHTML = `
+          <strong>${c.name}</strong>
+          <p>${c.text}</p>
+          <button class="vote" title="Votar comentario destacado">
+            <span class="yarn" aria-hidden="true">🧶</span> <span class="v">${c.votes||0}</span>
+          </button>
+          <button class="quick-btn secondary" data-postit>Post‑it</button>
+        `;
+        // votar
+        li.querySelector('.vote').onclick = async ()=>{
+          await ensureFirebase();
+          const { doc, updateDoc, increment } = window.PATO_FB;
+          await updateDoc(doc(db,'comments',docSnap.id),{ votes: increment(1) });
+          Gamification.addPoints(window.PATO_USER_ID, 1); // +1 por votar
+        };
+        // convertir a post-it colocable
+        li.querySelector('[data-postit]').onclick = ()=> this.spawnPostit(c, docSnap.id);
+        this.listEl.appendChild(li);
+      });
+    });
+  }
+  async spawnPostit(comment, id){
+    // crear nota arrastrable sobre la entrada
+    const note = document.createElement('div');
+    note.className='postit';
+    note.tabIndex=0;
+    note.textContent = comment.text;
+    note.style.position='absolute';
+    note.style.left='20px'; note.style.top='20px';
+    // contenedor seguro:
+    const container = this.mountEl.closest('.notebook-page') || this.mountEl;
+    container.style.position='relative';
+    container.appendChild(note);
+    note.focus();
+    // arrastre básico
+    let drag=false, offX=0, offY=0;
+    note.addEventListener('mousedown',e=>{drag=true;offX=e.offsetX;offY=e.offsetY; note.classList.add('wiggle');});
+    window.addEventListener('mouseup',()=>{drag=false; note.classList.remove('wiggle');});
+    window.addEventListener('mousemove',async e=>{
+      if(!drag) return;
+      const rect = container.getBoundingClientRect();
+      note.style.left = (e.pageX - rect.left - offX) + 'px';
+      note.style.top  = (e.pageY - rect.top  - offY + window.scrollY) + 'px';
+    }, {passive:true});
+    // persistir posición/color en Firestore
+    await ensureFirebase();
+    const { doc, updateDoc } = window.PATO_FB;
+    note.addEventListener('mouseup', async ()=>{
+      const color = getComputedStyle(note).backgroundColor;
+      await updateDoc(doc(db,'comments',id),{ postit: { left:note.style.left, top:note.style.top, color }});
+    });
+  }
+}
 
-  /* ===== DATOS ===== */
-  async cargarEntradasDesdeCSV() {
-    try {
-      if (!window.Papa) throw new Error('PapaParse no está cargado');
-      const resp = await fetch(CSV_URL, { cache: 'reload' });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status} - ${resp.statusText}`);
+/* ========= Voz: lectura + comando ========= */
+const Voice = (()=>{
+  let listening = false, recog=null;
+  const canRead = 'speechSynthesis' in window;
+  const canRec  = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+
+  function readLatest(){
+    if(!canRead) return alert('Tu navegador no soporta lectura en voz.');
+    const titles = [...document.querySelectorAll('.entry-title')].slice(0,3).map(e=>e.textContent.trim());
+    const text = titles.length ? `Últimos posts: ${titles.join('. ')}.` : 'No hay posts para leer por ahora.';
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang='es-ES'; u.rate=1; u.pitch=1;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  }
+  function startCmd(){
+    if(!canRec) return alert('Comandos de voz no soportados.');
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recog = new SR(); recog.lang='es-ES'; recog.continuous=false; recog.interimResults=false;
+    recog.onresult = e=>{
+      const phrase = (e.results[0][0].transcript||'').toLowerCase();
+      if (phrase.includes('patofelting') && phrase.includes('lee los últimos posts')) readLatest();
+    };
+    recog.onend = ()=> listening=false;
+    recog.start(); listening=true;
+  }
+  return {
+    toggle(){ listening ? window.speechSynthesis.cancel() : startCmd(); },
+    readLatest
+  };
+})();
+
+/* ========= Transcripción automática (best-effort) ========= */
+async function attachTranscriptionButtons(){
+  const videos = document.querySelectorAll('iframe.entrada-video, video.entrada-video');
+  videos.forEach(v=>{
+    const btn = document.createElement('button');
+    btn.className='quick-btn secondary';
+    btn.textContent='Transcribir video';
+    btn.style.margin='8px 0';
+    btn.onclick=()=>transcribeVideo(v);
+    v.insertAdjacentElement('afterend', btn);
+  });
+}
+async function transcribeVideo(videoEl){
+  const canRec = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+  if(!canRec) return alert('Transcripción no soportada en este navegador.');
+  try{
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recog = new SR(); recog.lang='es-ES'; recog.continuous=true;
+    let text = '';
+    recog.onresult = e=>{
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        if(e.results[i].isFinal) text += e.results[i][0].transcript + ' ';
+      }
+    };
+    recog.onend = ()=>{
+      const pre = document.createElement('pre');
+      pre.style.whiteSpace='pre-wrap'; pre.style.background='var(--paper)'; pre.style.padding='8px'; pre.style.borderRadius='10px';
+      pre.textContent = text.trim() || 'No se capturó audio. (Consejo: acerca el micrófono al altavoz).';
+      videoEl.insertAdjacentElement('afterend', pre);
+    };
+    recog.start();
+    alert('Transcripción en curso. Habla cerca del audio si es necesario.');
+  }catch(e){ alert('No fue posible transcribir automáticamente en este entorno.'); }
+}
+
+/* ========= E‑commerce (tu integración existente) ========= */
+class BlogEcommerceIntegration {
+  constructor(){ this.addProductLinks(); this.addCallToActionTracking(); }
+  addProductLinks(){
+    document.querySelectorAll('[data-product]').forEach(mention=>{
+      const productId = mention.dataset.product;
+      mention.addEventListener('click',()=>{ window.location.href=`index.html#productos?highlight=${productId}`;});
+      mention.style.cssText='cursor:pointer;text-decoration:underline;color:var(--primary-green)';
+    });
+  }
+  addCallToActionTracking(){
+    document.querySelectorAll('.cta-button-blog').forEach(cta=>{
+      cta.addEventListener('click', e=>{
+        const action = e.target.textContent.trim();
+        if (typeof gtag !== 'undefined'){ gtag('event','blog_cta_click',{event_category:'Blog',event_label:action});}
+      });
+    });
+  }
+}
+
+/* ========= Gestor principal del blog ========= */
+class BlogManager {
+  constructor(){ this.entradas=[]; this.init(); }
+  async init(){
+    await this.cargarEntradasDesdeCSV();
+    this.renderEnhancements();
+  }
+  async cargarEntradasDesdeCSV(){
+    try{
+      const resp = await fetch(CSV_URL,{cache:'reload'});
+      if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const texto = await resp.text();
-      const parsed = Papa.parse(texto, { header: true, skipEmptyLines: true, transform: v => (v ?? '').trim() });
-
-      this.entradas = parsed.data
-        .filter(f => f.titulo && f.contenido)
-        .map((f, i) => ({
-          id: f.id || String(i),
+      const resultado = Papa.parse(texto,{ header:true, skipEmptyLines:true, transform:v=>v.trim() });
+      this.entradas = resultado.data
+        .filter(f=>f.titulo && f.contenido)
+        .map((f,i)=>({
+          id: f.id || i.toString(),
           fecha: f.fecha || '',
           titulo: f.titulo,
           contenido: f.contenido,
           imagenes: BlogUtils.limpiarURLs(f.imagenPrincipal || ''),
-          videos: BlogUtils.limpiarURLs(f.videoURL || ''),
-          orden: parseInt(f.orden) || i,
+          videos:   BlogUtils.limpiarURLs(f.videoURL || ''),
+          orden: parseInt(f.orden)||0,
           postit: f.postit || '',
-          ordenpostit: parseInt(f.ordenpostit) || 0
+          ordenpostit: parseInt(f.ordenpostit)||0,
         }))
-        .sort((a, b) => a.orden - b.orden);
-
+        .sort((a,b)=>a.orden-b.orden);
       this.renderizarBlog();
-    } catch (e) {
-      console.error('CSV error:', e);
+    }catch(e){
+      console.error('CSV error', e);
       BlogUtils.mostrarMensajeError();
     }
   }
-
-  /* ===== RENDER ===== */
-  renderizarBlog() {
-    const wrap = document.getElementById('blog-entries');
-    const tmpl = document.getElementById('entry-template');
+  renderizarBlog(){
+    const cont = document.getElementById('main-content');
+    const tpl  = document.getElementById('entry-template');
     const loader = document.getElementById('blog-loading');
-    if (!wrap || !tmpl?.content) return;
+    if(loader) loader.style.display='none';
+    cont.innerHTML='';
+    if(!this.entradas.length){ BlogUtils.mostrarMensajeVacio(); return; }
 
-    if (loader) loader.style.display = 'none';
-    wrap.innerHTML = '';
+    this.entradas.forEach(ent=>{
+      const clone = tpl.content.cloneNode(true);
+      const entry = clone.querySelector('.blog-entry');
+      entry.setAttribute('data-entry-id', ent.id);
+      const titleEl = clone.querySelector('.entry-title');
+      titleEl.innerHTML = `${ent.titulo}<span class="stitch" aria-hidden="true"></span>`;
+      clone.querySelector('.entry-date').textContent = BlogUtils.formatearFecha(ent.fecha);
 
-    if (!this.entradas.length) { BlogUtils.mostrarMensajeVacio(); return; }
-
-    this.entradas.forEach((entrada) => {
-      const frag = tmpl.content.cloneNode(true);
-      const entry = frag.querySelector('.blog-entry');
-      entry.setAttribute('data-entry-id', entrada.id);
-      entry.id = `entry-${entrada.id}`;
-
-      // Fecha + título
-      frag.querySelector('.entry-title').textContent = entrada.titulo;
-      frag.querySelector('.entry-date').textContent = BlogUtils.formatearFecha(entrada.fecha);
-
-      // Contenido
-      const texto = frag.querySelector('.entry-text');
-      entrada.contenido.split('\n').forEach(linea => {
-        const t = linea.trim();
-        if (!t) return;
+      // Texto
+      const txt = clone.querySelector('.entry-text');
+      ent.contenido.split('\n').forEach(line=>{
+        if(!line.trim()) return;
         const p = document.createElement('p');
-        p.className = 'notebook-line';
-        p.textContent = t;
-        texto.appendChild(p);
+        p.className='notebook-line';
+        p.textContent=line.trim();
+        txt.appendChild(p);
       });
-
-      const content = frag.querySelector('.entry-content');
 
       // Media
-      let media = content.querySelector('.media-gallery');
-      if (!media) {
-        media = document.createElement('div');
-        media.className = 'media-gallery';
-        content.appendChild(media);
+      let gallery = clone.querySelector('.media-gallery');
+      if(!gallery){
+        gallery = document.createElement('div'); gallery.className='media-gallery';
+        clone.querySelector('.entry-content').appendChild(gallery);
       }
-
-      // Imágenes → carrusel
-      if (entrada.imagenes?.length) {
-        const c = document.createElement('div');
-        c.className = 'carousel';
-        entrada.imagenes.forEach((url, i) => {
-          const it = document.createElement('div');
-          it.className = `carousel-item ${i === 0 ? 'active' : ''}`;
-          const pol = document.createElement('div'); pol.className = 'photo-polaroid';
-          const img = document.createElement('img');
-          img.className = 'entrada-imagen';
-          img.src = url;
-          img.alt = `${entrada.titulo} — imagen ${i + 1}`;
-          img.loading = 'lazy';
-          pol.appendChild(img);
-          it.appendChild(pol);
-          c.appendChild(it);
-        });
-        if (entrada.imagenes.length > 1) {
-          const prev = document.createElement('button'); prev.className = 'carousel-prev'; prev.textContent = '◄';
-          const next = document.createElement('button'); next.className = 'carousel-next'; next.textContent = '►';
-          c.appendChild(prev); c.appendChild(next);
-        }
-        media.appendChild(c);
-      }
-
-      // Videos
-      if (entrada.videos?.length) {
-        entrada.videos.forEach(url => {
-          const v = document.createElement('iframe');
-          v.className = 'entrada-video';
-          v.src = url;
-          v.loading = 'lazy';
-          v.allowFullscreen = true;
-          v.setAttribute('title', entrada.titulo);
-          media.appendChild(v);
-        });
-      }
-
-      wrap.appendChild(frag);
-    });
-
-    // Extras tras render
-    this.addImageLazyLoading();
-    this.addVideoPlayPause();
-    this.buildIndex();
-    this.initReactions();
-    this.enablePostits();
-    this.initCommentsAll();
-    this.injectJSONLD();
-  }
-
-  /* ===== ÍNDICE ===== */
-  buildIndex() {
-    const nav = document.getElementById('blog-index');
-    if (!nav) return;
-    const entries = document.querySelectorAll('.blog-entry');
-    const ul = document.createElement('ul');
-    entries.forEach((e, i) => {
-      const id = e.getAttribute('data-entry-id') || `e${i}`;
-      const t = e.querySelector('.entry-title')?.textContent?.trim() || `Entrada ${i + 1}`;
-      const li = document.createElement('li'); 
-      const a = document.createElement('a');
-      a.href = `#entry-${id}`; 
-      a.textContent = t;
-      a.addEventListener('click', (ev) => { 
-        ev.preventDefault(); 
-        document.querySelector(a.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth' }); 
+      ent.imagenes.forEach(url=>{
+        const fig=document.createElement('figure'); fig.className='photo-polaroid';
+        const img=new Image(); img.src=url; img.alt=ent.titulo; img.loading='lazy'; img.className='entrada-imagen';
+        img.onerror=()=>{ fig.classList.add('image-error'); fig.innerHTML='<div style="padding:10px;color:#999">Imagen no disponible</div>'; };
+        fig.appendChild(img); gallery.appendChild(fig);
       });
-      li.appendChild(a); 
-      ul.appendChild(li);
-    });
-    nav.innerHTML = ''; 
-    nav.appendChild(ul);
-  }
-
-  wireIndexMobile() {
-    const btn = document.querySelector('.index-toggle');
-    const index = document.getElementById('blog-index');
-    const overlay = document.getElementById('blog-index-overlay');
-    if (!btn || !index || !overlay) return;
-    const toggle = (open) => {
-      index.classList.toggle('menu-mobile-open', open);
-      overlay.classList.toggle('hidden', !open);
-      btn.setAttribute('aria-expanded', String(open));
-    };
-    btn.addEventListener('click', () => toggle(!index.classList.contains('menu-mobile-open')));
-    overlay.addEventListener('click', () => toggle(false));
-  }
-
-  /* ===== REACCIONES ===== */
-  initReactions() {
-    const cache = JSON.parse(localStorage.getItem(LS_KEYS.reactions) || '{}');
-
-    document.querySelectorAll('.blog-entry').forEach(entry => {
-      const id = entry.getAttribute('data-entry-id');
-      const wrap = entry.querySelector('.entry-reactions');
-      if (!wrap) return;
-
-      const emojiBtns = wrap.querySelectorAll('[data-emoji]');
-      const favBtn = wrap.querySelector('.entry-fav');
-
-      if (HAS_FIREBASE) {
-        // Contadores live
-        window.firebaseCompatDb.ref(PATHS.reactions(id)).on('value', snap => {
-          const counts = snap.val() || {};
-          emojiBtns.forEach(btn => {
-            const emoji = btn.dataset.emoji;
-            btn.querySelector('span').textContent = counts[emoji] || 0;
-          });
-        });
-
-        const setPressed = (flags = {}) => {
-          emojiBtns.forEach(btn => {
-            const emoji = btn.dataset.emoji;
-            btn.setAttribute('aria-pressed', String(!!flags[emoji]));
-          });
-        };
-        const setFav = (v) => {
-          favBtn?.classList.toggle('active', !!v);
-          favBtn?.setAttribute('aria-pressed', String(!!v));
-        };
-
-        const attachUser = () => {
-          const uid = this.uid;
-          if (!uid) return;
-          window.firebaseCompatDb.ref(PATHS.reactionsByUser(id, uid)).on('value', s => setPressed(s.val() || {}));
-          window.firebaseCompatDb.ref(PATHS.favorites(id, uid)).on('value', s => setFav(!!s.val()));
-        };
-        attachUser();
-        if (!this.uid) window.firebaseCompatAuth.onAuthStateChanged(() => attachUser());
-
-        // Clicks
-        emojiBtns.forEach(btn => {
-          btn.addEventListener('click', async () => {
-            const emoji = btn.dataset.emoji;
-            const uid = this.uid;
-            if (!uid) { alert('Conectando… probá en 1 segundo'); return; }
-            const byUserRef = window.firebaseCompatDb.ref(`${PATHS.reactionsByUser(id, uid)}/${emoji}`);
-            const exists = (await byUserRef.get()).exists();
-            if (exists) return;
-            const countRef = window.firebaseCompatDb.ref(`${PATHS.reactions(id)}/${emoji}`);
-            await countRef.transaction(n => (typeof n === 'number' ? n : 0) + 1);
-            await byUserRef.set(true);
-            btn.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.15)' }, { transform: 'scale(1)' }], { duration: 180 });
-          });
-        });
-
-        favBtn?.addEventListener('click', async () => {
-          const uid = this.uid;
-          if (!uid) { alert('Conectando… probá en 1 segundo'); return; }
-          const ref = window.firebaseCompatDb.ref(PATHS.favorites(id, uid));
-          const cur = (await ref.get()).val();
-          await ref.set(!cur);
-        });
-
-      } else {
-        // Fallback local
-        const state = cache[id] || { '🧶': 0, '✨': 0, fav: false };
-        emojiBtns.forEach(btn => {
-          const emoji = btn.dataset.emoji;
-          btn.querySelector('span').textContent = state[emoji] || 0;
-          btn.addEventListener('click', () => {
-            state[emoji] = (state[emoji] || 0) + 1;
-            btn.querySelector('span').textContent = state[emoji];
-            cache[id] = state;
-            localStorage.setItem(LS_KEYS.reactions, JSON.stringify(cache));
-            btn.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.15)' }, { transform: 'scale(1)' }], { duration: 180 });
-          });
-        });
-        if (favBtn) {
-          favBtn.classList.toggle('active', !!state.fav);
-          favBtn.setAttribute('aria-pressed', String(!!state.fav));
-          favBtn.addEventListener('click', () => {
-            state.fav = !state.fav;
-            favBtn.classList.toggle('active', state.fav);
-            favBtn.setAttribute('aria-pressed', String(state.fav));
-            cache[id] = state;
-            localStorage.setItem(LS_KEYS.reactions, JSON.stringify(cache));
-          });
-        }
-      }
-    });
-  }
-
-  /* ===== POST-ITS ===== */
-  enablePostits() {
-    const store = JSON.parse(localStorage.getItem(LS_KEYS.postits) || '{}');
-
-    document.querySelectorAll('.blog-entry').forEach(entry => {
-      const id = entry.getAttribute('data-entry-id');
-      const box = entry.querySelector('.postit-container');
-      if (!box) return;
-
-      box.style.position = box.style.position || 'relative';
-
-      // Restaurar guardados
-      (store[id] || []).forEach(p => box.appendChild(this._renderPostit(box, p, entry)));
-
-      // Botón para crear
-      if (!box.querySelector('.postit-add')) {
-        const add = document.createElement('button');
-        add.textContent = '➕ Post-it';
-        add.className = 'postit-add';
-        add.addEventListener('click', () => {
-          const p = { 
-            id: crypto.randomUUID(), 
-            text: 'Escribe aquí…', 
-            x: 6 + Math.random() * 40, 
-            y: 4 + Math.random() * 30, 
-            color: '#ffeb3b', 
-            w: 220, 
-            h: 150 
-          };
-          box.appendChild(this._renderPostit(box, p, entry));
-          this._persistPostits(entry);
-        });
-        box.appendChild(add);
-      }
-    });
-  }
-
-  _renderPostit(container, p, entryEl) {
-    const el = document.createElement('div');
-    el.className = 'postit';
-    el.dataset.pid = p.id;
-    el.style.position = 'absolute';
-    el.style.zIndex = '20';
-    el.style.cursor = 'grab';
-    el.style.background = p.color || '#ffeb3b';
-    el.style.left = (typeof p.x === 'number' ? p.x + '%' : p.x || '6%');
-    el.style.top = (typeof p.y === 'number' ? p.y + '%' : p.y || '6%');
-    if (p.w) el.style.width = (typeof p.w === 'number' ? p.w + 'px' : p.w);
-    if (p.h) el.style.height = (typeof p.h === 'number' ? p.h + 'px' : p.h);
-
-    // Barra
-    const bar = document.createElement('div');
-    bar.className = 'postit-bar';
-    bar.style.display = 'flex';
-    bar.style.alignItems = 'center';
-    bar.style.justifyContent = 'space-between';
-    bar.style.gap = '.5rem';
-    bar.style.padding = '.25rem .4rem';
-    bar.style.cursor = 'grab';
-    bar.style.userSelect = 'none';
-    bar.style.touchAction = 'none';
-
-    const title = document.createElement('span');
-    title.className = 'title';
-    title.textContent = 'Nota';
-
-    const tools = document.createElement('div');
-    tools.className = 'tools';
-    tools.style.display = 'flex';
-    tools.style.alignItems = 'center';
-    tools.style.gap = '.35rem';
-
-    const palette = document.createElement('div');
-    palette.className = 'postit-color-options';
-    palette.style.display = 'inline-flex';
-    palette.style.gap = '.25rem';
-
-    ['#f5eead', '#fca8c4', '#b8f1bb', '#42a5f5'].forEach(c => {
-      const dot = document.createElement('span');
-      dot.className = 'color-option';
-      Object.assign(dot.style, {
-        width: '14px', height: '14px', borderRadius: '999px',
-        border: '2px solid #fff', boxShadow: '0 0 0 1px rgba(0,0,0,.1)',
-        background: c, display: 'inline-block'
+      ent.videos.forEach(url=>{
+        const iframe=document.createElement('iframe');
+        iframe.src=url; iframe.className='entrada-video'; iframe.allowFullscreen=true; iframe.loading='lazy';
+        gallery.appendChild(iframe);
       });
-      dot.addEventListener('pointerdown', e => e.stopPropagation());
-      dot.addEventListener('click', (e) => { 
-        e.stopPropagation(); 
-        el.style.background = c; 
-        this._persistPostits(entryEl); 
+
+      // Comentarios + post-its
+      const commentsMount = document.createElement('div');
+      commentsMount.className='comments-mount';
+      clone.querySelector('.entry-content').appendChild(commentsMount);
+
+      cont.appendChild(clone);
+      new CommentsModule(ent.id, commentsMount);
+    });
+
+    // Colores de post-its ya se manejan en CommentsModule al crear
+  }
+  renderEnhancements(){
+    // Tiempo de lectura
+    setTimeout(()=>{
+      const rt = BlogUtils.calculateReadingTime();
+      const el = document.createElement('div');
+      el.className='reading-time';
+      el.innerHTML = `<span>📖 Tiempo de lectura: ${rt} min</span>`;
+      Object.assign(el.style,{
+        position:'fixed',bottom:'20px',left:'20px',background:'white',
+        padding:'0.5rem 1rem',borderRadius:'25px',boxShadow:'0 4px 15px rgba(0,0,0,.1)',
+        fontSize:'0.9rem',color:'var(--ink)',zIndex:'1000'
       });
-      palette.appendChild(dot);
-    });
+      document.body.appendChild(el);
+    }, 1200);
 
-    const btnDel = document.createElement('button');
-    btnDel.type = 'button';
-    btnDel.title = 'Eliminar';
-    btnDel.setAttribute('aria-label', 'Eliminar nota');
-    btnDel.textContent = '🗑️';
-    btnDel.style.background = 'none';
-    btnDel.style.border = '0';
-    btnDel.style.cursor = 'pointer';
-    btnDel.addEventListener('pointerdown', e => e.stopPropagation());
-    btnDel.addEventListener('click', (e) => {
-      e.stopPropagation();
-      el.remove();
-      this._persistPostits(entryEl);
-    });
+    // Micro‑interacciones
+    attachYarnScroll();
+    applySunlightShadows();
+    setInterval(applySunlightShadows, 60*1000);
 
-    tools.appendChild(palette);
-    tools.appendChild(btnDel);
-    bar.appendChild(title);
-    bar.appendChild(tools);
+    // Botones de transcribir (best‑effort)
+    attachTranscriptionButtons();
 
-    const content = document.createElement('div');
-    content.className = 'postit-content';
-    content.contentEditable = true;
-    content.textContent = p.text || '';
-    content.style.padding = '.5rem .6rem .7rem';
-    content.style.minHeight = '110px';
-    content.style.lineHeight = '1.25';
-    content.addEventListener('input', () => this._persistPostits(entryEl));
-
-    el.appendChild(bar);
-    el.appendChild(content);
-
-    // Drag
-    let dragging = false, offsetX = 0, offsetY = 0;
-    const crect = () => container.getBoundingClientRect();
-
-    bar.addEventListener('pointerdown', (e) => {
-      if (e.target.closest('.tools')) return;
-      dragging = true;
-      el.classList.add('dragging');
-      bar.setPointerCapture?.(e.pointerId);
-      const r = el.getBoundingClientRect();
-      offsetX = e.clientX - r.left;
-      offsetY = e.clientY - r.top;
-    });
-
-    bar.addEventListener('pointermove', (e) => {
-      if (!dragging) return;
-      const c = crect();
-      let left = e.clientX - c.left - offsetX;
-      let top = e.clientY - c.top - offsetY;
-      left = Math.max(0, Math.min(left, c.width - el.offsetWidth));
-      top = Math.max(0, Math.min(top, c.height - el.offsetHeight));
-      el.style.left = (left / c.width) * 100 + '%';
-      el.style.top = (top / c.height) * 100 + '%';
-    });
-
-    const stop = (e) => {
-      if (!dragging) return;
-      dragging = false;
-      el.classList.remove('dragging');
-      bar.releasePointerCapture?.(e.pointerId);
-      this._persistPostits(entryEl);
-    };
-    bar.addEventListener('pointerup', stop);
-    bar.addEventListener('pointercancel', stop);
-
-    return el;
+    // Preloads básicos
+    BlogUtils.preload('https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Dancing+Script:wght@400;500;600;700&display=swap','style');
+    document.querySelectorAll('img[loading="lazy"]').forEach(img=>{ if (img.src) BlogUtils.preload(img.src,'image'); });
   }
-
-  _persistPostits(entryEl) {
-    const id = entryEl.getAttribute('data-entry-id');
-    const list = [...entryEl.querySelectorAll('.postit')].map(el => {
-      const style = getComputedStyle(el);
-      return {
-        id: el.dataset.pid,
-        text: el.querySelector('.postit-content')?.textContent?.trim() || '',
-        color: style.backgroundColor,
-        x: parseFloat(style.left),
-        y: parseFloat(style.top),
-        w: parseInt(style.width, 10),
-        h: parseInt(style.height, 10)
-      };
-    });
-    const store = JSON.parse(localStorage.getItem(LS_KEYS.postits) || '{}');
-    store[id] = list;
-    localStorage.setItem(LS_KEYS.postits, JSON.stringify(store));
-  }
-
-  /* ===== COMENTARIOS ===== */
-  initCommentsAll() {
-    document.querySelectorAll('.blog-entry').forEach(entry => {
-      const id = entry.getAttribute('data-entry-id');
-      const section = entry.querySelector('.entry-comments');
-      const list = section.querySelector('.comments-list');
-      const form = section.querySelector('.comment-form');
-
-      const render = (comments) => {
-        const arr = Array.isArray(comments) ? comments.slice().sort((a, b) => a.ts - b.ts) : [];
-        if (!arr.length) {
-          list.innerHTML = '<li class="comment-item"><div class="comment-text">Sé el primero en comentar ✨</div></li>';
-          return;
-        }
-        list.innerHTML = arr.map(c => `
-          <li class="comment-item" data-id="${c.id}">
-            <div class="comment-meta">
-              <span class="comment-name">${c.name || 'Anónimo'}</span>
-              <span>•</span>
-              <time datetime="${new Date(c.ts).toISOString()}">${new Date(c.ts).toLocaleString()}</time>
-              ${ADMIN ? `<button class="comment-del" data-id="${c.id}" title="Eliminar">🗑️</button>` : ''}
-            </div>
-            <div class="comment-text">${c.text}</div>
-          </li>
-        `).join('');
-
-        if (ADMIN) {
-          list.querySelectorAll('.comment-del').forEach(btn => {
-            btn.addEventListener('click', async () => {
-              const cid = btn.dataset.id;
-              if (!confirm('¿Eliminar comentario?')) return;
-              if (HAS_FIREBASE) {
-                await window.firebaseCompatDb.ref(`${PATHS.comments(id)}/${cid}`).remove().catch(console.error);
-              } else {
-                const key = LS_KEYS.comments(id);
-                const current = JSON.parse(localStorage.getItem(key) || '[]').filter(c => c.id !== cid);
-                localStorage.setItem(key, JSON.stringify(current));
-                render(current);
-              }
-            });
-          });
-        }
-      };
-
-      // Suscripción / carga
-      if (HAS_FIREBASE) {
-        window.firebaseCompatDb.ref(PATHS.comments(id)).on('value', snap => {
-          console.log('Comentarios recibidos de Firebase:', snap.val());
-          render(Object.values(snap.val() || {}));
-        }, err => {
-          console.warn('Firebase comments error:', err);
-          const ls = JSON.parse(localStorage.getItem(LS_KEYS.comments(id)) || '[]');
-          render(ls);
-        });
-      } else {
-        const ls = JSON.parse(localStorage.getItem(LS_KEYS.comments(id)) || '[]');
-        render(ls);
-      }
-
-      // Publicar
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const name = BlogUtils.sanitize((form.name.value || 'Anónimo').trim());
-        const text = BlogUtils.sanitize((form.text.value || '').trim());
-        if (!text) return;
-
-        // Anti-spam simple: 10s
-        const last = Number(localStorage.getItem(LS_KEYS.lastCommentAt) || 0);
-        if (Date.now() - last < 10_000) { 
-          alert('Esperá unos segundos antes de comentar de nuevo 🙏'); 
-          return; 
-        }
-
-        const comment = { 
-          id: crypto.randomUUID(), 
-          name, 
-          text, 
-          ts: Date.now(), 
-          uid: this.uid || null 
-        };
-
-        console.log('Publicando comentario:', comment);
-
-        if (HAS_FIREBASE) {
-          try {
-            await window.firebaseCompatDb.ref(`${PATHS.comments(id)}/${comment.id}`).set(comment);
-          } catch (e) {
-            console.error('Error al guardar en Firebase, usando localStorage:', e);
-            const key = LS_KEYS.comments(id);
-            const arr = JSON.parse(localStorage.getItem(key) || '[]'); 
-            arr.push(comment);
-            localStorage.setItem(key, JSON.stringify(arr));
-            render(arr);
-          }
-        } else {
-          const key = LS_KEYS.comments(id);
-          const arr = JSON.parse(localStorage.getItem(key) || '[]'); 
-          arr.push(comment);
-          localStorage.setItem(key, JSON.stringify(arr));
-          render(arr);
-        }
-
-        form.reset();
-        localStorage.setItem(LS_KEYS.lastCommentAt, String(Date.now()));
-      });
-    });
-  }
-
-  /* ===== MEDIA ===== */
-  addImageLazyLoading() {
-    const imgs = document.querySelectorAll('.entrada-imagen');
-    if (!imgs.length) return;
-    const io = new IntersectionObserver((entries, obs) => {
-      entries.forEach(e => {
-        if (!e.isIntersecting) return;
-        const img = e.target;
-        img.decode?.().catch(() => { }).finally(() => img.style.opacity = 1);
-        obs.unobserve(img);
-      });
-    }, { rootMargin: '200px 0px 200px 0px' });
-    imgs.forEach(i => { i.style.opacity = .001; io.observe(i); });
-  }
-
-  addVideoPlayPause() {
-    const iframes = document.querySelectorAll('.entrada-video');
-    if (!iframes.length) return;
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach(({ isIntersecting, target }) => {
-        if (!/youtube|vimeo/.test(target.src)) return;
-        const cmd = JSON.stringify({ event: 'command', func: isIntersecting ? 'playVideo' : 'pauseVideo' });
-        target.contentWindow?.postMessage(cmd, '*');
-      });
-    }, { threshold: .3 });
-    iframes.forEach(v => io.observe(v));
-  }
-
-  /* ===== SEO ===== */
-  injectJSONLD() {
-    const slot = document.getElementById('jsonld-slot'); 
-    if (!slot) return;
-    const items = [...document.querySelectorAll('.blog-entry')].map(e => {
-      const name = e.querySelector('.entry-title')?.textContent?.trim();
-      const dateTxt = e.querySelector('.entry-date')?.textContent?.trim();
-      const img = e.querySelector('.entrada-imagen')?.src;
-      const text = e.querySelector('.entry-text')?.innerText?.trim();
-      const dateISO = dateTxt?.split('/')?.reverse()?.join('-');
-      return { 
-        "@type": "BlogPosting", 
-        "headline": name, 
-        "image": img ? [img] : undefined, 
-        "datePublished": dateISO, 
-        "articleBody": text, 
-        "author": { "@type": "Person", "name": "Patofelting" } 
-      };
-    });
-    slot.textContent = JSON.stringify({ "@context": "https://schema.org", "@graph": items });
-  }
-
-  recargar() { this.cargarEntradasDesdeCSV(); }
+  recargar(){ return this.cargarEntradasDesdeCSV(); }
 }
 
-/* ---------- EXPOSE ---------- */
-window.recargarBlog = () => window.blogManager?.recargar();
+/* ========= Service Worker ========= */
+async function registerSW(){
+  if ('serviceWorker' in navigator){
+    try{ await navigator.serviceWorker.register('/sw.js'); }
+    catch(e){ console.warn('SW fail', e); }
+  }
+}
 
-/* ---------- Arranque ---------- */
+/* ========= Boot ========= */
 let blogManager;
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async ()=>{
+  // Skins y accesibilidad
+  Skin.init();
+
+  // Carga blog + ecomm
   blogManager = new BlogManager();
-  const y = document.getElementById('current-year');
-  if (y) y.textContent = new Date().getFullYear();
+  new BlogEcommerceIntegration();
+
+  // Voz: comando rápido desde quickbar
+  registerSW();
+
+  // Recarga cada 60s (progresivo)
+  setInterval(()=>{ if (blogManager && blogManager.entradas.length>0){ blogManager.recargar(); } }, 60000);
 });
+
+// Exponer helpers
+window.BlogUtils = BlogUtils;
+window.recargarBlog = ()=> blogManager && blogManager.recargar();
