@@ -1,196 +1,218 @@
 /*********************************************************
- * Blog Patofelting – Carrusel Pro (slide + auto‑height)
- * Limpio y robusto
+ * Blog Patofelting – JS con Carrusel Pro (slide + auto‑height)
  **********************************************************/
 
 class BlogUtils {
   static formatearFecha(fecha) {
     if (!fecha) return '';
-    const [d, m, y] = fecha.split('/');
-    return `${d}/${m}/${y}`;
+    const [day, month, year] = fecha.split('/');
+    return `${day}/${month}/${year}`;
   }
 
   static mostrarMensajeError() {
-    const c = document.getElementById('main-content');
-    if (!c) return;
-    c.innerHTML = `
-      <div class="blog-error" role="alert">
+    const contenedor = document.getElementById('main-content');
+    if (!contenedor) return;
+
+    contenedor.innerHTML = `
+      <div class="blog-error">
         <span class="error-icon">❌</span>
         <div class="error-message">Hubo un error al cargar las entradas. Por favor, intenta de nuevo.</div>
         <button class="retry-button" onclick="window.recargarBlog()">Reintentar</button>
-      </div>`;
+      </div>
+    `;
   }
 
   static mostrarMensajeVacio() {
-    const c = document.getElementById('main-content');
-    if (!c) return;
-    c.innerHTML = `
+    const contenedor = document.getElementById('main-content');
+    if (!contenedor) return;
+
+    contenedor.innerHTML = `
       <div class="blog-error">
         <span class="error-icon">📝</span>
         <div class="error-message">No hay historias para mostrar aún. ¡Vuelve pronto!</div>
-      </div>`;
+      </div>
+    `;
   }
 
-  // Acepta URLs separadas por comas y/o espacios; filtra las inválidas
+  // Acepta URLs separadas por comas (como venías usando)
+  // Si querés, podés mejorarla a split por coma o espacios.
   static limpiarURLs(urls) {
     return (urls || '')
-      .split(/[\s,]+/)
-      .map(u => u.trim())
-      .filter(u => /^https?:\/\//i.test(u));
+      .split(',')
+      .map(url => url.trim())
+      .filter(url => url);
+  }
+
+  static shareOnSocial(platform, text, url = window.location.href) {
+    const encodedUrl = encodeURIComponent(url);
+    const encodedText = encodeURIComponent(text);
+
+    const urls = {
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+      twitter: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
+      whatsapp: `https://wa.me/?text=${encodedText} ${encodedUrl}`,
+      pinterest: `https://pinterest.com/pin/create/button/?url=${encodedUrl}&description=${encodedText}`,
+    };
+
+    if (urls[platform]) {
+      window.open(urls[platform], '_blank', 'width=600,height=400');
+    }
   }
 
   static calculateReadingTime() {
-    const m = document.querySelector('.blog-main');
-    if (!m) return 1;
-    const words = m.textContent.trim().split(/\s+/).length;
-    return Math.max(1, Math.ceil(words / 200));
+    const blogMain = document.querySelector('.blog-main');
+    if (!blogMain) return 1;
+
+    const text = blogMain.textContent;
+    const wordsPerMinute = 200;
+    const words = text.trim().split(/\s+/).length;
+    const time = Math.ceil(words / wordsPerMinute);
+
+    return Math.max(1, time);
   }
 }
 
-/* ====== Efectos suaves (tema + stitch + tiempo lectura) ====== */
-class PremiumEffects {
-  static init() {
-    const io = new IntersectionObserver((es) => {
-      es.forEach(e => { if (e.isIntersecting) e.target.classList.add('stitch-animation'); });
-    }, { threshold: 0.4 });
-    document.querySelectorAll('.entry-title').forEach(t => io.observe(t));
-
-    const nav = document.querySelector('.nav-container');
-    if (nav && !document.getElementById('theme-toggle')) {
-      const b = document.createElement('button');
-      b.id = 'theme-toggle';
-      b.className = 'theme-toggle';
-      b.type = 'button';
-      b.setAttribute('aria-label', 'Cambiar tema');
-      b.textContent = 'Tema: Artesanal';
-      b.addEventListener('click', () => PremiumEffects.cycleTheme());
-      nav.appendChild(b);
-    }
-
-    const rt = BlogUtils.calculateReadingTime();
-    const el = document.createElement('div');
-    el.className = 'reading-time';
-    el.innerHTML = `<span>📖 ${rt} min</span>`;
-    document.body.appendChild(el);
-  }
-
-  static cycleTheme() {
-    const themes = ['default', 'acuarela', 'lana'];
-    const cur = document.documentElement.getAttribute('data-theme') || 'default';
-    const next = themes[(themes.indexOf(cur) + 1) % themes.length];
-    if (next === 'default') document.documentElement.removeAttribute('data-theme');
-    else document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('pf_theme', next);
-  }
-
-  static restoreTheme() {
-    const s = localStorage.getItem('pf_theme');
-    if (s && s !== 'default') document.documentElement.setAttribute('data-theme', s);
-  }
-}
-
-/* ===================== Manager ===================== */
 class BlogManager {
-  constructor() { this.entradas = []; }
+  constructor() {
+    this.entradas = [];
+    this.init();
+  }
 
   async init() {
-    PremiumEffects.restoreTheme();
     await this.cargarEntradasDesdeCSV();
-    this.addImageEnhancements();
-    PremiumEffects.init();
+    this.addScrollEffects?.();
+    this.addImageLazyLoading?.();
+    this.addVideoPlayPause?.();
+    this.addTouchInteractions?.();
+    this.addReadingProgress?.();
+    this.initializeAnimations?.();
+    this.initializePostitColors();
   }
 
+  // ========== CARGA DE DATOS DESDE GOOGLE SHEETS ==========
   async cargarEntradasDesdeCSV() {
     try {
-      const r = await fetch(CSV_URL, { cache: 'reload' });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const txt = await r.text();
+      console.log('🔄 Cargando entradas del blog desde Google Sheets...');
+      console.log('📍 URL:', CSV_URL);
 
-      const res = Papa.parse(txt, {
+      const respuesta = await fetch(CSV_URL, { cache: 'reload' });
+      if (!respuesta.ok) {
+        throw new Error(`HTTP error! status: ${respuesta.status} - ${respuesta.statusText}`);
+      }
+
+      const texto = await respuesta.text();
+      console.log('📄 CSV recibido:', texto.substring(0, 500));
+
+      const resultado = Papa.parse(texto, {
         header: true,
         skipEmptyLines: true,
-        transform: v => (v || '').toString().trim()
+        transform: (value) => (value || '').toString().trim(),
       });
 
-      this.entradas = res.data
-        .filter(f => f.titulo && f.contenido)
-        .map((f, i) => ({
-          id: f.id || String(i),
-          fecha: f.fecha || '',
-          titulo: f.titulo,
-          contenido: f.contenido,
-          imagenes: BlogUtils.limpiarURLs(f.imagenPrincipal || ''),
-          videos: BlogUtils.limpiarURLs(f.videoURL || ''),
-          orden: parseInt(f.orden) || 0,
-          postit: f.postit || '',
-          ordenpostit: parseInt(f.ordenpostit) || 0
+      this.entradas = resultado.data
+        .filter((fila) => fila.titulo && fila.contenido)
+        .map((fila, i) => ({
+          id: fila.id || i.toString(),
+          fecha: fila.fecha || '',
+          titulo: fila.titulo,
+          contenido: fila.contenido,
+          imagenes: BlogUtils.limpiarURLs(fila.imagenPrincipal || ''),
+          videos: BlogUtils.limpiarURLs(fila.videoURL || ''),
+          orden: parseInt(fila.orden) || 0,
+          postit: fila.postit || '',
+          ordenpostit: parseInt(fila.ordenpostit) || 0,
         }))
         .sort((a, b) => a.orden - b.orden);
 
+      console.log('✅ Entradas procesadas:', this.entradas.length);
       this.renderizarBlog();
-    } catch (e) {
-      console.error('Error CSV', e);
+
+    } catch (error) {
+      console.error('❌ Error al cargar CSV:', error.message);
       BlogUtils.mostrarMensajeError();
     }
   }
 
+  // ========== RENDERIZADO DEL BLOG ==========
   renderizarBlog() {
-    const cont = document.getElementById('main-content');
-    const tpl  = document.getElementById('entry-template');
+    const contenedor = document.getElementById('main-content');
+    const template = document.getElementById('entry-template');
     const loader = document.getElementById('blog-loading');
+
+    if (!contenedor) {
+      console.error('❌ No se encontró el contenedor principal. Verifica el ID "main-content" en el HTML.');
+      return;
+    }
+
+    if (!template || !template.content) {
+      console.error('❌ No se encontró el template para las entradas. Verifica el ID "entry-template" en el HTML.');
+      BlogUtils.mostrarMensajeError();
+      return;
+    }
+
     if (loader) loader.style.display = 'none';
-    if (!cont || !tpl || !tpl.content) return;
+    contenedor.innerHTML = '';
 
-    cont.innerHTML = '';
-    if (this.entradas.length === 0) { BlogUtils.mostrarMensajeVacio(); return; }
+    if (this.entradas.length === 0) {
+      BlogUtils.mostrarMensajeVacio();
+      return;
+    }
 
-    this.entradas.forEach(entrada => {
-      const clone = tpl.content.cloneNode(true);
-      const article = clone.querySelector('.blog-entry');
-      article.setAttribute('data-entry-id', entrada.id);
+    this.entradas.forEach((entrada) => {
+      const clone = template.content.cloneNode(true);
+      const entryElement = clone.querySelector('.blog-entry');
+      entryElement.setAttribute('data-entry-id', entrada.id);
 
+      // Título y fecha
       clone.querySelector('.entry-title').textContent = entrada.titulo;
-      clone.querySelector('.entry-date').textContent  = BlogUtils.formatearFecha(entrada.fecha);
+      clone.querySelector('.entry-date').textContent = BlogUtils.formatearFecha(entrada.fecha);
 
-      const texto = clone.querySelector('.entry-text');
+      // Contenido
+      const textoContainer = clone.querySelector('.entry-text');
       entrada.contenido.split('\n').forEach(linea => {
-        if (!linea.trim()) return;
-        const p = document.createElement('p');
-        p.className = 'notebook-line';
-        p.textContent = linea.trim();
-        texto.appendChild(p);
+        if (linea.trim()) {
+          const p = document.createElement('p');
+          p.className = 'notebook-line';
+          p.textContent = linea.trim();
+          textoContainer.appendChild(p);
+        }
       });
 
-      /* ------ Carrusel Pro (slide) ------ */
-      const gallery = clone.querySelector('.media-gallery');
-      const media = [];
-      (entrada.imagenes || []).forEach((u, i) => media.push({ type: 'img', url: u, alt: `${entrada.titulo} — imagen ${i + 1}` }));
-      (entrada.videos   || []).forEach((u, i) => media.push({ type: 'video', url: u, alt: `${entrada.titulo} — video ${i + 1}` }));
+      // === CARRUSEL PRO (slide + auto‑height) ===
+      const gallery = clone.querySelector('.media-gallery'); // existe en tu template
+      const sources = [];
 
-      if (media.length) {
+      (entrada.imagenes || []).forEach((url, idx) => {
+        sources.push({ type: 'img', url, alt: `${entrada.titulo} — imagen ${idx + 1}` });
+      });
+      (entrada.videos || []).forEach((url, idx) => {
+        sources.push({ type: 'video', url, alt: `${entrada.titulo} — video ${idx + 1}` });
+      });
+
+      if (sources.length > 0) {
         const carousel = document.createElement('div');
-        carousel.className = 'carousel-pro'; // usa modo slide de CSS
+        carousel.className = 'carousel-pro'; // modo slide
 
         const track = document.createElement('div');
         track.className = 'carousel-track';
         carousel.appendChild(track);
 
-        media.forEach((m, i) => {
+        sources.forEach((item, i) => {
           const slide = document.createElement('div');
           slide.className = 'carousel-slide' + (i === 0 ? ' active' : '');
 
-          if (m.type === 'img') {
+          if (item.type === 'img') {
             const img = document.createElement('img');
-            img.src = m.url;
-            img.alt = m.alt;
+            img.src = item.url;
+            img.alt = item.alt;
             img.loading = 'lazy';
             img.decoding = 'async';
             slide.appendChild(img);
           } else {
             const iframe = document.createElement('iframe');
-            iframe.src = m.url;
+            iframe.src = item.url;
             iframe.loading = 'lazy';
-            iframe.title = m.alt;
+            iframe.title = item.alt;
             iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
             iframe.setAttribute('allowfullscreen', '');
             slide.appendChild(iframe);
@@ -199,6 +221,7 @@ class BlogManager {
           track.appendChild(slide);
         });
 
+        // Controles + indicadores
         const nav = document.createElement('div');
         nav.className = 'carousel-nav';
         nav.innerHTML = `
@@ -207,56 +230,87 @@ class BlogManager {
 
         const dots = document.createElement('div');
         dots.className = 'carousel-indicators';
-        media.forEach((_, i) => {
-          const b = document.createElement('button');
-          if (i === 0) b.classList.add('active');
-          b.setAttribute('aria-label', 'Ir al slide ' + (i + 1));
-          dots.appendChild(b);
+        sources.forEach((_, i) => {
+          const dot = document.createElement('button');
+          if (i === 0) dot.classList.add('active');
+          dot.setAttribute('aria-label', 'Ir al slide ' + (i + 1));
+          dots.appendChild(dot);
         });
 
         carousel.appendChild(nav);
         carousel.appendChild(dots);
         gallery.appendChild(carousel);
       } else {
+        // sin media: no dejamos hueco
         gallery.remove();
       }
 
-      // Post-it opcional
+      // Post-it (si viene texto)
       if (entrada.postit) {
-        const entryContent = clone.querySelector('.entry-content');
-        const wrap = document.createElement('div');
-        wrap.className = 'postit-container';
+        const postitContainer = clone.querySelector('.postit-container') || clone.querySelector('.entry-content');
         const postit = document.createElement('div');
         postit.className = 'postit';
         postit.textContent = entrada.postit;
-        postit.setAttribute('tabindex', '0');
-        wrap.appendChild(postit);
-        entryContent.prepend(wrap);
+        postit.setAttribute('draggable', 'true');
+        postitContainer.appendChild(postit);
+
+        // Drag & drop simple
+        postit.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', postit.outerHTML);
+          postit.classList.add('dragging');
+        });
+        postit.addEventListener('dragend', () => postit.classList.remove('dragging'));
+
+        entryElement.addEventListener('dragover', (e) => e.preventDefault());
+        entryElement.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const data = e.dataTransfer.getData('text/plain');
+          const wrap = document.createElement('div');
+          wrap.innerHTML = data;
+          const newPostit = wrap.querySelector('.postit');
+          newPostit.style.position = 'absolute';
+          newPostit.style.left = `${e.pageX - entryElement.offsetLeft}px`;
+          newPostit.style.top = `${e.pageY - entryElement.offsetTop}px`;
+          entryElement.appendChild(newPostit);
+          postit.remove();
+        });
       }
 
-      cont.appendChild(clone);
+      contenedor.appendChild(clone);
     });
 
-    initCarouselPro(cont);
+    // Inicializar todos los carruseles ya renderizados
+    initCarouselPro(contenedor);
   }
 
-  addImageEnhancements() {
-    document.addEventListener('error', (e) => {
-      const t = e.target;
-      if (t.tagName === 'IMG') {
-        t.alt = (t.alt || '') + ' (no disponible)';
-        t.style.opacity = '.3';
-      }
-    }, true);
-  }
+  // Colores del post‑it
+  initializePostitColors() {
+    document.querySelectorAll('.postit').forEach(postit => {
+      const colorOptions = document.createElement('div');
+      colorOptions.className = 'postit-color-options';
+      ['yellow', 'pink', 'green', 'blue'].forEach(color => {
+        const option = document.createElement('div');
+        option.id = `color-${color}`;
+        option.className = 'color-option';
+        option.addEventListener('click', () => {
+          postit.style.background = getComputedStyle(document.getElementById(`color-${color}`)).backgroundColor;
+        });
+        colorOptions.appendChild(option);
+      });
+      postit.appendChild(colorOptions);
 
-  async recargar() { await this.cargarEntradasDesdeCSV(); }
+      postit.addEventListener('mouseenter', () => { colorOptions.style.display = 'block'; });
+      postit.addEventListener('mouseleave', () => {
+        setTimeout(() => { if (!postit.matches(':hover')) colorOptions.style.display = 'none'; }, 500);
+      });
+    });
+  }
 }
 
-/* ====== Inicializador Carrusel (slide + autoHeight) ====== */
+/* ====== Carrusel Pro – Inicializador (slide + autoHeight) ====== */
 function initCarouselPro(root) {
   root.querySelectorAll('.carousel-pro').forEach(carousel => {
-    const track = carousel.querySelector('.carousel-track');
+    const track  = carousel.querySelector('.carousel-track');
     const slides = Array.from(track.children);
     const prev   = carousel.querySelector('.carousel-btn.prev');
     const next   = carousel.querySelector('.carousel-btn.next');
@@ -288,9 +342,11 @@ function initCarouselPro(root) {
     next?.addEventListener('click', () => go(index + 1));
     dots.forEach((d, i) => d.addEventListener('click', () => go(i)));
 
-    // Gestos táctiles
+    // Gestos (pointer)
     let startX = 0, down = false, pid = null;
-    track.addEventListener('pointerdown', e => { down = true; startX = e.clientX; pid = e.pointerId; track.setPointerCapture(pid); });
+    track.addEventListener('pointerdown', e => {
+      down = true; startX = e.clientX; pid = e.pointerId; track.setPointerCapture(pid);
+    });
     track.addEventListener('pointerup', e => {
       if (!down) return; down = false;
       const dx = e.clientX - startX;
@@ -319,22 +375,39 @@ function initCarouselPro(root) {
   });
 }
 
-/* ====== Ecommerce hooks ====== */
+/* ====== Integración e‑commerce ====== */
 class BlogEcommerceIntegration {
-  constructor() { this.addProductLinks(); this.addCallToActionTracking(); }
+  constructor() {
+    this.addProductLinks();
+    this.addCallToActionTracking();
+  }
+
   addProductLinks() {
-    document.querySelectorAll('[data-product]').forEach(m => {
-      const id = m.dataset.product;
-      m.addEventListener('click', () => { window.location.href = `index.html#productos?highlight=${id}`; });
-      m.style.cursor = 'pointer';
+    const productMentions = document.querySelectorAll('[data-product]');
+
+    productMentions.forEach((mention) => {
+      const productId = mention.dataset.product;
+      mention.addEventListener('click', () => {
+        window.location.href = `index.html#productos?highlight=${productId}`;
+      });
+
+      mention.style.cursor = 'pointer';
+      mention.style.textDecoration = 'underline';
+      mention.style.color = 'var(--primary-green)';
     });
   }
+
   addCallToActionTracking() {
-    document.querySelectorAll('.cta-button-blog').forEach(cta => {
+    document.querySelectorAll('.cta-button-blog').forEach((cta) => {
       cta.addEventListener('click', (e) => {
         const action = e.target.textContent.trim();
+        console.log(`Blog CTA clicked: ${action}`);
+
         if (typeof gtag !== 'undefined') {
-          gtag('event', 'blog_cta_click', { event_category: 'Blog', event_label: action });
+          gtag('event', 'blog_cta_click', {
+            event_category: 'Blog',
+            event_label: action,
+          });
         }
       });
     });
@@ -346,15 +419,95 @@ const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQar
 
 /* ====== Boot ====== */
 let blogManager;
+
 document.addEventListener('DOMContentLoaded', async () => {
+  console.log('🚀 Iniciando Blog de Patofelting...');
+
   blogManager = new BlogManager();
-  await blogManager.init();
   new BlogEcommerceIntegration();
 
-  setInterval(() => blogManager.recargar(), 120000); // auto‑refresh suave
+  setTimeout(() => {
+    const readingTime = BlogUtils.calculateReadingTime();
+    const timeElement = document.createElement('div');
+    timeElement.className = 'reading-time';
+    timeElement.innerHTML = `<span>📖 Tiempo de lectura: ${readingTime} min</span>`;
+    timeElement.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: white;
+      padding: 0.5rem 1rem;
+      border-radius: 25px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      font-size: 0.9rem;
+      color: var(--pencil-gray);
+      z-index: 1000;
+    `;
+    document.body.appendChild(timeElement);
+  }, 2000);
 
-  const y = document.getElementById('current-year');
-  if (y) y.textContent = new Date().getFullYear();
+  setInterval(() => {
+    if (blogManager && blogManager.entradas.length > 0) {
+      console.log('🔄 Intentando recargar entradas...');
+      blogManager.recargar?.();
+    }
+  }, 60000);
+
+  console.log('✨ Blog de Patofelting cargado correctamente');
 });
 
-window.recargarBlog = () => blogManager?.recargar();
+// API reintentar
+window.BlogUtils = BlogUtils;
+window.recargarBlog = () => { blogManager?.recargar?.(); };
+
+/* ====== Extras post-it persistencia (opcional, como tenías) ====== */
+document.querySelectorAll('.color-option').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const color = window.getComputedStyle(this).backgroundColor;
+    const postit = this.closest('.postit');
+    if (!postit) return;
+    postit.style.background = color;
+
+    const id = postit.dataset.id;
+    const pos = { left: postit.style.left, top: postit.style.top };
+    if (id) localStorage.setItem('postit_' + id, JSON.stringify({ color, ...pos }));
+  });
+});
+
+document.querySelectorAll('.postit').forEach(postit => {
+  postit.onmousedown = function(e) {
+    let shiftX = e.clientX - postit.getBoundingClientRect().left;
+    let shiftY = e.clientY - postit.getBoundingClientRect().top;
+    postit.classList.add('dragging');
+    function moveAt(pageX, pageY) {
+      postit.style.left = pageX - shiftX + 'px';
+      postit.style.top = pageY - shiftY + 'px';
+    }
+    function onMouseMove(ev) { moveAt(ev.pageX, ev.pageY); }
+    document.addEventListener('mousemove', onMouseMove);
+    postit.onmouseup = function() {
+      document.removeEventListener('mousemove', onMouseMove);
+      postit.onmouseup = null;
+      postit.classList.remove('dragging');
+      const id = postit.dataset.id;
+      const color = postit.style.background;
+      if (id) {
+        localStorage.setItem('postit_' + id, JSON.stringify({
+          color,
+          left: postit.style.left,
+          top: postit.style.top
+        }));
+      }
+    };
+  };
+  postit.ondragstart = () => false;
+
+  const id = postit.dataset.id;
+  const saved = id ? localStorage.getItem('postit_' + id) : null;
+  if (saved) {
+    const data = JSON.parse(saved);
+    if (data.color) postit.style.background = data.color;
+    if (data.left)  postit.style.left = data.left;
+    if (data.top)   postit.style.top = data.top;
+  }
+});
