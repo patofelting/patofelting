@@ -1,9 +1,6 @@
 /*********************************************************
  * Blog Patofelting – Carrusel Pro (fade + scale + auto‑height)
- * - Solo renderiza si hay media real
- * - Transición Apple‑like (fade + micro‑zoom)
- * - Gestos táctiles y teclado
- * - Alturas autoajustables y lazy loading
+ * Limpio y robusto
  **********************************************************/
 
 class BlogUtils {
@@ -34,11 +31,12 @@ class BlogUtils {
       </div>`;
   }
 
+  // Acepta URLs separadas por coma(s) y/o espacio(s)
   static limpiarURLs(urls) {
     return (urls || '')
-      .split(',')
-      .map(url => url.trim())
-      .filter(url => url);
+      .split(/[\s,]+/)                 // separa por comas o espacios
+      .map(u => u.trim())
+      .filter(u => /^https?:\/\//i.test(u)); // descarta cadenas inválidas
   }
 
   static calculateReadingTime() {
@@ -173,7 +171,7 @@ class BlogManager {
         }
       });
 
-      // --- CAROUSEL PRO (solo si hay media) ---
+      // --- CAROUSEL PRO (solo si hay media válida) ---
       const gallery = clone.querySelector('.media-gallery');
       const sources = [];
       (entrada.imagenes || []).forEach((url, idx) => sources.push({ type: 'img', url, alt: `${entrada.titulo} — imagen ${idx + 1}` }));
@@ -181,7 +179,8 @@ class BlogManager {
 
       if (sources.length > 0) {
         const carousel = document.createElement('div');
-        carousel.className = 'carousel-pro fade'; // modo fade
+        carousel.className = 'carousel-pro fade'; // modo fade + micro-zoom
+
         const track = document.createElement('div');
         track.className = 'carousel-track';
         carousel.appendChild(track);
@@ -195,7 +194,6 @@ class BlogManager {
             img.alt = item.alt;
             img.loading = 'lazy';
             img.decoding = 'async';
-            // placeholder blur suave antes de cargar
             img.style.opacity = '0';
             img.addEventListener('load', () => { img.style.opacity = '1'; });
             slide.appendChild(img);
@@ -230,7 +228,7 @@ class BlogManager {
         carousel.appendChild(dots);
         gallery.appendChild(carousel);
       } else {
-        // si no hay media, no mostramos contenedor vacío
+        // sin media: no dejamos un hueco
         gallery.remove();
       }
 
@@ -250,7 +248,7 @@ class BlogManager {
       contenedor.appendChild(clone);
     });
 
-    // Inicializar todos los carruseles renderizados
+    // Inicializar carruseles
     initCarouselPro(contenedor);
   }
 
@@ -288,12 +286,9 @@ function initCarouselPro(root) {
     function setAutoHeight() {
       const media = activeMedia();
       if (!media) return;
-      // esperar layout
       requestAnimationFrame(() => {
         const h = media.getBoundingClientRect().height || media.naturalHeight || 0;
-        if (h) {
-          carousel.style.height = h + 'px';
-        }
+        if (h) carousel.style.height = h + 'px';
       });
     }
 
@@ -327,11 +322,11 @@ function initCarouselPro(root) {
       if (e.key === 'ArrowRight') go(index + 1);
     });
 
-    // Ajustar altura al cargar cada media
+    // Ajuste de altura al cargar media
     slides.forEach(s => {
       const m = s.querySelector('img,iframe,video');
       if (!m) return;
-      m.addEventListener('load', setAutoHeight, { once: false });
+      m.addEventListener('load', setAutoHeight);
       if (m.tagName === 'IMG' && m.complete) setAutoHeight();
     });
 
@@ -339,7 +334,7 @@ function initCarouselPro(root) {
   });
 }
 
-/* ====== Integración básica con e‑commerce ====== */
+/* ====== Integración e‑commerce ====== */
 class BlogEcommerceIntegration {
   constructor() {
     this.addProductLinks();
@@ -352,8 +347,6 @@ class BlogEcommerceIntegration {
         window.location.href = `index.html#productos?highlight=${productId}`;
       });
       mention.style.cursor = 'pointer';
-      mention.style.textDecoration = 'underline';
-      mention.style.color = 'var(--primary-green)';
     });
   }
   addCallToActionTracking() {
