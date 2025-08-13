@@ -232,8 +232,7 @@ class BlogManager {
       carousel.appendChild(dots);
 
       gallery.appendChild(carousel);
-// Insertar lightboxes eliminado por carrusel pro
- al final del article (manteniendo estructura padre)
+// Insertar lightboxes eliminado por carrusel pro al final del article (manteniendo estructura padre)
       const entryContent = clone.querySelector('.entry-content');
       lightboxes.forEach(lb => entryContent.appendChild(lb));
 
