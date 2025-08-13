@@ -323,10 +323,6 @@ button:active{transform:scale(.98)}
   display:grid; place-items:center; font-size:1.2rem; cursor:pointer;
   transition: transform .2s ease, box-shadow .2s ease; box-shadow: var(--shadow-soft);
 }
-.carousel-pro .carousel-btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow-hover); }
-.carousel-pro .carousel-indicators{ position:absolute; left:50%; transform:translateX(-50%); bottom:10px; display:flex; gap:8px; }
-.carousel-pro .carousel-indicators button{ width:9px; height:9px; border-radius:999px; border:none; background: rgba(255,255,255,.55); cursor:pointer; transition: transform .25s, background .25s; }
-.carousel-pro .carousel-indicators button.active{ background: var(--primary-green); transform: scale(1.3); }
 
 
 .carousel-pro.fade{position:relative;overflow:hidden;border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-soft)}
@@ -334,4 +330,5 @@ button:active{transform:scale(.98)}
 .carousel-pro.fade .carousel-slide{position:absolute;inset:0;opacity:0;transform:scale(.985);transition:opacity .6s cubic-bezier(.4,0,.2,1),transform .6s ease;display:grid;place-items:center;padding:clamp(6px,1vw,12px)}
 .carousel-pro.fade .carousel-slide.active{opacity:1;transform:scale(1.02)}
 .carousel-pro.fade img,.carousel-pro.fade iframe{width:100%;height:auto;object-fit:cover;aspect-ratio:4/3;border-radius:calc(var(--radius) - 6px);box-shadow:0 12px 34px rgba(0,0,0,.12)}
+
 
