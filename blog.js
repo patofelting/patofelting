@@ -6,14 +6,14 @@
 class BlogUtils {
   static formatearFecha(fecha) {
     if (!fecha) return '';
-    const [day, month, year] = fecha.split('/');
-    return `${day}/${month}/${year}`;
+    const [d, m, y] = fecha.split('/');
+    return `${d}/${m}/${y}`;
   }
 
   static mostrarMensajeError() {
-    const contenedor = document.getElementById('main-content');
-    if (!contenedor) return;
-    contenedor.innerHTML = `
+    const c = document.getElementById('main-content');
+    if (!c) return;
+    c.innerHTML = `
       <div class="blog-error" role="alert">
         <span class="error-icon">❌</span>
         <div class="error-message">Hubo un error al cargar las entradas. Por favor, intenta de nuevo.</div>
@@ -22,16 +22,16 @@ class BlogUtils {
   }
 
   static mostrarMensajeVacio() {
-    const contenedor = document.getElementById('main-content');
-    if (!contenedor) return;
-    contenedor.innerHTML = `
+    const c = document.getElementById('main-content');
+    if (!c) return;
+    c.innerHTML = `
       <div class="blog-error">
         <span class="error-icon">📝</span>
         <div class="error-message">No hay historias para mostrar aún. ¡Vuelve pronto!</div>
       </div>`;
   }
 
-  // Acepta URLs separadas por comas o espacios y filtra inválidas
+  // Acepta URLs separadas por comas y/o espacios; filtra las inválidas
   static limpiarURLs(urls) {
     return (urls || '')
       .split(/[\s,]+/)
@@ -40,62 +40,58 @@ class BlogUtils {
   }
 
   static calculateReadingTime() {
-    const blogMain = document.querySelector('.blog-main');
-    if (!blogMain) return 1;
-    const words = blogMain.textContent.trim().split(/\s+/).length;
+    const m = document.querySelector('.blog-main');
+    if (!m) return 1;
+    const words = m.textContent.trim().split(/\s+/).length;
     return Math.max(1, Math.ceil(words / 200));
   }
 }
 
+/* ====== Efectos suaves (tema + stitch + tiempo lectura) ====== */
 class PremiumEffects {
   static init() {
-    // Títulos con “stitch” al entrar
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('stitch-animation'); });
+    const io = new IntersectionObserver((es) => {
+      es.forEach(e => { if (e.isIntersecting) e.target.classList.add('stitch-animation'); });
     }, { threshold: 0.4 });
     document.querySelectorAll('.entry-title').forEach(t => io.observe(t));
 
-    // Botón de tema (inyectado)
     const nav = document.querySelector('.nav-container');
     if (nav && !document.getElementById('theme-toggle')) {
-      const btn = document.createElement('button');
-      btn.id = 'theme-toggle';
-      btn.className = 'theme-toggle';
-      btn.type = 'button';
-      btn.setAttribute('aria-label', 'Cambiar tema');
-      btn.textContent = 'Tema: Artesanal';
-      btn.addEventListener('click', () => PremiumEffects.cycleTheme());
-      nav.appendChild(btn);
+      const b = document.createElement('button');
+      b.id = 'theme-toggle';
+      b.className = 'theme-toggle';
+      b.type = 'button';
+      b.setAttribute('aria-label', 'Cambiar tema');
+      b.textContent = 'Tema: Artesanal';
+      b.addEventListener('click', () => PremiumEffects.cycleTheme());
+      nav.appendChild(b);
     }
 
-    // Tiempo de lectura
+    const rt = BlogUtils.calculateReadingTime();
     const el = document.createElement('div');
     el.className = 'reading-time';
-    el.innerHTML = `<span>📖 ${BlogUtils.calculateReadingTime()} min</span>`;
+    el.innerHTML = `<span>📖 ${rt} min</span>`;
     document.body.appendChild(el);
   }
 
   static cycleTheme() {
     const themes = ['default', 'acuarela', 'lana'];
-    const current = document.documentElement.getAttribute('data-theme') || 'default';
-    const next = themes[(themes.indexOf(current) + 1) % themes.length];
+    const cur = document.documentElement.getAttribute('data-theme') || 'default';
+    const next = themes[(themes.indexOf(cur) + 1) % themes.length];
     if (next === 'default') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('pf_theme', next);
   }
 
   static restoreTheme() {
-    const saved = localStorage.getItem('pf_theme');
-    if (saved && saved !== 'default') {
-      document.documentElement.setAttribute('data-theme', saved);
-    }
+    const s = localStorage.getItem('pf_theme');
+    if (s && s !== 'default') document.documentElement.setAttribute('data-theme', s);
   }
 }
 
+/* ===================== Manager ===================== */
 class BlogManager {
-  constructor() {
-    this.entradas = [];
-  }
+  constructor() { this.entradas = []; }
 
   async init() {
     PremiumEffects.restoreTheme();
@@ -106,28 +102,28 @@ class BlogManager {
 
   async cargarEntradasDesdeCSV() {
     try {
-      const respuesta = await fetch(CSV_URL, { cache: 'reload' });
-      if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
-      const texto = await respuesta.text();
+      const r = await fetch(CSV_URL, { cache: 'reload' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const txt = await r.text();
 
-      const resultado = Papa.parse(texto, {
+      const res = Papa.parse(txt, {
         header: true,
         skipEmptyLines: true,
-        transform: (value) => (value || '').toString().trim(),
+        transform: v => (v || '').toString().trim()
       });
 
-      this.entradas = resultado.data
-        .filter((fila) => fila.titulo && fila.contenido)
-        .map((fila, i) => ({
-          id: fila.id || String(i),
-          fecha: fila.fecha || '',
-          titulo: fila.titulo,
-          contenido: fila.contenido,
-          imagenes: BlogUtils.limpiarURLs(fila.imagenPrincipal || ''),
-          videos: BlogUtils.limpiarURLs(fila.videoURL || ''),
-          orden: parseInt(fila.orden) || 0,
-          postit: fila.postit || '',
-          ordenpostit: parseInt(fila.ordenpostit) || 0,
+      this.entradas = res.data
+        .filter(f => f.titulo && f.contenido)
+        .map((f, i) => ({
+          id: f.id || String(i),
+          fecha: f.fecha || '',
+          titulo: f.titulo,
+          contenido: f.contenido,
+          imagenes: BlogUtils.limpiarURLs(f.imagenPrincipal || ''),
+          videos: BlogUtils.limpiarURLs(f.videoURL || ''),
+          orden: parseInt(f.orden) || 0,
+          postit: f.postit || '',
+          ordenpostit: parseInt(f.ordenpostit) || 0
         }))
         .sort((a, b) => a.orden - b.orden);
 
@@ -139,114 +135,109 @@ class BlogManager {
   }
 
   renderizarBlog() {
-    const contenedor = document.getElementById('main-content');
-    const template = document.getElementById('entry-template');
+    const cont = document.getElementById('main-content');
+    const tpl  = document.getElementById('entry-template');
     const loader = document.getElementById('blog-loading');
     if (loader) loader.style.display = 'none';
-    if (!contenedor || !template || !template.content) return;
+    if (!cont || !tpl || !tpl.content) return;
 
-    contenedor.innerHTML = '';
+    cont.innerHTML = '';
+    if (this.entradas.length === 0) { BlogUtils.mostrarMensajeVacio(); return; }
 
-    if (this.entradas.length === 0) {
-      BlogUtils.mostrarMensajeVacio();
-      return;
-    }
-
-    this.entradas.forEach((entrada) => {
-      const clone = template.content.cloneNode(true);
-      const entryElement = clone.querySelector('.blog-entry');
-      entryElement.setAttribute('data-entry-id', entrada.id);
+    this.entradas.forEach(entrada => {
+      const clone = tpl.content.cloneNode(true);
+      const article = clone.querySelector('.blog-entry');
+      article.setAttribute('data-entry-id', entrada.id);
 
       clone.querySelector('.entry-title').textContent = entrada.titulo;
-      clone.querySelector('.entry-date').textContent = BlogUtils.formatearFecha(entrada.fecha);
+      clone.querySelector('.entry-date').textContent  = BlogUtils.formatearFecha(entrada.fecha);
 
-      const textoContainer = clone.querySelector('.entry-text');
+      const texto = clone.querySelector('.entry-text');
       entrada.contenido.split('\n').forEach(linea => {
-        if (linea.trim()) {
-          const p = document.createElement('p');
-          p.className = 'notebook-line';
-          p.textContent = linea.trim();
-          textoContainer.appendChild(p);
-        }
+        if (!linea.trim()) return;
+        const p = document.createElement('p');
+        p.className = 'notebook-line';
+        p.textContent = linea.trim();
+        texto.appendChild(p);
       });
 
-      // --- CAROUSEL PRO (solo si hay media válida) ---
+      /* ------ Carrusel Pro (slide) ------ */
       const gallery = clone.querySelector('.media-gallery');
-      const sources = [];
-      (entrada.imagenes || []).forEach((url, idx) => sources.push({ type: 'img', url, alt: `${entrada.titulo} — imagen ${idx + 1}` }));
-      (entrada.videos || []).forEach((url, idx) => sources.push({ type: 'video', url, alt: `${entrada.titulo} — video ${idx + 1}` }));
+      const media = [];
+      (entrada.imagenes || []).forEach((u, i) => media.push({ type: 'img', url: u, alt: `${entrada.titulo} — imagen ${i + 1}` }));
+      (entrada.videos   || []).forEach((u, i) => media.push({ type: 'video', url: u, alt: `${entrada.titulo} — video ${i + 1}` }));
 
-      if (sources.length > 0) {
+      if (media.length) {
         const carousel = document.createElement('div');
-        carousel.className = 'carousel-pro'; // slide (compatible con tu CSS)
+        carousel.className = 'carousel-pro'; // usa modo slide de CSS
 
         const track = document.createElement('div');
         track.className = 'carousel-track';
         carousel.appendChild(track);
 
-        sources.forEach((item, i) => {
+        media.forEach((m, i) => {
           const slide = document.createElement('div');
           slide.className = 'carousel-slide' + (i === 0 ? ' active' : '');
-          if (item.type === 'img') {
+
+          if (m.type === 'img') {
             const img = document.createElement('img');
-            img.src = item.url;
-            img.alt = item.alt;
+            img.src = m.url;
+            img.alt = m.alt;
             img.loading = 'lazy';
             img.decoding = 'async';
             slide.appendChild(img);
           } else {
             const iframe = document.createElement('iframe');
-            iframe.src = item.url;
+            iframe.src = m.url;
             iframe.loading = 'lazy';
-            iframe.title = item.alt;
+            iframe.title = m.alt;
             iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
             iframe.setAttribute('allowfullscreen', '');
             slide.appendChild(iframe);
           }
+
           track.appendChild(slide);
         });
 
-        // Controles + indicadores
         const nav = document.createElement('div');
         nav.className = 'carousel-nav';
         nav.innerHTML = `
           <button class="carousel-btn prev" aria-label="Anterior">❮</button>
           <button class="carousel-btn next" aria-label="Siguiente">❯</button>`;
+
         const dots = document.createElement('div');
         dots.className = 'carousel-indicators';
-        sources.forEach((_, i) => {
-          const dot = document.createElement('button');
-          if (i === 0) dot.classList.add('active');
-          dot.setAttribute('aria-label', 'Ir al slide ' + (i + 1));
-          dots.appendChild(dot);
+        media.forEach((_, i) => {
+          const b = document.createElement('button');
+          if (i === 0) b.classList.add('active');
+          b.setAttribute('aria-label', 'Ir al slide ' + (i + 1));
+          dots.appendChild(b);
         });
 
         carousel.appendChild(nav);
         carousel.appendChild(dots);
         gallery.appendChild(carousel);
       } else {
-        // sin media: no dejamos un hueco
         gallery.remove();
       }
 
-      // Post‑it (opcional)
+      // Post-it opcional
       if (entrada.postit) {
         const entryContent = clone.querySelector('.entry-content');
-        const postitContainer = document.createElement('div');
-        postitContainer.className = 'postit-container';
+        const wrap = document.createElement('div');
+        wrap.className = 'postit-container';
         const postit = document.createElement('div');
         postit.className = 'postit';
         postit.textContent = entrada.postit;
         postit.setAttribute('tabindex', '0');
-        postitContainer.appendChild(postit);
-        entryContent.prepend(postitContainer);
+        wrap.appendChild(postit);
+        entryContent.prepend(wrap);
       }
 
-      contenedor.appendChild(clone);
+      cont.appendChild(clone);
     });
 
-    // Inicializar carruseles
-    initCarouselPro(contenedor);
+    initCarouselPro(cont);
   }
 
   addImageEnhancements() {
@@ -259,26 +250,24 @@ class BlogManager {
     }, true);
   }
 
-  async recargar() {
-    await this.cargarEntradasDesdeCSV();
-  }
+  async recargar() { await this.cargarEntradasDesdeCSV(); }
 }
 
-/* ====== Carrusel Pro – Inicializador (slide + autoHeight) ====== */
+/* ====== Inicializador Carrusel (slide + autoHeight) ====== */
 function initCarouselPro(root) {
   root.querySelectorAll('.carousel-pro').forEach(carousel => {
     const track = carousel.querySelector('.carousel-track');
     const slides = Array.from(track.children);
-    const prevBtn = carousel.querySelector('.carousel-btn.prev');
-    const nextBtn = carousel.querySelector('.carousel-btn.next');
-    const dots = Array.from(carousel.querySelectorAll('.carousel-indicators button'));
+    const prev   = carousel.querySelector('.carousel-btn.prev');
+    const next   = carousel.querySelector('.carousel-btn.next');
+    const dots   = Array.from(carousel.querySelectorAll('.carousel-indicators button'));
     let index = 0;
 
     function setAutoHeight() {
       const s = slides[index];
-      const media = s?.querySelector('img,iframe,video') || s;
+      const m = s?.querySelector('img,iframe,video') || s;
       requestAnimationFrame(() => {
-        const h = media.getBoundingClientRect().height || media.naturalHeight || 0;
+        const h = m.getBoundingClientRect().height || m.naturalHeight || 0;
         if (h) carousel.style.height = h + 'px';
       });
     }
@@ -286,7 +275,7 @@ function initCarouselPro(root) {
     function update() {
       track.style.transform = `translateX(-${index * 100}%)`;
       slides.forEach((s, i) => s.classList.toggle('active', i === index));
-      dots.forEach((d, i) => d.classList.toggle('active', i === index));
+      dots.forEach((d, i)   => d.classList.toggle('active', i === index));
       setAutoHeight();
     }
 
@@ -295,30 +284,30 @@ function initCarouselPro(root) {
       update();
     }
 
-    prevBtn?.addEventListener('click', () => go(index - 1));
-    nextBtn?.addEventListener('click', () => go(index + 1));
+    prev?.addEventListener('click', () => go(index - 1));
+    next?.addEventListener('click', () => go(index + 1));
     dots.forEach((d, i) => d.addEventListener('click', () => go(i)));
 
-    // Gestos táctiles / puntero
-    let startX = 0, isDown = false, pid = null;
-    track.addEventListener('pointerdown', e => { isDown = true; startX = e.clientX; pid = e.pointerId; track.setPointerCapture(pid); });
+    // Gestos táctiles
+    let startX = 0, down = false, pid = null;
+    track.addEventListener('pointerdown', e => { down = true; startX = e.clientX; pid = e.pointerId; track.setPointerCapture(pid); });
     track.addEventListener('pointerup', e => {
-      if (!isDown) return; isDown = false;
+      if (!down) return; down = false;
       const dx = e.clientX - startX;
       if (dx > 50) go(index - 1);
       else if (dx < -50) go(index + 1);
       try { track.releasePointerCapture(pid); } catch {}
     });
-    track.addEventListener('pointercancel', () => { isDown = false; });
+    track.addEventListener('pointercancel', () => { down = false; });
 
     // Teclado
     carousel.setAttribute('tabindex', '0');
     carousel.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowLeft') go(index - 1);
+      if (e.key === 'ArrowLeft')  go(index - 1);
       if (e.key === 'ArrowRight') go(index + 1);
     });
 
-    // Altura inicial al cargar imágenes
+    // Altura inicial al cargar medios
     slides.forEach(s => {
       const m = s.querySelector('img,iframe,video');
       if (!m) return;
@@ -330,23 +319,18 @@ function initCarouselPro(root) {
   });
 }
 
-/* ====== Integración e‑commerce ====== */
+/* ====== Ecommerce hooks ====== */
 class BlogEcommerceIntegration {
-  constructor() {
-    this.addProductLinks();
-    this.addCallToActionTracking();
-  }
+  constructor() { this.addProductLinks(); this.addCallToActionTracking(); }
   addProductLinks() {
-    document.querySelectorAll('[data-product]').forEach((mention) => {
-      const productId = mention.dataset.product;
-      mention.addEventListener('click', () => {
-        window.location.href = `index.html#productos?highlight=${productId}`;
-      });
-      mention.style.cursor = 'pointer';
+    document.querySelectorAll('[data-product]').forEach(m => {
+      const id = m.dataset.product;
+      m.addEventListener('click', () => { window.location.href = `index.html#productos?highlight=${id}`; });
+      m.style.cursor = 'pointer';
     });
   }
   addCallToActionTracking() {
-    document.querySelectorAll('.cta-button-blog').forEach((cta) => {
+    document.querySelectorAll('.cta-button-blog').forEach(cta => {
       cta.addEventListener('click', (e) => {
         const action = e.target.textContent.trim();
         if (typeof gtag !== 'undefined') {
@@ -367,13 +351,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   await blogManager.init();
   new BlogEcommerceIntegration();
 
-  // Auto‑refresh suave
-  setInterval(() => blogManager.recargar(), 120000);
+  setInterval(() => blogManager.recargar(), 120000); // auto‑refresh suave
 
-  // Año footer
   const y = document.getElementById('current-year');
   if (y) y.textContent = new Date().getFullYear();
 });
 
-// API reintentar
 window.recargarBlog = () => blogManager?.recargar();
