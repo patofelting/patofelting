@@ -295,40 +295,116 @@ button:active{transform:scale(.98)}
 
 
 /* ========== CAROUSEL PRO (Apple-like artesanal) ========== */
+/* ========== CAROUSEL PRO (responsive, Apple-like) ========== */
 
-/* ===== Carrusel Pro – modo fade + micro-zoom ===== */
-.carousel-pro.fade { position: relative; overflow: hidden; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-soft); }
-.carousel-pro.fade .carousel-track { position: relative; min-height: 240px; }
-.carousel-pro.fade .carousel-slide { 
-  position: absolute; inset: 0; 
-  opacity: 0; transform: scale(0.985);
+/* Base común */
+.carousel-pro{
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  /* evita que el contenedor sea más alto que la imagen activa */
+  transition: height .35s ease;
+}
+
+.carousel-pro img,
+.carousel-pro iframe,
+.carousel-pro video{
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+  /* mantén proporción agradable si la imagen aún no conoce su alto */
+  aspect-ratio: 4 / 3;
+  border-radius: calc(var(--radius) - 6px);
+  box-shadow: 0 12px 34px rgba(0,0,0,.12);
+}
+
+/* ===================== Modo SLIDE ===================== */
+/* Usado cuando el contenedor tiene class="carousel-pro" (sin 'fade') */
+.carousel-pro .carousel-track{
+  display: flex;
+  will-change: transform;
+  transition: transform .5s cubic-bezier(.4,0,.2,1);
+  min-height: 240px; /* anti‑CLS mientras carga */
+}
+.carousel-pro .carousel-slide{
+  flex: 0 0 100%;
+  padding: clamp(6px, 1vw, 12px);
+  display: grid;
+  place-items: center;
+}
+
+/* ===================== Modo FADE ====================== */
+/* Actívalo con class="carousel-pro fade" en el contenedor */
+.carousel-pro.fade .carousel-track{
+  position: relative;
+  min-height: 240px; /* anti‑CLS mientras carga */
+}
+.carousel-pro.fade .carousel-slide{
+  position: absolute;
+  inset: 0;
+  padding: clamp(6px, 1vw, 12px);
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transform: scale(.985);
   transition: opacity .6s cubic-bezier(.4,0,.2,1), transform .6s ease;
-  display: grid; place-items: center; padding: clamp(6px,1vw,12px);
 }
-.carousel-pro.fade .carousel-slide.active { opacity: 1; transform: scale(1.02); }
-.carousel-pro.fade img, 
-.carousel-pro.fade iframe {
-  width: 100%; height: auto; object-fit: cover; aspect-ratio: 4/3;
-  border-radius: calc(var(--radius) - 6px); box-shadow: 0 12px 34px rgba(0,0,0,.12);
+.carousel-pro.fade .carousel-slide.active{
+  opacity: 1;
+  transform: scale(1.02);
 }
 
-/* Controles e indicadores (reutiliza tu estilo existente si ya lo tenés) */
+/* ================= Controles & Dots =================== */
 .carousel-pro .carousel-nav{
-  position:absolute; inset-inline:0; top:50%; transform: translateY(-50%);
-  display:flex; justify-content:space-between; padding: 0 .5rem; pointer-events:none;
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-between;
+  padding: 0 .5rem;
+  pointer-events: none; /* sólo los botones reciben eventos */
 }
 .carousel-pro .carousel-btn{
-  pointer-events:auto; width:40px; height:40px; border-radius:999px; border:1px solid #e5e7eb;
-  background: color-mix(in srgb, var(--paper-white) 92%, #fff 8%); backdrop-filter: blur(6px);
-  display:grid; place-items:center; font-size:1.2rem; cursor:pointer;
-  transition: transform .2s ease, box-shadow .2s ease; box-shadow: var(--shadow-soft);
+  pointer-events: auto;
+  width: 40px; height: 40px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: color-mix(in srgb, var(--paper-white) 92%, #fff 8%);
+  backdrop-filter: blur(6px);
+  display: grid; place-items: center;
+  font-size: 1.15rem;
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease;
+  box-shadow: var(--shadow-soft);
+}
+.carousel-pro .carousel-btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow-hover); }
+
+.carousel-pro .carousel-indicators{
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  bottom: 10px;
+  display: flex; gap: 8px;
+}
+.carousel-pro .carousel-indicators button{
+  width: 9px; height: 9px; border-radius: 999px; border: 0;
+  background: rgba(255,255,255,.55);
+  cursor: pointer;
+  transition: transform .25s, background .25s;
+}
+.carousel-pro .carousel-indicators button.active{
+  background: var(--primary-green);
+  transform: scale(1.25);
 }
 
-
-.carousel-pro.fade{position:relative;overflow:hidden;border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-soft)}
-.carousel-pro.fade .carousel-track{position:relative;min-height:240px}
-.carousel-pro.fade .carousel-slide{position:absolute;inset:0;opacity:0;transform:scale(.985);transition:opacity .6s cubic-bezier(.4,0,.2,1),transform .6s ease;display:grid;place-items:center;padding:clamp(6px,1vw,12px)}
-.carousel-pro.fade .carousel-slide.active{opacity:1;transform:scale(1.02)}
-.carousel-pro.fade img,.carousel-pro.fade iframe{width:100%;height:auto;object-fit:cover;aspect-ratio:4/3;border-radius:calc(var(--radius) - 6px);box-shadow:0 12px 34px rgba(0,0,0,.12)}
-
-
+/* ================ Responsive tweaks =================== */
+@media (max-width: 640px){
+  .carousel-pro img,
+  .carousel-pro iframe,
+  .carousel-pro video{
+    aspect-ratio: 1 / 1; /* más cuadradito en mobile */
+  }
+}
