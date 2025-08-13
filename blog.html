@@ -1,20 +1,19 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="El cuaderno de bitácora de Patofelting - Historias sobre fibras, agujas y creaciones artesanales" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="El cuaderno de bitácora de Patofelting - Historias sobre fibras, agujas y creaciones artesanales">
   <title>El Cuaderno de Patofelting - Mi Historia con las Fibras</title>
-
-  <link rel="stylesheet" href="blog.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Dancing+Script:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="icon" href="favicon.ico" type="image/x-icon" />
-  <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
+  <link rel="preload" href="https://fonts.gstatic.com/s/kalam/v18/uU9NBM0U8Ew_8Q8_7xP4.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="blog.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Dancing+Script:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 </head>
 <body>
-  <!-- Template de entrada -->
   <template id="entry-template">
     <article class="blog-entry" tabindex="0">
       <div class="notebook-page">
@@ -24,14 +23,11 @@
           <h2 class="entry-title"></h2>
           <div class="entry-text"></div>
           <div class="media-gallery"></div>
-          <!-- Aquí montamos comentarios dinámicamente -->
-          <div class="comments-mount"></div>
         </div>
       </div>
     </article>
   </template>
 
-  <!-- Nav -->
   <nav class="blog-nav" aria-label="Navegación principal">
     <div class="nav-container">
       <a href="index.html" class="back-home" aria-label="Volver a la tienda principal">
@@ -41,13 +37,13 @@
         Volver a la tienda
       </a>
       <div class="blog-logo">
-        <img src="img/patofelting.jpg" alt="Logo de Patofelting" class="logo-small" width="40" height="40" loading="lazy" />
+        <img src="img/patofelting.jpg" alt="Logo de Patofelting" class="logo-small" width="40" height="40" loading="lazy">
         <span>Mi Cuaderno de Bitácora</span>
       </div>
+      <!-- El botón de tema se inyecta por JS para no tocar estructura base -->
     </div>
   </nav>
 
-  <!-- Contenido -->
   <main class="blog-main" id="main-content">
     <div class="blog-loading" id="blog-loading" aria-live="polite">
       <div class="loading-animation">
@@ -59,7 +55,6 @@
     <div class="blog-entries" id="blog-entries"></div>
   </main>
 
-  <!-- Footer -->
   <footer class="blog-footer">
     <div class="footer-content">
       <p>Con amor desde mi taller,</p>
