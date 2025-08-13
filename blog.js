@@ -1,3 +1,10 @@
+/*********************************************************
+ * Blog Patofelting – Versión Premium (Carrusel Pro)
+ * - Mantiene estructura
+ * - Galería => Carrusel Apple‑like (imágenes + videos)
+ * - Accesibilidad (teclado), gestos táctiles, lazy loading
+ **********************************************************/
+
 class BlogUtils {
   static formatearFecha(fecha) {
     if (!fecha) return '';
@@ -45,7 +52,7 @@ class BlogUtils {
 
 class PremiumEffects {
   static init() {
-    // Stitch animation cuando los títulos entran en viewport
+    // Títulos con “stitch” al entrar
     const io = new IntersectionObserver((entries) => {
       entries.forEach(e => {
         if (e.isIntersecting) e.target.classList.add('stitch-animation');
@@ -53,7 +60,7 @@ class PremiumEffects {
     }, { threshold: 0.4 });
     document.querySelectorAll('.entry-title').forEach(t => io.observe(t));
 
-    // Inserta botón de tema sin tocar estructura HTML base
+    // Botón de tema (inyectado)
     const nav = document.querySelector('.nav-container');
     if (nav && !document.getElementById('theme-toggle')) {
       const btn = document.createElement('button');
@@ -75,7 +82,7 @@ class PremiumEffects {
   }
 
   static cycleTheme() {
-    const themes = ['default','acuarela','lana'];
+    const themes = ['default', 'acuarela', 'lana'];
     const current = document.documentElement.getAttribute('data-theme') || 'default';
     const next = themes[(themes.indexOf(current) + 1) % themes.length];
     if (next === 'default') {
@@ -103,7 +110,6 @@ class BlogManager {
     PremiumEffects.restoreTheme();
     await this.cargarEntradasDesdeCSV();
     this.addImageEnhancements();
-    this.addKeyboardCloseLightbox();
     PremiumEffects.init();
   }
 
@@ -175,38 +181,40 @@ class BlogManager {
 
       // --- CAROUSEL PRO (Apple-like) ---
       const gallery = clone.querySelector('.media-gallery');
-      // Crear estructura base del carrusel
+
+      // Estructura base
       const carousel = document.createElement('div');
       carousel.className = 'carousel-pro';
       const track = document.createElement('div');
       track.className = 'carousel-track';
       carousel.appendChild(track);
 
-      const slideSources = [];
+      // Slides (imágenes + videos)
+      const sources = [];
       (entrada.imagenes || []).forEach((url, idx) => {
-        slideSources.push({type:'img', url, alt:`${entrada.titulo} — imagen ${idx+1}`});
+        sources.push({ type: 'img', url, alt: `${entrada.titulo} — imagen ${idx + 1}` });
       });
       (entrada.videos || []).forEach((url, idx) => {
-        slideSources.push({type:'video', url, alt:`${entrada.titulo} — video ${idx+1}`});
+        sources.push({ type: 'video', url, alt: `${entrada.titulo} — video ${idx + 1}` });
       });
 
-      slideSources.forEach((item, i) => {
+      sources.forEach((item, i) => {
         const slide = document.createElement('div');
-        slide.className = 'carousel-slide' + (i===0?' active':'');
-        if(item.type==='img'){
+        slide.className = 'carousel-slide' + (i === 0 ? ' active' : '');
+        if (item.type === 'img') {
           const img = document.createElement('img');
           img.src = item.url;
           img.alt = item.alt;
           img.loading = 'lazy';
           img.decoding = 'async';
           slide.appendChild(img);
-        }else{
+        } else {
           const iframe = document.createElement('iframe');
           iframe.src = item.url;
           iframe.loading = 'lazy';
           iframe.title = item.alt;
-          iframe.setAttribute('allow','accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
-          iframe.setAttribute('allowfullscreen','');
+          iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+          iframe.setAttribute('allowfullscreen', '');
           slide.appendChild(iframe);
         }
         track.appendChild(slide);
@@ -223,21 +231,19 @@ class BlogManager {
       // Indicadores
       const dots = document.createElement('div');
       dots.className = 'carousel-indicators';
-      slideSources.forEach((_, i) => {
+      sources.forEach((_, i) => {
         const dot = document.createElement('button');
-        if(i===0) dot.classList.add('active');
-        dot.setAttribute('aria-label', 'Ir al slide ' + (i+1));
+        if (i === 0) dot.classList.add('active');
+        dot.setAttribute('aria-label', 'Ir al slide ' + (i + 1));
         dots.appendChild(dot);
       });
       carousel.appendChild(dots);
 
       gallery.appendChild(carousel);
-// Insertar lightboxes eliminado por carrusel pro al final del article (manteniendo estructura padre)
-      const entryContent = clone.querySelector('.entry-content');
-      lightboxes.forEach(lb => entryContent.appendChild(lb));
 
-      // Post-it (drag simple manteniendo estructura)
+      // Post-it (opcional)
       if (entrada.postit) {
+        const entryContent = clone.querySelector('.entry-content');
         const postitContainer = document.createElement('div');
         postitContainer.className = 'postit-container';
         const postit = document.createElement('div');
@@ -250,31 +256,75 @@ class BlogManager {
 
       contenedor.appendChild(clone);
     });
+
+    // Inicializar todos los carruseles renderizados
+    initCarouselPro(contenedor);
   }
 
   addImageEnhancements() {
-    document.querySelectorAll('img[loading="lazy"]').forEach(img => {
-      img.addEventListener('load', () => img.closest('.gallery-item')?.classList.add('loaded'));
-      img.addEventListener('error', () => {
-        img.alt = (img.alt || '') + ' (no disponible)';
-        img.style.opacity = .3;
-      });
-    });
-  }
-
-  addKeyboardCloseLightbox(){
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && location.hash.startsWith('#lb')) {
-        history.pushState("", document.title, window.location.pathname + window.location.search);
+    // Suaviza entrada de imágenes del carrusel
+    document.addEventListener('load', (e) => {
+      const target = e.target;
+      if (target.tagName === 'IMG' && target.closest('.carousel-pro')) {
+        target.style.opacity = '1';
+        target.style.transition = 'opacity .4s ease';
       }
-    });
+    }, true);
   }
 
-  async recargar(){
+  async recargar() {
     await this.cargarEntradasDesdeCSV();
   }
 }
 
+/* ====== Carrusel Pro – Inicializador ====== */
+function initCarouselPro(root) {
+  root.querySelectorAll('.carousel-pro').forEach(carousel => {
+    const track = carousel.querySelector('.carousel-track');
+    const slides = Array.from(track.children);
+    const prevBtn = carousel.querySelector('.carousel-btn.prev');
+    const nextBtn = carousel.querySelector('.carousel-btn.next');
+    const dots = Array.from(carousel.querySelectorAll('.carousel-indicators button'));
+
+    let index = 0;
+    const go = (n) => {
+      index = (n + slides.length) % slides.length;
+      track.style.transform = `translateX(-${index * 100}%)`;
+      slides.forEach((s, i) => s.classList.toggle('active', i === index));
+      dots.forEach((d, i) => d.classList.toggle('active', i === index));
+    };
+
+    prevBtn?.addEventListener('click', () => go(index - 1));
+    nextBtn?.addEventListener('click', () => go(index + 1));
+    dots.forEach((d, i) => d.addEventListener('click', () => go(i)));
+
+    // Gestos táctiles / puntero
+    let startX = 0, isDown = false, pid = null;
+    track.addEventListener('pointerdown', e => {
+      isDown = true; startX = e.clientX; pid = e.pointerId;
+      track.setPointerCapture(pid);
+    });
+    track.addEventListener('pointerup', e => {
+      if (!isDown) return; isDown = false;
+      const dx = e.clientX - startX;
+      if (dx > 50) go(index - 1);
+      else if (dx < -50) go(index + 1);
+      try { track.releasePointerCapture(pid); } catch {}
+    });
+    track.addEventListener('pointercancel', () => { isDown = false; });
+
+    // Accesible por teclado
+    carousel.setAttribute('tabindex', '0');
+    carousel.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') go(index - 1);
+      if (e.key === 'ArrowRight') go(index + 1);
+    });
+
+    go(0);
+  });
+}
+
+/* ====== Integración básica con e‑commerce ====== */
 class BlogEcommerceIntegration {
   constructor() {
     this.addProductLinks();
@@ -303,65 +353,23 @@ class BlogEcommerceIntegration {
   }
 }
 
+/* ====== Datos ====== */
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?gid=127717360&single=true&output=csv';
 
+/* ====== Boot ====== */
 let blogManager;
 document.addEventListener('DOMContentLoaded', async () => {
   blogManager = new BlogManager();
   await blogManager.init();
   new BlogEcommerceIntegration();
 
-  // Auto refresh ligero (sin jank)
+  // Auto-refresh suave
   setInterval(() => blogManager.recargar(), 120000);
 
-  // Año dinámico
+  // Año footer
   const y = document.getElementById('current-year');
   if (y) y.textContent = new Date().getFullYear();
 });
 
-// API para reintentar desde botón
+// API reintentar
 window.recargarBlog = () => blogManager?.recargar();
-
-
-function initCarouselPro(carousel) {
-  const track = carousel.querySelector('.carousel-track');
-  const slides = Array.from(track.children);
-  const prevBtn = carousel.querySelector('.carousel-btn.prev');
-  const nextBtn = carousel.querySelector('.carousel-btn.next');
-  const indicators = carousel.querySelectorAll('.carousel-indicators button');
-
-  let index = 0;
-
-  function updateCarousel() {
-    track.style.transform = `translateX(-${index * 100}%)`;
-    slides.forEach((s, i) => s.classList.toggle('active', i === index));
-    indicators.forEach((dot, i) => dot.classList.toggle('active', i === index));
-  }
-
-  prevBtn.addEventListener('click', () => {
-    index = (index - 1 + slides.length) % slides.length;
-    updateCarousel();
-  });
-
-  nextBtn.addEventListener('click', () => {
-    index = (index + 1) % slides.length;
-    updateCarousel();
-  });
-
-  indicators.forEach((dot, i) => {
-    dot.addEventListener('click', () => {
-      index = i;
-      updateCarousel();
-    });
-  });
-
-  let startX = 0;
-  track.addEventListener('touchstart', e => startX = e.touches[0].clientX);
-  track.addEventListener('touchend', e => {
-    const diff = e.changedTouches[0].clientX - startX;
-    if (diff > 50) prevBtn.click();
-    if (diff < -50) nextBtn.click();
-  });
-
-  updateCarousel();
-}
