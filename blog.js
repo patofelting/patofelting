@@ -173,54 +173,67 @@ class BlogManager {
         }
       });
 
-      // --- GALERÍA INTERACTIVA (reemplaza carrusel) ---
+      // --- CAROUSEL PRO (Apple-like) ---
       const gallery = clone.querySelector('.media-gallery');
-      const lightboxes = []; // acumulamos para insertar luego
+      // Crear estructura base del carrusel
+      const carousel = document.createElement('div');
+      carousel.className = 'carousel-pro';
+      const track = document.createElement('div');
+      track.className = 'carousel-track';
+      carousel.appendChild(track);
 
-      // Imágenes
+      const slideSources = [];
       (entrada.imagenes || []).forEach((url, idx) => {
-        const lbId = `lb-${entrada.id}-${idx}`;
-        const a = document.createElement('a');
-        a.href = `#${lbId}`;
-        a.className = 'gallery-item';
-        const img = document.createElement('img');
-        img.src = url;
-        img.alt = `${entrada.titulo} — imagen ${idx+1}`;
-        img.loading = 'lazy';
-        img.decoding = 'async';
-        a.appendChild(img);
-        gallery.appendChild(a);
-
-        const lb = document.createElement('div');
-        lb.className = 'lightbox';
-        lb.id = lbId;
-        lb.innerHTML = `<a href="#" class="lb-close" aria-label="Cerrar">×</a><img src="${url}" alt="${entrada.titulo}">`;
-        lightboxes.push(lb);
+        slideSources.push({type:'img', url, alt:`${entrada.titulo} — imagen ${idx+1}`});
       });
-
-      // Videos (YouTube/Vimeo embebidos)
       (entrada.videos || []).forEach((url, idx) => {
-        const lbId = `lbv-${entrada.id}-${idx}`;
-        const a = document.createElement('a');
-        a.href = `#${lbId}`;
-        a.className = 'gallery-item';
-        const thumb = document.createElement('img');
-        thumb.src = `https://image.thum.io/get/width/800/crop/600/${encodeURIComponent(url)}`;
-        thumb.alt = `${entrada.titulo} — video ${idx+1}`;
-        thumb.loading = 'lazy'; thumb.decoding='async';
-        a.appendChild(thumb);
-        gallery.appendChild(a);
-
-        const lb = document.createElement('div');
-        lb.className = 'lightbox';
-        lb.id = lbId;
-        lb.innerHTML = `<a href="#" class="lb-close" aria-label="Cerrar">×</a>
-          <iframe src="${url}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowfullscreen title="${entrada.titulo}"></iframe>`;
-        lightboxes.push(lb);
+        slideSources.push({type:'video', url, alt:`${entrada.titulo} — video ${idx+1}`});
       });
 
-      // Insertar lightboxes al final del article (manteniendo estructura padre)
+      slideSources.forEach((item, i) => {
+        const slide = document.createElement('div');
+        slide.className = 'carousel-slide' + (i===0?' active':'');
+        if(item.type==='img'){
+          const img = document.createElement('img');
+          img.src = item.url;
+          img.alt = item.alt;
+          img.loading = 'lazy';
+          img.decoding = 'async';
+          slide.appendChild(img);
+        }else{
+          const iframe = document.createElement('iframe');
+          iframe.src = item.url;
+          iframe.loading = 'lazy';
+          iframe.title = item.alt;
+          iframe.setAttribute('allow','accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+          iframe.setAttribute('allowfullscreen','');
+          slide.appendChild(iframe);
+        }
+        track.appendChild(slide);
+      });
+
+      // Controles
+      const nav = document.createElement('div');
+      nav.className = 'carousel-nav';
+      nav.innerHTML = `
+        <button class="carousel-btn prev" aria-label="Anterior">❮</button>
+        <button class="carousel-btn next" aria-label="Siguiente">❯</button>`;
+      carousel.appendChild(nav);
+
+      // Indicadores
+      const dots = document.createElement('div');
+      dots.className = 'carousel-indicators';
+      slideSources.forEach((_, i) => {
+        const dot = document.createElement('button');
+        if(i===0) dot.classList.add('active');
+        dot.setAttribute('aria-label', 'Ir al slide ' + (i+1));
+        dots.appendChild(dot);
+      });
+      carousel.appendChild(dots);
+
+      gallery.appendChild(carousel);
+// Insertar lightboxes eliminado por carrusel pro
+ al final del article (manteniendo estructura padre)
       const entryContent = clone.querySelector('.entry-content');
       lightboxes.forEach(lb => entryContent.appendChild(lb));
 
@@ -309,3 +322,47 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // API para reintentar desde botón
 window.recargarBlog = () => blogManager?.recargar();
+
+
+function initCarouselPro(carousel) {
+  const track = carousel.querySelector('.carousel-track');
+  const slides = Array.from(track.children);
+  const prevBtn = carousel.querySelector('.carousel-btn.prev');
+  const nextBtn = carousel.querySelector('.carousel-btn.next');
+  const indicators = carousel.querySelectorAll('.carousel-indicators button');
+
+  let index = 0;
+
+  function updateCarousel() {
+    track.style.transform = `translateX(-${index * 100}%)`;
+    slides.forEach((s, i) => s.classList.toggle('active', i === index));
+    indicators.forEach((dot, i) => dot.classList.toggle('active', i === index));
+  }
+
+  prevBtn.addEventListener('click', () => {
+    index = (index - 1 + slides.length) % slides.length;
+    updateCarousel();
+  });
+
+  nextBtn.addEventListener('click', () => {
+    index = (index + 1) % slides.length;
+    updateCarousel();
+  });
+
+  indicators.forEach((dot, i) => {
+    dot.addEventListener('click', () => {
+      index = i;
+      updateCarousel();
+    });
+  });
+
+  let startX = 0;
+  track.addEventListener('touchstart', e => startX = e.touches[0].clientX);
+  track.addEventListener('touchend', e => {
+    const diff = e.changedTouches[0].clientX - startX;
+    if (diff > 50) prevBtn.click();
+    if (diff < -50) nextBtn.click();
+  });
+
+  updateCarousel();
+}
