@@ -1,5 +1,5 @@
 /*********************************************************
- * Blog Patofelting – Carrusel Pro (fade + scale + auto‑height)
+ * Blog Patofelting – Carrusel Pro (slide + auto‑height)
  * Limpio y robusto
  **********************************************************/
 
@@ -31,21 +31,19 @@ class BlogUtils {
       </div>`;
   }
 
-  // Acepta URLs separadas por coma(s) y/o espacio(s)
+  // Acepta URLs separadas por comas o espacios y filtra inválidas
   static limpiarURLs(urls) {
     return (urls || '')
-      .split(/[\s,]+/)                 // separa por comas o espacios
+      .split(/[\s,]+/)
       .map(u => u.trim())
-      .filter(u => /^https?:\/\//i.test(u)); // descarta cadenas inválidas
+      .filter(u => /^https?:\/\//i.test(u));
   }
 
   static calculateReadingTime() {
     const blogMain = document.querySelector('.blog-main');
     if (!blogMain) return 1;
-    const text = blogMain.textContent;
-    const wordsPerMinute = 200;
-    const words = text.trim().split(/\s+/).length;
-    return Math.max(1, Math.ceil(words / wordsPerMinute));
+    const words = blogMain.textContent.trim().split(/\s+/).length;
+    return Math.max(1, Math.ceil(words / 200));
   }
 }
 
@@ -71,10 +69,9 @@ class PremiumEffects {
     }
 
     // Tiempo de lectura
-    const readingTime = BlogUtils.calculateReadingTime();
     const el = document.createElement('div');
     el.className = 'reading-time';
-    el.innerHTML = `<span>📖 ${readingTime} min</span>`;
+    el.innerHTML = `<span>📖 ${BlogUtils.calculateReadingTime()} min</span>`;
     document.body.appendChild(el);
   }
 
@@ -89,7 +86,9 @@ class PremiumEffects {
 
   static restoreTheme() {
     const saved = localStorage.getItem('pf_theme');
-    if (saved && saved !== 'default') document.documentElement.setAttribute('data-theme', saved);
+    if (saved && saved !== 'default') {
+      document.documentElement.setAttribute('data-theme', saved);
+    }
   }
 }
 
@@ -179,7 +178,7 @@ class BlogManager {
 
       if (sources.length > 0) {
         const carousel = document.createElement('div');
-        carousel.className = 'carousel-pro fade'; // modo fade + micro-zoom
+        carousel.className = 'carousel-pro'; // slide (compatible con tu CSS)
 
         const track = document.createElement('div');
         track.className = 'carousel-track';
@@ -194,8 +193,6 @@ class BlogManager {
             img.alt = item.alt;
             img.loading = 'lazy';
             img.decoding = 'async';
-            img.style.opacity = '0';
-            img.addEventListener('load', () => { img.style.opacity = '1'; });
             slide.appendChild(img);
           } else {
             const iframe = document.createElement('iframe');
@@ -267,7 +264,7 @@ class BlogManager {
   }
 }
 
-/* ====== Carrusel Pro – Inicializador (fade + autoHeight) ====== */
+/* ====== Carrusel Pro – Inicializador (slide + autoHeight) ====== */
 function initCarouselPro(root) {
   root.querySelectorAll('.carousel-pro').forEach(carousel => {
     const track = carousel.querySelector('.carousel-track');
@@ -275,28 +272,27 @@ function initCarouselPro(root) {
     const prevBtn = carousel.querySelector('.carousel-btn.prev');
     const nextBtn = carousel.querySelector('.carousel-btn.next');
     const dots = Array.from(carousel.querySelectorAll('.carousel-indicators button'));
-
     let index = 0;
 
-    function activeMedia() {
-      const s = slides[index];
-      return s ? (s.querySelector('img,iframe,video') || s) : null;
-    }
-
     function setAutoHeight() {
-      const media = activeMedia();
-      if (!media) return;
+      const s = slides[index];
+      const media = s?.querySelector('img,iframe,video') || s;
       requestAnimationFrame(() => {
         const h = media.getBoundingClientRect().height || media.naturalHeight || 0;
         if (h) carousel.style.height = h + 'px';
       });
     }
 
-    function go(n) {
-      index = (n + slides.length) % slides.length;
+    function update() {
+      track.style.transform = `translateX(-${index * 100}%)`;
       slides.forEach((s, i) => s.classList.toggle('active', i === index));
       dots.forEach((d, i) => d.classList.toggle('active', i === index));
       setAutoHeight();
+    }
+
+    function go(n) {
+      index = (n + slides.length) % slides.length;
+      update();
     }
 
     prevBtn?.addEventListener('click', () => go(index - 1));
@@ -322,7 +318,7 @@ function initCarouselPro(root) {
       if (e.key === 'ArrowRight') go(index + 1);
     });
 
-    // Ajuste de altura al cargar media
+    // Altura inicial al cargar imágenes
     slides.forEach(s => {
       const m = s.querySelector('img,iframe,video');
       if (!m) return;
@@ -330,7 +326,7 @@ function initCarouselPro(root) {
       if (m.tagName === 'IMG' && m.complete) setAutoHeight();
     });
 
-    go(0);
+    update();
   });
 }
 
