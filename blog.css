@@ -295,88 +295,35 @@ button:active{transform:scale(.98)}
 
 
 /* ========== CAROUSEL PRO (Apple-like artesanal) ========== */
-.carousel-pro {
-  position: relative;
-  overflow: hidden;
-  border-radius: var(--border-radius);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+
+/* ===== Carrusel Pro – modo fade + micro-zoom ===== */
+.carousel-pro.fade { position: relative; overflow: hidden; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-soft); }
+.carousel-pro.fade .carousel-track { position: relative; min-height: 240px; }
+.carousel-pro.fade .carousel-slide { 
+  position: absolute; inset: 0; 
+  opacity: 0; transform: scale(0.985);
+  transition: opacity .6s cubic-bezier(.4,0,.2,1), transform .6s ease;
+  display: grid; place-items: center; padding: clamp(6px,1vw,12px);
+}
+.carousel-pro.fade .carousel-slide.active { opacity: 1; transform: scale(1.02); }
+.carousel-pro.fade img, 
+.carousel-pro.fade iframe {
+  width: 100%; height: auto; object-fit: cover; aspect-ratio: 4/3;
+  border-radius: calc(var(--radius) - 6px); box-shadow: 0 12px 34px rgba(0,0,0,.12);
 }
 
-.carousel-track {
-  display: flex;
-  transition: transform 0.6s cubic-bezier(.4,0,.2,1);
-  will-change: transform;
+/* Controles e indicadores (reutiliza tu estilo existente si ya lo tenés) */
+.carousel-pro .carousel-nav{
+  position:absolute; inset-inline:0; top:50%; transform: translateY(-50%);
+  display:flex; justify-content:space-between; padding: 0 .5rem; pointer-events:none;
 }
-
-.carousel-slide {
-  min-width: 100%;
-  flex-shrink: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: var(--paper-white);
+.carousel-pro .carousel-btn{
+  pointer-events:auto; width:40px; height:40px; border-radius:999px; border:1px solid #e5e7eb;
+  background: color-mix(in srgb, var(--paper-white) 92%, #fff 8%); backdrop-filter: blur(6px);
+  display:grid; place-items:center; font-size:1.2rem; cursor:pointer;
+  transition: transform .2s ease, box-shadow .2s ease; box-shadow: var(--shadow-soft);
 }
-
-.carousel-slide img {
-  width: 100%;
-  height: auto;
-  object-fit: cover;
-  border-radius: var(--border-radius);
-  transition: transform 0.6s ease;
-}
-
-.carousel-slide.active img {
-  transform: scale(1.02);
-}
-
-.carousel-nav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  padding: 0 1rem;
-  pointer-events: none;
-}
-
-.carousel-btn {
-  pointer-events: auto;
-  background: rgba(255,255,255,0.85);
-  border: none;
-  border-radius: 50%;
-  width: 38px;
-  height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.4rem;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
-.carousel-btn:hover {
-  background: white;
-}
-
-.carousel-indicators {
-  position: absolute;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 6px;
-}
-
-.carousel-indicators button {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255,255,255,0.5);
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.3s ease;
-}
-.carousel-indicators button.active {
-  background: var(--primary-green);
-  transform: scale(1.2);
-}
+.carousel-pro .carousel-btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow-hover); }
+.carousel-pro .carousel-indicators{ position:absolute; left:50%; transform:translateX(-50%); bottom:10px; display:flex; gap:8px; }
+.carousel-pro .carousel-indicators button{ width:9px; height:9px; border-radius:999px; border:none; background: rgba(255,255,255,.55); cursor:pointer; transition: transform .25s, background .25s; }
+.carousel-pro .carousel-indicators button.active{ background: var(--primary-green); transform: scale(1.3); }
