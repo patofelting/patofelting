@@ -484,7 +484,7 @@ function renderizarPaginacion(totalProductos) {
 function mostrarModalProducto(producto) {
   const modal = elementos.productoModal;
   const contenido = elementos.modalContenido;
-  if (!modal || !contenido) return;
+  if (!modal || !contenido || !producto) return;
 
   const enCarrito = carrito.find(item => item.id === producto.id) || { cantidad: 0 };
   const disponibles = Math.max(0, producto.stock - enCarrito.cantidad);
@@ -568,6 +568,7 @@ function mostrarModalProducto(producto) {
   renderCarruselAndContent();
   modal.classList.add('active');
   document.body.classList.add('no-scroll');
+  modal.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function cerrarModal() {
@@ -643,60 +644,63 @@ function inicializarMenuHamburguesa() {
 }
 
 // ===============================
-// CONTACT FORM (EmailJS) – versión corregida
+// CONTACT FORM (EmailJS) – versión robusta
 // ===============================
 function setupContactForm() {
   const formContacto = document.getElementById('formContacto');
   const successMessage = document.getElementById('successMessage');
   const errorMessage = document.getElementById('errorMessage');
 
-  if (formContacto) {
-    formContacto.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const nombre = document.getElementById('nombre').value;
-      const email = document.getElementById('email').value;
-      const mensaje = document.getElementById('mensaje').value;
+  if (!formContacto) return;
 
-      if (!window.emailjs) {
-        console.warn('EmailJS no está cargado; se evita el envío para no romper.');
-        if (errorMessage) {
-          errorMessage.classList.remove('hidden');
-          errorMessage.textContent = 'Servicio de email no disponible.';
-          setTimeout(() => errorMessage.classList.add('hidden'), 3000);
-        }
-        return;
+  formContacto.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    // Chequeo básico de EmailJS
+    if (!window.emailjs || !window.emailjs.send) {
+      console.warn('EmailJS no está cargado o inicializado');
+      if (errorMessage) {
+        errorMessage.classList.remove('hidden');
+        errorMessage.textContent = 'Servicio de email no disponible.';
+        errorMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => errorMessage.classList.add('hidden'), 4000);
       }
+      return;
+    }
 
-      emailjs.send('service_89by24g', 'template_8mn7hdp', {
-        from_name: nombre,
-        from_email: email,
-        message: mensaje
-      })
-      .then(() => {
-        if (successMessage) {
-          successMessage.classList.remove('hidden');
-          successMessage.textContent = 'Mensaje enviado correctamente ✔️';
-          successMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        if (errorMessage) errorMessage.classList.add('hidden');
-        formContacto.reset();
-        setTimeout(() => {
-          if (successMessage) successMessage.classList.add('hidden');
-        }, 3000);
-      }, (error) => {
-        console.error('Error al enviar el mensaje:', error);
-        if (errorMessage) {
-          errorMessage.classList.remove('hidden');
-          errorMessage.textContent = 'Error al enviar el mensaje ❌';
-          errorMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+    const nombre = document.getElementById('nombre').value;
+    const email = document.getElementById('email').value;
+    const mensaje = document.getElementById('mensaje').value;
+
+    emailjs.send('service_89by24g', 'template_8mn7hdp', {
+      from_name: nombre,
+      from_email: email,
+      message: mensaje
+    })
+    .then(() => {
+      if (successMessage) {
+        successMessage.classList.remove('hidden');
+        successMessage.textContent = '¡Mensaje enviado correctamente!';
+        successMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      if (errorMessage) errorMessage.classList.add('hidden');
+      formContacto.reset();
+      setTimeout(() => {
         if (successMessage) successMessage.classList.add('hidden');
-        setTimeout(() => {
-          if (errorMessage) errorMessage.classList.add('hidden');
-        }, 3000);
-      });
+      }, 4000);
+    }, (error) => {
+      console.error('Error al enviar el mensaje:', error);
+      if (errorMessage) {
+        errorMessage.classList.remove('hidden');
+        errorMessage.textContent = 'Error al enviar el mensaje. Intenta más tarde.';
+        errorMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      if (successMessage) successMessage.classList.add('hidden');
+      setTimeout(() => {
+        if (errorMessage) errorMessage.classList.add('hidden');
+      }, 4000);
     });
-  }
+  });
 }
 
 // ===============================
@@ -763,30 +767,9 @@ function inicializarEventos() {
 
   elementos.aplicarRangoBtn?.addEventListener('click', () => aplicarRango());
 
-  // Delegado para cards
+  // Delegado para "Ver Detalle"
   elementos.galeriaProductos?.addEventListener('click', (e) => {
-    const boton = e.target.closest('button');
-    const tarjeta = e.target.closest('.producto-card');
-    if (!tarjeta || !boton) return;
-
-    const id = parseInt(tarjeta.dataset.id);
-    const producto = productos.find(p => p.id === id);
-    if (!producto || isNaN(id)) return;
-
-    e.stopPropagation();
-
-    if (boton.classList.contains('boton-detalles')) {
-      verDetalle(id);
-    } else if (boton.classList.contains('boton-agregar')) {
-      agregarAlCarrito(id, 1, boton);
-    } else if (boton.classList.contains('boton-aviso-stock')) {
-      preguntarStock(boton.dataset.nombre || producto.nombre);
-    }
-  });
-
-  // Delegado para ver detalle desde cualquier botón "Ver Detalle"
-  document.body.addEventListener('click', function(ev) {
-    const botonDetalle = ev.target.closest('.boton-detalles');
+    const botonDetalle = e.target.closest('.boton-detalles');
     if (botonDetalle) {
       const tarjeta = botonDetalle.closest('.producto-card');
       if (tarjeta) {
@@ -794,7 +777,24 @@ function inicializarEventos() {
         verDetalle(id);
       }
     }
+    // ... [otros botones]
+    const boton = e.target.closest('button');
+    if (!boton) return;
+    const tarjeta = e.target.closest('.producto-card');
+    if (!tarjeta) return;
+    const id = parseInt(tarjeta.dataset.id);
+    const producto = productos.find(p => p.id === id);
+    if (!producto || isNaN(id)) return;
+    e.stopPropagation();
+    if (boton.classList.contains('boton-agregar')) {
+      agregarAlCarrito(id, 1, boton);
+    } else if (boton.classList.contains('boton-aviso-stock')) {
+      preguntarStock(boton.dataset.nombre || producto.nombre);
+    }
   });
+
+  // También exponer la función a window
+  window.verDetalle = verDetalle;
 
   // Precio slider "burbujas" y click en span para cambiar valor
   const minPriceSpan = document.getElementById('min-price');
