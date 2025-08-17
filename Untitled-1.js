@@ -595,32 +595,30 @@ function setupContactForm(){
   });
 }
 
-// ---------------------------------
-// EVENTOS GLOBALES
-// ---------------------------------
-function inicializarEventos(){
+
+function inicializarEventos() {
   // carrito
-  elementos.carritoBtnMain?.addEventListener('click', ()=> toggleCarrito(true));
-  elementos.carritoOverlay?.addEventListener('click', ()=> toggleCarrito(false));
-  elementos.btnCerrarCarrito?.addEventListener('click', ()=> toggleCarrito(false));
+  elementos.carritoBtnMain?.addEventListener('click', () => toggleCarrito(true));
+  elementos.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
+  elementos.btnCerrarCarrito?.addEventListener('click', () => toggleCarrito(false));
   elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
 
-  elementos.btnFinalizarCompra?.addEventListener('click', ()=>{
-    if (!carrito.length){ mostrarNotificacion('El carrito está vacío','error'); return; }
-    if (elementos.avisoPreCompraModal){
+  elementos.btnFinalizarCompra?.addEventListener('click', () => {
+    if (!carrito.length) { mostrarNotificacion('El carrito está vacío', 'error'); return; }
+    if (elementos.avisoPreCompraModal) {
       elementos.avisoPreCompraModal.hidden = false;
       elementos.avisoPreCompraModal.style.display = 'flex';
-      elementos.avisoPreCompraModal.setAttribute('aria-hidden','false');
+      elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'false');
     }
   });
 
-  elementos.btnEntendidoAviso?.addEventListener('click', ()=>{
-    if (elementos.avisoPreCompraModal){
+  elementos.btnEntendidoAviso?.addEventListener('click', () => {
+    if (elementos.avisoPreCompraModal) {
       elementos.avisoPreCompraModal.hidden = true;
       elementos.avisoPreCompraModal.style.display = 'none';
-      elementos.avisoPreCompraModal.setAttribute('aria-hidden','true');
+      elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
     }
-    if (elementos.modalDatosEnvio){
+    if (elementos.modalDatosEnvio) {
       elementos.modalDatosEnvio.hidden = false;
       elementos.modalDatosEnvio.style.display = 'flex';
       elementos.modalDatosEnvio.classList.add('visible');
@@ -628,62 +626,65 @@ function inicializarEventos(){
     }
   });
 
-  elementos.btnCancelarAviso?.addEventListener('click', ()=>{
-    if (elementos.avisoPreCompraModal){
+  elementos.btnCancelarAviso?.addEventListener('click', () => {
+    if (elementos.avisoPreCompraModal) {
       elementos.avisoPreCompraModal.hidden = true;
       elementos.avisoPreCompraModal.style.display = 'none';
-      elementos.avisoPreCompraModal.setAttribute('aria-hidden','true');
+      elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
     }
   });
 
   elementos.selectEnvio?.addEventListener('change', actualizarResumenPedido);
 
   // filtros
-  elementos.inputBusqueda?.addEventListener('input', (e)=>{
+  elementos.inputBusqueda?.addEventListener('input', (e) => {
     filtrosActuales.busqueda = (e.target.value || '').toLowerCase();
     aplicarFiltros();
   });
-  elementos.selectCategoria?.addEventListener('change', (e)=>{
+  elementos.selectCategoria?.addEventListener('change', (e) => {
     filtrosActuales.categoria = e.target.value;
     aplicarFiltros();
   });
-  elementos.precioMinInput?.addEventListener('input', ()=>{ updateRange(); aplicarFiltros(); });
-  elementos.precioMaxInput?.addEventListener('input', ()=>{ updateRange(); aplicarFiltros(); });
-  elementos.aplicarRangoBtn?.addEventListener('click', ()=>{ updateRange(); aplicarFiltros(); });
+  elementos.precioMinInput?.addEventListener('input', () => { updateRange(); aplicarFiltros(); });
+  elementos.precioMaxInput?.addEventListener('input', () => { updateRange(); aplicarFiltros(); });
+  elementos.aplicarRangoBtn?.addEventListener('click', () => { updateRange(); aplicarFiltros(); });
 
   // catálogo (delegación sobre el contenedor)
-  elementos.galeriaProductos?.addEventListener('click', (e)=>{
+  elementos.galeriaProductos?.addEventListener('click', (e) => {
     const card = e.target.closest('.producto-card');
     if (!card) return;
 
     const btnDetalle = e.target.closest('.boton-detalles');
     const btnAgregar = e.target.closest('.boton-agregar');
-    const btnAviso   = e.target.closest('.boton-aviso-stock');
+    const btnAviso = e.target.closest('.boton-aviso-stock');
 
-    if (btnDetalle){
+    if (btnDetalle) {
       const id = Number(btnDetalle.dataset.id || card.dataset.id);
       if (Number.isFinite(id)) verDetalle(id);
       return;
     }
-    if (btnAgregar){
+    if (btnAgregar) {
       const id = Number(card.dataset.id);
       if (Number.isFinite(id)) agregarAlCarrito(id, 1, btnAgregar);
       return;
     }
-    if (btnAviso){
+    if (btnAviso) {
       preguntarStock(btnAviso.dataset.nombre);
       return;
     }
   });
 
   // 🛡️ Delegación de respaldo a nivel documento (por si el contenedor cambia)
-  document.addEventListener('click', (e)=>{
+  document.addEventListener('click', (e) => {
     const btn = e.target.closest('.boton-detalles');
-    if (!btn) return;
-    const id = Number(btn.dataset.id || btn.closest('.producto-card')?.dataset.id);
-    if (Number.isFinite(id)) verDetalle(id);
+    if (btn) {
+      const id = Number(btn.dataset.id || btn.closest('.producto-card')?.dataset.id);
+      if (Number.isFinite(id)) verDetalle(id);
+    }
   });
 }
+
+// [Rest of the code remains unchanged]
 
 function inicializarMenuHamburguesa(){
   const {hamburguesa, menu} = elementos;
