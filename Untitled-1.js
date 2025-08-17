@@ -575,17 +575,7 @@ function mostrarModalProducto(producto) {
   productoModal.focus();
 }
 
-function cerrarModal() {
-  const { productoModal } = elementos;
-  if (!productoModal) return;
 
-  productoModal.classList.remove('active');
-  document.body.classList.remove('no-scroll');
-  productoModal.setAttribute('aria-hidden', 'true');
-  
-  // Devolver foco al elemento que abrió el modal
-  document.querySelector(`[data-id="${productoModal.dataset.lastFocus}"]`)?.focus();
-}
 
 function cerrarModal(){
   if (elementos.productoModal){
