@@ -254,24 +254,28 @@ function procesarDatosProductos(data){
 }
 
 function crearCardProducto(p){
-  const enCarrito = carrito.find(i=>i.id===p.id);
+  const enCarrito = carrito.find(i => i.id === p.id);
   const disponibles = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
-  const agot = disponibles<=0;
+  const agot = disponibles <= 0;
   const img = p.imagenes?.[0] || PLACEHOLDER_IMAGE;
+
   return `
-    <div class="producto-card ${agot?'agotado':''}" data-id="${p.id}">
+    <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}">
       <img src="${img}" alt="${p.nombre}" class="producto-img" loading="lazy">
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${formatearUY(p.precio)}</p>
       <div class="card-acciones">
-        <button class="boton-agregar${agot?' agotado':''}" ${agot?'disabled':''}>
+        <button class="boton-agregar${agot ? ' agotado' : ''}" ${agot ? 'disabled' : ''}>
           ${agot ? 'Agotado' : 'Agregar'}
         </button>
-        ${agot ? `<button class="boton-aviso-stock" data-nombre="${p.nombre.replace(/"/g,'&quot;')}">📩 Avisame</button>`:''}
+        ${agot ? `<button class="boton-aviso-stock" data-nombre="${p.nombre.replace(/"/g,'&quot;')}">📩 Avisame</button>` : ''}
       </div>
-      <button class="boton-detalles">🔍 Ver Detalle</button>
-    </div>`;
+      <!-- 👇 ahora el botón también lleva data-id -->
+      <button class="boton-detalles" data-id="${p.id}">🔍 Ver Detalle</button>
+    </div>
+  `;
 }
+
 
 function renderizarProductos(){
   const data = filtrarProductos();
@@ -640,20 +644,25 @@ function inicializarEventos(){
   elementos.aplicarRangoBtn?.addEventListener('click', ()=>{ updateRange(); aplicarFiltros(); });
 
   // catálogo (delegación)
-  elementos.galeriaProductos?.addEventListener('click', (e)=>{
-    const card = e.target.closest('.producto-card');
-    if (!card) return;
-    const id = Number(card.dataset.id);
-    if (!Number.isFinite(id)) return;
+ elementos.galeriaProductos?.addEventListener('click', (e)=>{
+  const card = e.target.closest('.producto-card');
+  if (!card) return;
+  const id = Number(e.target.dataset.id || card.dataset.id);
 
-    if (e.target.closest('.boton-detalles')){ verDetalle(id); return; }
-    if (e.target.closest('.boton-agregar')){ agregarAlCarrito(id, 1, e.target.closest('button')); return; }
-    if (e.target.closest('.boton-aviso-stock')){
-      const nombre = e.target.closest('.boton-aviso-stock').dataset.nombre;
-      preguntarStock(nombre); return;
-    }
-  });
-}
+  if (e.target.closest('.boton-detalles')){
+    verDetalle(id);
+    return;
+  }
+  if (e.target.closest('.boton-agregar')){
+    agregarAlCarrito(id, 1, e.target.closest('button'));
+    return;
+  }
+  if (e.target.closest('.boton-aviso-stock')){
+    preguntarStock(e.target.closest('.boton-aviso-stock').dataset.nombre);
+    return;
+  }
+});
+
 
 // ---------------------------------
 // INIT
@@ -683,3 +692,4 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   cargarCarrito();
   init();
 });
+}
