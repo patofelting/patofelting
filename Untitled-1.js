@@ -5,7 +5,7 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
-// Import Firebase modules (v10+ modular SDK)
+// Firebase v10+ (SDK modular)
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getDatabase, ref, runTransaction, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
@@ -19,9 +19,10 @@ let productos = [];
 let carrito = [];
 let paginaActual = 1;
 
-// Candados contra dobles eventos
-const busyButtons = new WeakSet();   // evita doble click en el mismo botón
-const inFlightAdds = new Set();      // evita doble agregado por producto
+// Candados para evitar dobles acciones
+const busyButtons   = new WeakSet(); // doble click en el mismo botón
+const inFlightAdds  = new Set();     // mismo producto agregado 2 veces en paralelo
+let suprimirRealtime = 0;            // silencia 1+ ticks del listener para evitar “pestañeo”
 
 let filtrosActuales = {
   precioMin: 0,
@@ -31,7 +32,7 @@ let filtrosActuales = {
 };
 
 // ===============================
-// UTILIDADES GENERALES
+// UTILIDADES
 // ===============================
 function mostrarNotificacion(mensaje, tipo = 'exito') {
   const noti = document.createElement('div');
@@ -46,7 +47,7 @@ function mostrarNotificacion(mensaje, tipo = 'exito') {
 }
 const getElement = (id) => document.getElementById(id);
 
-// Referencias al DOM agrupadas
+// Referencias DOM
 const elementos = {
   galeriaProductos: getElement('galeria-productos'),
   paginacion: getElement('paginacion'),
@@ -75,14 +76,14 @@ const elementos = {
 };
 
 // ===============================
-// MANEJO DE CARRITO
+// CARRITO
 // ===============================
 function guardarCarrito() {
   try {
     localStorage.setItem(LS_CARRITO_KEY, JSON.stringify(carrito));
     actualizarContadorCarrito();
-  } catch (error) {
-    console.error('Error al guardar carrito en localStorage:', error);
+  } catch (e) {
+    console.error('localStorage setItem fallo:', e);
     mostrarNotificacion('Error al guardar el carrito', 'error');
   }
 }
@@ -91,8 +92,8 @@ function cargarCarrito() {
     const stored = localStorage.getItem(LS_CARRITO_KEY);
     carrito = stored ? JSON.parse(stored) : [];
     actualizarContadorCarrito();
-  } catch (error) {
-    console.error('Error al cargar carrito de localStorage:', error);
+  } catch (e) {
+    console.error('localStorage getItem fallo:', e);
     carrito = [];
     mostrarNotificacion('Error al cargar el carrito', 'error');
   }
@@ -100,13 +101,16 @@ function cargarCarrito() {
 async function vaciarCarrito() {
   if (carrito.length === 0) return mostrarNotificacion('El carrito ya está vacío', 'info');
 
+  const n = carrito.length; // nº cambios de stock
   try {
     await Promise.all(
       carrito.map(async (item) => {
         const productRef = ref(db, `productos/${item.id}/stock`);
-        await runTransaction(productRef, (currentStock) => (currentStock || 0) + item.cantidad);
+        await runTransaction(productRef, (s) => (s || 0) + item.cantidad);
       })
     );
+    // feedback local inmediato + evitar pestañeo del onValue siguiente
+    suprimirRealtime += n;
     carrito = [];
     guardarCarrito();
     renderizarCarrito();
@@ -138,7 +142,7 @@ function toggleCarrito(forceState) {
 }
 
 // ===============================
-// MANEJO DE PRODUCTOS DESDE FIREBASE
+// FIREBASE: CARGA Y REALTIME
 // ===============================
 async function cargarProductosDesdeFirebase() {
   const productosRef = ref(db, 'productos');
@@ -161,6 +165,9 @@ async function cargarProductosDesdeFirebase() {
 
     if (!cargarProductosDesdeFirebase._listening) {
       onValue(productosRef, (snap) => {
+        // Evita el “doble render” justo después de tus escrituras
+        if (suprimirRealtime > 0) { suprimirRealtime--; return; }
+
         if (!snap.exists()) {
           productos = [];
         } else {
@@ -170,7 +177,7 @@ async function cargarProductosDesdeFirebase() {
         actualizarCategorias();
         actualizarUI();
       }, (error) => {
-        console.error('Error en listener de productos:', error);
+        console.error('Listener productos error:', error);
         mostrarNotificacion('Error al recibir actualizaciones de productos', 'error');
       });
       cargarProductosDesdeFirebase._listening = true;
@@ -227,7 +234,7 @@ function procesarDatosProductos(data) {
 }
 
 // ===============================
-// RENDERIZADO DE CARRITO
+// CARRITO: RENDER
 // ===============================
 function renderizarCarrito() {
   if (!elementos.listaCarrito || !elementos.totalCarrito) return;
@@ -236,7 +243,7 @@ function renderizarCarrito() {
     ? '<p class="carrito-vacio">Tu carrito está vacío</p>'
     : carrito.map(item => {
         const producto = productos.find(p => p.id === item.id) || { stock: 0 };
-        // 👉 El stock remoto YA descuenta lo que agregaste al carrito
+        // Stock disponible = stock remoto (ya con descuentos aplicados)
         const disponibles = Math.max(0, producto.stock || 0);
         return `
           <li class="carrito-item" data-id="${item.id}">
@@ -258,6 +265,7 @@ function renderizarCarrito() {
   const total = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
   elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
 
+  // Handlers +/- (reemplazados en cada render; no se duplican)
   elementos.listaCarrito.querySelectorAll('.disminuir-cantidad').forEach(btn => {
     btn.onclick = async (e) => {
       const id = parseInt(e.currentTarget.dataset.id);
@@ -265,6 +273,11 @@ function renderizarCarrito() {
       if (item && item.cantidad > 1) {
         try {
           await runTransaction(ref(db, `productos/${id}/stock`), (s) => (s || 0) + 1);
+          suprimirRealtime++; // evitamos pestañeo del onValue
+          // feedback local: subo el stock del producto
+          const p = productos.find(x => x.id === id);
+          if (p) p.stock = (p.stock || 0) + 1;
+
           item.cantidad--;
           guardarCarrito();
           renderizarCarrito();
@@ -283,11 +296,10 @@ function renderizarCarrito() {
 }
 
 // ===============================
-// RENDERIZADO DE PRODUCTOS Y PAGINACIÓN
+// GALERÍA + PAGINACIÓN
 // ===============================
 function crearCardProducto(p) {
-  // 👉 Mostramos exactamente el stock remoto (ya descontado)
-  const disp = Math.max(0, p.stock || 0);
+  const disp = Math.max(0, p.stock || 0); // stock remoto
   const agot = disp <= 0;
   const imagen = (p.imagenes && p.imagenes[0]) || PLACEHOLDER_IMAGE;
 
@@ -335,10 +347,7 @@ function renderizarProductos() {
 function renderizarPaginacion(total) {
   const pages = Math.ceil(total / PRODUCTOS_POR_PAGINA);
   if (!elementos.paginacion) return;
-  if (pages <= 1) {
-    elementos.paginacion.innerHTML = '';
-    return;
-  }
+  if (pages <= 1) return (elementos.paginacion.innerHTML = '');
   elementos.paginacion.innerHTML = Array.from({ length: pages }, (_, i) => i + 1).map(page => `
     <button class="${page === paginaActual ? 'active' : ''}" onclick="cambiarPagina(${page})">${page}</button>
   `).join('');
@@ -351,7 +360,7 @@ window.cambiarPagina = function (page) {
 };
 
 // ===============================
-// MODAL DE PRODUCTO (sin flechas; click en imagen = siguiente)
+// MODAL DE PRODUCTO (click imagen = siguiente; overlay cierra)
 // ===============================
 function ensureProductModal() {
   if (!getElement('producto-modal')) {
@@ -367,14 +376,13 @@ function ensureProductModal() {
   elementos.productoModal = getElement('producto-modal');
   elementos.modalContenido = getElement('modal-contenido');
 
-  // Cierra SOLO si clicas el overlay
+  // Cierra solo si clicas el overlay
   elementos.productoModal.addEventListener('click', (e) => {
     if (e.target === elementos.productoModal) cerrarModal();
   });
-  // El contenido no propaga
+  // El contenido no propaga (nunca cierra)
   elementos.modalContenido.addEventListener('click', (e) => e.stopPropagation());
 
-  // ESC para cerrar
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && elementos.productoModal.classList.contains('visible')) cerrarModal();
   });
@@ -385,7 +393,6 @@ function mostrarModalProducto(producto) {
   const cont = elementos.modalContenido;
   if (!elementos.productoModal || !cont) return;
 
-  // 👉 Disponibles es el stock remoto (ya descontado)
   let currentIndex = 0;
 
   const render = () => {
@@ -427,7 +434,7 @@ function mostrarModalProducto(producto) {
       </div>
     `;
 
-    // Click en la imagen grande: siguiente (sin cerrar)
+    // Cambiar imagen con click en la grande (no cierra)
     const imgGrande = cont.querySelector('#modal-imagen');
     imgGrande?.addEventListener('click', (ev) => {
       ev.stopPropagation();
@@ -436,14 +443,12 @@ function mostrarModalProducto(producto) {
       render();
     });
 
-    // Miniaturas
     cont.querySelectorAll('.thumbnail').forEach(th => th.addEventListener('click', (e) => {
       e.stopPropagation();
       currentIndex = parseInt(e.currentTarget.dataset.index);
       render();
     }));
 
-    // Agregar desde modal
     cont.querySelector('.boton-agregar-modal')?.addEventListener('click', (e) => {
       e.stopPropagation();
       const id = parseInt(e.currentTarget.dataset.id);
@@ -467,10 +472,10 @@ function cerrarModal() {
 window.cerrarModal = cerrarModal;
 
 // ===============================
-// LÓGICA DE AGREGAR AL CARRITO
+// AGREGAR AL CARRITO
 // ===============================
 async function agregarAlCarrito(id, cantidad = 1, boton = null) {
-  // Bloqueo por producto (idempotente)
+  // Bloqueo por producto (idempotente ante handlers duplicados)
   if (inFlightAdds.has(id)) return;
   inFlightAdds.add(id);
 
@@ -482,7 +487,7 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
   const cantidadAgregar = Math.max(1, parseInt(cantidad));
   if (!Number.isFinite(cantidadAgregar)) { inFlightAdds.delete(id); return mostrarNotificacion('Cantidad inválida', 'error'); }
 
-  // Evitar doble click en el mismo botón
+  // Candado del botón concreto
   if (boton) {
     if (busyButtons.has(boton)) { inFlightAdds.delete(id); return; }
     busyButtons.add(boton);
@@ -491,7 +496,7 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
     boton.innerHTML = 'Agregando <span class="spinner"></span>';
   }
 
-  // 👉 Chequeo con stock remoto directamente
+  // Chequeo con stock remoto actual
   if ((producto.stock || 0) < cantidadAgregar) {
     if (boton) { boton.disabled = false; boton.innerHTML = boton._oldHTML; busyButtons.delete(boton); }
     inFlightAdds.delete(id);
@@ -502,13 +507,14 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
     const productRef = ref(db, `productos/${id}/stock`);
     const { committed } = await runTransaction(productRef, (stock) => {
       stock = stock || 0;
-      if (stock < cantidadAgregar) return; // aborta
+      if (stock < cantidadAgregar) return; // aborta transacción
       return stock - cantidadAgregar;
     });
 
     if (!committed) throw new Error('Stock insuficiente o cambiado por otro usuario');
 
-    // ✅ feedback inmediato local
+    // Feedback inmediato local + evitar pestañeo del onValue
+    suprimirRealtime++;
     producto.stock = Math.max(0, (producto.stock || 0) - cantidadAgregar);
 
     const enCarrito = carrito.find(item => item.id === id);
@@ -539,7 +545,7 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
 }
 
 // ===============================
-// UI Y FILTROS
+// UI / FILTROS
 // ===============================
 function actualizarCategorias() {
   if (!elementos.selectCategoria) return;
@@ -666,6 +672,7 @@ function initEventos() {
     aplicarFiltros();
   });
 
+  // Delegación en la galería (evitamos duplicados)
   const galeria = elementos.galeriaProductos;
   if (galeria) {
     if (galeria._pfHandler) galeria.removeEventListener('click', galeria._pfHandler);
@@ -833,7 +840,7 @@ function updateRange() {
 }
 
 // ===============================
-// OTRAS FUNCIONES
+// OTRAS
 // ===============================
 function preguntarStock(nombre) {
   const asunto = encodeURIComponent(`Consulta sobre disponibilidad de "${nombre}"`);
@@ -842,7 +849,7 @@ function preguntarStock(nombre) {
 }
 
 // ===============================
-// INICIALIZACIÓN
+// INIT
 // ===============================
 document.addEventListener('DOMContentLoaded', async () => {
   try {
