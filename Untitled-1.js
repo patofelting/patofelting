@@ -40,10 +40,15 @@ const $id = (id) => document.getElementById(id);
 const $qs = (sel) => document.querySelector(sel);
 
 const elementos = {
+  // catálogo
   galeriaProductos: $id('galeria-productos'),
   paginacion: $id('paginacion'),
+
+  // modal producto
   productoModal: $id('producto-modal'),
   modalContenido: $id('modal-contenido'),
+
+  // carrito
   carritoBtnMain: $id('carrito-btn-main'),
   carritoPanel: $id('carrito-panel'),
   carritoOverlay: $qs('.carrito-overlay'),
@@ -53,6 +58,8 @@ const elementos = {
   contadorCarrito: $id('contador-carrito'),
   btnVaciarCarrito: $qs('.boton-vaciar-carrito'),
   btnFinalizarCompra: $qs('.boton-finalizar-compra'),
+
+  // aviso pre-compra + datos envío
   avisoPreCompraModal: $id('aviso-pre-compra-modal'),
   btnEntendidoAviso: $id('btn-entendido-aviso'),
   btnCancelarAviso: $id('btn-cancelar-aviso'),
@@ -61,6 +68,8 @@ const elementos = {
   resumenPedido: $id('resumen-pedido'),
   resumenProductos: $id('resumen-productos'),
   resumenTotal: $id('resumen-total'),
+
+  // filtros
   inputBusqueda: $qs('.input-busqueda'),
   selectCategoria: $id('filtro-categoria'),
   precioMinInput: $id('min-slider'),
@@ -71,12 +80,18 @@ const elementos = {
   thumbMax: $id('thumb-label-max'),
   rangeTrack: $qs('.range-slider .range'),
   aplicarRangoBtn: $qs('.aplicar-rango-btn'),
+
+  // otros
   productLoader: $id('product-loader'),
   hamburguesa: $qs('.hamburguesa'),
   menu: $id('menu'),
+
+  // contacto
   formContacto: $id('formulario-contacto'),
   successMessage: $id('successMessage'),
   errorMessage: $id('errorMessage'),
+
+  // stock modal (opcional)
   stockModal: $id('stock-modal'),
   stockForm: $id('stock-form'),
   stockEmail: $id('stock-email'),
@@ -257,11 +272,12 @@ function crearCardProducto(p){
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${formatearUY(p.precio)}</p>
       <div class="card-acciones">
-        <button class="boton-agregar${agot?' agotado':''}" data-id="${p.id}" ${agot?'disabled':''}>
+        <button class="boton-agregar${agot?' agotado':''}" ${agot?'disabled':''}>
           ${agot ? 'Agotado' : 'Agregar'}
         </button>
-        ${agot ? `<button class="boton-aviso-stock" data-nombre="${p.nombre.replace(/"/g,'&quot;')}" data-id="${p.id}">📩 Avisame</button>`:''}
+        ${agot ? `<button class="boton-aviso-stock" data-nombre="${p.nombre.replace(/"/g,'&quot;')}">📩 Avisame</button>`:''}
       </div>
+      <!-- Botón con data-id propio para no depender del padre -->
       <button class="boton-detalles" data-id="${p.id}">🔍 Ver Detalle</button>
     </div>`;
 }
@@ -563,6 +579,7 @@ function setupContactForm(){
 // EVENTOS GLOBALES
 // ---------------------------------
 function inicializarEventos(){
+  // carrito
   elementos.carritoBtnMain?.addEventListener('click', ()=> toggleCarrito(true));
   elementos.carritoOverlay?.addEventListener('click', ()=> toggleCarrito(false));
   elementos.btnCerrarCarrito?.addEventListener('click', ()=> toggleCarrito(false));
@@ -601,6 +618,7 @@ function inicializarEventos(){
 
   elementos.selectEnvio?.addEventListener('change', actualizarResumenPedido);
 
+  // filtros
   elementos.inputBusqueda?.addEventListener('input', (e)=>{
     filtrosActuales.busqueda = (e.target.value || '').toLowerCase();
     aplicarFiltros();
@@ -613,17 +631,22 @@ function inicializarEventos(){
   elementos.precioMaxInput?.addEventListener('input', ()=>{ updateRange(); aplicarFiltros(); });
   elementos.aplicarRangoBtn?.addEventListener('click', ()=>{ updateRange(); aplicarFiltros(); });
 
+  // catálogo (delegación)
   elementos.galeriaProductos?.addEventListener('click', (e)=>{
+    const card = e.target.closest('.producto-card');
+    if (!card) return;
+
     const btnDetalle = e.target.closest('.boton-detalles');
     const btnAgregar = e.target.closest('.boton-agregar');
     const btnAviso   = e.target.closest('.boton-aviso-stock');
+
     if (btnDetalle){
-      const id = Number(btnDetalle.dataset.id);
+      const id = Number(btnDetalle.dataset.id || card.dataset.id);
       if (Number.isFinite(id)) verDetalle(id);
       return;
     }
     if (btnAgregar){
-      const id = Number(btnAgregar.dataset.id);
+      const id = Number(card.dataset.id);
       if (Number.isFinite(id)) agregarAlCarrito(id, 1, btnAgregar);
       return;
     }
@@ -670,8 +693,8 @@ async function init(){
   inicializarFAQ();
   setupContactForm();
   inicializarEventos();
-  updateRange();
-  aplicarFiltros();
+  updateRange();      // sincroniza sliders visualmente
+  aplicarFiltros();   // primera render
   actualizarResumenPedido();
 }
 
