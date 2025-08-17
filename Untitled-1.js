@@ -418,18 +418,46 @@ function mostrarModalProducto(producto){
       </div>`;
 
     // Delegación de eventos: Solo 1 vez por render
-    cont.querySelector('#btn-close-modal')?.addEventListener('click', cerrarModal);
-    cont.querySelector('.modal-prev')?.addEventListener('click', ()=>{ if(idx>0){ idx--; render(); }});
-    cont.querySelector('.modal-next')?.addEventListener('click', ()=>{ if(idx<producto.imagenes.length-1){ idx++; render(); }});
+    // Remover event listeners previos para evitar duplicación
+    const btnClose = cont.querySelector('#btn-close-modal');
+    const btnPrev = cont.querySelector('.modal-prev');
+    const btnNext = cont.querySelector('.modal-next');
+    const btnAdd = cont.querySelector('.boton-agregar-modal');
+    const inputCant = cont.querySelector('.cantidad-modal-input');
+    
+    // Clonar elementos para remover todos los listeners (truco para evitar duplicados)
+    if (btnClose) {
+      const newBtnClose = btnClose.cloneNode(true);
+      btnClose.parentNode?.replaceChild(newBtnClose, btnClose);
+      newBtnClose.addEventListener('click', cerrarModal);
+    }
+    
+    if (btnPrev) {
+      const newBtnPrev = btnPrev.cloneNode(true);
+      btnPrev.parentNode?.replaceChild(newBtnPrev, btnPrev);
+      newBtnPrev.addEventListener('click', ()=>{ if(idx>0){ idx--; render(); }});
+    }
+    
+    if (btnNext) {
+      const newBtnNext = btnNext.cloneNode(true);
+      btnNext.parentNode?.replaceChild(newBtnNext, btnNext);
+      newBtnNext.addEventListener('click', ()=>{ if(idx<producto.imagenes.length-1){ idx++; render(); }});
+    }
+    
+    // Thumbnails
     cont.querySelectorAll('.thumbnail').forEach(th=>{
       th.onclick = ()=>{ idx = parseInt(th.dataset.index); render(); };
     });
-    const btnAdd = cont.querySelector('.boton-agregar-modal');
-    const inputCant = cont.querySelector('.cantidad-modal-input');
-    btnAdd?.addEventListener('click', ()=>{
-      const cant = Math.max(1, parseInt(inputCant.value||1));
-      agregarAlCarrito(producto.id, cant, btnAdd);
-    });
+    
+    // Botón agregar
+    if (btnAdd && inputCant) {
+      const newBtnAdd = btnAdd.cloneNode(true);
+      btnAdd.parentNode?.replaceChild(newBtnAdd, btnAdd);
+      newBtnAdd.addEventListener('click', ()=>{
+        const cant = Math.max(1, parseInt(inputCant.value||1));
+        agregarAlCarrito(producto.id, cant, newBtnAdd);
+      });
+    }
   }
 
   render();
@@ -443,6 +471,10 @@ function cerrarModal(){
     elementos.productoModal.classList.remove('active');
     elementos.productoModal.hidden = true;
     modalDetalleAbierto = false;
+    // Limpiar el contenido del modal para remover event listeners
+    if (elementos.modalContenido) {
+      elementos.modalContenido.innerHTML = '';
+    }
   }
   document.body.classList.remove('no-scroll');
 }
