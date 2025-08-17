@@ -40,15 +40,10 @@ const $id = (id) => document.getElementById(id);
 const $qs = (sel) => document.querySelector(sel);
 
 const elementos = {
-  // catálogo
   galeriaProductos: $id('galeria-productos'),
   paginacion: $id('paginacion'),
-
-  // modal producto
   productoModal: $id('producto-modal'),
   modalContenido: $id('modal-contenido'),
-
-  // carrito
   carritoBtnMain: $id('carrito-btn-main'),
   carritoPanel: $id('carrito-panel'),
   carritoOverlay: $qs('.carrito-overlay'),
@@ -58,8 +53,6 @@ const elementos = {
   contadorCarrito: $id('contador-carrito'),
   btnVaciarCarrito: $qs('.boton-vaciar-carrito'),
   btnFinalizarCompra: $qs('.boton-finalizar-compra'),
-
-  // aviso pre-compra + datos envío
   avisoPreCompraModal: $id('aviso-pre-compra-modal'),
   btnEntendidoAviso: $id('btn-entendido-aviso'),
   btnCancelarAviso: $id('btn-cancelar-aviso'),
@@ -68,8 +61,6 @@ const elementos = {
   resumenPedido: $id('resumen-pedido'),
   resumenProductos: $id('resumen-productos'),
   resumenTotal: $id('resumen-total'),
-
-  // filtros
   inputBusqueda: $qs('.input-busqueda'),
   selectCategoria: $id('filtro-categoria'),
   precioMinInput: $id('min-slider'),
@@ -80,18 +71,12 @@ const elementos = {
   thumbMax: $id('thumb-label-max'),
   rangeTrack: $qs('.range-slider .range'),
   aplicarRangoBtn: $qs('.aplicar-rango-btn'),
-
-  // otros
   productLoader: $id('product-loader'),
   hamburguesa: $qs('.hamburguesa'),
   menu: $id('menu'),
-
-  // contacto
   formContacto: $id('formulario-contacto'),
   successMessage: $id('successMessage'),
   errorMessage: $id('errorMessage'),
-
-  // stock modal (opcional)
   stockModal: $id('stock-modal'),
   stockForm: $id('stock-form'),
   stockEmail: $id('stock-email'),
@@ -186,7 +171,6 @@ function renderizarCarrito(){
   const total = carrito.reduce((s,i)=> s + i.precio*i.cantidad, 0);
   elementos.totalCarrito.textContent = `Total: $U ${formatearUY(total)}`;
 
-  // Delegación
   elementos.listaCarrito.querySelectorAll('.disminuir-cantidad').forEach(btn=>{
     btn.addEventListener('click', async (e)=>{
       const id = +e.currentTarget.dataset.id;
@@ -273,12 +257,11 @@ function crearCardProducto(p){
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${formatearUY(p.precio)}</p>
       <div class="card-acciones">
-        <button class="boton-agregar${agot?' agotado':''}" ${agot?'disabled':''}>
+        <button class="boton-agregar${agot?' agotado':''}" data-id="${p.id}" ${agot?'disabled':''}>
           ${agot ? 'Agotado' : 'Agregar'}
         </button>
-        ${agot ? `<button class="boton-aviso-stock" data-nombre="${p.nombre.replace(/"/g,'&quot;')}">📩 Avisame</button>`:''}
+        ${agot ? `<button class="boton-aviso-stock" data-nombre="${p.nombre.replace(/"/g,'&quot;')}" data-id="${p.id}">📩 Avisame</button>`:''}
       </div>
-      <!-- Botón con data-id propio para no depender del padre -->
       <button class="boton-detalles" data-id="${p.id}">🔍 Ver Detalle</button>
     </div>`;
 }
@@ -424,7 +407,6 @@ function mostrarModalProducto(producto){
         </div>
       </div>`;
 
-    // eventos internos
     cont.querySelector('#btn-close-modal')?.addEventListener('click', cerrarModal);
     cont.querySelector('.modal-prev')?.addEventListener('click', ()=>{ if(idx>0){ idx--; render(); }});
     cont.querySelector('.modal-next')?.addEventListener('click', ()=>{ if(idx<producto.imagenes.length-1){ idx++; render(); }});
@@ -536,12 +518,10 @@ function setupContactForm(){
   const form = elementos.formContacto;
   if (!form) return;
 
-  // Tu Public Key de EmailJS (visible en UI)
   const PUBLIC_KEY = 'o4IxJz0Zz-LQ8jYKG';
   const SERVICE_ID = 'service_89by24g';
   const TEMPLATE_ID = 'template_8mn7hdp';
 
-  // Asegurar init una vez
   if (!window.__emailjsInited){
     if (window.emailjs && typeof window.emailjs.init === 'function'){
       window.emailjs.init(PUBLIC_KEY);
@@ -583,7 +563,6 @@ function setupContactForm(){
 // EVENTOS GLOBALES
 // ---------------------------------
 function inicializarEventos(){
-  // carrito
   elementos.carritoBtnMain?.addEventListener('click', ()=> toggleCarrito(true));
   elementos.carritoOverlay?.addEventListener('click', ()=> toggleCarrito(false));
   elementos.btnCerrarCarrito?.addEventListener('click', ()=> toggleCarrito(false));
@@ -622,7 +601,6 @@ function inicializarEventos(){
 
   elementos.selectEnvio?.addEventListener('change', actualizarResumenPedido);
 
-  // filtros
   elementos.inputBusqueda?.addEventListener('input', (e)=>{
     filtrosActuales.busqueda = (e.target.value || '').toLowerCase();
     aplicarFiltros();
@@ -635,23 +613,17 @@ function inicializarEventos(){
   elementos.precioMaxInput?.addEventListener('input', ()=>{ updateRange(); aplicarFiltros(); });
   elementos.aplicarRangoBtn?.addEventListener('click', ()=>{ updateRange(); aplicarFiltros(); });
 
-  // catálogo (delegación)
   elementos.galeriaProductos?.addEventListener('click', (e)=>{
-    const card = e.target.closest('.producto-card');
-    if (!card) return;
-
-    // usar el data-id del botón si existe, o el del padre
     const btnDetalle = e.target.closest('.boton-detalles');
     const btnAgregar = e.target.closest('.boton-agregar');
     const btnAviso   = e.target.closest('.boton-aviso-stock');
-
     if (btnDetalle){
-      const id = Number(btnDetalle.dataset.id || card.dataset.id);
+      const id = Number(btnDetalle.dataset.id);
       if (Number.isFinite(id)) verDetalle(id);
       return;
     }
     if (btnAgregar){
-      const id = Number(card.dataset.id);
+      const id = Number(btnAgregar.dataset.id);
       if (Number.isFinite(id)) agregarAlCarrito(id, 1, btnAgregar);
       return;
     }
@@ -698,8 +670,8 @@ async function init(){
   inicializarFAQ();
   setupContactForm();
   inicializarEventos();
-  updateRange();      // sincroniza sliders visualmente
-  aplicarFiltros();   // primera render
+  updateRange();
+  aplicarFiltros();
   actualizarResumenPedido();
 }
 
