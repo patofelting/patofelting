@@ -728,7 +728,7 @@ function actualizarResumenPedido() {
 
   const envioSelect = getElement('select-envio');
   const metodo = envioSelect?.value || 'retiro';
-  let costoEnvio = metodo === 'montevideo' ? 150 : metodo === 'interior' ? 300 : 0;
+  let costoEnvio = metodo === 'montevideo' ? 200 : metodo === 'interior' ? 250 : 0;
 
   html += `
     <div class="resumen-item resumen-subtotal">
@@ -785,7 +785,7 @@ getElement('form-envio')?.addEventListener('submit', async (e) => {
   carrito.forEach(item => mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}\n`);
 
   const subtotal = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
-  const costoEnvio = envio === 'montevideo' ? 150 : envio === 'interior' ? 300 : 0;
+  const costoEnvio = envio === 'montevideo' ? 200 : envio === 'interior' ? 250 : 0;
   const total = subtotal + costoEnvio;
 
   mensaje += `\n*💰 Total:*\nSubtotal: $U ${subtotal.toLocaleString('es-UY')}\nEnvío: $U ${costoEnvio.toLocaleString('es-UY')}\n*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
