@@ -5,12 +5,12 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
-// Firebase (SDK modular)
+// Import Firebase modules (v10+ modular SDK)
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { ref, runTransaction, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, runTransaction, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-const db = window.firebaseDatabase;
-const auth = window.firebaseApp ? getAuth(window.firebaseApp) : getAuth();
+const db = window.firebaseDatabase || getDatabase(window.firebaseApp);
+const auth = getAuth(window.firebaseApp);
 
 // ===============================
 // ESTADO GLOBAL
@@ -18,7 +18,10 @@ const auth = window.firebaseApp ? getAuth(window.firebaseApp) : getAuth();
 let productos = [];
 let carrito = [];
 let paginaActual = 1;
-const busyButtons = new WeakSet(); // candado anti doble click
+
+// Candados contra dobles eventos
+const busyButtons = new WeakSet();   // evita doble click en el mismo botón
+const inFlightAdds = new Set();      // evita doble agregado por producto
 
 let filtrosActuales = {
   precioMin: 0,
@@ -41,10 +44,9 @@ function mostrarNotificacion(mensaje, tipo = 'exito') {
     setTimeout(() => noti.remove(), 250);
   }, 2500);
 }
-
 const getElement = (id) => document.getElementById(id);
 
-// Referencias al DOM
+// Referencias al DOM agrupadas
 const elementos = {
   galeriaProductos: getElement('galeria-productos'),
   paginacion: getElement('paginacion'),
@@ -73,7 +75,7 @@ const elementos = {
 };
 
 // ===============================
-// CARRITO
+// MANEJO DE CARRITO
 // ===============================
 function guardarCarrito() {
   try {
@@ -136,10 +138,11 @@ function toggleCarrito(forceState) {
 }
 
 // ===============================
-// PRODUCTOS DESDE FIREBASE
+// MANEJO DE PRODUCTOS DESDE FIREBASE
 // ===============================
 async function cargarProductosDesdeFirebase() {
   const productosRef = ref(db, 'productos');
+
   try {
     if (elementos.productLoader) {
       elementos.productLoader.hidden = false;
@@ -156,7 +159,7 @@ async function cargarProductosDesdeFirebase() {
       actualizarUI();
     }
 
-    // Listener en tiempo real (una sola vez)
+    // Listener en tiempo real: me aseguro de no duplicarlo
     if (!cargarProductosDesdeFirebase._listening) {
       onValue(productosRef, (snap) => {
         if (!snap.exists()) {
@@ -185,28 +188,50 @@ async function cargarProductosDesdeFirebase() {
   }
 }
 
+const toNum = (v) => {
+  // Soporta "4,50", "4.50", "4", null, undefined
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'number') return isFinite(v) ? v : null;
+  const s = String(v).replace(',', '.').trim();
+  const n = parseFloat(s);
+  return isFinite(n) ? n : null;
+};
+
 function procesarDatosProductos(data) {
   productos = Object.entries(data || {}).map(([key, p]) => {
     if (typeof p !== 'object' || !p) return null;
+
+    const alto = toNum(p.alto);
+    const ancho = toNum(p.ancho);
+    const profundidad = toNum(p.profundidad);
+
+    // Soporte a "cantidad" como stock si no hay "stock"
+    const stockRaw = (p.stock !== undefined ? p.stock : p.cantidad);
+    const stock = Math.max(0, parseInt(String(stockRaw).replace(',', '.'), 10) || 0);
+
+    // Filtrar adicionales "-" o vacío
+    const adic = (p.adicionales || '').toString().trim();
+    const adicionales = (adic && adic !== '-' && adic !== '–') ? adic : '';
+
     return {
-      id: parseInt(p.id || key),
+      id: parseInt(p.id || key, 10),
       nombre: (p.nombre || 'Sin nombre').trim(),
       descripcion: (p.descripcion || '').trim(),
-      precio: parseFloat(p.precio) || 0,
-      stock: Math.max(0, parseInt(p.stock, 10) || 0),
-      imagenes: Array.isArray(p.imagenes) ? p.imagenes.filter(img => typeof img === 'string' && img.trim()) : [PLACEHOLDER_IMAGE],
+      precio: parseFloat(String(p.precio).replace(',', '.')) || 0,
+      stock,
+      imagenes: Array.isArray(p.imagenes)
+        ? p.imagenes.filter(img => typeof img === 'string' && img.trim())
+        : [p.imagen || PLACEHOLDER_IMAGE],
       categoria: (p.categoria || 'otros').toLowerCase().trim(),
       estado: (p.estado || '').trim(),
-      adicionales: (p.adicionales || '').trim(),
-      alto: parseFloat(p.alto) || null,
-      ancho: parseFloat(p.ancho) || null,
-      profundidad: parseFloat(p.profundidad) || null,
+      adicionales,
+      alto, ancho, profundidad
     };
   }).filter(Boolean).sort((a,b)=>a.id-b.id);
 }
 
 // ===============================
-// RENDER CARRITO
+// RENDERIZADO DE CARRITO
 // ===============================
 function renderizarCarrito() {
   if (!elementos.listaCarrito || !elementos.totalCarrito) return;
@@ -236,7 +261,7 @@ function renderizarCarrito() {
   const total = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
   elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
 
-  // Controles +/- (reemplazamos handlers cada render; sin duplicar)
+  // Event listeners +/- (se reemplazan en cada render, no se duplican)
   elementos.listaCarrito.querySelectorAll('.disminuir-cantidad').forEach(btn => {
     btn.onclick = async (e) => {
       const id = parseInt(e.currentTarget.dataset.id);
@@ -262,13 +287,13 @@ function renderizarCarrito() {
 }
 
 // ===============================
-// RENDER PRODUCTOS + PAGINACIÓN
+// RENDERIZADO DE PRODUCTOS Y PAGINACIÓN
 // ===============================
 function crearCardProducto(p) {
   const enCarrito = carrito.find(i => i.id === p.id) || { cantidad: 0 };
   const disp = Math.max(0, p.stock - enCarrito.cantidad);
   const agot = disp <= 0;
-  const imagen = p.imagenes[0] || PLACEHOLDER_IMAGE;
+  const imagen = (p.imagenes && p.imagenes[0]) || PLACEHOLDER_IMAGE;
 
   return `
     <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}">
@@ -288,7 +313,6 @@ function crearCardProducto(p) {
     </div>
   `;
 }
-
 function filtrarProductos() {
   return productos.filter(p => {
     const { precioMin, precioMax, categoria, busqueda } = filtrosActuales;
@@ -301,7 +325,6 @@ function filtrarProductos() {
     );
   });
 }
-
 function renderizarProductos() {
   const filtrados = filtrarProductos();
   const inicio = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
@@ -313,7 +336,6 @@ function renderizarProductos() {
 
   renderizarPaginacion(filtrados.length);
 }
-
 function renderizarPaginacion(total) {
   const pages = Math.ceil(total / PRODUCTOS_POR_PAGINA);
   if (!elementos.paginacion) return;
@@ -333,10 +355,10 @@ window.cambiarPagina = function (page) {
 };
 
 // ===============================
-// MODAL DE PRODUCTO
+// MODAL DE PRODUCTO (sin flechas; click en imagen = siguiente)
 // ===============================
 function ensureProductModal() {
-  // Usamos el modal existente del HTML; si no estuviera, lo creamos compatible con tu CSS
+  // Usa el modal existente (#producto-modal). Si faltara lo creo compatible con tu CSS (.modal-overlay + .visible)
   if (!getElement('producto-modal')) {
     const modal = document.createElement('div');
     modal.id = 'producto-modal';
@@ -350,7 +372,7 @@ function ensureProductModal() {
   elementos.productoModal = getElement('producto-modal');
   elementos.modalContenido = getElement('modal-contenido');
 
-  // Cerrar al hacer click fuera del contenido
+  // Cerrar al click fuera del contenido
   elementos.productoModal.addEventListener('click', (e) => {
     if (!elementos.modalContenido.contains(e.target)) cerrarModal();
   });
@@ -376,11 +398,6 @@ function mostrarModalProducto(producto) {
       <div class="modal-flex">
         <div class="modal-carrusel">
           <img id="modal-imagen" src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
-          ${producto.imagenes.length > 1 ? `
-          <div class="modal-controls">
-            <button class="modal-prev" ${currentIndex === 0 ? 'disabled' : ''}>&lt;</button>
-            <button class="modal-next" ${currentIndex === producto.imagenes.length - 1 ? 'disabled' : ''}>&gt;</button>
-          </div>` : ''}
           <div class="modal-thumbnails">
             ${producto.imagenes.map((img, i) => `
               <img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}">
@@ -390,12 +407,17 @@ function mostrarModalProducto(producto) {
         <div class="modal-info">
           <h1 class="modal-nombre">${producto.nombre}</h1>
           <p class="modal-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
-          <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}</p>
+
           <div class="modal-descripcion">
-            ${producto.descripcion || ''}
-            ${producto.adicionales ? `<br><small><b>Adicionales:</b> ${producto.adicionales}</small>` : ''}
-            ${(producto.alto || producto.ancho || producto.profundidad) ? `<br><small><b>Medidas:</b> ${[producto.alto, producto.ancho, producto.profundidad].filter(Boolean).join(' x ')} cm</small>` : ''}
+            ${producto.descripcion ? `<p>${producto.descripcion}</p>` : ''}
+            ${producto.adicionales ? `<p><b>Adicionales:</b> ${producto.adicionales}</p>` : ''}
+            ${(producto.alto || producto.ancho || producto.profundidad)
+              ? `<p><b>Medidas:</b> ${[producto.alto, producto.ancho, producto.profundidad].filter(Boolean).join(' x ')} cm</p>`
+              : ''}
           </div>
+
+          <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}</p>
+
           <div class="modal-acciones">
             <input type="number" value="1" min="1" max="${disponibles}" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
             <button class="boton-agregar-modal ${agotado ? 'agotado' : ''}" data-id="${producto.id}" ${agotado ? 'disabled' : ''}>
@@ -406,21 +428,31 @@ function mostrarModalProducto(producto) {
       </div>
     `;
 
-    cont.querySelector('.modal-prev')?.addEventListener('click', () => { if (currentIndex > 0) { currentIndex--; render(); } });
-    cont.querySelector('.modal-next')?.addEventListener('click', () => { if (currentIndex < producto.imagenes.length - 1) { currentIndex++; render(); } });
+    // Cambiar de imagen con click en la grande (cíclico)
+    const imgGrande = cont.querySelector('#modal-imagen');
+    imgGrande?.addEventListener('click', () => {
+      if (!producto.imagenes || producto.imagenes.length <= 1) return;
+      currentIndex = (currentIndex + 1) % producto.imagenes.length;
+      render();
+    });
+
+    // Miniaturas
     cont.querySelectorAll('.thumbnail').forEach(th => th.addEventListener('click', (e) => {
       currentIndex = parseInt(e.currentTarget.dataset.index);
       render();
     }));
+
+    // Agregar desde modal (protegido)
     cont.querySelector('.boton-agregar-modal')?.addEventListener('click', (e) => {
       const id = parseInt(e.currentTarget.dataset.id);
-      const cantidad = parseInt(cont.querySelector('.cantidad-modal-input').value);
-      agregarAlCarrito(id, cantidad, e.currentTarget);
+      const qty = parseInt(cont.querySelector('.cantidad-modal-input').value);
+      agregarAlCarrito(id, qty, e.currentTarget);
     });
   };
 
   render();
-  // 👇 Ahora sí: usa la clase que tu CSS espera
+
+  // Mostrar modal con la clase que tu CSS espera (.visible)
   elementos.productoModal.classList.add('visible');
   elementos.productoModal.setAttribute('aria-hidden', 'false');
   document.body.classList.add('no-scroll');
@@ -435,7 +467,7 @@ function cerrarModal() {
 window.cerrarModal = cerrarModal;
 
 // ===============================
-// AGREGAR AL CARRITO (con transacción y candado)
+// LÓGICA DE AGREGAR AL CARRITO (con transacción y dobles protegidos)
 // ===============================
 async function agregarAlCarrito(id, cantidad = 1, boton = null) {
   if (!Number.isFinite(id) || id <= 0) return mostrarNotificacion('ID de producto inválido', 'error');
@@ -446,7 +478,7 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
   const cantidadAgregar = Math.max(1, parseInt(cantidad));
   if (!Number.isFinite(cantidadAgregar)) return mostrarNotificacion('Cantidad inválida', 'error');
 
-  // Evitar doble click
+  // Evitar dobles (por botón y por producto)
   if (boton) {
     if (busyButtons.has(boton)) return;
     busyButtons.add(boton);
@@ -454,12 +486,19 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
     boton._oldHTML = boton.innerHTML;
     boton.innerHTML = 'Agregando <span class="spinner"></span>';
   }
+  if (inFlightAdds.has(id)) {
+    // Ya hay un agregado en curso para este producto
+    if (boton) { boton.disabled = false; boton.innerHTML = boton._oldHTML; busyButtons.delete(boton); }
+    return;
+  }
+  inFlightAdds.add(id);
 
   // No permitir superar stock considerando lo que ya hay en carrito
   const enCarrito = carrito.find(item => item.id === id);
   const yaEnCarrito = enCarrito ? enCarrito.cantidad : 0;
   if (producto.stock - yaEnCarrito < cantidadAgregar) {
     if (boton) { boton.disabled = false; boton.innerHTML = boton._oldHTML; busyButtons.delete(boton); }
+    inFlightAdds.delete(id);
     return mostrarNotificacion('Stock insuficiente', 'error');
   }
 
@@ -467,7 +506,7 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
     const productRef = ref(db, `productos/${id}/stock`);
     const { committed } = await runTransaction(productRef, (stock) => {
       stock = stock || 0;
-      if (stock < cantidadAgregar) return; // aborta
+      if (stock < cantidadAgregar) return; // aborta transacción
       return stock - cantidadAgregar;
     });
 
@@ -479,7 +518,7 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
       nombre: producto.nombre,
       precio: producto.precio,
       cantidad: cantidadAgregar,
-      imagen: producto.imagenes?.[0] || PLACEHOLDER_IMAGE
+      imagen: (producto.imagenes && producto.imagenes[0]) || PLACEHOLDER_IMAGE
     });
 
     guardarCarrito();
@@ -495,11 +534,12 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
       boton.innerHTML = boton._oldHTML;
       busyButtons.delete(boton);
     }
+    inFlightAdds.delete(id);
   }
 }
 
 // ===============================
-// UI / FILTROS
+// UI Y FILTROS
 // ===============================
 function actualizarCategorias() {
   if (!elementos.selectCategoria) return;
@@ -526,15 +566,14 @@ function resetearFiltros() {
 }
 
 // ===============================
-// AUX: FAQ, Menú, Contacto
+// INICIALIZACIONES ESPECÍFICAS
 // ===============================
 function inicializarFAQ() {
   document.querySelectorAll('.faq-toggle').forEach(toggle => {
     toggle.onclick = () => {
       const expanded = toggle.getAttribute('aria-expanded') === 'true';
-      toggle.setAttribute('aria-expanded', String(!expanded));
-      const content = toggle.nextElementSibling;
-      if (content) content.hidden = expanded;
+      toggle.setAttribute('aria-expanded', !expanded);
+      toggle.nextElementSibling.hidden = expanded;
     };
   });
 }
@@ -550,18 +589,15 @@ function inicializarMenuHamburguesa() {
   };
   menu.querySelectorAll('a').forEach(link => link.onclick = () => {
     menu.classList.remove('active');
-    hamburguesa.setAttribute('aria-expanded', 'false');
+    hamburguesa.setAttribute('aria-expanded', false);
     document.body.classList.remove('no-scroll');
   });
 }
-// ✅ corrige el id del formulario
 function setupContactForm() {
   const form = getElement('formulario-contacto');
   if (!form || !window.emailjs) return;
 
-  // TODO: reemplazar por tu public key real
   emailjs.init("YOUR_EMAILJS_USER_ID");
-
   form.onsubmit = (e) => {
     e.preventDefault();
     const nombre = getElement('nombre').value;
@@ -584,15 +620,15 @@ function setupContactForm() {
 }
 
 // ===============================
-// EVENTOS (delegación protegida)
+// EVENTOS Y DELEGACIÓN
 // ===============================
 function initEventos() {
   elementos.carritoBtnMain?.addEventListener('click', () => toggleCarrito(true));
   elementos.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
   elementos.btnCerrarCarrito?.addEventListener('click', () => toggleCarrito(false));
-  elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
 
   getElement('select-envio')?.addEventListener('change', actualizarResumenPedido);
+  elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
   elementos.btnFinalizarCompra?.addEventListener('click', () => {
     if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
     elementos.avisoPreCompraModal.style.display = 'flex';
@@ -630,18 +666,17 @@ function initEventos() {
     aplicarFiltros();
   });
 
-  // Delegación en galería: aseguramos que no se duplica
+  // Delegación de eventos en galería — deduplicada
   const galeria = elementos.galeriaProductos;
-  if (galeria && !galeria._pfDelegated) {
-    galeria.addEventListener('click', (e) => {
+  if (galeria) {
+    if (galeria._pfHandler) galeria.removeEventListener('click', galeria._pfHandler);
+    const handler = (e) => {
       const target = e.target.closest('.boton-detalles, .boton-agregar, .boton-aviso-stock');
       if (!target) return;
       e.preventDefault();
       e.stopPropagation();
-
       const card = target.closest('.producto-card');
-      if (!card) return;
-      const id = parseInt(card.dataset.id);
+      const id = parseInt(card?.dataset?.id);
       const producto = productos.find(p => p.id === id);
       if (!producto) return;
 
@@ -652,13 +687,14 @@ function initEventos() {
       } else if (target.classList.contains('boton-aviso-stock')) {
         preguntarStock(producto.nombre);
       }
-    });
-    galeria._pfDelegated = true;
+    };
+    galeria.addEventListener('click', handler, { passive: false });
+    galeria._pfHandler = handler;
   }
 }
 
 // ===============================
-// RESUMEN / ENVÍO
+// RESUMEN Y ENVÍO
 // ===============================
 function actualizarResumenPedido() {
   const resumenProductos = getElement('resumen-productos');
@@ -684,8 +720,9 @@ function actualizarResumenPedido() {
     `;
   });
 
-  const metodo = getElement('select-envio')?.value || 'retiro';
-  const costoEnvio = metodo === 'montevideo' ? 150 : metodo === 'interior' ? 300 : 0;
+  const envioSelect = getElement('select-envio');
+  const metodo = envioSelect?.value || 'retiro';
+  let costoEnvio = metodo === 'montevideo' ? 150 : metodo === 'interior' ? 300 : 0;
 
   html += `
     <div class="resumen-item resumen-subtotal">
@@ -700,7 +737,8 @@ function actualizarResumenPedido() {
   `;
 
   resumenProductos.innerHTML = html;
-  resumenTotal.textContent = `$U ${(subtotal + costoEnvio).toLocaleString('es-UY')}`;
+  const total = subtotal + costoEnvio;
+  resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
 
   const grupoDireccion = getElement('grupo-direccion');
   const inputDireccion = getElement('input-direccion');
@@ -709,11 +747,13 @@ function actualizarResumenPedido() {
     inputDireccion.required = metodo !== 'retiro';
   }
 }
+
 getElement('btn-cerrar-modal-envio')?.addEventListener('click', () => {
   const modal = getElement('modal-datos-envio');
   modal.classList.remove('visible');
-  setTimeout(() => modal.style.display = 'none', 250);
+  setTimeout(() => modal.style.display = 'none', 300);
 });
+
 getElement('form-envio')?.addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -726,7 +766,7 @@ getElement('form-envio')?.addEventListener('submit', async (e) => {
 
   if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
     return mostrarNotificacion('Complete todos los campos obligatorios', 'error');
-    }
+  }
 
   // Validar stock actual antes de confirmar
   for (const item of carrito) {
@@ -761,7 +801,7 @@ getElement('form-envio')?.addEventListener('submit', async (e) => {
     actualizarUI();
     mostrarNotificacion('Pedido listo para enviar por WhatsApp', 'exito');
     getElement('form-envio').reset();
-  }, 250);
+  }, 300);
 });
 
 // ===============================
