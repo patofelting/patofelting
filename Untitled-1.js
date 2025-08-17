@@ -1,29 +1,26 @@
-/* ===============================
- * E-COMMERCE JS – Patofelting
- * Archivo: Untitled-1.js (type="module")
- * =============================== */
+// ===============================
+// E-COMMERCE JS – Patofelting
+// ===============================
 
 // ---------------------------------
 // CONFIGURACIÓN GLOBAL
 // ---------------------------------
 const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
-const PLACEHOLDER_IMAGE =
-  window.PLACEHOLDER_IMAGE ||
-  'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
+const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
 // Firebase (la app ya está inicializada en index.html)
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { ref, runTransaction, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-const db   = window.firebaseDatabase; // expuesto globalmente en index.html
-const auth = getAuth();               // toma la app por defecto
+const db = window.firebaseDatabase;
+const auth = getAuth();
 
 // ---------------------------------
 // ESTADO GLOBAL
 // ---------------------------------
 let productos = [];
-let carrito   = [];
+let carrito = [];
 let paginaActual = 1;
 
 let filtrosActuales = {
@@ -40,15 +37,10 @@ const $id = (id) => document.getElementById(id);
 const $qs = (sel) => document.querySelector(sel);
 
 const elementos = {
-  // catálogo
   galeriaProductos: $id('galeria-productos'),
   paginacion: $id('paginacion'),
-
-  // modal producto
   productoModal: $id('producto-modal'),
   modalContenido: $id('modal-contenido'),
-
-  // carrito
   carritoBtnMain: $id('carrito-btn-main'),
   carritoPanel: $id('carrito-panel'),
   carritoOverlay: $qs('.carrito-overlay'),
@@ -58,8 +50,6 @@ const elementos = {
   contadorCarrito: $id('contador-carrito'),
   btnVaciarCarrito: $qs('.boton-vaciar-carrito'),
   btnFinalizarCompra: $qs('.boton-finalizar-compra'),
-
-  // aviso pre-compra + datos envío
   avisoPreCompraModal: $id('aviso-pre-compra-modal'),
   btnEntendidoAviso: $id('btn-entendido-aviso'),
   btnCancelarAviso: $id('btn-cancelar-aviso'),
@@ -68,8 +58,6 @@ const elementos = {
   resumenPedido: $id('resumen-pedido'),
   resumenProductos: $id('resumen-productos'),
   resumenTotal: $id('resumen-total'),
-
-  // filtros
   inputBusqueda: $qs('.input-busqueda'),
   selectCategoria: $id('filtro-categoria'),
   precioMinInput: $id('min-slider'),
@@ -80,18 +68,12 @@ const elementos = {
   thumbMax: $id('thumb-label-max'),
   rangeTrack: $qs('.range-slider .range'),
   aplicarRangoBtn: $qs('.aplicar-rango-btn'),
-
-  // otros
   productLoader: $id('product-loader'),
   hamburguesa: $qs('.hamburguesa'),
   menu: $id('menu'),
-
-  // contacto
   formContacto: $id('formulario-contacto'),
   successMessage: $id('successMessage'),
   errorMessage: $id('errorMessage'),
-
-  // stock modal (opcional)
   stockModal: $id('stock-modal'),
   stockForm: $id('stock-form'),
   stockEmail: $id('stock-email'),
@@ -101,7 +83,7 @@ const elementos = {
 // ---------------------------------
 // UTILIDADES
 // ---------------------------------
-function mostrarNotificacion(mensaje, tipo='exito'){
+function mostrarNotificacion(mensaje, tipo='exito') {
   const n = document.createElement('div');
   n.className = `notificacion ${tipo}`;
   n.textContent = mensaje;
@@ -109,38 +91,34 @@ function mostrarNotificacion(mensaje, tipo='exito'){
   requestAnimationFrame(()=> n.classList.add('show'));
   setTimeout(()=>{ n.classList.remove('show'); setTimeout(()=>n.remove(),220); }, 2500);
 }
-
-function formatearUY(num){
+function formatearUY(num) {
   return Number(num || 0).toLocaleString('es-UY');
 }
 
 // ---------------------------------
 // CARRITO: persistencia y UI
 // ---------------------------------
-function guardarCarrito(){
+function guardarCarrito() {
   localStorage.setItem(LS_CARRITO_KEY, JSON.stringify(carrito));
   actualizarContadorCarrito();
   if (elementos.modalDatosEnvio?.classList.contains('visible')) renderResumenDeCompra();
 }
-
-function cargarCarrito(){
+function cargarCarrito() {
   try{ carrito = JSON.parse(localStorage.getItem(LS_CARRITO_KEY)) || []; }
   catch{ carrito = []; }
   actualizarContadorCarrito();
 }
-
-function actualizarContadorCarrito(){
+function actualizarContadorCarrito() {
   const total = carrito.reduce((s,i)=>s+i.cantidad,0);
   if (elementos.contadorCarrito){
     elementos.contadorCarrito.textContent = total;
     elementos.contadorCarrito.classList.toggle('visible', total>0);
   }
 }
-
-async function vaciarCarrito(){
+async function vaciarCarrito() {
   if (!carrito.length){ mostrarNotificacion('El carrito ya está vacío','info'); return; }
-  try{
-    await Promise.all(carrito.map(async (it)=>{
+  try {
+    await Promise.all(carrito.map(async (it) => {
       const r = ref(db, `productos/${it.id}/stock`);
       await runTransaction(r, (cur)=> (typeof cur==='number' && !isNaN(cur) ? cur : 0) + it.cantidad);
     }));
@@ -149,12 +127,11 @@ async function vaciarCarrito(){
     renderizarCarrito();
     renderizarProductos();
     mostrarNotificacion('Carrito vaciado y stock restaurado','exito');
-  }catch(e){
+  } catch(e) {
     console.error(e); mostrarNotificacion('Error al vaciar carrito','error');
   }
 }
-
-function renderizarCarrito(){
+function renderizarCarrito() {
   if (!elementos.listaCarrito || !elementos.totalCarrito) return;
 
   if (!carrito.length){
@@ -186,7 +163,6 @@ function renderizarCarrito(){
   const total = carrito.reduce((s,i)=> s + i.precio*i.cantidad, 0);
   elementos.totalCarrito.textContent = `Total: $U ${formatearUY(total)}`;
 
-  // Delegación
   elementos.listaCarrito.querySelectorAll('.disminuir-cantidad').forEach(btn=>{
     btn.addEventListener('click', async (e)=>{
       const id = +e.currentTarget.dataset.id;
@@ -207,7 +183,6 @@ function renderizarCarrito(){
     });
   });
 }
-
 function toggleCarrito(forceState){
   if (!elementos.carritoPanel || !elementos.carritoOverlay) return;
   const isOpen = typeof forceState==='boolean' ? forceState : !elementos.carritoPanel.classList.contains('active');
@@ -237,7 +212,6 @@ async function cargarProductosDesdeFirebase(){
     if (elementos.productLoader) elementos.productLoader.hidden = true;
   }
 }
-
 function procesarDatosProductos(data){
   productos = [];
   Object.keys(data).forEach(key=>{
@@ -261,7 +235,6 @@ function procesarDatosProductos(data){
   actualizarCategorias();
   actualizarUI();
 }
-
 function crearCardProducto(p){
   const enCarrito = carrito.find(i=>i.id===p.id);
   const disponibles = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
@@ -273,16 +246,14 @@ function crearCardProducto(p){
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${formatearUY(p.precio)}</p>
       <div class="card-acciones">
-        <button class="boton-agregar${agot?' agotado':''}" ${agot?'disabled':''}>
+        <button class="boton-agregar${agot?' agotado':''}" data-id="${p.id}" ${agot?'disabled':''}>
           ${agot ? 'Agotado' : 'Agregar'}
         </button>
-        ${agot ? `<button class="boton-aviso-stock" data-nombre="${p.nombre.replace(/"/g,'&quot;')}">📩 Avisame</button>`:''}
+        ${agot ? `<button class="boton-aviso-stock" data-nombre="${p.nombre.replace(/"/g,'&quot;')}" data-id="${p.id}">📩 Avisame</button>`:''}
       </div>
-      <!-- Botón con data-id propio para no depender del padre -->
       <button class="boton-detalles" data-id="${p.id}">🔍 Ver Detalle</button>
     </div>`;
 }
-
 function renderizarProductos(){
   const data = filtrarProductos();
   const start = (paginaActual-1)*PRODUCTOS_POR_PAGINA;
@@ -295,7 +266,6 @@ function renderizarProductos(){
 
   renderizarPaginacion(data.length);
 }
-
 function renderizarPaginacion(total){
   const totalPages = Math.ceil(total/PRODUCTOS_POR_PAGINA);
   if (!elementos.paginacion) return;
@@ -329,20 +299,16 @@ function filtrarProductos(){
     return okPrecio && okCat && okBusq;
   });
 }
-
 function aplicarFiltros(){
   paginaActual = 1;
   renderizarProductos();
 }
-
 function actualizarCategorias(){
   if (!elementos.selectCategoria) return;
   const cats = ['todos', ...new Set(productos.map(p=>p.categoria).filter(Boolean).sort())];
   elementos.selectCategoria.innerHTML = cats.map(c=>`<option value="${c}">${c.charAt(0).toUpperCase()+c.slice(1)}</option>`).join('');
   elementos.selectCategoria.value = filtrosActuales.categoria;
 }
-
-// Slider visual + valores
 function updateRange(){
   if (!elementos.precioMinInput || !elementos.precioMaxInput) return;
   let min = parseInt(elementos.precioMinInput.value || 0);
@@ -362,7 +328,6 @@ function updateRange(){
 
   if (elementos.thumbMin){ elementos.thumbMin.style.left = `${pctMin}%`; elementos.thumbMin.textContent = `$U ${formatearUY(min)}`; }
   if (elementos.thumbMax){ elementos.thumbMax.style.left = `${pctMax}%`; elementos.thumbMax.textContent = `$U ${formatearUY(max)}`; }
-
   if (elementos.rangeTrack){
     elementos.rangeTrack.style.left  = `${pctMin}%`;
     elementos.rangeTrack.style.right = `${100-pctMax}%`;
@@ -378,7 +343,6 @@ function verDetalle(id){
   mostrarModalProducto(p);
 }
 window.verDetalle = verDetalle;
-
 function mostrarModalProducto(producto){
   const modal = elementos.productoModal, cont = elementos.modalContenido;
   if (!modal || !cont) return;
@@ -424,7 +388,6 @@ function mostrarModalProducto(producto){
         </div>
       </div>`;
 
-    // eventos internos
     cont.querySelector('#btn-close-modal')?.addEventListener('click', cerrarModal);
     cont.querySelector('.modal-prev')?.addEventListener('click', ()=>{ if(idx>0){ idx--; render(); }});
     cont.querySelector('.modal-next')?.addEventListener('click', ()=>{ if(idx<producto.imagenes.length-1){ idx++; render(); }});
@@ -443,7 +406,6 @@ function mostrarModalProducto(producto){
   modal.classList.add('active');
   document.body.classList.add('no-scroll');
 }
-
 function cerrarModal(){
   if (elementos.productoModal){
     elementos.productoModal.classList.remove('active');
@@ -517,14 +479,12 @@ function renderResumenDeCompra(){
   const envio = calcularEnvioActual();
   elementos.resumenTotal.textContent = `$U ${formatearUY(subtotal + envio)}`;
 }
-
 function calcularEnvioActual(){
   const val = elementos.selectEnvio?.value || '';
   if (val==='montevideo') return 150;
   if (val==='interior') return 300;
   return 0;
 }
-
 function actualizarResumenPedido(){
   renderResumenDeCompra();
 }
@@ -535,13 +495,10 @@ function actualizarResumenPedido(){
 function setupContactForm(){
   const form = elementos.formContacto;
   if (!form) return;
-
-  // Tu Public Key de EmailJS (visible en UI)
   const PUBLIC_KEY = 'o4IxJz0Zz-LQ8jYKG';
   const SERVICE_ID = 'service_89by24g';
   const TEMPLATE_ID = 'template_8mn7hdp';
 
-  // Asegurar init una vez
   if (!window.__emailjsInited){
     if (window.emailjs && typeof window.emailjs.init === 'function'){
       window.emailjs.init(PUBLIC_KEY);
@@ -580,10 +537,9 @@ function setupContactForm(){
 }
 
 // ---------------------------------
-// EVENTOS GLOBALES
+// EVENTOS
 // ---------------------------------
 function inicializarEventos(){
-  // carrito
   elementos.carritoBtnMain?.addEventListener('click', ()=> toggleCarrito(true));
   elementos.carritoOverlay?.addEventListener('click', ()=> toggleCarrito(false));
   elementos.btnCerrarCarrito?.addEventListener('click', ()=> toggleCarrito(false));
@@ -637,21 +593,16 @@ function inicializarEventos(){
 
   // catálogo (delegación)
   elementos.galeriaProductos?.addEventListener('click', (e)=>{
-    const card = e.target.closest('.producto-card');
-    if (!card) return;
-
-    // usar el data-id del botón si existe, o el del padre
     const btnDetalle = e.target.closest('.boton-detalles');
     const btnAgregar = e.target.closest('.boton-agregar');
     const btnAviso   = e.target.closest('.boton-aviso-stock');
-
     if (btnDetalle){
-      const id = Number(btnDetalle.dataset.id || card.dataset.id);
+      const id = Number(btnDetalle.dataset.id);
       if (Number.isFinite(id)) verDetalle(id);
       return;
     }
     if (btnAgregar){
-      const id = Number(card.dataset.id);
+      const id = Number(btnAgregar.dataset.id);
       if (Number.isFinite(id)) agregarAlCarrito(id, 1, btnAgregar);
       return;
     }
@@ -661,7 +612,6 @@ function inicializarEventos(){
     }
   });
 }
-
 function inicializarMenuHamburguesa(){
   const {hamburguesa, menu} = elementos;
   if (!hamburguesa || !menu) return;
@@ -678,7 +628,6 @@ function inicializarMenuHamburguesa(){
     });
   });
 }
-
 function inicializarFAQ(){
   document.querySelectorAll('.faq-toggle').forEach(t=>{
     t.addEventListener('click', ()=>{
@@ -698,8 +647,8 @@ async function init(){
   inicializarFAQ();
   setupContactForm();
   inicializarEventos();
-  updateRange();      // sincroniza sliders visualmente
-  aplicarFiltros();   // primera render
+  updateRange();
+  aplicarFiltros();
   actualizarResumenPedido();
 }
 
