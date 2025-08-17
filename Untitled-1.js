@@ -1003,455 +1003,1331 @@ function toggleCarrito(forceState) {
 }
 
 // ---------------------------------
-// PRODUCTOS: carga
+// FIREBASE OPERATIONS & PRODUCT MANAGEMENT
 // ---------------------------------
-async function cargarProductosDesdeFirebase(){
+
+/**
+ * Loads products from Firebase with improved error handling and retry logic
+ */
+async function cargarProductosDesdeFirebase() {
+  if (!db) {
+    console.error('Firebase database not initialized');
+    mostrarNotificacion('Error de conexión a la base de datos', 'error');
+    return;
+  }
+  
   const productosRef = ref(db, 'productos');
-  try{
-    if (elementos.productLoader) elementos.productLoader.hidden = false;
+  const productLoader = elementos.productLoader;
+  
+  try {
+    state.isLoading = true;
+    if (productLoader) {
+      productLoader.hidden = false;
+      productLoader.setAttribute('aria-busy', 'true');
+    }
+    
+    // First load - get current data
+    await retryOperation(async () => {
+      const snapshot = await get(productosRef);
+      if (snapshot.exists()) {
+        procesarDatosProductos(snapshot.val());
+      } else {
+        console.warn('No products found in database');
+        state.productos = [];
+        renderizarProductos();
+        actualizarCategorias();
+      }
+    });
+    
+    // Set up real-time listener
+    setupRealtimeListener(productosRef);
+    
+  } catch (error) {
+    console.error('Error loading products from Firebase:', error);
+    handleFirebaseError(error);
+  } finally {
+    state.isLoading = false;
+    if (productLoader) {
+      productLoader.hidden = true;
+      productLoader.setAttribute('aria-busy', 'false');
+    }
+  }
+}
 
-    const snap = await get(productosRef);
-    if (snap.exists()) procesarDatosProductos(snap.val());
-
-    // tiempo real
-    onValue(productosRef, (s)=>{
-      if (!s.exists()){
-        productos=[];
+/**
+ * Sets up real-time listener for product changes
+ * @param {DatabaseReference} productosRef - Firebase reference
+ */
+function setupRealtimeListener(productosRef) {
+  // Remove existing listener if any
+  if (state.activeListeners.has('productos')) {
+    off(productosRef);
+    state.activeListeners.delete('productos');
+  }
+  
+  // Add new listener
+  const unsubscribe = onValue(productosRef, (snapshot) => {
+    try {
+      if (!snapshot.exists()) {
+        console.log('Products collection is empty');
+        state.productos = [];
         renderizarProductos();
         actualizarCategorias();
         actualizarUI();
         return;
       }
-      procesarDatosProductos(s.val());
-    });
-  }catch(e){
-    console.error('Error al cargar productos:', e);
-    if (elementos.galeriaProductos) {
-      elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos.</p>';
+      
+      procesarDatosProductos(snapshot.val());
+      
+    } catch (error) {
+      console.error('Error in real-time listener:', error);
+      mostrarNotificacion('Error al actualizar datos en tiempo real', 'warning');
     }
-  }finally{
-    if (elementos.productLoader) elementos.productLoader.hidden = true;
+  }, (error) => {
+    console.error('Firebase listener error:', error);
+    handleFirebaseError(error);
+  });
+  
+  state.activeListeners.add('productos');
+}
+
+/**
+ * Processes and validates product data from Firebase
+ * @param {Object} data - Raw product data from Firebase
+ */
+function procesarDatosProductos(data) {
+  if (!data || typeof data !== 'object') {
+    console.warn('Invalid product data received');
+    return;
+  }
+  
+  try {
+    const productosNuevos = [];
+    
+    Object.entries(data).forEach(([key, producto]) => {
+      if (!producto || typeof producto !== 'object') {
+        console.warn(`Invalid product data for key ${key}:`, producto);
+        return;
+      }
+      
+      // Validate and sanitize product data
+      const productoValidado = validarProducto(producto, key);
+      if (productoValidado) {
+        productosNuevos.push(productoValidado);
+      }
+    });
+    
+    // Update state
+    state.productos = productosNuevos.sort((a, b) => a.nombre.localeCompare(b.nombre));
+    
+    // Update UI
+    renderizarProductos();
+    actualizarCategorias();
+    actualizarUI();
+    
+    console.log(`✅ Loaded ${state.productos.length} products successfully`);
+    
+  } catch (error) {
+    console.error('Error processing product data:', error);
+    mostrarNotificacion('Error al procesar los datos de productos', 'error');
   }
 }
 
-function procesarDatosProductos(data){
-  productos = [];
-  Object.keys(data).forEach(key=>{
-    const p = data[key] ?? {};
-    productos.push({
-      id: p.id && !isNaN(p.id) ? parseInt(p.id) : parseInt(key),
-      nombre: (p.nombre ?? 'Sin nombre').trim(),
-      descripcion: (p.descripcion ?? '').trim(),
-      precio: !isNaN(+p.precio) ? +p.precio : 0,
-      stock: !isNaN(parseInt(p.stock)) ? Math.max(0, parseInt(p.stock)) : 0,
-      imagenes: Array.isArray(p.imagenes) && p.imagenes.length ? p.imagenes : [PLACEHOLDER_IMAGE],
-      categoria: (p.categoria ?? 'otros').toLowerCase().trim(),
-      estado: (p.estado ?? '').trim(),
-      adicionales: (p.adicionales ?? '').trim(),
-      alto: !isNaN(+p.alto) ? +p.alto : null,
-      ancho: !isNaN(+p.ancho) ? +p.ancho : null,
-      profundidad: !isNaN(+p.profundidad) ? +p.profundidad : null,
-    });
-  });
-
-  renderizarProductos();
-  actualizarCategorias();
-  actualizarUI();
+/**
+ * Validates and sanitizes a single product
+ * @param {Object} producto - Raw product data
+ * @param {string} key - Firebase key
+ * @returns {Object|null} Validated product or null if invalid
+ */
+function validarProducto(producto, key) {
+  try {
+    // Required fields validation
+    if (!producto.nombre || typeof producto.nombre !== 'string') {
+      console.warn(`Product ${key} missing valid name`);
+      return null;
+    }
+    
+    // Sanitize and validate all fields
+    const productoValidado = {
+      id: producto.id && !isNaN(producto.id) ? parseInt(producto.id) : parseInt(key) || 0,
+      nombre: sanitizeHTML(producto.nombre.trim()),
+      descripcion: sanitizeHTML((producto.descripcion || '').trim()),
+      precio: Math.max(0, parseFloat(producto.precio) || 0),
+      stock: Math.max(0, parseInt(producto.stock) || 0),
+      categoria: sanitizeHTML((producto.categoria || 'otros').toLowerCase().trim()),
+      estado: sanitizeHTML((producto.estado || '').trim()),
+      adicionales: sanitizeHTML((producto.adicionales || '').trim()),
+      
+      // Dimensions - validate as positive numbers
+      alto: producto.alto && !isNaN(producto.alto) && producto.alto > 0 ? parseFloat(producto.alto) : null,
+      ancho: producto.ancho && !isNaN(producto.ancho) && producto.ancho > 0 ? parseFloat(producto.ancho) : null,
+      profundidad: producto.profundidad && !isNaN(producto.profundidad) && producto.profundidad > 0 ? parseFloat(producto.profundidad) : null,
+      
+      // Images - validate URLs
+      imagenes: validarImagenes(producto.imagenes),
+      
+      // Timestamps
+      fechaCreacion: producto.fechaCreacion || Date.now(),
+      fechaActualizacion: Date.now()
+    };
+    
+    // Final validation
+    if (!productoValidado.nombre || productoValidado.precio < 0) {
+      console.warn(`Product ${key} failed final validation`);
+      return null;
+    }
+    
+    return productoValidado;
+    
+  } catch (error) {
+    console.error(`Error validating product ${key}:`, error);
+    return null;
+  }
 }
 
-function actualizarUI(){
+/**
+ * Validates and sanitizes image URLs
+ * @param {*} imagenes - Image data from Firebase
+ * @returns {Array} Array of valid image URLs
+ */
+function validarImagenes(imagenes) {
+  if (!imagenes) {
+    return [CONFIG.PLACEHOLDER_IMAGE];
+  }
+  
+  if (typeof imagenes === 'string') {
+    return isValidImageUrl(imagenes) ? [imagenes] : [CONFIG.PLACEHOLDER_IMAGE];
+  }
+  
+  if (Array.isArray(imagenes)) {
+    const imagenesValidas = imagenes
+      .filter(img => typeof img === 'string' && isValidImageUrl(img));
+    
+    return imagenesValidas.length > 0 ? imagenesValidas : [CONFIG.PLACEHOLDER_IMAGE];
+  }
+  
+  return [CONFIG.PLACEHOLDER_IMAGE];
+}
+
+/**
+ * Validates if a string is a valid image URL
+ * @param {string} url - URL to validate
+ * @returns {boolean} True if valid image URL
+ */
+function isValidImageUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  
+  try {
+    const urlObj = new URL(url);
+    const validProtocols = ['http:', 'https:', 'data:'];
+    const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif'];
+    
+    if (!validProtocols.includes(urlObj.protocol)) return false;
+    
+    // For data URLs, just check if it starts with data:image
+    if (urlObj.protocol === 'data:') {
+      return url.startsWith('data:image/');
+    }
+    
+    // For regular URLs, check extension or accept if no extension (might be a service URL)
+    const pathname = urlObj.pathname.toLowerCase();
+    return validExtensions.some(ext => pathname.endsWith(ext)) || !pathname.includes('.');
+    
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Handles Firebase-specific errors
+ * @param {Error} error - Firebase error
+ */
+function handleFirebaseError(error) {
+  console.error('Firebase error:', error);
+  
+  let mensaje = 'Error de conexión con la base de datos';
+  
+  switch (error.code) {
+    case 'permission-denied':
+      mensaje = 'No tienes permisos para acceder a los datos';
+      break;
+    case 'network-request-failed':
+      mensaje = 'Error de red. Verifica tu conexión a internet';
+      break;
+    case 'unavailable':
+      mensaje = 'Servicio temporalmente no disponible';
+      break;
+    case 'timeout':
+      mensaje = 'La operación tardó demasiado tiempo';
+      break;
+  }
+  
+  mostrarNotificacion(mensaje, 'error');
+  
+  // Update UI with error state
+  if (elementos.galeriaProductos) {
+    elementos.galeriaProductos.innerHTML = `
+      <div class="error-carga" role="alert">
+        <h3>Error al cargar productos</h3>
+        <p>${mensaje}</p>
+        <button onclick="location.reload()" class="boton-reintentar">
+          Reintentar
+        </button>
+      </div>
+    `;
+  }
+}
+
+/**
+ * Updates UI components that depend on product data
+ */
+function actualizarUI() {
   renderizarCarrito();
   actualizarContadorCarrito();
 }
 
 // ---------------------------------
-// MODAL DE PRODUCTO
+// PRODUCT MODAL & DETAILS
 // ---------------------------------
-function verDetalle(id){
-  const p = productos.find(x=>x.id===id);
-  if (!p){
-    mostrarNotificacion('Producto no encontrado','error');
+
+/**
+ * Shows detailed view of a product
+ * @param {number} id - Product ID
+ */
+function verDetalle(id) {
+  const producto = state.productos.find(p => p.id === id);
+  if (!producto) {
+    mostrarNotificacion('Producto no encontrado', 'error');
     return;
   }
-  mostrarModalProducto(p);
+  mostrarModalProducto(producto);
 }
-window.verDetalle = verDetalle;
 
-function mostrarModalProducto(producto){
-  const modal = elementos.productoModal, cont = elementos.modalContenido;
-  if (!modal || !cont) return;
-
-  const enCarrito = carrito.find(i=>i.id===producto.id) ?? {cantidad:0};
+/**
+ * Shows product modal with carousel and detailed information
+ * @param {Object} producto - Product object
+ */
+function mostrarModalProducto(producto) {
+  const modal = elementos.productoModal;
+  const contenido = elementos.modalContenido;
+  
+  if (!modal || !contenido) return;
+  
+  const enCarrito = state.carrito.find(item => item.id === producto.id) || { cantidad: 0 };
   const disponibles = Math.max(0, producto.stock - enCarrito.cantidad);
   const agotado = disponibles <= 0;
-  let idx = 0;
-
-  function render(){
-    const medidas =
-      (producto.alto || producto.ancho || producto.profundidad)
-        ? `<small><b>Medidas:</b> ${producto.alto ? `${producto.alto} cm (alto)` : ''}${producto.ancho ? ` x ${producto.ancho} cm (ancho)` : ''}${producto.profundidad ? ` x ${producto.profundidad} cm (prof.)` : ''}</small>`
-        : '';
-
-    const adicionales = producto.adicionales
-      ? `<small><b>Adicionales:</b> ${producto.adicionales}</small>`
-      : '';
-
-    cont.innerHTML = `
-      <button class="cerrar-modal" aria-label="Cerrar" id="btn-close-modal">×</button>
-      <div class="modal-flex">
+  let imagenActual = 0;
+  
+  function renderModal() {
+    const dimensiones = construirTextoMedidas(producto);
+    const adicionales = producto.adicionales ? 
+      `<p class="modal-adicionales"><strong>Detalles adicionales:</strong> ${sanitizeHTML(producto.adicionales)}</p>` : '';
+    
+    contenido.innerHTML = `
+      <div class="modal-header">
+        <button class="cerrar-modal" aria-label="Cerrar modal" type="button" id="btn-close-modal">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      
+      <div class="modal-body">
         <div class="modal-carrusel">
-          <img id="modal-imagen" src="${producto.imagenes[idx] ?? PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
-          ${producto.imagenes.length>1 ? `
-            <div class="modal-controls">
-              <button class="modal-prev" ${idx===0 ? 'disabled' : ''} aria-label="Imagen anterior">&lt;</button>
-              <button class="modal-next" ${idx===producto.imagenes.length-1 ? 'disabled' : ''} aria-label="Imagen siguiente">&gt;</button>
+          <div class="imagen-principal">
+            <img id="modal-imagen" 
+                 src="${producto.imagenes[imagenActual] || CONFIG.PLACEHOLDER_IMAGE}" 
+                 class="modal-img" 
+                 alt="${sanitizeHTML(producto.nombre)}"
+                 onerror="this.src='${CONFIG.PLACEHOLDER_IMAGE}'">
+          </div>
+          
+          ${producto.imagenes.length > 1 ? `
+            <div class="modal-controles">
+              <button class="modal-prev" 
+                      ${imagenActual === 0 ? 'disabled' : ''} 
+                      aria-label="Imagen anterior">
+                ‹
+              </button>
+              <span class="contador-imagenes" aria-live="polite">
+                ${imagenActual + 1} / ${producto.imagenes.length}
+              </span>
+              <button class="modal-next" 
+                      ${imagenActual === producto.imagenes.length - 1 ? 'disabled' : ''} 
+                      aria-label="Imagen siguiente">
+                ›
+              </button>
             </div>
           ` : ''}
-          <div class="modal-thumbnails">
-            ${producto.imagenes.map((img,i)=>`
-              <img src="${img}" class="thumbnail ${i===idx ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i+1}">
-            `).join('')}
-          </div>
+          
+          ${producto.imagenes.length > 1 ? `
+            <div class="modal-thumbnails" role="tablist" aria-label="Miniaturas de imágenes">
+              ${producto.imagenes.map((img, index) => `
+                <button class="thumbnail ${index === imagenActual ? 'active' : ''}" 
+                        data-index="${index}"
+                        role="tab"
+                        aria-selected="${index === imagenActual}"
+                        aria-label="Ver imagen ${index + 1}">
+                  <img src="${img}" 
+                       alt="Miniatura ${index + 1}"
+                       onerror="this.src='${CONFIG.PLACEHOLDER_IMAGE}'">
+                </button>
+              `).join('')}
+            </div>
+          ` : ''}
         </div>
-
+        
         <div class="modal-info">
-          <h1 class="modal-nombre">${producto.nombre}</h1>
-          <p class="modal-precio">$U ${formatearUY(producto.precio)}</p>
-          <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}</p>
-
-          <div class="modal-descripcion">
-            ${producto.descripcion || ''}
-            ${adicionales ? `<br>${adicionales}` : ''}
-            ${medidas ? `<br>${medidas}` : ''}
+          <h1 class="modal-nombre">${sanitizeHTML(producto.nombre)}</h1>
+          
+          <div class="modal-precio-stock">
+            <p class="modal-precio">$U ${formatearUY(producto.precio)}</p>
+            <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">
+              ${agotado ? '❌ AGOTADO' : `✅ ${disponibles} disponibles`}
+            </p>
           </div>
-
+          
+          <div class="modal-descripcion">
+            ${producto.descripcion ? `<p>${sanitizeHTML(producto.descripcion)}</p>` : ''}
+            ${adicionales}
+            ${dimensiones ? `<p class="modal-dimensiones">${dimensiones}</p>` : ''}
+          </div>
+          
           <div class="modal-acciones">
-            <input type="number" value="1" min="1" max="${disponibles}" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
-            <button class="boton-agregar-modal ${agotado ? 'agotado' : ''}" data-id="${producto.id}" ${agotado ? 'disabled' : ''} aria-label="${agotado?'Agotado':'Agregar al carrito'}">
-              ${agotado ? 'Agotado' : 'Agregar al carrito'}
+            <div class="cantidad-selector" ${agotado ? 'style="opacity: 0.5"' : ''}>
+              <label for="cantidad-modal-input" class="sr-only">Cantidad a agregar</label>
+              <input type="number" 
+                     id="cantidad-modal-input"
+                     class="cantidad-modal-input" 
+                     value="1" 
+                     min="1" 
+                     max="${disponibles}" 
+                     ${agotado ? 'disabled' : ''}>
+            </div>
+            
+            <button class="boton-agregar-modal ${agotado ? 'agotado' : ''}" 
+                    data-id="${producto.id}" 
+                    ${agotado ? 'disabled' : ''} 
+                    aria-label="${agotado ? 'Producto agotado' : `Agregar ${sanitizeHTML(producto.nombre)} al carrito`}">
+              ${agotado ? '❌ Agotado' : '🛒 Agregar al carrito'}
             </button>
           </div>
         </div>
       </div>
     `;
-
-    // eventos internos
-    cont.querySelector('#btn-close-modal')?.addEventListener('click', cerrarModal);
-    cont.querySelector('.modal-prev')?.addEventListener('click', ()=>{ if(idx>0){ idx--; render(); }});
-    cont.querySelector('.modal-next')?.addEventListener('click', ()=>{ if(idx<producto.imagenes.length-1){ idx++; render(); }});
-    cont.querySelectorAll('.thumbnail').forEach(th=>{
-      th.addEventListener('click', ()=>{
-        idx = parseInt(th.dataset.index);
-        render();
+    
+    // Add event listeners
+    setupModalEventListeners(producto);
+  }
+  
+  function setupModalEventListeners(producto) {
+    // Close button
+    contenido.querySelector('#btn-close-modal')?.addEventListener('click', cerrarModal);
+    
+    // Navigation buttons
+    const prevBtn = contenido.querySelector('.modal-prev');
+    const nextBtn = contenido.querySelector('.modal-next');
+    
+    prevBtn?.addEventListener('click', () => {
+      if (imagenActual > 0) {
+        imagenActual--;
+        renderModal();
+      }
+    });
+    
+    nextBtn?.addEventListener('click', () => {
+      if (imagenActual < producto.imagenes.length - 1) {
+        imagenActual++;
+        renderModal();
+      }
+    });
+    
+    // Thumbnail clicks
+    contenido.querySelectorAll('.thumbnail').forEach(thumbnail => {
+      thumbnail.addEventListener('click', () => {
+        imagenActual = parseInt(thumbnail.dataset.index);
+        renderModal();
       });
     });
-    const btnAdd   = cont.querySelector('.boton-agregar-modal');
-    const inputCant = cont.querySelector('.cantidad-modal-input');
-    btnAdd?.addEventListener('click', ()=>{
-      const cant = Math.max(1, parseInt(inputCant.value ?? 1));
-      agregarAlCarrito(producto.id, cant, btnAdd);
+    
+    // Add to cart button
+    const addButton = contenido.querySelector('.boton-agregar-modal');
+    const quantityInput = contenido.querySelector('.cantidad-modal-input');
+    
+    addButton?.addEventListener('click', () => {
+      const cantidad = Math.max(1, parseInt(quantityInput?.value || 1));
+      agregarAlCarrito(producto.id, cantidad, addButton);
+    });
+    
+    // Keyboard navigation
+    contenido.addEventListener('keydown', (e) => {
+      switch (e.key) {
+        case 'ArrowLeft':
+          if (imagenActual > 0) {
+            e.preventDefault();
+            imagenActual--;
+            renderModal();
+          }
+          break;
+        case 'ArrowRight':
+          if (imagenActual < producto.imagenes.length - 1) {
+            e.preventDefault();
+            imagenActual++;
+            renderModal();
+          }
+          break;
+        case 'Escape':
+          e.preventDefault();
+          cerrarModal();
+          break;
+      }
     });
   }
-
-  render();
-
-  // Abrir modal accesible
+  
+  // Build dimensions text
+  function construirTextoMedidas(producto) {
+    const medidas = [];
+    if (producto.alto) medidas.push(`${producto.alto} cm alto`);
+    if (producto.ancho) medidas.push(`${producto.ancho} cm ancho`);
+    if (producto.profundidad) medidas.push(`${producto.profundidad} cm prof.`);
+    
+    return medidas.length > 0 ? 
+      `<strong>Medidas:</strong> ${medidas.join(' × ')}` : '';
+  }
+  
+  // Render and show modal
+  renderModal();
+  
+  // Show modal with accessibility
   modal.classList.add('active');
   modal.style.display = 'flex';
-  modal.setAttribute('aria-hidden','false');
+  modal.setAttribute('aria-hidden', 'false');
   document.body.classList.add('no-scroll');
+  
+  // Focus management
+  setTimeout(() => {
+    const firstFocusable = contenido.querySelector('button, input, [tabindex]');
+    firstFocusable?.focus();
+  }, 100);
 }
 
-function cerrarModal(){
-  if (elementos.productoModal){
-    elementos.productoModal.classList.remove('active');
-    elementos.productoModal.style.display = 'none';
-    elementos.productoModal.setAttribute('aria-hidden','true');
+/**
+ * Closes the product modal
+ */
+function cerrarModal() {
+  const modal = elementos.productoModal;
+  if (modal) {
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
   }
+  
   document.body.classList.remove('no-scroll');
+  
+  // Return focus to trigger element
+  elementos.carritoBtnMain?.focus();
 }
-window.cerrarModal = cerrarModal;
 
 // ---------------------------------
-// AGREGAR AL CARRITO
+// ADD TO CART FUNCTIONALITY
 // ---------------------------------
-function agregarAlCarrito(id, cantidad=1, boton=null){
-  const p = productos.find(x=>x.id===id);
-  if (!p){
-    mostrarNotificacion('Producto no encontrado','error');
+
+/**
+ * Adds product to cart with Firebase stock management
+ * @param {number} id - Product ID
+ * @param {number} cantidad - Quantity to add (default: 1)
+ * @param {HTMLElement} boton - Button element for UI feedback (optional)
+ */
+async function agregarAlCarrito(id, cantidad = 1, boton = null) {
+  if (!db) {
+    mostrarNotificacion('Error de conexión a la base de datos', 'error');
     return;
   }
-
-  const enCarrito = carrito.find(i=>i.id===id);
-  const ya = enCarrito ? enCarrito.cantidad : 0;
-  const disponibles = p.stock - ya;
-  const cant = Math.max(1, parseInt(cantidad ?? 1));
-
-  if (disponibles < cant || cant < 1){
-    mostrarNotificacion('Stock insuficiente o cantidad inválida','error');
+  
+  const producto = state.productos.find(p => p.id === id);
+  if (!producto) {
+    mostrarNotificacion('Producto no encontrado', 'error');
     return;
   }
-
-  let original=null;
-  if (boton){
-    original = boton.innerHTML;
+  
+  const itemEnCarrito = state.carrito.find(item => item.id === id);
+  const cantidadEnCarrito = itemEnCarrito?.cantidad || 0;
+  const disponibles = producto.stock - cantidadEnCarrito;
+  const cantidadAgregar = Math.max(1, parseInt(cantidad) || 1);
+  
+  // Validate quantity
+  if (cantidadAgregar > disponibles || cantidadAgregar < 1) {
+    mostrarNotificacion(`Solo hay ${disponibles} unidades disponibles`, 'error');
+    return;
+  }
+  
+  if (disponibles <= 0) {
+    mostrarNotificacion('Producto agotado', 'error');
+    return;
+  }
+  
+  // UI feedback - show loading state
+  let originalButtonContent = null;
+  if (boton) {
+    originalButtonContent = boton.innerHTML;
     boton.disabled = true;
-    boton.innerHTML = 'Agregando <span class="spinner"></span>';
+    boton.innerHTML = `
+      <span class="loading-spinner" aria-hidden="true"></span>
+      Agregando...
+    `;
   }
-
-  const r = ref(db, `productos/${id}/stock`);
-  runTransaction(r, (cur)=>{
-    cur = (typeof cur !== 'number' || isNaN(cur)) ? 0 : cur;
-    if (cur < cant) return undefined; // aborta transacción
-    return Math.max(0, cur - cant);
-  }).then(res=>{
-    if (!res.committed){
-      mostrarNotificacion('Stock actualizado por otro usuario','error');
+  
+  try {
+    // Firebase transaction to update stock atomically
+    const stockRef = ref(db, `productos/${id}/stock`);
+    
+    const result = await retryOperation(async () => {
+      return await runTransaction(stockRef, (currentStock) => {
+        const stock = (typeof currentStock === 'number' && !isNaN(currentStock)) ? 
+          currentStock : 0;
+        
+        if (stock < cantidadAgregar) {
+          // Abort transaction - not enough stock
+          return undefined;
+        }
+        
+        return Math.max(0, stock - cantidadAgregar);
+      });
+    });
+    
+    if (!result.committed) {
+      mostrarNotificacion('Stock actualizado por otro usuario. Inténtalo de nuevo.', 'warning');
       return;
     }
-    if (enCarrito) enCarrito.cantidad += cant;
-    else carrito.push({
-      id: p.id, nombre: p.nombre, precio: p.precio, cantidad: cant,
-      imagen: p.imagenes?.[0] ?? PLACEHOLDER_IMAGE
-    });
-
+    
+    // Update local cart
+    if (itemEnCarrito) {
+      itemEnCarrito.cantidad += cantidadAgregar;
+    } else {
+      state.carrito.push({
+        id: producto.id,
+        nombre: producto.nombre,
+        precio: producto.precio,
+        cantidad: cantidadAgregar,
+        imagen: (producto.imagenes && producto.imagenes[0]) || CONFIG.PLACEHOLDER_IMAGE
+      });
+    }
+    
+    // Save and update UI
     guardarCarrito();
     renderizarCarrito();
     renderizarProductos();
-    mostrarNotificacion('✅ Producto agregado','exito');
-  }).catch(err=>{
-    console.error(err);
-    mostrarNotificacion('Error al agregar','error');
-  }).finally(()=>{
-    if (boton){ boton.disabled=false; boton.innerHTML = original; }
-  });
+    
+    const mensaje = cantidadAgregar === 1 ? 
+      `✅ ${producto.nombre} agregado al carrito` :
+      `✅ ${cantidadAgregar} x ${producto.nombre} agregados al carrito`;
+    
+    mostrarNotificacion(mensaje, 'exito');
+    
+  } catch (error) {
+    console.error('Error adding to cart:', error);
+    const errorMessage = error.code === 'permission-denied' ?
+      'No tienes permisos para realizar esta operación' :
+      'Error al agregar el producto. Inténtalo de nuevo.';
+    
+    mostrarNotificacion(errorMessage, 'error');
+    
+  } finally {
+    // Restore button state
+    if (boton) {
+      boton.disabled = false;
+      boton.innerHTML = originalButtonContent;
+    }
+  }
 }
-window.agregarAlCarrito = agregarAlCarrito;
 
-// ---------------------------------
-// AVISO DE STOCK (mail rápido)
-// ---------------------------------
-function preguntarStock(nombre){
-  const asunto = encodeURIComponent('Aviso de stock');
-  const cuerpo  = encodeURIComponent(`Hola, me gustaría saber cuándo vuelve a estar disponible: ${nombre}. Gracias.`);
-  window.location.href = `mailto:${window.STOCK_EMAIL ?? 'patofelting@gmail.com'}?subject=${asunto}&body=${cuerpo}`;
+/**
+ * Handles stock notification requests
+ * @param {string} nombreProducto - Product name for the notification
+ */
+function preguntarStock(nombreProducto) {
+  if (!nombreProducto) return;
+  
+  const email = window.STOCK_EMAIL || 'patofelting@gmail.com';
+  const asunto = encodeURIComponent('Consulta de stock - Patofelting');
+  const cuerpo = encodeURIComponent(
+    `Hola,\n\nMe gustaría saber cuándo vuelve a estar disponible el producto: "${nombreProducto}".\n\nGracias por tu atención.\n\nSaludos.`
+  );
+  
+  const mailtoUrl = `mailto:${email}?subject=${asunto}&body=${cuerpo}`;
+  
+  try {
+    window.location.href = mailtoUrl;
+    mostrarNotificacion('Abriendo cliente de correo...', 'info');
+  } catch (error) {
+    console.error('Error opening email client:', error);
+    mostrarNotificacion('No se pudo abrir el cliente de correo', 'warning');
+  }
 }
+
+// Expose functions globally for HTML onclick handlers
+window.verDetalle = verDetalle;
+window.cerrarModal = cerrarModal;
+window.agregarAlCarrito = agregarAlCarrito;
 window.preguntarStock = preguntarStock;
 
 // ---------------------------------
-// RESUMEN DE COMPRA
+// ORDER SUMMARY & CHECKOUT
 // ---------------------------------
-function renderResumenDeCompra(){
-  if (!elementos.resumenProductos || !elementos.resumenTotal) return;
 
-  if (!carrito.length){
-    elementos.resumenProductos.innerHTML = '<p>No hay productos en el carrito.</p>';
-    elementos.resumenTotal.textContent = '$U 0';
+/**
+ * Renders order summary for checkout modal
+ */
+function renderResumenDeCompra() {
+  const resumenProductos = elementos.resumenProductos;
+  const resumenTotal = elementos.resumenTotal;
+  
+  if (!resumenProductos || !resumenTotal) return;
+  
+  if (state.carrito.length === 0) {
+    resumenProductos.innerHTML = '<p>No hay productos en el carrito.</p>';
+    resumenTotal.textContent = '$U 0';
     return;
   }
-
-  elementos.resumenProductos.innerHTML = carrito.map(i=>`
-    <div class="resumen-item">
-      <span>${i.nombre} x${i.cantidad}</span>
-      <span>$U ${formatearUY(i.precio * i.cantidad)}</span>
-    </div>
-  `).join('');
-
-  const subtotal = carrito.reduce((s,i)=> s + i.precio*i.cantidad, 0);
-  const envio = calcularEnvioActual();
-  elementos.resumenTotal.textContent = `$U ${formatearUY(subtotal + envio)}`;
+  
+  try {
+    resumenProductos.innerHTML = state.carrito.map(item => `
+      <div class="resumen-item" role="listitem">
+        <div class="resumen-item-info">
+          <span class="resumen-item-nombre">${sanitizeHTML(item.nombre)}</span>
+          <span class="resumen-item-cantidad">x${item.cantidad}</span>
+        </div>
+        <span class="resumen-item-precio">$U ${formatearUY(item.precio * item.cantidad)}</span>
+      </div>
+    `).join('');
+    
+    const subtotal = state.carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+    const envio = calcularEnvioActual();
+    const total = subtotal + envio;
+    
+    resumenTotal.innerHTML = `
+      <div class="resumen-subtotal">
+        <span>Subtotal:</span>
+        <span>$U ${formatearUY(subtotal)}</span>
+      </div>
+      ${envio > 0 ? `
+        <div class="resumen-envio">
+          <span>Envío:</span>
+          <span>$U ${formatearUY(envio)}</span>
+        </div>
+      ` : ''}
+      <div class="resumen-total-final">
+        <span><strong>Total:</strong></span>
+        <span><strong>$U ${formatearUY(total)}</strong></span>
+      </div>
+    `;
+    
+  } catch (error) {
+    console.error('Error rendering order summary:', error);
+    resumenProductos.innerHTML = '<p class="error">Error al mostrar el resumen.</p>';
+  }
 }
 
-function calcularEnvioActual(){
-  const val = elementos.selectEnvio?.value ?? '';
-  if (val==='montevideo') return 150;
-  if (val==='interior')   return 300;
-  return 0;
+/**
+ * Calculates current shipping cost based on selected method
+ * @returns {number} Shipping cost
+ */
+function calcularEnvioActual() {
+  const metodoPago = elementos.selectEnvio?.value || '';
+  
+  switch (metodoPago) {
+    case 'montevideo':
+      return 150;
+    case 'interior':
+      return 300;
+    case 'retiro':
+    default:
+      return 0;
+  }
 }
 
-function actualizarResumenPedido(){
+/**
+ * Updates order summary when shipping method changes
+ */
+function actualizarResumenPedido() {
   renderResumenDeCompra();
-}
-
-// ---------------------------------
-// FORMULARIO DE CONTACTO (EmailJS)
-// ---------------------------------
-function setupContactForm(){
-  const form = elementos.formContacto;
-  if (!form) return;
-
-  const PUBLIC_KEY  = 'o4IxJz0Zz-LQ8jYKG';
-  const SERVICE_ID  = 'service_89by24g';
-  const TEMPLATE_ID = 'template_8mn7hdp';
-
-  if (!window.__emailjsInited){
-    if (window.emailjs && typeof window.emailjs.init === 'function'){
-      window.emailjs.init(PUBLIC_KEY);
-      window.__emailjsInited = true;
-    }else{
-      console.error('EmailJS no cargó.');
+  
+  // Show/hide address field based on shipping method
+  const grupoDireccion = document.getElementById('grupo-direccion');
+  const inputDireccion = document.getElementById('input-direccion');
+  const metodoPago = elementos.selectEnvio?.value || '';
+  
+  if (grupoDireccion && inputDireccion) {
+    if (metodoPago === 'retiro') {
+      grupoDireccion.style.display = 'none';
+      inputDireccion.required = false;
+    } else {
+      grupoDireccion.style.display = 'block';
+      inputDireccion.required = true;
     }
   }
+}
 
-  form.setAttribute('autocomplete','on');
+// ---------------------------------
+// CONTACT FORM WITH EMAILJS
+// ---------------------------------
 
-  form.addEventListener('submit', (e)=>{
-    e.preventDefault();
-    const {successMessage, errorMessage} = elementos;
-
-    if (!window.emailjs || !window.__emailjsInited){
-      if (errorMessage){
-        errorMessage.classList.remove('hidden');
-        errorMessage.textContent = 'Servicio de email no disponible.';
-        setTimeout(()=>errorMessage.classList.add('hidden'),3000);
-      }
-      return;
+/**
+ * Sets up the contact form with EmailJS integration
+ */
+function setupContactForm() {
+  const form = elementos.formContacto;
+  if (!form) return;
+  
+  // Initialize EmailJS
+  if (!window.__emailjsInitialized && window.emailjs) {
+    try {
+      window.emailjs.init(CONFIG.EMAIL.PUBLIC_KEY);
+      window.__emailjsInitialized = true;
+      console.log('✅ EmailJS initialized');
+    } catch (error) {
+      console.error('❌ EmailJS initialization failed:', error);
     }
+  }
+  
+  // Add form validation and submission handler
+  form.addEventListener('submit', handleContactFormSubmit);
+  
+  // Add real-time validation
+  addFormValidation(form);
+}
 
-    const nombre  = form.querySelector('[name="nombre"]')?.value ?? '';
-    const email   = form.querySelector('[name="email"]')?.value ?? '';
-    const mensaje = form.querySelector('[name="mensaje"]')?.value ?? '';
-
-    // Validación de email mínimamente decente
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-      mostrarNotificacion('Email inválido','error');
-      return;
+/**
+ * Handles contact form submission
+ * @param {Event} event - Form submission event
+ */
+async function handleContactFormSubmit(event) {
+  event.preventDefault();
+  
+  const form = event.target;
+  const formData = new FormData(form);
+  
+  // Clear previous messages
+  clearFormMessages();
+  
+  // Validate form data
+  const validationResult = validateContactForm(formData);
+  if (!validationResult.isValid) {
+    showFormErrors(validationResult.errors);
+    return;
+  }
+  
+  // Show loading state
+  const submitButton = form.querySelector('button[type="submit"]');
+  const originalButtonText = submitButton?.textContent;
+  
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.innerHTML = `
+      <span class="loading-spinner" aria-hidden="true"></span>
+      Enviando...
+    `;
+  }
+  
+  try {
+    if (!window.emailjs || !window.__emailjsInitialized) {
+      throw new Error('EmailJS no está disponible');
     }
+    
+    const templateParams = {
+      from_name: formData.get('nombre'),
+      from_email: formData.get('email'),
+      message: formData.get('mensaje'),
+      to_email: 'patofelting@gmail.com',
+      reply_to: formData.get('email')
+    };
+    
+    await window.emailjs.send(
+      CONFIG.EMAIL.SERVICE_ID,
+      CONFIG.EMAIL.TEMPLATE_ID,
+      templateParams
+    );
+    
+    // Show success message
+    showFormSuccess('✅ ¡Mensaje enviado con éxito! Te responderemos pronto.');
+    form.reset();
+    
+  } catch (error) {
+    console.error('Contact form submission error:', error);
+    showFormError('❌ Error al enviar el mensaje. Por favor intenta de nuevo o contáctanos directamente.');
+  } finally {
+    // Restore button state
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = originalButtonText;
+    }
+  }
+}
 
-    emailjs.send(SERVICE_ID, TEMPLATE_ID, {
-      from_name: nombre,
-      from_email: email,
-      message: mensaje
-    }).then(()=>{
-      if (successMessage){
-        successMessage.classList.remove('hidden');
-        setTimeout(()=>successMessage.classList.add('hidden'),3000);
+/**
+ * Validates contact form data
+ * @param {FormData} formData - Form data to validate
+ * @returns {Object} Validation result
+ */
+function validateContactForm(formData) {
+  const errors = {};
+  
+  const nombre = formData.get('nombre')?.trim();
+  const email = formData.get('email')?.trim();
+  const mensaje = formData.get('mensaje')?.trim();
+  
+  // Validate name
+  if (!nombre || nombre.length < 2) {
+    errors.nombre = 'El nombre debe tener al menos 2 caracteres';
+  } else if (nombre.length > 50) {
+    errors.nombre = 'El nombre no puede tener más de 50 caracteres';
+  }
+  
+  // Validate email
+  if (!email) {
+    errors.email = 'El email es requerido';
+  } else if (!isValidEmail(email)) {
+    errors.email = 'Por favor ingresa un email válido';
+  } else if (email.length > 100) {
+    errors.email = 'El email no puede tener más de 100 caracteres';
+  }
+  
+  // Validate message
+  if (!mensaje || mensaje.length < 10) {
+    errors.mensaje = 'El mensaje debe tener al menos 10 caracteres';
+  } else if (mensaje.length > 1000) {
+    errors.mensaje = 'El mensaje no puede tener más de 1000 caracteres';
+  }
+  
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors
+  };
+}
+
+/**
+ * Adds real-time form validation
+ * @param {HTMLFormElement} form - Form element
+ */
+function addFormValidation(form) {
+  const inputs = form.querySelectorAll('input, textarea');
+  
+  inputs.forEach(input => {
+    // Validate on blur
+    input.addEventListener('blur', () => validateField(input));
+    
+    // Clear error on input
+    input.addEventListener('input', () => clearFieldError(input));
+  });
+}
+
+/**
+ * Validates a single form field
+ * @param {HTMLElement} field - Field to validate
+ */
+function validateField(field) {
+  const name = field.name;
+  const value = field.value.trim();
+  const errorElement = document.getElementById(`${name}-error`);
+  
+  if (!errorElement) return;
+  
+  let error = '';
+  
+  switch (name) {
+    case 'nombre':
+      if (!value || value.length < 2) {
+        error = 'El nombre debe tener al menos 2 caracteres';
+      } else if (value.length > 50) {
+        error = 'El nombre no puede tener más de 50 caracteres';
       }
-      if (errorMessage) errorMessage.classList.add('hidden');
-      form.reset();
-    }).catch(err=>{
-      console.error(err);
-      if (errorMessage){
-        errorMessage.classList.remove('hidden');
-        errorMessage.textContent = 'Error al enviar el mensaje. Intenta de nuevo.';
-        setTimeout(()=>errorMessage.classList.add('hidden'),3000);
+      break;
+      
+    case 'email':
+      if (!value) {
+        error = 'El email es requerido';
+      } else if (!isValidEmail(value)) {
+        error = 'Por favor ingresa un email válido';
+      } else if (value.length > 100) {
+        error = 'El email no puede tener más de 100 caracteres';
       }
-    });
+      break;
+      
+    case 'mensaje':
+      if (!value || value.length < 10) {
+        error = 'El mensaje debe tener al menos 10 caracteres';
+      } else if (value.length > 1000) {
+        error = 'El mensaje no puede tener más de 1000 caracteres';
+      }
+      break;
+  }
+  
+  if (error) {
+    errorElement.textContent = error;
+    errorElement.style.display = 'block';
+    field.setAttribute('aria-invalid', 'true');
+  } else {
+    clearFieldError(field);
+  }
+}
+
+/**
+ * Clears error for a specific field
+ * @param {HTMLElement} field - Field to clear error for
+ */
+function clearFieldError(field) {
+  const errorElement = document.getElementById(`${field.name}-error`);
+  if (errorElement) {
+    errorElement.textContent = '';
+    errorElement.style.display = 'none';
+  }
+  field.setAttribute('aria-invalid', 'false');
+}
+
+/**
+ * Shows form validation errors
+ * @param {Object} errors - Validation errors object
+ */
+function showFormErrors(errors) {
+  Object.entries(errors).forEach(([fieldName, errorMessage]) => {
+    const errorElement = document.getElementById(`${fieldName}-error`);
+    const field = document.querySelector(`[name="${fieldName}"]`);
+    
+    if (errorElement && field) {
+      errorElement.textContent = errorMessage;
+      errorElement.style.display = 'block';
+      field.setAttribute('aria-invalid', 'true');
+    }
+  });
+  
+  // Focus first invalid field
+  const firstError = Object.keys(errors)[0];
+  const firstField = document.querySelector(`[name="${firstError}"]`);
+  if (firstField) {
+    firstField.focus();
+  }
+}
+
+/**
+ * Shows form success message
+ * @param {string} message - Success message
+ */
+function showFormSuccess(message) {
+  const successElement = elementos.successMessage;
+  if (successElement) {
+    successElement.textContent = message;
+    successElement.classList.remove('hidden');
+    successElement.style.display = 'block';
+    successElement.setAttribute('role', 'status');
+    successElement.setAttribute('aria-live', 'polite');
+    
+    setTimeout(() => {
+      successElement.classList.add('hidden');
+      successElement.style.display = 'none';
+    }, 5000);
+  }
+}
+
+/**
+ * Shows form error message
+ * @param {string} message - Error message
+ */
+function showFormError(message) {
+  const errorElement = elementos.errorMessage;
+  if (errorElement) {
+    errorElement.textContent = message;
+    errorElement.classList.remove('hidden');
+    errorElement.style.display = 'block';
+    errorElement.setAttribute('role', 'alert');
+    errorElement.setAttribute('aria-live', 'assertive');
+    
+    setTimeout(() => {
+      errorElement.classList.add('hidden');
+      errorElement.style.display = 'none';
+    }, 5000);
+  }
+}
+
+/**
+ * Clears all form messages
+ */
+function clearFormMessages() {
+  const successElement = elementos.successMessage;
+  const errorElement = elementos.errorMessage;
+  
+  if (successElement) {
+    successElement.classList.add('hidden');
+    successElement.style.display = 'none';
+  }
+  
+  if (errorElement) {
+    errorElement.classList.add('hidden');
+    errorElement.style.display = 'none';
+  }
+  
+  // Clear field errors
+  document.querySelectorAll('.error-message').forEach(el => {
+    el.textContent = '';
+    el.style.display = 'none';
+  });
+  
+  // Reset aria-invalid attributes
+  document.querySelectorAll('[aria-invalid="true"]').forEach(field => {
+    field.setAttribute('aria-invalid', 'false');
   });
 }
 
 // ---------------------------------
-// EVENTOS GLOBALES
+// EVENT HANDLERS & INITIALIZATION
 // ---------------------------------
+
+/**
+ * Initializes all event listeners with improved error handling
+ */
 function inicializarEventos() {
-  // carrito
+  try {
+    // Cart event listeners
+    setupCartEventListeners();
+    
+    // Modal event listeners
+    setupModalEventListeners();
+    
+    // Filter event listeners
+    setupFilterEventListeners();
+    
+    // Product catalog event listeners
+    setupCatalogEventListeners();
+    
+    // Global keyboard event listeners
+    setupKeyboardEventListeners();
+    
+    console.log('✅ Event listeners initialized');
+    
+  } catch (error) {
+    console.error('Error initializing events:', error);
+  }
+}
+
+/**
+ * Sets up cart-related event listeners
+ */
+function setupCartEventListeners() {
+  // Cart toggle buttons
   elementos.carritoBtnMain?.addEventListener('click', () => toggleCarrito(true));
   elementos.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
   elementos.btnCerrarCarrito?.addEventListener('click', () => toggleCarrito(false));
+  
+  // Cart action buttons
   elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
-
-  elementos.btnFinalizarCompra?.addEventListener('click', () => {
-    if (!carrito.length) { mostrarNotificacion('El carrito está vacío', 'error'); return; }
-    if (elementos.avisoPreCompraModal) {
-      elementos.avisoPreCompraModal.hidden = false;
-      elementos.avisoPreCompraModal.style.display = 'flex';
-      elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'false');
-    }
-  });
-
-  elementos.btnEntendidoAviso?.addEventListener('click', () => {
-    if (elementos.avisoPreCompraModal) {
-      elementos.avisoPreCompraModal.hidden = true;
-      elementos.avisoPreCompraModal.style.display = 'none';
-      elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
-    }
-    if (elementos.modalDatosEnvio) {
-      elementos.modalDatosEnvio.hidden = false;
-      elementos.modalDatosEnvio.style.display = 'flex';
-      elementos.modalDatosEnvio.classList.add('visible');
-      renderResumenDeCompra();
-    }
-  });
-
-  elementos.btnCancelarAviso?.addEventListener('click', () => {
-    if (elementos.avisoPreCompraModal) {
-      elementos.avisoPreCompraModal.hidden = true;
-      elementos.avisoPreCompraModal.style.display = 'none';
-      elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
-    }
-  });
-
+  elementos.btnFinalizarCompra?.addEventListener('click', handleFinalizarCompra);
+  
+  // Pre-purchase modal buttons
+  elementos.btnEntendidoAviso?.addEventListener('click', handleEntendidoAviso);
+  elementos.btnCancelarAviso?.addEventListener('click', handleCancelarAviso);
+  
+  // Shipping method selector
   elementos.selectEnvio?.addEventListener('change', actualizarResumenPedido);
+}
 
-  // filtros
-  elementos.inputBusqueda?.addEventListener('input', (e) => {
-    filtrosActuales.busqueda = (e.target.value ?? '').toLowerCase();
-    aplicarFiltros();
-  });
-  elementos.selectCategoria?.addEventListener('change', (e) => {
-    filtrosActuales.categoria = e.target.value;
-    aplicarFiltros();
-  });
-  elementos.precioMinInput?.addEventListener('input', () => { updateRange(); aplicarFiltros(); });
-  elementos.precioMaxInput?.addEventListener('input', () => { updateRange(); aplicarFiltros(); });
-  elementos.aplicarRangoBtn?.addEventListener('click', () => { updateRange(); aplicarFiltros(); });
-
-  // catálogo (delegación sobre el contenedor)
-  elementos.galeriaProductos?.addEventListener('click', (e) => {
-    const card = e.target.closest('.producto-card');
-    if (!card) return;
-
-    const btnDetalle = e.target.closest('.boton-detalles');
-    const btnAgregar = e.target.closest('.boton-agregar');
-    const btnAviso   = e.target.closest('.boton-aviso-stock');
-
-    if (btnDetalle) {
-      const id = Number(btnDetalle.dataset.id || card.dataset.id);
-      if (Number.isFinite(id)) verDetalle(id);
-      return;
-    }
-    if (btnAgregar) {
-      const id = Number(card.dataset.id);
-      if (Number.isFinite(id)) agregarAlCarrito(id, 1, btnAgregar);
-      return;
-    }
-    if (btnAviso) {
-      preguntarStock(btnAviso.dataset.nombre);
-      return;
+/**
+ * Sets up modal-related event listeners
+ */
+function setupModalEventListeners() {
+  // Close modal buttons
+  document.getElementById('btn-cerrar-modal-envio')?.addEventListener('click', cerrarModalEnvio);
+  
+  // Modal overlay clicks (close on outside click)
+  elementos.productoModal?.addEventListener('click', (e) => {
+    if (e.target === elementos.productoModal) {
+      cerrarModal();
     }
   });
-
-  // Respaldo: click directo sobre un botón de detalles que no esté dentro del contenedor
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest('.boton-detalles');
-    if (btn) {
-      const id = Number(btn.dataset.id || btn.closest('.producto-card')?.dataset.id);
-      if (Number.isFinite(id)) verDetalle(id);
-    }
-  });
-
-  // Cerrar modal de datos de envío (si existe el botón)
-  document.getElementById('btn-cerrar-modal-envio')?.addEventListener('click', ()=>{
-    elementos.modalDatosEnvio?.classList.remove('visible');
-    if (elementos.modalDatosEnvio){
-      elementos.modalDatosEnvio.style.display = 'none';
-      elementos.modalDatosEnvio.hidden = true;
+  
+  elementos.avisoPreCompraModal?.addEventListener('click', (e) => {
+    if (e.target === elementos.avisoPreCompraModal) {
+      handleCancelarAviso();
     }
   });
 }
 
-function inicializarMenuHamburguesa(){
-  const {hamburguesa, menu} = elementos;
-  if (!hamburguesa || !menu) return;
-
-  hamburguesa.addEventListener('click', ()=>{
-    const open = menu.classList.toggle('active');
-    hamburguesa.setAttribute('aria-expanded', open);
-    document.body.classList.toggle('no-scroll', open);
+/**
+ * Sets up filter-related event listeners with debouncing
+ */
+function setupFilterEventListeners() {
+  // Search input with debouncing
+  const debouncedSearch = debounce((e) => {
+    state.filtrosActuales.busqueda = (e.target.value || '').toLowerCase().trim();
+    aplicarFiltros();
+  }, CONFIG.DEBOUNCE_DELAY);
+  
+  elementos.inputBusqueda?.addEventListener('input', debouncedSearch);
+  
+  // Category selector
+  elementos.selectCategoria?.addEventListener('change', (e) => {
+    state.filtrosActuales.categoria = e.target.value;
+    aplicarFiltros();
   });
+  
+  // Price range sliders with debouncing
+  const debouncedPriceUpdate = debounce(() => {
+    updateRange();
+    aplicarFiltros();
+  }, CONFIG.DEBOUNCE_DELAY);
+  
+  elementos.precioMinInput?.addEventListener('input', debouncedPriceUpdate);
+  elementos.precioMaxInput?.addEventListener('input', debouncedPriceUpdate);
+  elementos.aplicarRangoBtn?.addEventListener('click', debouncedPriceUpdate);
+}
 
-  menu.querySelectorAll('a').forEach(a=>{
-    a.addEventListener('click', ()=>{
+/**
+ * Sets up product catalog event listeners using event delegation
+ */
+function setupCatalogEventListeners() {
+  const galeria = elementos.galeriaProductos;
+  if (!galeria) return;
+  
+  galeria.addEventListener('click', async (e) => {
+    const card = e.target.closest('.producto-card');
+    if (!card) return;
+    
+    const productId = parseInt(card.dataset.id);
+    if (!productId) return;
+    
+    const button = e.target.closest('button');
+    if (!button) return;
+    
+    try {
+      if (button.classList.contains('boton-detalles')) {
+        verDetalle(productId);
+      } else if (button.classList.contains('boton-agregar')) {
+        await agregarAlCarrito(productId, 1, button);
+      } else if (button.classList.contains('boton-aviso-stock')) {
+        const nombreProducto = button.dataset.nombre;
+        if (nombreProducto) {
+          preguntarStock(nombreProducto);
+        }
+      }
+    } catch (error) {
+      console.error('Catalog event handler error:', error);
+      mostrarNotificacion('Error al procesar la acción', 'error');
+    }
+  });
+}
+
+/**
+ * Sets up global keyboard event listeners for accessibility
+ */
+function setupKeyboardEventListeners() {
+  document.addEventListener('keydown', (e) => {
+    // Close modals with Escape key
+    if (e.key === 'Escape') {
+      if (elementos.productoModal?.classList.contains('active')) {
+        e.preventDefault();
+        cerrarModal();
+      } else if (elementos.carritoPanel?.classList.contains('active')) {
+        e.preventDefault();
+        toggleCarrito(false);
+      } else if (elementos.avisoPreCompraModal && !elementos.avisoPreCompraModal.hidden) {
+        e.preventDefault();
+        handleCancelarAviso();
+      } else if (elementos.modalDatosEnvio?.classList.contains('visible')) {
+        e.preventDefault();
+        cerrarModalEnvio();
+      }
+    }
+  });
+}
+
+/**
+ * Handles "Finalizar Compra" button click
+ */
+function handleFinalizarCompra() {
+  if (state.carrito.length === 0) {
+    mostrarNotificacion('El carrito está vacío', 'error');
+    return;
+  }
+  
+  if (elementos.avisoPreCompraModal) {
+    elementos.avisoPreCompraModal.hidden = false;
+    elementos.avisoPreCompraModal.style.display = 'flex';
+    elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'false');
+    
+    // Focus management
+    const firstButton = elementos.avisoPreCompraModal.querySelector('button');
+    if (firstButton) {
+      setTimeout(() => firstButton.focus(), 100);
+    }
+  }
+}
+
+/**
+ * Handles "Entendido" button click in pre-purchase modal
+ */
+function handleEntendidoAviso() {
+  if (elementos.avisoPreCompraModal) {
+    elementos.avisoPreCompraModal.hidden = true;
+    elementos.avisoPreCompraModal.style.display = 'none';
+    elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
+  }
+  
+  if (elementos.modalDatosEnvio) {
+    elementos.modalDatosEnvio.hidden = false;
+    elementos.modalDatosEnvio.style.display = 'flex';
+    elementos.modalDatosEnvio.classList.add('visible');
+    renderResumenDeCompra();
+    
+    // Focus management
+    const firstInput = elementos.modalDatosEnvio.querySelector('input');
+    if (firstInput) {
+      setTimeout(() => firstInput.focus(), 100);
+    }
+  }
+}
+
+/**
+ * Handles "Cancelar" button click in pre-purchase modal
+ */
+function handleCancelarAviso() {
+  if (elementos.avisoPreCompraModal) {
+    elementos.avisoPreCompraModal.hidden = true;
+    elementos.avisoPreCompraModal.style.display = 'none';
+    elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
+  }
+}
+
+/**
+ * Closes the shipping data modal
+ */
+function cerrarModalEnvio() {
+  if (elementos.modalDatosEnvio) {
+    elementos.modalDatosEnvio.classList.remove('visible');
+    elementos.modalDatosEnvio.style.display = 'none';
+    elementos.modalDatosEnvio.hidden = true;
+  }
+}
+
+/**
+ * Initializes hamburger menu with accessibility
+ */
+function inicializarMenuHamburguesa() {
+  const { hamburguesa, menu } = elementos;
+  if (!hamburguesa || !menu) return;
+  
+  hamburguesa.addEventListener('click', () => {
+    const isOpen = menu.classList.toggle('active');
+    hamburguesa.setAttribute('aria-expanded', isOpen);
+    document.body.classList.toggle('no-scroll', isOpen);
+    
+    // Focus management
+    if (isOpen) {
+      const firstLink = menu.querySelector('a');
+      if (firstLink) {
+        setTimeout(() => firstLink.focus(), 100);
+      }
+    }
+  });
+  
+  // Close menu when clicking links
+  menu.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
       menu.classList.remove('active');
       hamburguesa.setAttribute('aria-expanded', false);
       document.body.classList.remove('no-scroll');
@@ -1459,42 +2335,190 @@ function inicializarMenuHamburguesa(){
   });
 }
 
-function inicializarFAQ(){
-  document.querySelectorAll('.faq-toggle').forEach(t=>{
-    t.addEventListener('click', ()=>{
-      const exp = t.getAttribute('aria-expanded')==='true';
-      t.setAttribute('aria-expanded', String(!exp));
-      const content = t.nextElementSibling;
-      if (content) content.hidden = exp;
+/**
+ * Initializes FAQ section with improved accessibility
+ */
+function inicializarFAQ() {
+  document.querySelectorAll('.faq-toggle').forEach(toggle => {
+    toggle.addEventListener('click', () => {
+      const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+      const newState = !isExpanded;
+      
+      toggle.setAttribute('aria-expanded', newState);
+      
+      const content = document.getElementById(toggle.getAttribute('aria-controls'));
+      if (content) {
+        content.hidden = !newState;
+        
+        // Smooth scroll to expanded content
+        if (newState) {
+          setTimeout(() => {
+            toggle.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }, 100);
+        }
+      }
     });
   });
 }
 
-// ---------------------------------
-// INIT
-// ---------------------------------
-async function init(){
-  inicializarMenuHamburguesa();
-  inicializarFAQ();
-  setupContactForm();
-  inicializarEventos();
-  updateRange();      // sincroniza sliders visualmente
-  aplicarFiltros();   // primera render del catálogo
-  actualizarResumenPedido();
+/**
+ * Handles online/offline connection changes
+ */
+function setupConnectionHandlers() {
+  window.addEventListener('online', handleConnectionChange);
+  window.addEventListener('offline', handleConnectionChange);
+  
+  // Initial connection state
+  state.isOnline = navigator.onLine;
+}
+
+/**
+ * Cleanup function to remove listeners and prevent memory leaks
+ */
+function cleanup() {
+  // Remove Firebase listeners
+  state.activeListeners.forEach(listenerType => {
+    if (listenerType === 'productos') {
+      const productosRef = ref(db, 'productos');
+      off(productosRef);
+    }
+  });
+  state.activeListeners.clear();
+  
+  // Clear DOM cache
+  elementos.clearCache();
+  
+  console.log('🧹 Cleanup completed');
 }
 
 // ---------------------------------
-// ARRANQUE
+// INITIALIZATION & STARTUP
 // ---------------------------------
-document.addEventListener('DOMContentLoaded', async ()=>{
-  try{
-    await signInAnonymously(auth);
-    console.log('✅ Signed in anonymously to Firebase.');
-    await cargarProductosDesdeFirebase();
-  }catch(e){
-    console.error('❌ Error de autenticación Firebase:', e);
-    mostrarNotificacion('Error de autenticación con Firebase','error');
+
+/**
+ * Main initialization function
+ */
+async function init() {
+  try {
+    console.log('🚀 Initializing Patofelting E-commerce...');
+    
+    // Initialize UI components
+    inicializarMenuHamburguesa();
+    inicializarFAQ();
+    setupContactForm();
+    inicializarEventos();
+    
+    // Initialize connection handlers
+    setupConnectionHandlers();
+    
+    // Initialize UI state
+    updateRange();
+    aplicarFiltros();
+    actualizarResumenPedido();
+    
+    console.log('✅ Initialization completed successfully');
+    
+  } catch (error) {
+    console.error('❌ Initialization failed:', error);
+    mostrarNotificacion('Error al inicializar la aplicación', 'error');
   }
-  cargarCarrito();
-  init();
+}
+
+/**
+ * Application startup sequence
+ */
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    // Check Firebase initialization
+    if (!db) {
+      throw new Error('Firebase database not available');
+    }
+    
+    console.log('🔐 Authenticating with Firebase...');
+    
+    // Authenticate anonymously with Firebase
+    await retryOperation(async () => {
+      await signInAnonymously(auth);
+    });
+    
+    console.log('✅ Firebase authentication successful');
+    
+    // Load cart from localStorage
+    cargarCarrito();
+    
+    // Load products from Firebase
+    await cargarProductosDesdeFirebase();
+    
+    // Initialize the application
+    await init();
+    
+    console.log('🎉 Patofelting E-commerce is ready!');
+    
+  } catch (error) {
+    console.error('💥 Application startup failed:', error);
+    
+    // Show user-friendly error message
+    const errorMessage = error.code === 'auth/network-request-failed' ?
+      'No se pudo conectar con el servidor. Verifica tu conexión a internet.' :
+      'Error al inicializar la aplicación. Por favor recarga la página.';
+    
+    mostrarNotificacion(errorMessage, 'error', 10000);
+    
+    // Still try to initialize basic functionality
+    try {
+      cargarCarrito();
+      await init();
+    } catch (fallbackError) {
+      console.error('Fallback initialization also failed:', fallbackError);
+    }
+  }
 });
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', cleanup);
+
+// ---------------------------------
+// ERROR BOUNDARY
+// ---------------------------------
+
+/**
+ * Global error handler
+ */
+window.addEventListener('error', (event) => {
+  console.error('Global error caught:', event.error);
+  
+  // Don't show errors for external scripts or resources
+  if (event.filename && !event.filename.includes(window.location.origin)) {
+    return;
+  }
+  
+  mostrarNotificacion('Ha ocurrido un error inesperado', 'error');
+});
+
+/**
+ * Global promise rejection handler
+ */
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled promise rejection:', event.reason);
+  
+  // Prevent default browser behavior
+  event.preventDefault();
+  
+  mostrarNotificacion('Error en operación asíncrona', 'warning');
+});
+
+// ---------------------------------
+// PERFORMANCE MONITORING
+// ---------------------------------
+
+if (typeof performance !== 'undefined' && performance.mark) {
+  performance.mark('patofelting-start');
+  
+  window.addEventListener('load', () => {
+    performance.mark('patofelting-end');
+    performance.measure('patofelting-load', 'patofelting-start', 'patofelting-end');
+    
+    const measure = performance.getEntriesByName('patofelting-load')[0];
+    console.log(`⚡ Patofelting loaded in ${measure.duration.toFixed(2)}ms`);
+  });
+}
