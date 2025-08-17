@@ -66,6 +66,8 @@ const elementos = {
   modalDatosEnvio: $id('modal-datos-envio'),
   selectEnvio: $id('select-envio'),
   resumenPedido: $id('resumen-pedido'),
+  resumenProductos: $id('resumen-productos'),
+  resumenTotal: $id('resumen-total'),
 
   // filtros
   inputBusqueda: $qs('.input-busqueda'),
@@ -88,6 +90,12 @@ const elementos = {
   formContacto: $id('formulario-contacto'),
   successMessage: $id('successMessage'),
   errorMessage: $id('errorMessage'),
+
+  // stock modal (opcional)
+  stockModal: $id('stock-modal'),
+  stockForm: $id('stock-form'),
+  stockEmail: $id('stock-email'),
+  stockFeedback: $id('stock-modal-feedback'),
 };
 
 // ---------------------------------
@@ -112,6 +120,7 @@ function formatearUY(num){
 function guardarCarrito(){
   localStorage.setItem(LS_CARRITO_KEY, JSON.stringify(carrito));
   actualizarContadorCarrito();
+  if (elementos.modalDatosEnvio?.classList.contains('visible')) renderResumenDeCompra();
 }
 
 function cargarCarrito(){
@@ -254,28 +263,25 @@ function procesarDatosProductos(data){
 }
 
 function crearCardProducto(p){
-  const enCarrito = carrito.find(i => i.id === p.id);
+  const enCarrito = carrito.find(i=>i.id===p.id);
   const disponibles = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
-  const agot = disponibles <= 0;
+  const agot = disponibles<=0;
   const img = p.imagenes?.[0] || PLACEHOLDER_IMAGE;
-
   return `
-    <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}">
+    <div class="producto-card ${agot?'agotado':''}" data-id="${p.id}">
       <img src="${img}" alt="${p.nombre}" class="producto-img" loading="lazy">
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${formatearUY(p.precio)}</p>
       <div class="card-acciones">
-        <button class="boton-agregar${agot ? ' agotado' : ''}" ${agot ? 'disabled' : ''}>
+        <button class="boton-agregar${agot?' agotado':''}" ${agot?'disabled':''}>
           ${agot ? 'Agotado' : 'Agregar'}
         </button>
-        ${agot ? `<button class="boton-aviso-stock" data-nombre="${p.nombre.replace(/"/g,'&quot;')}">📩 Avisame</button>` : ''}
+        ${agot ? `<button class="boton-aviso-stock" data-nombre="${p.nombre.replace(/"/g,'&quot;')}">📩 Avisame</button>`:''}
       </div>
-      <!-- 👇 ahora el botón también lleva data-id -->
+      <!-- Botón con data-id propio para no depender del padre -->
       <button class="boton-detalles" data-id="${p.id}">🔍 Ver Detalle</button>
-    </div>
-  `;
+    </div>`;
 }
-
 
 function renderizarProductos(){
   const data = filtrarProductos();
@@ -354,8 +360,8 @@ function updateRange(){
   const pctMin = ((min - rangeMin) / (rangeMax - rangeMin)) * 100;
   const pctMax = ((max - rangeMin) / (rangeMax - rangeMin)) * 100;
 
-  if (elementos.thumbMin){ elementos.thumbMin.style.left = `${pctMin}%`; elementos.thumbMin.textContent = formatearUY(min); }
-  if (elementos.thumbMax){ elementos.thumbMax.style.left = `${pctMax}%`; elementos.thumbMax.textContent = formatearUY(max); }
+  if (elementos.thumbMin){ elementos.thumbMin.style.left = `${pctMin}%`; elementos.thumbMin.textContent = `$U ${formatearUY(min)}`; }
+  if (elementos.thumbMax){ elementos.thumbMax.style.left = `${pctMax}%`; elementos.thumbMax.textContent = `$U ${formatearUY(max)}`; }
 
   if (elementos.rangeTrack){
     elementos.rangeTrack.style.left  = `${pctMin}%`;
@@ -487,58 +493,40 @@ window.agregarAlCarrito = agregarAlCarrito;
 function preguntarStock(nombre){
   const asunto = encodeURIComponent('Aviso de stock');
   const cuerpo  = encodeURIComponent(`Hola, me gustaría saber cuándo vuelve a estar disponible: ${nombre}. Gracias.`);
-  window.location.href = `mailto:${window.STOCK_EMAIL || 'contacto@patofelting.com'}?subject=${asunto}&body=${cuerpo}`;
+  window.location.href = `mailto:${window.STOCK_EMAIL || 'patofelting@gmail.com'}?subject=${asunto}&body=${cuerpo}`;
 }
 window.preguntarStock = preguntarStock;
 
 // ---------------------------------
-// UI GENERAL
+// RESUMEN DE COMPRA (modal datos envío)
 // ---------------------------------
-function actualizarUI(){
-  renderizarCarrito();
-  actualizarContadorCarrito();
+function renderResumenDeCompra(){
+  if (!elementos.resumenProductos || !elementos.resumenTotal) return;
+  if (!carrito.length){
+    elementos.resumenProductos.innerHTML = '<p>No hay productos en el carrito.</p>';
+    elementos.resumenTotal.textContent = '$U 0';
+    return;
+  }
+  elementos.resumenProductos.innerHTML = carrito.map(i=>`
+    <div class="resumen-item">
+      <span>${i.nombre} x${i.cantidad}</span>
+      <span>$U ${formatearUY(i.precio * i.cantidad)}</span>
+    </div>
+  `).join('');
+  const subtotal = carrito.reduce((s,i)=> s + i.precio*i.cantidad, 0);
+  const envio = calcularEnvioActual();
+  elementos.resumenTotal.textContent = `$U ${formatearUY(subtotal + envio)}`;
 }
 
-function inicializarMenuHamburguesa(){
-  const {hamburguesa, menu} = elementos;
-  if (!hamburguesa || !menu) return;
-  hamburguesa.addEventListener('click', ()=>{
-    const open = menu.classList.toggle('active');
-    hamburguesa.setAttribute('aria-expanded', open);
-    document.body.classList.toggle('no-scroll', open);
-  });
-  menu.querySelectorAll('a').forEach(a=>{
-    a.addEventListener('click', ()=>{
-      menu.classList.remove('active');
-      hamburguesa.setAttribute('aria-expanded', false);
-      document.body.classList.remove('no-scroll');
-    });
-  });
+function calcularEnvioActual(){
+  const val = elementos.selectEnvio?.value || '';
+  if (val==='montevideo') return 150;
+  if (val==='interior') return 300;
+  return 0;
 }
 
-function inicializarFAQ(){
-  document.querySelectorAll('.faq-toggle').forEach(t=>{
-    t.addEventListener('click', ()=>{
-      const exp = t.getAttribute('aria-expanded')==='true';
-      t.setAttribute('aria-expanded', String(!exp));
-      const content = t.nextElementSibling;
-      if (content) content.hidden = exp;
-    });
-  });
-}
-
-// Resumen de pedido simple (envío)
 function actualizarResumenPedido(){
-  if (!elementos.resumenPedido) return;
-  const tipo = elementos.selectEnvio?.value || 'retiro';
-  const costo = tipo==='envio' ? 200 : 0;
-  const subtotal = carrito.reduce((s,i)=>s+i.precio*i.cantidad,0);
-  const total = subtotal + costo;
-  elementos.resumenPedido.innerHTML = `
-    <li>Subtotal: $U ${formatearUY(subtotal)}</li>
-    <li>Envío: $U ${formatearUY(costo)}</li>
-    <li><strong>Total: $U ${formatearUY(total)}</strong></li>
-  `;
+  renderResumenDeCompra();
 }
 
 // ---------------------------------
@@ -604,6 +592,7 @@ function inicializarEventos(){
   elementos.btnFinalizarCompra?.addEventListener('click', ()=>{
     if (!carrito.length){ mostrarNotificacion('El carrito está vacío','error'); return; }
     if (elementos.avisoPreCompraModal){
+      elementos.avisoPreCompraModal.hidden = false;
       elementos.avisoPreCompraModal.style.display = 'flex';
       elementos.avisoPreCompraModal.setAttribute('aria-hidden','false');
     }
@@ -611,18 +600,21 @@ function inicializarEventos(){
 
   elementos.btnEntendidoAviso?.addEventListener('click', ()=>{
     if (elementos.avisoPreCompraModal){
+      elementos.avisoPreCompraModal.hidden = true;
       elementos.avisoPreCompraModal.style.display = 'none';
       elementos.avisoPreCompraModal.setAttribute('aria-hidden','true');
     }
     if (elementos.modalDatosEnvio){
+      elementos.modalDatosEnvio.hidden = false;
       elementos.modalDatosEnvio.style.display = 'flex';
       elementos.modalDatosEnvio.classList.add('visible');
-      actualizarResumenPedido();
+      renderResumenDeCompra();
     }
   });
 
   elementos.btnCancelarAviso?.addEventListener('click', ()=>{
     if (elementos.avisoPreCompraModal){
+      elementos.avisoPreCompraModal.hidden = true;
       elementos.avisoPreCompraModal.style.display = 'none';
       elementos.avisoPreCompraModal.setAttribute('aria-hidden','true');
     }
@@ -644,25 +636,59 @@ function inicializarEventos(){
   elementos.aplicarRangoBtn?.addEventListener('click', ()=>{ updateRange(); aplicarFiltros(); });
 
   // catálogo (delegación)
- elementos.galeriaProductos?.addEventListener('click', (e)=>{
-  const card = e.target.closest('.producto-card');
-  if (!card) return;
-  const id = Number(e.target.dataset.id || card.dataset.id);
+  elementos.galeriaProductos?.addEventListener('click', (e)=>{
+    const card = e.target.closest('.producto-card');
+    if (!card) return;
 
-  if (e.target.closest('.boton-detalles')){
-    verDetalle(id);
-    return;
-  }
-  if (e.target.closest('.boton-agregar')){
-    agregarAlCarrito(id, 1, e.target.closest('button'));
-    return;
-  }
-  if (e.target.closest('.boton-aviso-stock')){
-    preguntarStock(e.target.closest('.boton-aviso-stock').dataset.nombre);
-    return;
-  }
-});
+    // usar el data-id del botón si existe, o el del padre
+    const btnDetalle = e.target.closest('.boton-detalles');
+    const btnAgregar = e.target.closest('.boton-agregar');
+    const btnAviso   = e.target.closest('.boton-aviso-stock');
 
+    if (btnDetalle){
+      const id = Number(btnDetalle.dataset.id || card.dataset.id);
+      if (Number.isFinite(id)) verDetalle(id);
+      return;
+    }
+    if (btnAgregar){
+      const id = Number(card.dataset.id);
+      if (Number.isFinite(id)) agregarAlCarrito(id, 1, btnAgregar);
+      return;
+    }
+    if (btnAviso){
+      preguntarStock(btnAviso.dataset.nombre);
+      return;
+    }
+  });
+}
+
+function inicializarMenuHamburguesa(){
+  const {hamburguesa, menu} = elementos;
+  if (!hamburguesa || !menu) return;
+  hamburguesa.addEventListener('click', ()=>{
+    const open = menu.classList.toggle('active');
+    hamburguesa.setAttribute('aria-expanded', open);
+    document.body.classList.toggle('no-scroll', open);
+  });
+  menu.querySelectorAll('a').forEach(a=>{
+    a.addEventListener('click', ()=>{
+      menu.classList.remove('active');
+      hamburguesa.setAttribute('aria-expanded', false);
+      document.body.classList.remove('no-scroll');
+    });
+  });
+}
+
+function inicializarFAQ(){
+  document.querySelectorAll('.faq-toggle').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      const exp = t.getAttribute('aria-expanded')==='true';
+      t.setAttribute('aria-expanded', String(!exp));
+      const content = t.nextElementSibling;
+      if (content) content.hidden = exp;
+    });
+  });
+}
 
 // ---------------------------------
 // INIT
@@ -692,4 +718,3 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   cargarCarrito();
   init();
 });
-}
