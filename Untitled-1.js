@@ -115,7 +115,7 @@ function formatearUY(num){
 }
 
 // ---------------------------------
-// FILTROS (defínelos ANTES de usarlos)
+// FILTROS
 // ---------------------------------
 function filtrarProductos(){
   const {precioMin, precioMax, categoria} = filtrosActuales;
@@ -167,7 +167,7 @@ function updateRange(){
 }
 
 // ---------------------------------
-// RENDER DE CATÁLOGO (defínelos ANTES de que nadie los llame)
+// RENDER DE CATÁLOGO
 // ---------------------------------
 function crearCardProducto(p){
   const enCarrito = carrito.find(i=>i.id===p.id);
@@ -223,7 +223,7 @@ function renderizarPaginacion(total){
 }
 
 // ---------------------------------
-// CARRITO: persistencia y UI
+// CARRITO
 // ---------------------------------
 function guardarCarrito(){
   localStorage.setItem(LS_CARRITO_KEY, JSON.stringify(carrito));
@@ -325,7 +325,7 @@ function toggleCarrito(forceState){
 }
 
 // ---------------------------------
-// PRODUCTOS: carga y procesamiento
+// PRODUCTOS: carga
 // ---------------------------------
 async function cargarProductosDesdeFirebase(){
   const productosRef = ref(db, 'productos');
@@ -370,12 +370,11 @@ function procesarDatosProductos(data){
       profundidad: !isNaN(+p.profundidad) ? +p.profundidad : null,
     });
   });
-  renderizarProductos();     // ← ahora existe seguro
+  renderizarProductos();
   actualizarCategorias();
   actualizarUI();
 }
 
-// ⚠️ Esta faltaba en tu error anterior
 function actualizarUI(){
   renderizarCarrito();
   actualizarContadorCarrito();
@@ -451,13 +450,19 @@ function mostrarModalProducto(producto){
   }
 
   render();
+
+  // 🔧 forzamos visibilidad del modal
   modal.classList.add('active');
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden','false');
   document.body.classList.add('no-scroll');
 }
 
 function cerrarModal(){
   if (elementos.productoModal){
     elementos.productoModal.classList.remove('active');
+    elementos.productoModal.style.display = 'none';
+    elementos.productoModal.setAttribute('aria-hidden','true');
   }
   document.body.classList.remove('no-scroll');
 }
@@ -509,7 +514,7 @@ function preguntarStock(nombre){
 window.preguntarStock = preguntarStock;
 
 // ---------------------------------
-// RESUMEN DE COMPRA (modal datos envío)
+// RESUMEN DE COMPRA
 // ---------------------------------
 function renderResumenDeCompra(){
   if (!elementos.resumenProductos || !elementos.resumenTotal) return;
@@ -559,6 +564,8 @@ function setupContactForm(){
       console.error('EmailJS no cargó.');
     }
   }
+
+  form.setAttribute('autocomplete','on');
 
   form.addEventListener('submit', (e)=>{
     e.preventDefault();
@@ -644,7 +651,7 @@ function inicializarEventos(){
   elementos.precioMaxInput?.addEventListener('input', ()=>{ updateRange(); aplicarFiltros(); });
   elementos.aplicarRangoBtn?.addEventListener('click', ()=>{ updateRange(); aplicarFiltros(); });
 
-  // catálogo (delegación)
+  // catálogo (delegación sobre el contenedor)
   elementos.galeriaProductos?.addEventListener('click', (e)=>{
     const card = e.target.closest('.producto-card');
     if (!card) return;
@@ -667,6 +674,14 @@ function inicializarEventos(){
       preguntarStock(btnAviso.dataset.nombre);
       return;
     }
+  });
+
+  // 🛡️ Delegación de respaldo a nivel documento (por si el contenedor cambia)
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.boton-detalles');
+    if (!btn) return;
+    const id = Number(btn.dataset.id || btn.closest('.producto-card')?.dataset.id);
+    if (Number.isFinite(id)) verDetalle(id);
   });
 }
 
