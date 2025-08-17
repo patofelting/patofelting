@@ -15,7 +15,7 @@
   </svg>
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTnHg4CGR2D7kSs0v4LLanw2qksYuRlEzO+tcaEPQogQ0KaoGN26/zrn20ImR1DfuLWnOo7aBA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   
   <script>
     window.SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
@@ -23,30 +23,30 @@
     window.FIREBASE_URL = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json'; 
   </script>
 
- <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getDatabase } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+  <!-- Firebase: expone app y db en window -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
-    authDomain: "patofelting-b188f.firebaseapp.com",
-    databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
-    projectId: "patofelting-b188f",
-    storageBucket: "patofelting-b188f.appspot.com",
-    messagingSenderId: "858377467588",
-    appId: "1:858377467588:web:cade9de05ebccc17f87b91"
-  };
+    const firebaseConfig = {
+      apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
+      authDomain: "patofelting-b188f.firebaseapp.com",
+      databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com",
+      projectId: "patofelting-b188f",
+      storageBucket: "patofelting-b188f.appspot.com",
+      messagingSenderId: "858377467588",
+      appId: "1:858377467588:web:cade9de05ebccc17f87b91"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const database = getDatabase(app);
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
 
-  // ✅ Hacerlo accesible en todo el sitio:
-  window.firebaseDatabase = database;
-</script>
-
+    // 👇 Necesario para tu JS (auth y db):
+    window.firebaseApp = app;
+    window.firebaseDatabase = database;
+  </script>
 </head>
 <body oncontextmenu="return true;">
-  
   
 <nav class="nav">
   <div class="nav-container">
@@ -80,8 +80,6 @@
   </div>
 </nav>
 
-
-  
   <div id="carrito-panel" class="carrito-panel">
     <div class="carrito-header">
       <h2>Tu Carrito</h2>
@@ -158,14 +156,14 @@
       <!-- CATEGORÍAS -->
       <div class="filtro-categoria">
         <label for="filtro-categoria">Categorías:</label>
-        <select id="filtro-categoria">
+        <select id="filtro-categoria" name="filtro-categoria">
           <option value="todos">Todos</option>
           <option value="animales">Animales</option>
           <option value="fantasia">Fantasía</option>
         </select>
       </div>
 
-      <!-- RANGO DE PRECIO MEJORADO -->
+      <!-- RANGO DE PRECIO -->
       <div class="price-filter">
         <div class="price-header">
           <span id="min-price">$U0</span>
@@ -213,7 +211,8 @@
   </div>
 </section>
 
-<div id="producto-modal" class="modal-overlay">
+<!-- Modal de producto -->
+<div id="producto-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
   <div id="modal-contenido" class="modal-contenido-producto">
     <button class="cerrar-modal" aria-label="Cerrar modal" onclick="cerrarModal()">&times;</button>
     <div class="modal-flex">
@@ -229,8 +228,6 @@
     </div>
   </div>
 </div>
-
-
 
   <div id="aviso-pre-compra-modal" class="modal-aviso" role="dialog" aria-modal="true" hidden>
     <div class="modal-aviso-contenido">
@@ -255,24 +252,24 @@
       <form id="form-envio" class="form-envio">
         <div class="form-grupo">
           <label for="input-nombre">Nombre*</label>
-          <input type="text" id="input-nombre" placeholder="Ej: María" required>
+          <input type="text" id="input-nombre" name="nombre" placeholder="Ej: María" required>
         </div>
         <div class="form-grupo">
           <label for="input-apellido">Apellido*</label>
-          <input type="text" id="input-apellido" placeholder="Ej: González" required>
+          <input type="text" id="input-apellido" name="apellido" placeholder="Ej: González" required>
         </div>
         <div class="form-grupo">
           <label for="input-telefono">Teléfono*</label>
-          <input type="tel" id="input-telefono" placeholder="Ej: 099123456" required>
+          <input type="tel" id="input-telefono" name="telefono" placeholder="Ej: 099123456" required>
         </div>
         <div class="form-grupo" id="grupo-direccion">
           <label for="input-direccion">Dirección*</label>
-          <input type="text" id="input-direccion" placeholder="Ej: Av. 18 de Julio 1234" required>
+          <input type="text" id="input-direccion" name="direccion" placeholder="Ej: Av. 18 de Julio 1234" required>
           <small class="ayuda-texto">Solo si seleccionás envío</small>
         </div>
         <div class="form-grupo">
           <label for="select-envio">Método de envío*</label>
-          <select id="select-envio" required>
+          <select id="select-envio" name="metodo_envio" required>
             <option value="">Seleccionar método</option>
             <option value="retiro">Retiro en local (Gratis)</option>
             <option value="montevideo">Envío Montevideo ($150)</option>
@@ -281,7 +278,7 @@
         </div>
         <div class="form-notas">
           <label for="input-notas">Notas adicionales</label>
-          <textarea id="input-notas" placeholder="Detalles especiales, horarios preferidos, etc." rows="3"></textarea>
+          <textarea id="input-notas" name="notas" placeholder="Detalles especiales, horarios preferidos, etc." rows="3"></textarea>
         </div>
         <div class="resumen-pedido">
           <h4>Resumen de tu pedido</h4>
@@ -299,16 +296,16 @@
   </div>
 
   <div id="stock-modal" class="modal-stock" hidden>
-  <div class="modal-stock-content" role="dialog" aria-modal="true" aria-labelledby="stock-modal-title">
-    <button class="modal-stock-close" aria-label="Cerrar aviso">&times;</button>
-    <h2 id="stock-modal-title" class="modal-stock-title">¿Te avisamos cuando haya stock?</h2>
-    <form id="stock-form" autocomplete="on">
-      <input type="email" id="stock-email" name="stock-email" class="modal-stock-input" placeholder="Tu email" required>
-      <button type="submit" class="modal-stock-confirm">Confirmar</button>
-    </form>
-    <div id="stock-modal-feedback" class="modal-stock-feedback" hidden></div>
+    <div class="modal-stock-content" role="dialog" aria-modal="true" aria-labelledby="stock-modal-title">
+      <button class="modal-stock-close" aria-label="Cerrar aviso">&times;</button>
+      <h2 id="stock-modal-title" class="modal-stock-title">¿Te avisamos cuando haya stock?</h2>
+      <form id="stock-form" autocomplete="on">
+        <input type="email" id="stock-email" name="stock-email" class="modal-stock-input" placeholder="Tu email" required>
+        <button type="submit" class="modal-stock-confirm">Confirmar</button>
+      </form>
+      <div id="stock-modal-feedback" class="modal-stock-feedback" hidden></div>
+    </div>
   </div>
-</div>
 
 <!-- FORMULARIO EN HTML -->
 <section id="contacto" class="contact">
@@ -336,11 +333,7 @@
   </div>
 </section>
 
-
-
-
-
-  <section class="faq-section" id="preguntas">
+<section class="faq-section" id="preguntas">
     <h2>Preguntas Frecuentes</h2>
     <div class="faq-item" data-category="envios">
       <button class="faq-toggle" aria-expanded="false">¿A qué lugares realizan envíos?</button>
