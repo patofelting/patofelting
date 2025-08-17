@@ -258,61 +258,13 @@ function procesarDatosProductos(data){
   });
   renderizarProductos();
   actualizarCategorias();
-  actualizarUI();
+  actualizarUI(); // <<--- ahora existe
 }
 
-function crearCardProducto(p){
-  const enCarrito = carrito.find(i=>i.id===p.id);
-  const disponibles = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
-  const agot = disponibles<=0;
-  const img = p.imagenes?.[0] || PLACEHOLDER_IMAGE;
-  return `
-    <div class="producto-card ${agot?'agotado':''}" data-id="${p.id}">
-      <img src="${img}" alt="${p.nombre}" class="producto-img" loading="lazy">
-      <h3 class="producto-nombre">${p.nombre}</h3>
-      <p class="producto-precio">$U ${formatearUY(p.precio)}</p>
-      <div class="card-acciones">
-        <button class="boton-agregar${agot?' agotado':''}" ${agot?'disabled':''}>
-          ${agot ? 'Agotado' : 'Agregar'}
-        </button>
-        ${agot ? `<button class="boton-aviso-stock" data-nombre="${p.nombre.replace(/"/g,'&quot;')}">📩 Avisame</button>`:''}
-      </div>
-      <!-- Botón con data-id propio para no depender del padre -->
-      <button class="boton-detalles" data-id="${p.id}">🔍 Ver Detalle</button>
-    </div>`;
-}
-
-function renderizarProductos(){
-  const data = filtrarProductos();
-  const start = (paginaActual-1)*PRODUCTOS_POR_PAGINA;
-  const pageItems = data.slice(start, start+PRODUCTOS_POR_PAGINA);
-
-  if (!elementos.galeriaProductos) return;
-  elementos.galeriaProductos.innerHTML = pageItems.length
-    ? pageItems.map(crearCardProducto).join('')
-    : '<p class="sin-productos">No se encontraron productos que coincidan con los filtros.</p>';
-
-  renderizarPaginacion(data.length);
-}
-
-function renderizarPaginacion(total){
-  const totalPages = Math.ceil(total/PRODUCTOS_POR_PAGINA);
-  if (!elementos.paginacion) return;
-  elementos.paginacion.innerHTML = '';
-  if (totalPages<=1) return;
-  for (let i=1;i<=totalPages;i++){
-    const b = document.createElement('button');
-    b.textContent = i;
-    b.className = i===paginaActual ? 'active' : '';
-    b.addEventListener('click', ()=>{
-      paginaActual = i;
-      renderizarProductos();
-      if (elementos.galeriaProductos){
-        window.scrollTo({ top: elementos.galeriaProductos.offsetTop - 100, behavior: 'smooth' });
-      }
-    });
-    elementos.paginacion.appendChild(b);
-  }
+// ⚠️ ESTA FUNCIÓN FALTABA (causaba tu error)
+function actualizarUI(){
+  renderizarCarrito();
+  actualizarContadorCarrito();
 }
 
 // ---------------------------------
@@ -353,7 +305,6 @@ function updateRange(){
   if (elementos.minPriceText) elementos.minPriceText.textContent = `$U ${formatearUY(min)}`;
   if (elementos.maxPriceText) elementos.maxPriceText.textContent = `$U ${formatearUY(max)}`;
 
-  // mover etiquetas sobre los thumbs (si existen)
   const rangeMin = parseInt(elementos.precioMinInput.min || 0);
   const rangeMax = parseInt(elementos.precioMaxInput.max || 3000);
   const pctMin = ((min - rangeMin) / (rangeMax - rangeMin)) * 100;
