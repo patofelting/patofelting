@@ -115,6 +115,114 @@ function formatearUY(num){
 }
 
 // ---------------------------------
+// FILTROS (defínelos ANTES de usarlos)
+// ---------------------------------
+function filtrarProductos(){
+  const {precioMin, precioMax, categoria} = filtrosActuales;
+  const b = (filtrosActuales.busqueda || '').toLowerCase();
+  return productos.filter(p=>{
+    const okPrecio = p.precio >= precioMin && p.precio <= precioMax;
+    const okCat = categoria==='todos' || p.categoria===categoria;
+    const okBusq = !b || p.nombre.toLowerCase().includes(b) || p.descripcion.toLowerCase().includes(b);
+    return okPrecio && okCat && okBusq;
+  });
+}
+
+function aplicarFiltros(){
+  paginaActual = 1;
+  renderizarProductos();
+}
+
+function actualizarCategorias(){
+  if (!elementos.selectCategoria) return;
+  const cats = ['todos', ...new Set(productos.map(p=>p.categoria).filter(Boolean).sort())];
+  elementos.selectCategoria.innerHTML = cats.map(c=>`<option value="${c}">${c.charAt(0).toUpperCase()+c.slice(1)}</option>`).join('');
+  elementos.selectCategoria.value = filtrosActuales.categoria;
+}
+
+// Slider visual + valores
+function updateRange(){
+  if (!elementos.precioMinInput || !elementos.precioMaxInput) return;
+  let min = parseInt(elementos.precioMinInput.value || 0);
+  let max = parseInt(elementos.precioMaxInput.value || 0);
+  if (min>max){ [min,max] = [max,min]; }
+  filtrosActuales.precioMin = min;
+  filtrosActuales.precioMax = max;
+
+  if (elementos.minPriceText) elementos.minPriceText.textContent = `$U ${formatearUY(min)}`;
+  if (elementos.maxPriceText) elementos.maxPriceText.textContent = `$U ${formatearUY(max)}`;
+
+  const rangeMin = parseInt(elementos.precioMinInput.min || 0);
+  const rangeMax = parseInt(elementos.precioMaxInput.max || 3000);
+  const pctMin = ((min - rangeMin) / (rangeMax - rangeMin)) * 100;
+  const pctMax = ((max - rangeMin) / (rangeMax - rangeMin)) * 100;
+
+  if (elementos.thumbMin){ elementos.thumbMin.style.left = `${pctMin}%`; elementos.thumbMin.textContent = `$U ${formatearUY(min)}`; }
+  if (elementos.thumbMax){ elementos.thumbMax.style.left = `${pctMax}%`; elementos.thumbMax.textContent = `$U ${formatearUY(max)}`; }
+
+  if (elementos.rangeTrack){
+    elementos.rangeTrack.style.left  = `${pctMin}%`;
+    elementos.rangeTrack.style.right = `${100-pctMax}%`;
+  }
+}
+
+// ---------------------------------
+// RENDER DE CATÁLOGO (defínelos ANTES de que nadie los llame)
+// ---------------------------------
+function crearCardProducto(p){
+  const enCarrito = carrito.find(i=>i.id===p.id);
+  const disponibles = Math.max(0, p.stock - (enCarrito?.cantidad || 0));
+  const agot = disponibles<=0;
+  const img = p.imagenes?.[0] || PLACEHOLDER_IMAGE;
+  return `
+    <div class="producto-card ${agot?'agotado':''}" data-id="${p.id}">
+      <img src="${img}" alt="${p.nombre}" class="producto-img" loading="lazy">
+      <h3 class="producto-nombre">${p.nombre}</h3>
+      <p class="producto-precio">$U ${formatearUY(p.precio)}</p>
+      <div class="card-acciones">
+        <button class="boton-agregar${agot?' agotado':''}" ${agot?'disabled':''}>
+          ${agot ? 'Agotado' : 'Agregar'}
+        </button>
+        ${agot ? `<button class="boton-aviso-stock" data-nombre="${p.nombre.replace(/"/g,'&quot;')}">📩 Avisame</button>`:''}
+      </div>
+      <button class="boton-detalles" data-id="${p.id}">🔍 Ver Detalle</button>
+    </div>`;
+}
+
+function renderizarProductos(){
+  const data = filtrarProductos();
+  const start = (paginaActual-1)*PRODUCTOS_POR_PAGINA;
+  const pageItems = data.slice(start, start+PRODUCTOS_POR_PAGINA);
+
+  if (!elementos.galeriaProductos) return;
+  elementos.galeriaProductos.innerHTML = pageItems.length
+    ? pageItems.map(crearCardProducto).join('')
+    : '<p class="sin-productos">No se encontraron productos que coincidan con los filtros.</p>';
+
+  renderizarPaginacion(data.length);
+}
+
+function renderizarPaginacion(total){
+  const totalPages = Math.ceil(total/PRODUCTOS_POR_PAGINA);
+  if (!elementos.paginacion) return;
+  elementos.paginacion.innerHTML = '';
+  if (totalPages<=1) return;
+  for (let i=1;i<=totalPages;i++){
+    const b = document.createElement('button');
+    b.textContent = i;
+    b.className = i===paginaActual ? 'active' : '';
+    b.addEventListener('click', ()=>{
+      paginaActual = i;
+      renderizarProductos();
+      if (elementos.galeriaProductos){
+        window.scrollTo({ top: elementos.galeriaProductos.offsetTop - 100, behavior: 'smooth' });
+      }
+    });
+    elementos.paginacion.appendChild(b);
+  }
+}
+
+// ---------------------------------
 // CARRITO: persistencia y UI
 // ---------------------------------
 function guardarCarrito(){
@@ -217,7 +325,7 @@ function toggleCarrito(forceState){
 }
 
 // ---------------------------------
-// PRODUCTOS: carga y render
+// PRODUCTOS: carga y procesamiento
 // ---------------------------------
 async function cargarProductosDesdeFirebase(){
   const productosRef = ref(db, 'productos');
@@ -226,7 +334,13 @@ async function cargarProductosDesdeFirebase(){
     const snap = await get(productosRef);
     if (snap.exists()) procesarDatosProductos(snap.val());
     onValue(productosRef, (s)=>{
-      if (!s.exists()){ productos=[]; renderizarProductos(); actualizarCategorias(); actualizarUI(); return; }
+      if (!s.exists()){
+        productos=[];
+        renderizarProductos();
+        actualizarCategorias();
+        actualizarUI();
+        return;
+      }
       procesarDatosProductos(s.val());
     });
   }catch(e){
@@ -256,67 +370,15 @@ function procesarDatosProductos(data){
       profundidad: !isNaN(+p.profundidad) ? +p.profundidad : null,
     });
   });
-  renderizarProductos();
+  renderizarProductos();     // ← ahora existe seguro
   actualizarCategorias();
-  actualizarUI(); // <<--- ahora existe
+  actualizarUI();
 }
 
-// ⚠️ ESTA FUNCIÓN FALTABA (causaba tu error)
+// ⚠️ Esta faltaba en tu error anterior
 function actualizarUI(){
   renderizarCarrito();
   actualizarContadorCarrito();
-}
-
-// ---------------------------------
-// FILTROS
-// ---------------------------------
-function filtrarProductos(){
-  const {precioMin, precioMax, categoria} = filtrosActuales;
-  const b = (filtrosActuales.busqueda || '').toLowerCase();
-  return productos.filter(p=>{
-    const okPrecio = p.precio >= precioMin && p.precio <= precioMax;
-    const okCat = categoria==='todos' || p.categoria===categoria;
-    const okBusq = !b || p.nombre.toLowerCase().includes(b) || p.descripcion.toLowerCase().includes(b);
-    return okPrecio && okCat && okBusq;
-  });
-}
-
-function aplicarFiltros(){
-  paginaActual = 1;
-  renderizarProductos();
-}
-
-function actualizarCategorias(){
-  if (!elementos.selectCategoria) return;
-  const cats = ['todos', ...new Set(productos.map(p=>p.categoria).filter(Boolean).sort())];
-  elementos.selectCategoria.innerHTML = cats.map(c=>`<option value="${c}">${c.charAt(0).toUpperCase()+c.slice(1)}</option>`).join('');
-  elementos.selectCategoria.value = filtrosActuales.categoria;
-}
-
-// Slider visual + valores
-function updateRange(){
-  if (!elementos.precioMinInput || !elementos.precioMaxInput) return;
-  let min = parseInt(elementos.precioMinInput.value || 0);
-  let max = parseInt(elementos.precioMaxInput.value || 0);
-  if (min>max){ [min,max] = [max,min]; }
-  filtrosActuales.precioMin = min;
-  filtrosActuales.precioMax = max;
-
-  if (elementos.minPriceText) elementos.minPriceText.textContent = `$U ${formatearUY(min)}`;
-  if (elementos.maxPriceText) elementos.maxPriceText.textContent = `$U ${formatearUY(max)}`;
-
-  const rangeMin = parseInt(elementos.precioMinInput.min || 0);
-  const rangeMax = parseInt(elementos.precioMaxInput.max || 3000);
-  const pctMin = ((min - rangeMin) / (rangeMax - rangeMin)) * 100;
-  const pctMax = ((max - rangeMin) / (rangeMax - rangeMin)) * 100;
-
-  if (elementos.thumbMin){ elementos.thumbMin.style.left = `${pctMin}%`; elementos.thumbMin.textContent = `$U ${formatearUY(min)}`; }
-  if (elementos.thumbMax){ elementos.thumbMax.style.left = `${pctMax}%`; elementos.thumbMax.textContent = `$U ${formatearUY(max)}`; }
-
-  if (elementos.rangeTrack){
-    elementos.rangeTrack.style.left  = `${pctMin}%`;
-    elementos.rangeTrack.style.right = `${100-pctMax}%`;
-  }
 }
 
 // ---------------------------------
