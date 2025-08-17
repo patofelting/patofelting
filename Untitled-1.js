@@ -829,7 +829,7 @@ getElement('form-envio')?.addEventListener('submit', async (e) => {
   mensaje += `*👤 Datos del cliente:*\n` +
              `Nombre: ${nombre} ${apellido}\n` +
              `Teléfono: ${telefono}\n` +
-             `MéTODO de envío: ${envio === 'montevideo' ? 'Envío Montevideo ($200)' : envio === 'interior' ? 'Envío Interior ($250)' : 'Retiro en local (Gratis)'}\n`;
+             `Método de envío: ${envio === 'montevideo' ? 'Envío Montevideo ($200)' : envio === 'interior' ? 'Envío Interior ($250)' : 'Retiro en local (Gratis)'}\n`;
   if (envio !== 'retiro') mensaje += `Dirección: ${direccion}\n`;
   if (notas) mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
 
