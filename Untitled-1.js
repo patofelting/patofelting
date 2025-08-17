@@ -159,7 +159,6 @@ async function cargarProductosDesdeFirebase() {
       actualizarUI();
     }
 
-    // Listener en tiempo real: me aseguro de no duplicarlo
     if (!cargarProductosDesdeFirebase._listening) {
       onValue(productosRef, (snap) => {
         if (!snap.exists()) {
@@ -189,7 +188,6 @@ async function cargarProductosDesdeFirebase() {
 }
 
 const toNum = (v) => {
-  // Soporta "4,50", "4.50", "4", null, undefined
   if (v === null || v === undefined) return null;
   if (typeof v === 'number') return isFinite(v) ? v : null;
   const s = String(v).replace(',', '.').trim();
@@ -205,11 +203,9 @@ function procesarDatosProductos(data) {
     const ancho = toNum(p.ancho);
     const profundidad = toNum(p.profundidad);
 
-    // Soporte a "cantidad" como stock si no hay "stock"
     const stockRaw = (p.stock !== undefined ? p.stock : p.cantidad);
     const stock = Math.max(0, parseInt(String(stockRaw).replace(',', '.'), 10) || 0);
 
-    // Filtrar adicionales "-" o vacío
     const adic = (p.adicionales || '').toString().trim();
     const adicionales = (adic && adic !== '-' && adic !== '–') ? adic : '';
 
@@ -240,7 +236,8 @@ function renderizarCarrito() {
     ? '<p class="carrito-vacio">Tu carrito está vacío</p>'
     : carrito.map(item => {
         const producto = productos.find(p => p.id === item.id) || { stock: 0 };
-        const disponibles = Math.max(0, producto.stock - item.cantidad);
+        // 👉 El stock remoto YA descuenta lo que agregaste al carrito
+        const disponibles = Math.max(0, producto.stock || 0);
         return `
           <li class="carrito-item" data-id="${item.id}">
             <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}" loading="lazy">
@@ -261,7 +258,6 @@ function renderizarCarrito() {
   const total = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
   elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
 
-  // Event listeners +/- (se reemplazan en cada render, no se duplican)
   elementos.listaCarrito.querySelectorAll('.disminuir-cantidad').forEach(btn => {
     btn.onclick = async (e) => {
       const id = parseInt(e.currentTarget.dataset.id);
@@ -290,8 +286,8 @@ function renderizarCarrito() {
 // RENDERIZADO DE PRODUCTOS Y PAGINACIÓN
 // ===============================
 function crearCardProducto(p) {
-  const enCarrito = carrito.find(i => i.id === p.id) || { cantidad: 0 };
-  const disp = Math.max(0, p.stock - enCarrito.cantidad);
+  // 👉 Mostramos exactamente el stock remoto (ya descontado)
+  const disp = Math.max(0, p.stock || 0);
   const agot = disp <= 0;
   const imagen = (p.imagenes && p.imagenes[0]) || PLACEHOLDER_IMAGE;
 
@@ -358,7 +354,6 @@ window.cambiarPagina = function (page) {
 // MODAL DE PRODUCTO (sin flechas; click en imagen = siguiente)
 // ===============================
 function ensureProductModal() {
-  // Usa el modal existente (#producto-modal). Si faltara lo creo compatible con tu CSS (.modal-overlay + .visible)
   if (!getElement('producto-modal')) {
     const modal = document.createElement('div');
     modal.id = 'producto-modal';
@@ -372,14 +367,14 @@ function ensureProductModal() {
   elementos.productoModal = getElement('producto-modal');
   elementos.modalContenido = getElement('modal-contenido');
 
-  // 👉Cerrar solo si se hace click en el overlay (no en el contenido)
+  // Cierra SOLO si clicas el overlay
   elementos.productoModal.addEventListener('click', (e) => {
     if (e.target === elementos.productoModal) cerrarModal();
   });
-  // El contenido nunca debe cerrar el modal
+  // El contenido no propaga
   elementos.modalContenido.addEventListener('click', (e) => e.stopPropagation());
 
-  // Cerrar con ESC
+  // ESC para cerrar
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && elementos.productoModal.classList.contains('visible')) cerrarModal();
   });
@@ -390,12 +385,13 @@ function mostrarModalProducto(producto) {
   const cont = elementos.modalContenido;
   if (!elementos.productoModal || !cont) return;
 
-  const enCarrito = carrito.find(item => item.id === producto.id) || { cantidad: 0 };
-  const disponibles = Math.max(0, producto.stock - enCarrito.cantidad);
-  const agotado = disponibles <= 0;
+  // 👉 Disponibles es el stock remoto (ya descontado)
   let currentIndex = 0;
 
   const render = () => {
+    const disponibles = Math.max(0, producto.stock || 0);
+    const agotado = disponibles <= 0;
+
     cont.innerHTML = `
       <button class="cerrar-modal" aria-label="Cerrar modal" onclick="cerrarModal()">&times;</button>
       <div class="modal-flex">
@@ -431,7 +427,7 @@ function mostrarModalProducto(producto) {
       </div>
     `;
 
-    // Cambiar de imagen con click en la grande (cíclico). No cerrar el modal.
+    // Click en la imagen grande: siguiente (sin cerrar)
     const imgGrande = cont.querySelector('#modal-imagen');
     imgGrande?.addEventListener('click', (ev) => {
       ev.stopPropagation();
@@ -440,14 +436,14 @@ function mostrarModalProducto(producto) {
       render();
     });
 
-    // Miniaturas (también detienen propagación)
+    // Miniaturas
     cont.querySelectorAll('.thumbnail').forEach(th => th.addEventListener('click', (e) => {
       e.stopPropagation();
       currentIndex = parseInt(e.currentTarget.dataset.index);
       render();
     }));
 
-    // Agregar desde modal (protegido)
+    // Agregar desde modal
     cont.querySelector('.boton-agregar-modal')?.addEventListener('click', (e) => {
       e.stopPropagation();
       const id = parseInt(e.currentTarget.dataset.id);
@@ -457,8 +453,6 @@ function mostrarModalProducto(producto) {
   };
 
   render();
-
-  // Mostrar modal con la clase que tu CSS espera (.visible)
   elementos.productoModal.classList.add('visible');
   elementos.productoModal.setAttribute('aria-hidden', 'false');
   document.body.classList.add('no-scroll');
@@ -473,10 +467,10 @@ function cerrarModal() {
 window.cerrarModal = cerrarModal;
 
 // ===============================
-// LÓGICA DE AGREGAR AL CARRITO (con transacción y dobles protegidos)
+// LÓGICA DE AGREGAR AL CARRITO
 // ===============================
 async function agregarAlCarrito(id, cantidad = 1, boton = null) {
-  // 🔒 Bloqueo por producto desde el inicio (idempotente aunque haya handlers duplicados)
+  // Bloqueo por producto (idempotente)
   if (inFlightAdds.has(id)) return;
   inFlightAdds.add(id);
 
@@ -497,10 +491,8 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
     boton.innerHTML = 'Agregando <span class="spinner"></span>';
   }
 
-  // No permitir superar stock considerando lo que ya hay en carrito
-  const enCarrito = carrito.find(item => item.id === id);
-  const yaEnCarrito = enCarrito ? enCarrito.cantidad : 0;
-  if (producto.stock - yaEnCarrito < cantidadAgregar) {
+  // 👉 Chequeo con stock remoto directamente
+  if ((producto.stock || 0) < cantidadAgregar) {
     if (boton) { boton.disabled = false; boton.innerHTML = boton._oldHTML; busyButtons.delete(boton); }
     inFlightAdds.delete(id);
     return mostrarNotificacion('Stock insuficiente', 'error');
@@ -510,12 +502,16 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
     const productRef = ref(db, `productos/${id}/stock`);
     const { committed } = await runTransaction(productRef, (stock) => {
       stock = stock || 0;
-      if (stock < cantidadAgregar) return; // aborta transacción
+      if (stock < cantidadAgregar) return; // aborta
       return stock - cantidadAgregar;
     });
 
     if (!committed) throw new Error('Stock insuficiente o cambiado por otro usuario');
 
+    // ✅ feedback inmediato local
+    producto.stock = Math.max(0, (producto.stock || 0) - cantidadAgregar);
+
+    const enCarrito = carrito.find(item => item.id === id);
     if (enCarrito) enCarrito.cantidad += cantidadAgregar;
     else carrito.push({
       id: producto.id,
@@ -670,7 +666,6 @@ function initEventos() {
     aplicarFiltros();
   });
 
-  // Delegación de eventos en galería — deduplicada
   const galeria = elementos.galeriaProductos;
   if (galeria) {
     if (galeria._pfHandler) galeria.removeEventListener('click', galeria._pfHandler);
@@ -772,7 +767,6 @@ getElement('form-envio')?.addEventListener('submit', async (e) => {
     return mostrarNotificacion('Complete todos los campos obligatorios', 'error');
   }
 
-  // Validar stock actual antes de confirmar
   for (const item of carrito) {
     const prod = productos.find(p => p.id === item.id);
     if (!prod || prod.stock < item.cantidad) {
