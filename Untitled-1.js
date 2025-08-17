@@ -603,7 +603,7 @@ function setupContactForm() {
   const form = getElement('formulario-contacto');
   if (!form || !window.emailjs) return;
 
-  emailjs.init("YOUR_EMAILJS_USER_ID");
+  emailjs.init("o4IxJz0Zz-LQ8jYKG");
   form.onsubmit = (e) => {
     e.preventDefault();
     const nombre = getElement('nombre').value;
