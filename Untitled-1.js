@@ -258,74 +258,100 @@ function procesarDatosProductos(data) {
 
 
 function renderizarCarrito() {
-  if (!elementos.listaCarrito || !elementos.totalCarrito) return;
-
-  if (carrito.length === 0) {
-    elementos.listaCarrito.innerHTML = '<p class="carrito-vacio">Tu carrito está vacío</p>';
-    elementos.totalCarrito.textContent = 'Total: $U 0';
+  if (!elementos.listaCarrito || !elementos.totalCarrito) {
+    console.warn('Elementos del carrito no encontrados');
     return;
   }
 
-  elementos.listaCarrito.innerHTML = carrito.map(item => {
-    const producto = productos.find(p => p.id === item.id);
-    // Calculate available stock based on current product stock minus what's already in the cart for this item
-    const stockRealProducto = producto ? producto.stock : 0;
-    const disponiblesParaAgregar = Math.max(0, stockRealProducto - item.cantidad);
+  try {
+    if (carrito.length === 0) {
+      elementos.listaCarrito.innerHTML = '<p class="carrito-vacio">Tu carrito está vacío</p>';
+      elementos.totalCarrito.textContent = 'Total: $U 0';
+      return;
+    }
 
-    return `
-    <li class="carrito-item" data-id="${item.id}">
-      <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}" loading="lazy">
-      <div class="carrito-item-info">
-        <span class="carrito-item-nombre">${item.nombre}</span>
-        <span class="carrito-item-precio">$U ${item.precio.toLocaleString('es-UY')} c/u</span>
-        <div class="carrito-item-controls">
-          <button class="disminuir-cantidad" data-id="${item.id}" aria-label="Reducir cantidad" ${item.cantidad <= 1 ? 'disabled' : ''}>-</button>
-          <span class="carrito-item-cantidad">${item.cantidad}</span>
-          <button class="aumentar-cantidad" data-id="${item.id}" aria-label="Aumentar cantidad" ${disponiblesParaAgregar <= 0 ? 'disabled' : ''}>+</button>
+    // Limpiar event listeners anteriores para evitar duplicados
+    elementos.listaCarrito.replaceChildren();
+
+    elementos.listaCarrito.innerHTML = carrito.map(item => {
+      const producto = productos.find(p => p.id === item.id);
+      // Calculate available stock based on current product stock minus what's already in the cart for this item
+      const stockRealProducto = producto ? producto.stock : 0;
+      const disponiblesParaAgregar = Math.max(0, stockRealProducto - item.cantidad);
+
+      return `
+      <li class="carrito-item" data-id="${item.id}">
+        <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}" loading="lazy">
+        <div class="carrito-item-info">
+          <span class="carrito-item-nombre">${item.nombre}</span>
+          <span class="carrito-item-precio">$U ${item.precio.toLocaleString('es-UY')} c/u</span>
+          <div class="carrito-item-controls">
+            <button class="disminuir-cantidad" data-id="${item.id}" aria-label="Reducir cantidad" ${item.cantidad <= 1 ? 'disabled' : ''}>-</button>
+            <span class="carrito-item-cantidad">${item.cantidad}</span>
+            <button class="aumentar-cantidad" data-id="${item.id}" aria-label="Aumentar cantidad" ${disponiblesParaAgregar <= 0 ? 'disabled' : ''}>+</button>
+          </div>
+          <span class="carrito-item-subtotal">Subtotal: $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
         </div>
-        <span class="carrito-item-subtotal">Subtotal: $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
-      </div>
-    </li>
-  `;
-  }).join('');
+      </li>
+    `;
+    }).join('');
 
-  const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-  elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
+    const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+    elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
 
-  // Delegate events for quantity buttons
-  elementos.listaCarrito.querySelectorAll('.disminuir-cantidad').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const id = parseInt(e.target.dataset.id);
-      const item = carrito.find(item => item.id === id);
-      if (item && item.cantidad > 1) {
-        // Decrease quantity in cart
-        item.cantidad--;
-        // Restore stock in Firebase for the decreased amount
-        const productRef = ref(db, `productos/${id}/stock`);
-        runTransaction(productRef, (currentStock) => {
-          if (typeof currentStock !== 'number' || isNaN(currentStock)) {
-            currentStock = 0;
+    // Re-attach event listeners for quantity buttons with improved error handling
+    elementos.listaCarrito.querySelectorAll('.disminuir-cantidad').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        try {
+          const id = parseInt(e.target.dataset.id);
+          const item = carrito.find(item => item.id === id);
+          
+          if (item && item.cantidad > 1) {
+            console.log(`Disminuyendo cantidad de producto ${id}: ${item.cantidad} -> ${item.cantidad - 1}`);
+            
+            // Decrease quantity in cart
+            item.cantidad--;
+            
+            // Restore stock in Firebase for the decreased amount
+            const productRef = ref(db, `productos/${id}/stock`);
+            await runTransaction(productRef, (currentStock) => {
+              if (typeof currentStock !== 'number' || isNaN(currentStock)) {
+                currentStock = 0;
+              }
+              return currentStock + 1; // Add back 1 to stock
+            });
+
+            guardarCarrito();
+            renderizarCarrito();
+            renderizarProductos(); // Re-render product gallery to show updated stock
+            mostrarNotificacion(`Reducida cantidad de "${item.nombre}"`, 'info');
           }
-          return currentStock + 1; // Add back 1 to stock
-        }).then(() => {
-          guardarCarrito();
-          renderizarCarrito();
-          renderizarProductos(); // Re-render product gallery to show updated stock
-          mostrarNotificacion(`Reducida cantidad de "${item.nombre}"`, 'info');
-        }).catch(error => {
+        } catch (error) {
           console.error("Error al disminuir cantidad y restaurar stock:", error);
           mostrarNotificacion("Error al actualizar cantidad", "error");
-        });
-      }
+        }
+      });
     });
-  });
 
-  elementos.listaCarrito.querySelectorAll('.aumentar-cantidad').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const id = parseInt(e.target.dataset.id);
-      agregarAlCarrito(id, 1); // Use transaction-based add to check stock and decrement
+    elementos.listaCarrito.querySelectorAll('.aumentar-cantidad').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        try {
+          const id = parseInt(e.target.dataset.id);
+          console.log(`Aumentando cantidad de producto ${id}`);
+          agregarAlCarrito(id, 1); // Use transaction-based add to check stock and decrement
+        } catch (error) {
+          console.error("Error al aumentar cantidad:", error);
+          mostrarNotificacion("Error al agregar producto", "error");
+        }
+      });
     });
-  });
+
+    console.log(`Carrito renderizado: ${carrito.length} items únicos, total: $U ${total.toLocaleString('es-UY')}`);
+
+  } catch (error) {
+    console.error('Error al renderizar carrito:', error);
+    mostrarNotificacion('Error al actualizar el carrito', 'error');
+  }
 }
 
 // ===============================
@@ -351,9 +377,19 @@ function toggleCarrito(forceState) {
 // PRODUCTOS, FILTROS Y PAGINACIÓN
 // ===============================
 
+// Variable global para prevenir múltiples clics simultáneos
+let procesandoAgregarCarrito = new Set();
+
 function agregarAlCarrito(id, cantidad = 1, boton = null) {
-  if (isNaN(id) || id === null) {
+  // Validación de entrada mejorada
+  if (isNaN(id) || id === null || id === undefined) {
     mostrarNotificacion("ID de producto inválido", "error");
+    return;
+  }
+
+  // Prevenir múltiples operaciones simultáneas en el mismo producto
+  if (procesandoAgregarCarrito.has(id)) {
+    mostrarNotificacion("Procesando... por favor espere", "info");
     return;
   }
 
@@ -363,11 +399,14 @@ function agregarAlCarrito(id, cantidad = 1, boton = null) {
     return;
   }
 
-  const cantidadAgregar = Math.max(1, parseInt(cantidad));
-  if (isNaN(cantidadAgregar)) {
+  const cantidadAgregar = Math.max(1, parseInt(cantidad) || 1);
+  if (isNaN(cantidadAgregar) || cantidadAgregar <= 0) {
     mostrarNotificacion("Cantidad inválida", "error");
     return;
   }
+
+  // Marcar producto como en proceso
+  procesandoAgregarCarrito.add(id);
 
   // Check how much of this product is already in the cart
   const enCarrito = carrito.find(item => item.id === id);
@@ -378,6 +417,7 @@ function agregarAlCarrito(id, cantidad = 1, boton = null) {
 
   if (stockDisponible < cantidadAgregar) {
     mostrarNotificacion("Stock insuficiente", "error");
+    procesandoAgregarCarrito.delete(id);
     return;
   }
 
@@ -389,24 +429,35 @@ function agregarAlCarrito(id, cantidad = 1, boton = null) {
   }
 
   const productRef = ref(db, `productos/${id}/stock`);
+  
+  // Usar transacción para actualizar stock de manera atómica
   runTransaction(productRef, (currentStock) => {
+    // Log para debugging
+    console.log(`Transacción para producto ${id}: stock actual=${currentStock}, cantidad a agregar=${cantidadAgregar}`);
+    
     // If stock is null or not a number, initialize it to 0
     if (typeof currentStock !== 'number' || isNaN(currentStock)) {
+      console.warn(`Stock inválido para producto ${id}, inicializando a 0`);
       currentStock = 0;
     }
 
     if (currentStock < cantidadAgregar) {
       // Abort transaction if stock is insufficient
+      console.log(`Stock insuficiente: ${currentStock} < ${cantidadAgregar}`);
       return undefined;
     }
-    return currentStock - cantidadAgregar; // Decrement stock
-  }).then((res) => {
-    if (!res.committed) {
+    
+    const nuevoStock = currentStock - cantidadAgregar;
+    console.log(`Nuevo stock calculado para producto ${id}: ${nuevoStock}`);
+    return nuevoStock;
+  }).then((result) => {
+    if (!result.committed) {
       // Transaction was aborted, likely due to insufficient stock
       mostrarNotificacion('❌ Stock insuficiente o actualizado por otro usuario. Intente de nuevo.', 'error');
       return;
     }
 
+    // Actualización optimista del estado local
     if (enCarrito) {
       enCarrito.cantidad += cantidadAgregar;
     } else {
@@ -419,19 +470,35 @@ function agregarAlCarrito(id, cantidad = 1, boton = null) {
       });
     }
 
+    // Actualizar estado de la UI
     guardarCarrito();
     renderizarCarrito();
     renderizarProductos(); // Re-render gallery to reflect stock change
     mostrarNotificacion("✅ Producto agregado al carrito", "exito");
 
+    console.log(`Producto ${id} agregado exitosamente. Cantidad: ${cantidadAgregar}`);
+
   }).catch((error) => {
     console.error("Error al agregar al carrito (transacción Firebase):", error);
-    mostrarNotificacion("⚠️ Error inesperado al agregar al carrito", "error");
+    mostrarNotificacion("⚠️ Error inesperado al agregar al carrito. Intente nuevamente.", "error");
+    
+    // En caso de error, revertir cambios locales si se hicieron
+    if (enCarrito && enCarrito.cantidad >= cantidadAgregar) {
+      enCarrito.cantidad -= cantidadAgregar;
+      if (enCarrito.cantidad <= 0) {
+        const index = carrito.findIndex(item => item.id === id);
+        if (index > -1) carrito.splice(index, 1);
+      }
+      guardarCarrito();
+      renderizarCarrito();
+    }
   }).finally(() => {
+    // Restaurar estado del botón y limpiar proceso
     if (boton) {
       boton.disabled = false;
       boton.innerHTML = textoOriginal;
     }
+    procesandoAgregarCarrito.delete(id);
   });
 }
 
@@ -528,20 +595,21 @@ function renderizarPaginacion(totalProductos) {
     return;
   }
 
+  // Crear botones de paginación sin event listeners individuales
+  // El event listener delegado en inicializarEventos manejará los clicks
   for (let i = 1; i <= totalPages; i++) {
     const pageButton = document.createElement('button');
     pageButton.textContent = i;
     pageButton.className = i === paginaActual ? 'active' : '';
-    pageButton.addEventListener('click', () => {
-      paginaActual = i;
-      renderizarProductos();
-      window.scrollTo({
-        top: elementos.galeriaProductos.offsetTop - 100,
-        behavior: 'smooth'
-      }); // Scroll to products section
-    });
+    pageButton.setAttribute('data-page', i);
+    pageButton.setAttribute('aria-label', `Ir a página ${i}`);
+    
+    // No agregar event listeners individuales para evitar conflictos
+    // El evento se maneja por delegación en inicializarEventos
     paginacionContainer.appendChild(pageButton);
   }
+  
+  console.log(`Paginación renderizada: ${totalPages} páginas, página actual: ${paginaActual}`);
 }
 
 // ===============================
@@ -657,9 +725,16 @@ function mostrarModalProducto(producto) {
 }
 
 function cerrarModal() {
-  if (elementos.productoModal) {
-    elementos.productoModal.classList.remove('active');
-    document.body.classList.remove('no-scroll');
+  try {
+    if (elementos.productoModal) {
+      elementos.productoModal.classList.remove('active');
+      document.body.classList.remove('no-scroll');
+      console.log('Modal de producto cerrado');
+    } else {
+      console.warn('Elemento modal no encontrado al intentar cerrar');
+    }
+  } catch (error) {
+    console.error('Error al cerrar modal:', error);
   }
 }
 window.cerrarModal = cerrarModal; // Expose to global scope for onclick in HTML
@@ -676,8 +751,19 @@ function actualizarUI() {
 // FILTROS Y RESET
 // ===============================
 function aplicarFiltros() {
-  paginaActual = 1; // Reset to first page when filters change
-  renderizarProductos();
+  try {
+    console.log('Aplicando filtros:', filtrosActuales);
+    const paginaAnterior = paginaActual;
+    paginaActual = 1; // Reset to first page when filters change
+    renderizarProductos();
+    
+    if (paginaAnterior !== paginaActual) {
+      console.log(`Página reiniciada: ${paginaAnterior} -> ${paginaActual}`);
+    }
+  } catch (error) {
+    console.error('Error al aplicar filtros:', error);
+    mostrarNotificacion('Error al aplicar filtros', 'error');
+  }
 }
 
 function resetearFiltros() {
@@ -855,24 +941,54 @@ function inicializarEventos() {
 
   // Update filters immediately when sliders are moved
   elementos.precioMinInput?.addEventListener('input', () => {
-    updateRange();
-    aplicarFiltros(); // Apply filters immediately on slider change
+    try {
+      updateRange();
+      
+      // Actualizar filtros con validación
+      const minVal = parseInt(elementos.precioMinInput.value) || 0;
+      const maxVal = parseInt(elementos.precioMaxInput.value) || 3000;
+      
+      filtrosActuales.precioMin = Math.min(minVal, maxVal);
+      filtrosActuales.precioMax = Math.max(minVal, maxVal);
+      
+      aplicarFiltros(); // Apply filters immediately on slider change
+    } catch (error) {
+      console.error('Error al actualizar filtro de precio mínimo:', error);
+    }
   });
 
   elementos.precioMaxInput?.addEventListener('input', () => {
-    updateRange();
-    aplicarFiltros(); // Apply filters immediately on slider change
+    try {
+      updateRange();
+      
+      // Actualizar filtros con validación
+      const minVal = parseInt(elementos.precioMinInput.value) || 0;
+      const maxVal = parseInt(elementos.precioMaxInput.value) || 3000;
+      
+      filtrosActuales.precioMin = Math.min(minVal, maxVal);
+      filtrosActuales.precioMax = Math.max(minVal, maxVal);
+      
+      aplicarFiltros(); // Apply filters immediately on slider change
+    } catch (error) {
+      console.error('Error al actualizar filtro de precio máximo:', error);
+    }
   });
 
   elementos.aplicarRangoBtn?.addEventListener('click', () => {
-    // This button is redundant if filters apply on input, but keep if user needs explicit apply.
-    // Ensure that the filter values are updated from the slider inputs, not just by updateRange()
-    filtrosActuales.precioMin = parseInt(elementos.precioMinInput.value);
-    filtrosActuales.precioMax = parseInt(elementos.precioMaxInput.value);
-    aplicarFiltros();
+    try {
+      // This button is redundant if filters apply on input, but keep if user needs explicit apply.
+      // Ensure that the filter values are updated from the slider inputs, not just by updateRange()
+      filtrosActuales.precioMin = parseInt(elementos.precioMinInput.value) || 0;
+      filtrosActuales.precioMax = parseInt(elementos.precioMaxInput.value) || 3000;
+      aplicarFiltros();
+      console.log('Filtros aplicados manualmente:', filtrosActuales);
+    } catch (error) {
+      console.error('Error al aplicar filtros manualmente:', error);
+    }
   });
 
   // Delegated event listener for product cards (add to cart, view details, stock notification)
+  // Usar un solo event listener delegado para mejorar performance y evitar problemas con elementos dinámicos
   elementos.galeriaProductos?.addEventListener('click', (e) => {
     const boton = e.target.closest('button');
     const tarjeta = e.target.closest('.producto-card');
@@ -881,16 +997,58 @@ function inicializarEventos() {
 
     const id = parseInt(tarjeta.dataset.id);
     const producto = productos.find(p => p.id === id);
-    if (!producto || isNaN(id)) return;
+    if (!producto || isNaN(id)) {
+      console.warn('Producto no encontrado o ID inválido:', id);
+      return;
+    }
 
-    e.stopPropagation(); // Prevent duplicate clicks from propagating
+    // Prevenir propagación múltiple y double-clicks
+    e.preventDefault();
+    e.stopPropagation();
 
-    if (boton.classList.contains('boton-detalles')) {
-      verDetalle(id);
-    } else if (boton.classList.contains('boton-agregar')) {
-      agregarAlCarrito(id, 1, boton);
-    } else if (boton.classList.contains('boton-aviso-stock')) {
-      preguntarStock(boton.dataset.nombre || producto.nombre);
+    try {
+      if (boton.classList.contains('boton-detalles')) {
+        console.log(`Abriendo detalle para producto ${id}: ${producto.nombre}`);
+        verDetalle(id);
+      } else if (boton.classList.contains('boton-agregar') && !boton.disabled) {
+        console.log(`Agregando producto ${id} al carrito: ${producto.nombre}`);
+        agregarAlCarrito(id, 1, boton);
+      } else if (boton.classList.contains('boton-aviso-stock')) {
+        console.log(`Solicitando aviso de stock para: ${producto.nombre}`);
+        preguntarStock(boton.dataset.nombre || producto.nombre);
+      }
+    } catch (error) {
+      console.error('Error en delegación de eventos de productos:', error);
+      mostrarNotificacion('Error al procesar la acción. Intente nuevamente.', 'error');
+    }
+  });
+
+  // Event listener mejorado para paginación para evitar problemas de estado
+  elementos.paginacion?.addEventListener('click', (e) => {
+    const botonPagina = e.target.closest('button');
+    if (!botonPagina) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const nuevaPagina = parseInt(botonPagina.textContent);
+    if (isNaN(nuevaPagina) || nuevaPagina < 1) return;
+
+    try {
+      console.log(`Cambiando a página ${nuevaPagina} desde página ${paginaActual}`);
+      paginaActual = nuevaPagina;
+      renderizarProductos();
+      
+      // Scroll mejorado con verificación
+      if (elementos.galeriaProductos) {
+        window.scrollTo({
+          top: elementos.galeriaProductos.offsetTop - 100,
+          behavior: 'smooth'
+        });
+      }
+    } catch (error) {
+      console.error('Error al cambiar página:', error);
+      mostrarNotificacion('Error al cambiar de página', 'error');
     }
   });
 
@@ -1107,15 +1265,40 @@ function preguntarStock(nombreProducto) {
   window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
 }
 
+// Función para aplicar filtros de rango de precios (referenciada en window.aplicarRango)
+function aplicarRango() {
+  // Actualizar filtros actuales con valores de los sliders
+  if (elementos.precioMinInput && elementos.precioMaxInput) {
+    filtrosActuales.precioMin = parseInt(elementos.precioMinInput.value) || 0;
+    filtrosActuales.precioMax = parseInt(elementos.precioMaxInput.value) || 3000;
+  }
+  aplicarFiltros();
+}
+
 // Attach init to DOMContentLoaded (already done at the top, moved down for logical flow)
 // document.addEventListener('DOMContentLoaded', init);
 
 function verDetalle(id) {
-  const producto = productos.find(p => p.id === id);
-  if (producto) {
+  try {
+    // Validación mejorada del ID
+    if (isNaN(id) || id === null || id === undefined) {
+      console.error('ID inválido pasado a verDetalle:', id);
+      mostrarNotificacion("Error: ID de producto inválido", "error");
+      return;
+    }
+
+    const producto = productos.find(p => p.id === id);
+    if (!producto) {
+      console.error('Producto no encontrado con ID:', id);
+      mostrarNotificacion("Producto no encontrado", "error");
+      return;
+    }
+
+    console.log(`Mostrando detalle del producto: ${producto.nombre} (ID: ${id})`);
     mostrarModalProducto(producto);
-  } else {
-    mostrarNotificacion("Producto no encontrado", "error");
+  } catch (error) {
+    console.error('Error en verDetalle:', error);
+    mostrarNotificacion("Error al mostrar detalles del producto", "error");
   }
 }
 
