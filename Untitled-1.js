@@ -409,7 +409,7 @@ function mostrarModalProducto(producto){
             }
           </div>
           <div class="modal-acciones">
-            <input type="number" value="1" min="1" max="${disponibles}" class="cantidad-modal-input" ${agotado?'disabled':''}>
+            <input type="number" value="1" min="1" max="${disponibles}" id="cantidad-modal-${producto.id}" name="cantidad-modal-${producto.id}" class="cantidad-modal-input" ${agotado?'disabled':''}>
             <button class="boton-agregar-modal ${agotado?'agotado':''}" data-id="${producto.id}" ${agotado?'disabled':''}>
               ${agotado?'Agotado':'Agregar al carrito'}
             </button>
