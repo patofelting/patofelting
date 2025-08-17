@@ -94,6 +94,11 @@ function mostrarNotificacion(mensaje, tipo = 'exito') {
     noti.classList.remove('show');
     setTimeout(() => noti.remove(), 300);
   }, 2500);
+
+  // Scroll hacia la notificación si es un éxito en formulario de contacto
+  if (tipo === 'exito' && typeof mensaje === 'string' && mensaje.toLowerCase().includes('mensaje enviado')) {
+    noti.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 }
 
 // ===============================
@@ -488,7 +493,7 @@ function mostrarModalProducto(producto) {
 
   function renderCarruselAndContent() {
     contenido.innerHTML = `
-      <button class="cerrar-modal" aria-label="Cerrar modal" onclick="cerrarModal()">&times;</button>
+      <button class="cerrar-modal" aria-label="Cerrar modal">&times;</button>
       <div class="modal-flex">
         <div class="modal-carrusel">
           <img id="modal-imagen" src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
@@ -518,8 +523,7 @@ function mostrarModalProducto(producto) {
             <br>
             ${producto.adicionales ? `<small><b>Adicionales:</b> ${producto.adicionales}</small><br>` : ''}
             ${(producto.alto || producto.ancho || producto.profundidad)
-              ? `<small><b>Medidas:</b> ${producto.alto ? producto.alto + ' cm (alto)' : ''}${producto.ancho ? ' x ' + producto.ancho + ' cm (ancho)' : ''}${producto.profundidad ? ' x ' + producto.profundidad + ' cm (prof.)' : ''}</small>`
-              : ''}
+              ? `<small><b>Medidas:</b> ${producto.alto ? producto.alto + ' cm (alto)' : ''}${producto.ancho ? ' x ' + producto.ancho + ' cm (ancho)' : ''}${producto.profundidad ? ' x ' + producto.profundidad + ' cm (profundidad)' : ''}</small>` : ''}
           </div>
           <div class="modal-acciones">
             <input type="number" value="1" min="1" max="${disponibles}" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
@@ -639,49 +643,60 @@ function inicializarMenuHamburguesa() {
 }
 
 // ===============================
-// CONTACT FORM (EmailJS) – versión incorporada
+// CONTACT FORM (EmailJS) – versión corregida
 // ===============================
 function setupContactForm() {
   const formContacto = document.getElementById('formContacto');
   const successMessage = document.getElementById('successMessage');
   const errorMessage = document.getElementById('errorMessage');
 
-  if (!formContacto) return;
+  if (formContacto) {
+    formContacto.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const nombre = document.getElementById('nombre').value;
+      const email = document.getElementById('email').value;
+      const mensaje = document.getElementById('mensaje').value;
 
-  formContacto.addEventListener('submit', (e) => {
-    e.preventDefault();
-
-    if (!window.emailjs) {
-      console.warn('EmailJS no está cargado; se evita el envío para no romper.');
-      if (errorMessage) {
-        errorMessage.classList.remove('hidden');
-        errorMessage.textContent = 'Servicio de email no disponible.';
-        setTimeout(() => errorMessage.classList.add('hidden'), 3000);
+      if (!window.emailjs) {
+        console.warn('EmailJS no está cargado; se evita el envío para no romper.');
+        if (errorMessage) {
+          errorMessage.classList.remove('hidden');
+          errorMessage.textContent = 'Servicio de email no disponible.';
+          setTimeout(() => errorMessage.classList.add('hidden'), 3000);
+        }
+        return;
       }
-      return;
-    }
 
-    const nombre = document.getElementById('nombre').value;
-    const email = document.getElementById('email').value;
-    const mensaje = document.getElementById('mensaje').value;
-
-    emailjs.send('service_89by24g', 'template_8mn7hdp', {
-      from_name: nombre,
-      from_email: email,
-      message: mensaje
-    })
-    .then(() => {
-      successMessage?.classList.remove('hidden');
-      errorMessage?.classList.add('hidden');
-      formContacto.reset();
-      setTimeout(() => successMessage?.classList.add('hidden'), 3000);
-    }, (error) => {
-      console.error('Error al enviar el mensaje:', error);
-      errorMessage?.classList.remove('hidden');
-      successMessage?.classList.add('hidden');
-      setTimeout(() => errorMessage?.classList.add('hidden'), 3000);
+      emailjs.send('service_89by24g', 'template_8mn7hdp', {
+        from_name: nombre,
+        from_email: email,
+        message: mensaje
+      })
+      .then(() => {
+        if (successMessage) {
+          successMessage.classList.remove('hidden');
+          successMessage.textContent = 'Mensaje enviado correctamente ✔️';
+          successMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        if (errorMessage) errorMessage.classList.add('hidden');
+        formContacto.reset();
+        setTimeout(() => {
+          if (successMessage) successMessage.classList.add('hidden');
+        }, 3000);
+      }, (error) => {
+        console.error('Error al enviar el mensaje:', error);
+        if (errorMessage) {
+          errorMessage.classList.remove('hidden');
+          errorMessage.textContent = 'Error al enviar el mensaje ❌';
+          errorMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        if (successMessage) successMessage.classList.add('hidden');
+        setTimeout(() => {
+          if (errorMessage) errorMessage.classList.add('hidden');
+        }, 3000);
+      });
     });
-  });
+  }
 }
 
 // ===============================
@@ -768,6 +783,34 @@ function inicializarEventos() {
       preguntarStock(boton.dataset.nombre || producto.nombre);
     }
   });
+
+  // Delegado para ver detalle desde cualquier botón "Ver Detalle"
+  document.body.addEventListener('click', function(ev) {
+    const botonDetalle = ev.target.closest('.boton-detalles');
+    if (botonDetalle) {
+      const tarjeta = botonDetalle.closest('.producto-card');
+      if (tarjeta) {
+        const id = parseInt(tarjeta.dataset.id);
+        verDetalle(id);
+      }
+    }
+  });
+
+  // Precio slider "burbujas" y click en span para cambiar valor
+  const minPriceSpan = document.getElementById('min-price');
+  const maxPriceSpan = document.getElementById('max-price');
+  const minSlider = document.getElementById('min-slider');
+  const maxSlider = document.getElementById('max-slider');
+  if (minPriceSpan && minSlider) {
+    minPriceSpan.addEventListener('click', () => {
+      minSlider.focus();
+    });
+  }
+  if (maxPriceSpan && maxSlider) {
+    maxPriceSpan.addEventListener('click', () => {
+      maxSlider.focus();
+    });
+  }
 }
 
 function actualizarResumenPedido() {
@@ -949,7 +992,6 @@ function updateRange() {
   filtrosActuales.precioMax = maxVal;
 }
 
-// Acción “aplicar rango” (si hay botón en el HTML)
 function aplicarRango() {
   if (!minSlider || !maxSlider) return;
   filtrosActuales.precioMin = parseInt(minSlider.value);
