@@ -83,7 +83,6 @@ const elementos = {
   selectCategoria: getElement('filtro-categoria'),
   precioMinInput: getElement('min-slider'),
   precioMaxInput: getElement('max-slider'),
-  // botonResetearFiltros: document.querySelector('.boton-resetear-filtros'), // This button does not exist in HTML
   carritoBtnMain: getElement('carrito-btn-main'),
   carritoPanel: getElement('carrito-panel'),
   carritoOverlay: document.querySelector('.carrito-overlay'),
@@ -163,7 +162,6 @@ async function vaciarCarrito() {
     mostrarNotificacion('Ocurrió un error al vaciar el carrito', 'error');
   }
 }
-
 
 function actualizarContadorCarrito() {
   const total = carrito.reduce((sum, i) => sum + i.cantidad, 0);
@@ -255,7 +253,6 @@ function procesarDatosProductos(data) {
   actualizarCategorias();
   actualizarUI();
 }
-
 
 function renderizarCarrito() {
   if (!elementos.listaCarrito || !elementos.totalCarrito) return;
@@ -435,7 +432,6 @@ function agregarAlCarrito(id, cantidad = 1, boton = null) {
   });
 }
 
-
 function filtrarProductos() {
   return productos.filter(p => {
     if (!p) return false; // Ensure product is valid
@@ -495,7 +491,6 @@ function crearCardProducto(p) {
   `;
 }
 
-
 function renderizarProductos() {
   const productosFiltrados = filtrarProductos();
   const inicio = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
@@ -514,7 +509,6 @@ function renderizarProductos() {
 
   renderizarPaginacion(productosFiltrados.length);
 }
-
 
 function renderizarPaginacion(totalProductos) {
   const totalPages = Math.ceil(totalProductos / PRODUCTOS_POR_PAGINA);
@@ -707,8 +701,6 @@ function inicializarFAQ() {
       const content = toggle.nextElementSibling;
       if (content) {
         content.hidden = isExpanded; // Toggle hidden attribute
-        // Optional: add a class for CSS transitions
-        // content.classList.toggle('active', !isExpanded);
       }
     });
   });
@@ -746,53 +738,70 @@ function setupContactForm() {
   const successMessage = document.getElementById('successMessage');
   const errorMessage = document.getElementById('errorMessage');
 
-  if (formContacto && window.emailjs) { // Ensure emailjs library is loaded
-    // Initialize EmailJS with your user ID
-    emailjs.init("o4IxJz0Zz-LQ8jYKG"); // Replace with your actual EmailJS User ID
+  if (!formContacto) return;
 
-    formContacto.addEventListener('submit', (e) => {
-      e.preventDefault();
+  formContacto.addEventListener('submit', (e) => {
+    e.preventDefault();
 
-      // Check if emailjs is available
-      if (!window.emailjs) {
-        console.error('EmailJS library is not loaded.');
+    // Check if emailjs is available
+    if (!window.emailjs) {
+      console.error('EmailJS library is not loaded.');
+      if (errorMessage) {
         errorMessage.classList.remove('hidden');
         errorMessage.textContent = 'Error: Servicio de email no disponible. Intenta de nuevo más tarde.';
         setTimeout(() => errorMessage.classList.add('hidden'), 3000);
-        return;
+      }
+      return;
+    }
+
+    // Initialize EmailJS if not already initialized
+    if (!window.emailjs.init) {
+      console.error('EmailJS not properly loaded');
+      return;
+    }
+
+    try {
+      // Initialize with your user ID (only once)
+      if (!window.emailjsInitialized) {
+        emailjs.init('o4IxJz0Zz-LQ8jYKG'); // Replace with your actual EmailJS User ID
+        window.emailjsInitialized = true;
       }
 
       const nombre = document.getElementById('nombre').value;
       const email = document.getElementById('email').value;
       const mensaje = document.getElementById('mensaje').value;
 
-      emailjs.send('service_89by24g', 'template_8mn7hdp', { // Replace with your Service ID and Template ID
+      emailjs.send('service_89by24g', 'template_8mn7hdp', {
           from_name: nombre,
           from_email: email,
           message: mensaje
         })
         .then(() => {
-          successMessage.classList.remove('hidden');
-          errorMessage.classList.add('hidden');
-          formContacto.reset();
-          setTimeout(() => successMessage.classList.add('hidden'), 3000);
+          if (successMessage) {
+            successMessage.classList.remove('hidden');
+            if (errorMessage) errorMessage.classList.add('hidden');
+            formContacto.reset();
+            setTimeout(() => successMessage.classList.add('hidden'), 3000);
+          }
         }, (error) => {
           console.error('Error al enviar el mensaje:', error);
-          errorMessage.classList.remove('hidden');
-          successMessage.classList.add('hidden');
-          errorMessage.textContent = 'Error al enviar el mensaje. Intenta de nuevo.';
-          setTimeout(() => errorMessage.classList.add('hidden'), 3000);
+          if (errorMessage) {
+            errorMessage.classList.remove('hidden');
+            if (successMessage) successMessage.classList.add('hidden');
+            errorMessage.textContent = 'Error al enviar el mensaje. Intenta de nuevo.';
+            setTimeout(() => errorMessage.classList.add('hidden'), 3000);
+          }
         });
-    });
-  } else if (formContacto && !window.emailjs) {
-    console.warn('EmailJS library not found. Contact form will not function.');
-    // Optionally disable the form or show a message
-    // formContacto.querySelector('button[type="submit"]').disabled = true;
-    // errorMessage.textContent = 'El servicio de contacto no está disponible.';
-    // errorMessage.classList.remove('hidden');
-  }
+    } catch (error) {
+      console.error('Error in EmailJS:', error);
+      if (errorMessage) {
+        errorMessage.classList.remove('hidden');
+        errorMessage.textContent = 'Error en el servicio de contacto. Intenta de nuevo más tarde.';
+        setTimeout(() => errorMessage.classList.add('hidden'), 3000);
+      }
+    }
+  });
 }
-
 
 // ===============================
 // INICIALIZACIÓN GENERAL
@@ -801,37 +810,17 @@ function init() {
   inicializarMenuHamburguesa();
   inicializarFAQ();
   setupContactForm();
-  // cargarCarrito() is called in DOMContentLoaded before init now
   inicializarEventos();
   updateRange(); // Initialize slider positions
 }
 
-// ===============================
-// EVENTOS
-// ===============================
-function inicializarEventos() {
-  elementos.carritoBtnMain?.addEventListener('click', () => toggleCarrito(true));
-  elementos.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
-  elementos.btnCerrarCarrito?.addEventListener('click', () => toggleCarrito(false));
-
-  document.getElementById('select-envio')?.addEventListener('change', actualizarResumenPedido);
-  elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
-  elementos.btnFinalizarCompra?.addEventListener('click', () => {
-    if (carrito.length === 0) {
-      mostrarNotificacion('El carrito está vacío', 'error');
-      return;
-    }
-    elementos.avisoPreCompraModal.style.display = 'flex';
-    elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'false');
-  });
-
-  elementos.btnEntendidoAviso?.addEventListener('click', () => {
+elementos.btnEntendidoAviso?.addEventListener('click', () => {
     const modalEnvio = document.getElementById('modal-datos-envio');
     if (modalEnvio) {
       elementos.avisoPreCompraModal.style.display = 'none';
       elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
       modalEnvio.style.display = 'flex';
-      modalEnvio.classList.add('visible'); // Add visible class for animation
+      modalEnvio.classList.add('visible');
       actualizarResumenPedido();
     }
   });
@@ -853,274 +842,60 @@ function inicializarEventos() {
     aplicarFiltros();
   });
 
-  // Update filters immediately when sliders are moved
   elementos.precioMinInput?.addEventListener('input', () => {
     updateRange();
-    aplicarFiltros(); // Apply filters immediately on slider change
+    aplicarFiltros();
   });
-
   elementos.precioMaxInput?.addEventListener('input', () => {
     updateRange();
-    aplicarFiltros(); // Apply filters immediately on slider change
+    aplicarFiltros();
   });
 
   elementos.aplicarRangoBtn?.addEventListener('click', () => {
-    // This button is redundant if filters apply on input, but keep if user needs explicit apply.
-    // Ensure that the filter values are updated from the slider inputs, not just by updateRange()
     filtrosActuales.precioMin = parseInt(elementos.precioMinInput.value);
     filtrosActuales.precioMax = parseInt(elementos.precioMaxInput.value);
     aplicarFiltros();
   });
 
-  // Delegated event listener for product cards (add to cart, view details, stock notification)
+  // Delegación segura para los botones de producto
   elementos.galeriaProductos?.addEventListener('click', (e) => {
-    const boton = e.target.closest('button');
-    const tarjeta = e.target.closest('.producto-card');
+    const card = e.target.closest('.producto-card');
+    if (!card) return;
+    const id = Number(card.dataset.id);
+    if (!Number.isFinite(id)) return;
 
-    if (!tarjeta || !boton) return;
-
-    const id = parseInt(tarjeta.dataset.id);
-    const producto = productos.find(p => p.id === id);
-    if (!producto || isNaN(id)) return;
-
-    e.stopPropagation(); // Prevent duplicate clicks from propagating
-
-    if (boton.classList.contains('boton-detalles')) {
+    if (e.target.closest('.boton-detalles')) {
       verDetalle(id);
-    } else if (boton.classList.contains('boton-agregar')) {
-      agregarAlCarrito(id, 1, boton);
-    } else if (boton.classList.contains('boton-aviso-stock')) {
-      preguntarStock(boton.dataset.nombre || producto.nombre);
+      return;
+    }
+    if (e.target.closest('.boton-agregar')) {
+      agregarAlCarrito(id, 1, e.target.closest('button'));
+      return;
+    }
+    if (e.target.closest('.boton-aviso-stock')) {
+      preguntarStock(e.target.closest('.boton-aviso-stock').dataset.nombre);
+      return;
     }
   });
-
 }
-
-
-function actualizarResumenPedido() {
-  const resumenProductos = document.getElementById('resumen-productos');
-  const resumenTotal = document.getElementById('resumen-total');
-
-  if (!resumenProductos || !resumenTotal) {
-    console.error('Elements for the summary not found');
-    return;
-  }
-
-  if (carrito.length === 0) {
-    resumenProductos.innerHTML = '<p class="carrito-vacio">No hay productos en el carrito</p>';
-    resumenTotal.textContent = '$U 0';
-    return;
-  }
-
-  let html = '';
-  let subtotal = 0;
-
-  carrito.forEach(item => {
-    const itemTotal = item.precio * item.cantidad;
-    subtotal += itemTotal;
-    html += `
-      <div class="resumen-item">
-        <span>${item.nombre} x${item.cantidad}</span>
-        <span>$U ${itemTotal.toLocaleString('es-UY')}</span>
-      </div>
-    `;
-  });
-
-  const envioSelect = document.getElementById('select-envio');
-  const metodoEnvio = envioSelect ? envioSelect.value : 'retiro';
-  let costoEnvio = 0;
-
-  if (metodoEnvio === 'montevideo') {
-    costoEnvio = 150;
-  } else if (metodoEnvio === 'interior') {
-    costoEnvio = 300;
-  }
-
-  html += `
-    <div class="resumen-item resumen-subtotal">
-      <span>Subtotal:</span>
-      <span>$U ${subtotal.toLocaleString('es-UY')}</span>
-    </div>
-    ${metodoEnvio !== 'retiro' ? `
-    <div class="resumen-item resumen-envio">
-      <span>Envío (${metodoEnvio === 'montevideo' ? 'Montevideo' : 'Interior'}):</span>
-      <span>$U ${costoEnvio.toLocaleString('es-UY')}</span>
-    </div>
-    ` : ''}
-  `;
-
-  resumenProductos.innerHTML = html;
-  const total = subtotal + costoEnvio;
-  resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
-
-  // Toggle direction input visibility based on shipping method
-  const grupoDireccion = document.getElementById('grupo-direccion');
-  const inputDireccion = document.getElementById('input-direccion');
-  if (grupoDireccion && inputDireccion) {
-    if (metodoEnvio === 'retiro') {
-      grupoDireccion.style.display = 'none';
-      inputDireccion.required = false;
-    } else {
-      grupoDireccion.style.display = 'flex';
-      inputDireccion.required = true;
-    }
-  }
-}
-
-// Cerrar modal de envío
-document.getElementById('btn-cerrar-modal-envio')?.addEventListener('click', function() {
-  const modalEnvio = document.getElementById('modal-datos-envio');
-  modalEnvio.classList.remove('visible');
-  modalEnvio.setAttribute('aria-hidden', 'true');
-  setTimeout(() => {
-    modalEnvio.style.display = 'none';
-  }, 300);
-});
-
-
-// Validar y enviar por WhatsApp
-document.getElementById('form-envio')?.addEventListener('submit', async function(e) {
-  e.preventDefault();
-
-  const nombre = document.getElementById('input-nombre').value.trim();
-  const apellido = document.getElementById('input-apellido').value.trim();
-  const telefono = document.getElementById('input-telefono').value.trim();
-  const envio = document.getElementById('select-envio').value;
-  const direccion = envio !== 'retiro' ? document.getElementById('input-direccion').value.trim() : '';
-  const notas = document.getElementById('input-notas').value.trim();
-
-  if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
-    mostrarNotificacion('Por favor complete todos los campos obligatorios', 'error');
-    return;
-  }
-
-  // Double check stock before sending order
-  for (const item of carrito) {
-    const productoReal = productos.find(p => p.id === item.id);
-    if (!productoReal || productoReal.stock < item.cantidad) {
-      mostrarNotificacion(`Stock insuficiente para "${item.nombre}". Por favor, actualice su carrito.`, 'error');
-      return; // Stop the process
-    }
-  }
-
-  let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n`;
-  mensaje += `*📋 Detalles del pedido:*\n`;
-
-  carrito.forEach(item => {
-    mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}\n`;
-  });
-
-  const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-  const costoEnvio = envio === 'montevideo' ? 150 : envio === 'interior' ? 300 : 0;
-  const total = subtotal + costoEnvio;
-
-  mensaje += `\n*💰 Total:*\n`;
-  mensaje += `Subtotal: $U ${subtotal.toLocaleString('es-UY')}\n`;
-  mensaje += `Envío: $U ${costoEnvio.toLocaleString('es-UY')}\n`;
-  mensaje += `*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
-
-  mensaje += `*👤 Datos del cliente:*\n`;
-  mensaje += `Nombre: ${nombre} ${apellido}\n`;
-  mensaje += `Teléfono: ${telefono}\n`;
-  mensaje += `Método de envío: ${envio === 'montevideo' ? 'Envío Montevideo ($150)' : envio === 'interior' ? 'Envío Interior ($300)' : 'Retiro en local (Gratis)'}\n`;
-
-  if (envio !== 'retiro') {
-    mensaje += `Dirección: ${direccion}\n`;
-  }
-
-  if (notas) {
-    mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
-  }
-
-  const numeroWhatsApp = '59893566283'; // Your WhatsApp number
-  sessionStorage.setItem('ultimoPedidoWhatsApp', mensaje); // Save for potential recovery
-
-  const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
-
-  // Try opening in new tab, fall back to current tab if blocked by browser
-  const nuevaPestaña = window.open(urlWhatsApp, '_blank');
-  if (!nuevaPestaña || nuevaPestaña.closed || typeof nuevaPestaña.closed == 'undefined') {
-    // Fallback if popup is blocked
-    window.location.href = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${encodeURIComponent(mensaje)}`;
-  }
-
-  // Clear cart and UI after a small delay, assuming user proceeds to WhatsApp
-  setTimeout(() => {
-    document.getElementById('modal-datos-envio').classList.remove('visible');
-    document.getElementById('modal-datos-envio').setAttribute('aria-hidden', 'true');
-    setTimeout(() => {
-      document.getElementById('modal-datos-envio').style.display = 'none';
-      carrito = []; // Clear local cart
-      guardarCarrito(); // Update localStorage
-      actualizarUI(); // Re-render cart counter and other UI
-      mostrarNotificacion('Pedido listo para enviar por WhatsApp', 'exito');
-      document.getElementById('form-envio').reset(); // Reset the form
-    }, 300);
-  }, 1000);
-});
 
 // ===============================
-// CONTROLADORES PARA LOS SLIDERS DE PRECIO
+// SLIDERS DE PRECIO (ya incluido arriba, pero asegúrate que se ejecute al cargar)
 // ===============================
-const minSlider = document.getElementById('min-slider');
-const maxSlider = document.getElementById('max-slider');
-const minPriceSpan = document.getElementById('min-price');
-const maxPriceSpan = document.getElementById('max-price');
-const range = document.querySelector('.range');
-
-function updateRange() {
-  if (!minSlider || !maxSlider || !minPriceSpan || !maxPriceSpan || !range) return;
-
-  let minVal = parseInt(minSlider.value);
-  let maxVal = parseInt(maxSlider.value);
-
-  // Ensure minVal is always less than or equal to maxVal
-  if (minVal > maxVal) {
-    // Swap values and update slider positions
-    [minVal, maxVal] = [maxVal, minVal];
-    minSlider.value = minVal;
-    maxSlider.value = maxVal;
-  }
-
-  const sliderMax = parseInt(minSlider.max); // Both sliders should have the same max
-  const porcentajeMin = (minVal / sliderMax) * 100;
-  const porcentajeMax = (maxVal / sliderMax) * 100;
-
-  range.style.left = porcentajeMin + '%';
-  range.style.width = (porcentajeMax - porcentajeMin) + '%';
-
-  minPriceSpan.textContent = `$U${minVal}`;
-  maxPriceSpan.textContent = `$U${maxVal}`;
+if (elementos.precioMinInput && elementos.precioMaxInput) {
+  elementos.precioMinInput.addEventListener('input', updateRange);
+  elementos.precioMaxInput.addEventListener('input', updateRange);
+  updateRange();
 }
 
-// Initial update for sliders and their display
-if (minSlider && maxSlider) {
-  minSlider.addEventListener('input', updateRange);
-  maxSlider.addEventListener('input', updateRange);
-  updateRange(); // Call once on load to set initial state
-}
-
-
-function preguntarStock(nombreProducto) {
-  const asunto = encodeURIComponent(`Consulta sobre disponibilidad de "${nombreProducto}"`);
-  const cuerpo = encodeURIComponent(`Hola Patofelting,\n\nMe gustaría saber cuándo estará disponible el producto: ${nombreProducto}\n\nSaludos cordiales,\n[Nombre del Cliente]`);
-  window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
-}
-
-// Attach init to DOMContentLoaded (already done at the top, moved down for logical flow)
-// document.addEventListener('DOMContentLoaded', init);
-
-function verDetalle(id) {
-  const producto = productos.find(p => p.id === id);
-  if (producto) {
-    mostrarModalProducto(producto);
-  } else {
-    mostrarNotificacion("Producto no encontrado", "error");
-  }
-}
-
-// Expose functions to global scope if they are called from inline HTML event handlers (e.g., onclick)
+// ===============================
+// EXPORTAR FUNCIONES PARA HTML
+// ===============================
 window.verDetalle = verDetalle;
 window.agregarAlCarrito = agregarAlCarrito;
-window.aplicarRango = aplicarRango; // Expose aplicarRango if needed by HTML button
 window.preguntarStock = preguntarStock;
+
+// ===============================
+// INICIALIZACIÓN FINAL
+// ===============================
+init();
