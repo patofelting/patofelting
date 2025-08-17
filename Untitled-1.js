@@ -877,7 +877,7 @@ elementos.btnEntendidoAviso?.addEventListener('click', () => {
       return;
     }
   });
-}
+
 
 // ===============================
 // SLIDERS DE PRECIO (ya incluido arriba, pero asegúrate que se ejecute al cargar)
