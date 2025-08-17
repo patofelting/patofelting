@@ -529,53 +529,41 @@ function inicializarMenuHamburguesa() {
   });
 }
 
+
 // ===============================
-// CONTACTO (EmailJS)
+// CONTACT FORM CON EMAILJS
 // ===============================
 function setupContactForm() {
-  const form = document.getElementById('formulario-contacto');   // 👈 id correcto
+  const formContacto = document.getElementById('formContacto');
   const successMessage = document.getElementById('successMessage');
   const errorMessage = document.getElementById('errorMessage');
-  if (!form) return;
 
-  // Inicializa EmailJS si está presente (reemplaza TU_PUBLIC_KEY)
-  if (window.emailjs && emailjs.init) {
-    try { emailjs.init({ publicKey: 'TU_PUBLIC_KEY_DE_EMAILJS' }); } catch {}
-  }
+  if (formContacto) {
+    formContacto.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const nombre = document.getElementById('nombre').value;
+      const email = document.getElementById('email').value;
+      const mensaje = document.getElementById('mensaje').value;
 
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-
-    if (!window.emailjs || !emailjs.send) {
-      errorMessage?.classList.remove('hidden');
-      errorMessage && (errorMessage.textContent = 'Servicio de email no disponible.');
-      setTimeout(() => errorMessage?.classList.add('hidden'), 4000);
-      return;
-    }
-
-    const nombre = document.getElementById('nombre').value;
-    const email = document.getElementById('email').value;
-    const mensaje = document.getElementById('mensaje').value;
-
-    emailjs.send('service_89by24g', 'template_8mn7hdp', {
-      from_name: nombre,
-      from_email: email,
-      message: mensaje
-    })
-    .then(() => {
-      successMessage?.classList.remove('hidden');
-      errorMessage?.classList.add('hidden');
-      form.reset();
-      setTimeout(() => successMessage?.classList.add('hidden'), 4000);
-    }, (error) => {
-      console.error('EmailJS error:', error);
-      errorMessage?.classList.remove('hidden');
-      successMessage?.classList.add('hidden');
-      setTimeout(() => errorMessage?.classList.add('hidden'), 4000);
+      emailjs.send('service_89by24g', 'template_8mn7hdp', {
+        from_name: nombre,
+        from_email: email,
+        message: mensaje
+      })
+      .then(() => {
+        successMessage.classList.remove('hidden');
+        errorMessage.classList.add('hidden');
+        formContacto.reset();
+        setTimeout(() => successMessage.classList.add('hidden'), 3000);
+      }, (error) => {
+        console.error('Error al enviar el mensaje:', error);
+        errorMessage.classList.remove('hidden');
+        successMessage.classList.add('hidden');
+        setTimeout(() => errorMessage.classList.add('hidden'), 3000);
+      });
     });
-  });
+  }
 }
-
 // ===============================
 // INICIALIZACIÓN GENERAL
 // ===============================
