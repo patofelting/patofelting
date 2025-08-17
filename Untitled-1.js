@@ -372,10 +372,13 @@ function ensureProductModal() {
   elementos.productoModal = getElement('producto-modal');
   elementos.modalContenido = getElement('modal-contenido');
 
-  // Cerrar al click fuera del contenido
+  // 👉Cerrar solo si se hace click en el overlay (no en el contenido)
   elementos.productoModal.addEventListener('click', (e) => {
-    if (!elementos.modalContenido.contains(e.target)) cerrarModal();
+    if (e.target === elementos.productoModal) cerrarModal();
   });
+  // El contenido nunca debe cerrar el modal
+  elementos.modalContenido.addEventListener('click', (e) => e.stopPropagation());
+
   // Cerrar con ESC
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && elementos.productoModal.classList.contains('visible')) cerrarModal();
@@ -428,22 +431,25 @@ function mostrarModalProducto(producto) {
       </div>
     `;
 
-    // Cambiar de imagen con click en la grande (cíclico)
+    // Cambiar de imagen con click en la grande (cíclico). No cerrar el modal.
     const imgGrande = cont.querySelector('#modal-imagen');
-    imgGrande?.addEventListener('click', () => {
+    imgGrande?.addEventListener('click', (ev) => {
+      ev.stopPropagation();
       if (!producto.imagenes || producto.imagenes.length <= 1) return;
       currentIndex = (currentIndex + 1) % producto.imagenes.length;
       render();
     });
 
-    // Miniaturas
+    // Miniaturas (también detienen propagación)
     cont.querySelectorAll('.thumbnail').forEach(th => th.addEventListener('click', (e) => {
+      e.stopPropagation();
       currentIndex = parseInt(e.currentTarget.dataset.index);
       render();
     }));
 
     // Agregar desde modal (protegido)
     cont.querySelector('.boton-agregar-modal')?.addEventListener('click', (e) => {
+      e.stopPropagation();
       const id = parseInt(e.currentTarget.dataset.id);
       const qty = parseInt(cont.querySelector('.cantidad-modal-input').value);
       agregarAlCarrito(id, qty, e.currentTarget);
@@ -470,28 +476,26 @@ window.cerrarModal = cerrarModal;
 // LÓGICA DE AGREGAR AL CARRITO (con transacción y dobles protegidos)
 // ===============================
 async function agregarAlCarrito(id, cantidad = 1, boton = null) {
-  if (!Number.isFinite(id) || id <= 0) return mostrarNotificacion('ID de producto inválido', 'error');
+  // 🔒 Bloqueo por producto desde el inicio (idempotente aunque haya handlers duplicados)
+  if (inFlightAdds.has(id)) return;
+  inFlightAdds.add(id);
+
+  if (!Number.isFinite(id) || id <= 0) { inFlightAdds.delete(id); return mostrarNotificacion('ID de producto inválido', 'error'); }
 
   const producto = productos.find(p => p.id === id);
-  if (!producto) return mostrarNotificacion('Producto no encontrado', 'error');
+  if (!producto) { inFlightAdds.delete(id); return mostrarNotificacion('Producto no encontrado', 'error'); }
 
   const cantidadAgregar = Math.max(1, parseInt(cantidad));
-  if (!Number.isFinite(cantidadAgregar)) return mostrarNotificacion('Cantidad inválida', 'error');
+  if (!Number.isFinite(cantidadAgregar)) { inFlightAdds.delete(id); return mostrarNotificacion('Cantidad inválida', 'error'); }
 
-  // Evitar dobles (por botón y por producto)
+  // Evitar doble click en el mismo botón
   if (boton) {
-    if (busyButtons.has(boton)) return;
+    if (busyButtons.has(boton)) { inFlightAdds.delete(id); return; }
     busyButtons.add(boton);
     boton.disabled = true;
     boton._oldHTML = boton.innerHTML;
     boton.innerHTML = 'Agregando <span class="spinner"></span>';
   }
-  if (inFlightAdds.has(id)) {
-    // Ya hay un agregado en curso para este producto
-    if (boton) { boton.disabled = false; boton.innerHTML = boton._oldHTML; busyButtons.delete(boton); }
-    return;
-  }
-  inFlightAdds.add(id);
 
   // No permitir superar stock considerando lo que ya hay en carrito
   const enCarrito = carrito.find(item => item.id === id);
