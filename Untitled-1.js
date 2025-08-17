@@ -4,8 +4,6 @@
 const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
-// tiny placeholder para lazy-load
-const TINY_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
 
 // Firebase v10+ (SDK modular)
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -21,10 +19,10 @@ let productos = [];
 let carrito = [];
 let paginaActual = 1;
 
-// Candados / control de parpadeos
-const busyButtons    = new WeakSet(); // evita doble click en el mismo botón
-const inFlightAdds   = new Set();     // evita dobles agregados por producto
-let suprimirRealtime = 0;             // silencia 1+ ticks del listener para evitar “pestañeo”
+// Candados para evitar dobles acciones
+const busyButtons   = new WeakSet(); // doble click en el mismo botón
+const inFlightAdds  = new Set();     // mismo producto agregado 2 veces en paralelo
+let suprimirRealtime = 0;            // silencia 1+ ticks del listener para evitar “pestañeo”
 
 let filtrosActuales = {
   precioMin: 0,
@@ -48,27 +46,6 @@ function mostrarNotificacion(mensaje, tipo = 'exito') {
   }, 2500);
 }
 const getElement = (id) => document.getElementById(id);
-
-// Lazy loader global para las cards
-let imgObserver = null;
-function initLazyLoader() {
-  if ('IntersectionObserver' in window) {
-    imgObserver = new IntersectionObserver((entries, obs) => {
-      entries.forEach(entry => {
-        if (!entry.isIntersecting) return;
-        const img = entry.target;
-        const real = img.dataset.src;
-        if (real) {
-          img.src = real;
-          img.decode?.().catch(() => {});
-          img.removeAttribute('data-src');
-          img.classList.remove('lazy');
-        }
-        obs.unobserve(img);
-      });
-    }, { rootMargin: '200px 0px' });
-  }
-}
 
 // Referencias DOM
 const elementos = {
@@ -124,7 +101,7 @@ function cargarCarrito() {
 async function vaciarCarrito() {
   if (carrito.length === 0) return mostrarNotificacion('El carrito ya está vacío', 'info');
 
-  const n = carrito.length; // nº actualizaciones de stock
+  const n = carrito.length;
   try {
     await Promise.all(
       carrito.map(async (item) => {
@@ -132,7 +109,7 @@ async function vaciarCarrito() {
         await runTransaction(productRef, (s) => (s || 0) + item.cantidad);
       })
     );
-    suprimirRealtime += n; // evita “pestañeo” por onValue
+    suprimirRealtime += n; // evita pestañeo al volver el listener
     carrito = [];
     guardarCarrito();
     renderizarCarrito();
@@ -188,11 +165,8 @@ async function cargarProductosDesdeFirebase() {
     if (!cargarProductosDesdeFirebase._listening) {
       onValue(productosRef, (snap) => {
         if (suprimirRealtime > 0) { suprimirRealtime--; return; }
-        if (!snap.exists()) {
-          productos = [];
-        } else {
-          procesarDatosProductos(snap.val());
-        }
+        if (!snap.exists()) productos = [];
+        else procesarDatosProductos(snap.val());
         renderizarProductos();
         actualizarCategorias();
         actualizarUI();
@@ -230,18 +204,11 @@ function procesarDatosProductos(data) {
     const ancho = toNum(p.ancho);
     const profundidad = toNum(p.profundidad);
 
-    // si no hay "stock", usamos "cantidad" como stock inicial
     const stockRaw = (p.stock !== undefined ? p.stock : p.cantidad);
     const stock = Math.max(0, parseInt(String(stockRaw).replace(',', '.'), 10) || 0);
 
-    // adicionales limpios
     const adic = (p.adicionales || '').toString().trim();
     const adicionales = (adic && adic !== '-' && adic !== '–') ? adic : '';
-
-    // imágenes
-    const imgs = Array.isArray(p.imagenes)
-      ? p.imagenes.filter(img => typeof img === 'string' && img.trim())
-      : [p.imagen || PLACEHOLDER_IMAGE];
 
     return {
       id: parseInt(p.id || key, 10),
@@ -249,7 +216,9 @@ function procesarDatosProductos(data) {
       descripcion: (p.descripcion || '').trim(),
       precio: parseFloat(String(p.precio).replace(',', '.')) || 0,
       stock,
-      imagenes: imgs,
+      imagenes: Array.isArray(p.imagenes)
+        ? p.imagenes.filter(img => typeof img === 'string' && img.trim())
+        : [p.imagen || PLACEHOLDER_IMAGE],
       categoria: (p.categoria || 'otros').toLowerCase().trim(),
       estado: (p.estado || '').trim(),
       adicionales,
@@ -271,7 +240,7 @@ function renderizarCarrito() {
         const disponibles = Math.max(0, producto.stock || 0);
         return `
           <li class="carrito-item" data-id="${item.id}">
-            <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}" loading="lazy" decoding="async">
+            <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}" loading="lazy">
             <div class="carrito-item-info">
               <span class="carrito-item-nombre">${item.nombre}</span>
               <span class="carrito-item-precio">$U ${item.precio.toLocaleString('es-UY')} c/u</span>
@@ -297,7 +266,7 @@ function renderizarCarrito() {
       if (item && item.cantidad > 1) {
         try {
           await runTransaction(ref(db, `productos/${id}/stock`), (s) => (s || 0) + 1);
-          suprimirRealtime++; // evita pestañeo
+          suprimirRealtime++; // evita pestañeo del onValue
           const p = productos.find(x => x.id === id);
           if (p) p.stock = (p.stock || 0) + 1;
 
@@ -328,7 +297,7 @@ function crearCardProducto(p) {
 
   return `
     <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}">
-      <img class="producto-img lazy" src="${TINY_PLACEHOLDER}" data-src="${imagen}" alt="${p.nombre}" loading="lazy" decoding="async">
+      <img src="${imagen}" alt="${p.nombre}" class="producto-img" loading="lazy" decoding="async">
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
       <div class="producto-stock">
@@ -356,9 +325,13 @@ function filtrarProductos() {
     );
   });
 }
-function activarLazyEnContenedor(container) {
-  if (!imgObserver) return;
-  container.querySelectorAll('img.lazy[data-src]').forEach(img => imgObserver.observe(img));
+// pre-carga liviana para que las imágenes aparezcan antes
+function prewarmImages(lista) {
+  try {
+    lista.forEach(p => {
+      (p.imagenes || []).slice(0, 2).forEach(src => { const im = new Image(); im.decoding = 'async'; im.src = src; });
+    });
+  } catch {}
 }
 function renderizarProductos() {
   const filtrados = filtrarProductos();
@@ -369,7 +342,8 @@ function renderizarProductos() {
     ? '<p class="sin-productos">No se encontraron productos.</p>'
     : paginados.map(crearCardProducto).join('');
 
-  activarLazyEnContenedor(elementos.galeriaProductos);
+  prewarmImages(paginados); // acelera percepción de carga
+
   renderizarPaginacion(filtrados.length);
 }
 function renderizarPaginacion(total) {
@@ -404,7 +378,7 @@ function ensureProductModal() {
   elementos.productoModal = getElement('producto-modal');
   elementos.modalContenido = getElement('modal-contenido');
 
-  // Cierra sólo si clicas el overlay
+  // Cierra solo si clicas el overlay
   elementos.productoModal.addEventListener('click', (e) => {
     if (e.target === elementos.productoModal) cerrarModal();
   });
@@ -431,10 +405,10 @@ function mostrarModalProducto(producto) {
       <button class="cerrar-modal" aria-label="Cerrar modal" onclick="cerrarModal()">&times;</button>
       <div class="modal-flex">
         <div class="modal-carrusel">
-          <img id="modal-imagen" src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}" decoding="async">
+          <img id="modal-imagen" src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
           <div class="modal-thumbnails">
             ${producto.imagenes.map((img, i) => `
-              <img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}" loading="lazy" decoding="async">
+              <img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}">
             `).join('')}
           </div>
         </div>
@@ -500,10 +474,10 @@ function cerrarModal() {
 window.cerrarModal = cerrarModal;
 
 // ===============================
-// AGREGAR AL CARRITO (robusto con stock faltante en DB)
+// AGREGAR AL CARRITO
 // ===============================
 async function agregarAlCarrito(id, cantidad = 1, boton = null) {
-  // Evita dobles agregados simultáneos del mismo producto
+  // Bloqueo por producto (idempotente ante handlers duplicados)
   if (inFlightAdds.has(id)) return;
   inFlightAdds.add(id);
 
@@ -524,7 +498,7 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
     boton.innerHTML = 'Agregando <span class="spinner"></span>';
   }
 
-  // Chequeo local rápido
+  // Chequeo con stock remoto actual
   if ((producto.stock || 0) < cantidadAgregar) {
     if (boton) { boton.disabled = false; boton.innerHTML = boton._oldHTML; busyButtons.delete(boton); }
     inFlightAdds.delete(id);
@@ -533,12 +507,10 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
 
   try {
     const productRef = ref(db, `productos/${id}/stock`);
-    const { committed } = await runTransaction(productRef, (s) => {
-      // si no existe el campo stock en DB (p.ej. Freddy), lo inicializo con el que ya
-      // tengo en memoria (derivado de "cantidad") para que la primera compra lo cree.
-      let actual = (typeof s === 'number' && isFinite(s)) ? s : (producto.stock ?? 0);
-      if (actual < cantidadAgregar) return; // aborta transacción
-      return actual - cantidadAgregar;
+    const { committed } = await runTransaction(productRef, (stock) => {
+      stock = stock || 0;
+      if (stock < cantidadAgregar) return; // aborta transacción
+      return stock - cantidadAgregar;
     });
 
     if (!committed) throw new Error('Stock insuficiente o cambiado por otro usuario');
@@ -792,6 +764,28 @@ getElement('btn-cerrar-modal-envio')?.addEventListener('click', () => {
 
 let enviandoPedido = false;
 
+// --- Preferir App/Escritorio, luego API móvil, por último Web
+function abrirWhatsAppPreferApp(mensaje, numero = '59893566283') {
+  const txt  = encodeURIComponent(mensaje);
+  const deep = `whatsapp://send?phone=${numero}&text=${txt}`;                 // App (móvil o desktop)
+  const api  = `https://api.whatsapp.com/send?phone=${numero}&text=${txt}`;   // Móvil: abre app
+  const web  = `https://web.whatsapp.com/send?phone=${numero}&text=${txt}`;   // Escritorio: web
+  const isMobile = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  const onHide = () => { clearTimeout(timer); document.removeEventListener('visibilitychange', onHide); document.removeEventListener('pagehide', onHide); };
+  document.addEventListener('visibilitychange', onHide);
+  document.addEventListener('pagehide', onHide);
+
+  // 1) Intento abrir la app nativa
+  window.location.href = deep;
+
+  // 2) Fallback si no se abrió
+  const timer = setTimeout(() => {
+    if (document.visibilityState === 'hidden') return; // ya se abrió la app
+    window.location.href = isMobile ? api : web;
+  }, 800);
+}
+
 getElement('form-envio')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (enviandoPedido) return;
@@ -817,8 +811,7 @@ getElement('form-envio')?.addEventListener('submit', async (e) => {
       mostrarNotificacion(`Stock insuficiente para "${item?.nombre || 'un producto'}"`, 'error');
       enviandoPedido = false;
       return;
-    }
-  }
+  } }
 
   let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*📋 Detalles del pedido:*\n`;
   carrito.forEach(item => {
@@ -836,17 +829,12 @@ getElement('form-envio')?.addEventListener('submit', async (e) => {
   mensaje += `*👤 Datos del cliente:*\n` +
              `Nombre: ${nombre} ${apellido}\n` +
              `Teléfono: ${telefono}\n` +
-             `Método de envío: ${envio === 'montevideo' ? 'Envío Montevideo ($200)' : envio === 'interior' ? 'Envío Interior ($250)' : 'Retiro en local (Gratis)'}\n`;
+             `MéTODO de envío: ${envio === 'montevideo' ? 'Envío Montevideo ($200)' : envio === 'interior' ? 'Envío Interior ($250)' : 'Retiro en local (Gratis)'}\n`;
   if (envio !== 'retiro') mensaje += `Dirección: ${direccion}\n`;
   if (notas) mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
 
-  // Abrir WhatsApp (mobile/desktop) con fallback
-  const numeroWhatsApp = '59893566283';
-  const isMobile = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  const base = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
-  const url  = `${base}?phone=${numeroWhatsApp}&text=${encodeURIComponent(mensaje)}`;
-  const win  = window.open(url, '_blank', 'noopener,noreferrer');
-  if (!win) window.location.href = url;
+  // Abrir WhatsApp con preferencia por App/Escritorio
+  abrirWhatsAppPreferApp(mensaje, '59893566283');
 
   // Cerrar modal y limpiar carrito (el stock NO se repone)
   const modal = getElement('modal-datos-envio');
@@ -905,8 +893,6 @@ function preguntarStock(nombre) {
 // INIT
 // ===============================
 document.addEventListener('DOMContentLoaded', async () => {
-  initLazyLoader();
-
   try {
     await signInAnonymously(auth);
     console.log('✅ Signed in anonymously to Firebase.');
