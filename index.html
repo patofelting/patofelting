@@ -4,30 +4,60 @@
   <link rel="icon" href="data:,">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Patofelting - Creaciones en Fieltro</title>
-  <link rel="stylesheet" href="Untitled-1.css" />
-  <svg width="0" height="0" style="position:absolute;">
-    <defs>
-      <pattern id="lana-pattern" patternUnits="userSpaceOnUse" width="100" height="100">
-        <path d="M20,50 Q35,30 50,50 Q65,70 80,50" stroke="#7ed957" stroke-width="1.5" fill="none" opacity="0.1"/>
-        <path d="M10,70 Q25,50 40,70 Q55,90 70,70" stroke="#5a8f40" stroke-width="1" fill="none" opacity="0.05"/>
-      </pattern>
-    </defs>
-  </svg>
-  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTnHg4CGR2D7kSs0v4LLanw2qksYuRlEzO+tcaEPQogQ0KaoGN26/zrn20ImR1DfuLWnOo7aBA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   
+  <!-- SEO Meta Tags -->
+  <title>Patofelting - Creaciones Artesanales en Fieltro | Figuras Únicas Hechas a Mano</title>
+  <meta name="description" content="Descubre las creaciones únicas de Patofelting. Figuras artesanales en fieltro 100% hechas a mano con técnica needle felting. Personalizaciones disponibles. Envíos a todo Uruguay.">
+  <meta name="keywords" content="fieltro, needle felting, artesanías, figuras, decoración, personalizadas, Uruguay, hecho a mano">
+  <meta name="author" content="Patricia - Patofelting">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Patofelting - Creaciones Artesanales en Fieltro">
+  <meta property="og:description" content="Figuras únicas en fieltro, hechas a mano con amor y dedicación. Personalizaciones disponibles.">
+  <meta property="og:image" content="img/patofelting.jpg">
+  <meta property="og:url" content="https://patofelting.github.io/patofelting/">
+  
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Patofelting - Creaciones Artesanales en Fieltro">
+  <meta name="twitter:description" content="Figuras únicas en fieltro, hechas a mano con amor y dedicación. Personalizaciones disponibles.">
+  <meta name="twitter:image" content="img/patofelting.jpg">
+  
+  <!-- Preload critical resources -->
+  <link rel="preload" href="Untitled-1.css" as="style">
+  <link rel="preload" href="img/patofelting.jpg" as="image">
+  
+  <link rel="stylesheet" href="Untitled-1.css" />
+  <!-- External Libraries with integrity and defer -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" 
+        integrity="sha512-Fo3rlrZj/k7ujTnHg4CGR2D7kSs0v4LLanw2qksYuRlEzO+tcaEPQogQ0KaoGN26/zrn20ImR1DfuLWnOo7aBA==" 
+        crossorigin="anonymous" 
+        referrerpolicy="no-referrer" />
+  
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js" 
+          defer 
+          integrity="sha256-lDDAC8W7HVTHhQWkgKoGfcMoJ3xBhLmyEJE/YKLhK3M=" 
+          crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" 
+          defer 
+          crossorigin="anonymous"></script>
+  
+  <!-- Configuration -->
   <script>
+    // Environment configuration - move to environment variables in production
     window.SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
     window.PLACEHOLDER_IMAGE = 'img/placeholder.png';
-    window.FIREBASE_URL = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json'; 
+    window.FIREBASE_URL = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json';
+    window.STOCK_EMAIL = 'patofelting@gmail.com';
   </script>
 
+  <!-- Firebase Configuration -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+    // Firebase configuration - In production, use environment variables
     const firebaseConfig = {
       apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
       authDomain: "patofelting-b188f.firebaseapp.com",
@@ -38,11 +68,31 @@
       appId: "1:858377467588:web:cade9de05ebccc17f87b91"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app);
-    // ✅ Exponer en window para el JS principal
-    window.firebaseDatabase = database;
+    try {
+      const app = initializeApp(firebaseConfig);
+      const database = getDatabase(app);
+      
+      // Expose database instance globally for the main script
+      window.firebaseDatabase = database;
+      window.firebaseApp = app;
+      
+      console.log('✅ Firebase initialized successfully');
+    } catch (error) {
+      console.error('❌ Firebase initialization failed:', error);
+      window.firebaseDatabase = null;
+      window.firebaseApp = null;
+    }
   </script>
+  
+  <!-- Decorative SVG Patterns -->
+  <svg width="0" height="0" style="position:absolute;" aria-hidden="true">
+    <defs>
+      <pattern id="lana-pattern" patternUnits="userSpaceOnUse" width="100" height="100">
+        <path d="M20,50 Q35,30 50,50 Q65,70 80,50" stroke="#7ed957" stroke-width="1.5" fill="none" opacity="0.1"/>
+        <path d="M10,70 Q25,50 40,70 Q55,90 70,70" stroke="#5a8f40" stroke-width="1" fill="none" opacity="0.05"/>
+      </pattern>
+    </defs>
+  </svg>
 </head>
 
 <body oncontextmenu="return true;">
@@ -95,8 +145,18 @@
 <div class="carrito-overlay"></div>
 
 <section id="inicio" class="hero">
-  <video autoplay muted loop playsinline class="video-fondo" aria-hidden="true" poster="" preload="metadata">
+  <video 
+    autoplay 
+    muted 
+    loop 
+    playsinline 
+    class="video-fondo" 
+    aria-hidden="true" 
+    poster="img/video-poster.jpg" 
+    preload="metadata"
+    title="Video de fondo - Creaciones Patofelting">
     <source src="https://i.imgur.com/nWNPya9.mp4" type="video/mp4">
+    <p>Tu navegador no soporta el video. <a href="https://i.imgur.com/nWNPya9.mp4">Descargar video</a></p>
   </video>
   <div class="hero-content">
     <div class="content-wrapper">
@@ -207,14 +267,14 @@
       </div>
     </div>
 
-    <div id="galeria-productos" class="galeria-productos"></div>
-    <div id="product-loader" class="loader" hidden aria-live="polite">
+    <div id="galeria-productos" class="galeria-productos" role="region" aria-label="Catálogo de productos"></div>
+    <div id="product-loader" class="loader" hidden aria-live="polite" role="status">
       <svg class="spinner" viewBox="0 0 50 50" aria-hidden="true">
         <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"/>
       </svg>
       <p>Cargando productos...</p>
     </div>
-    <div id="paginacion" class="paginacion" aria-live="polite"></div>
+    <nav id="paginacion" class="paginacion" aria-live="polite" aria-label="Navegación de páginas"></nav>
   </div>
 </section>
 
@@ -332,79 +392,133 @@
       <p>¿Tienes alguna pregunta, una idea para una figura personalizada o simplemente quieres saludar? ¡No dudes en contactarme!</p>
     </div>
 
-    <form id="formulario-contacto" autocomplete="on">
-      <label for="nombre">Nombre:</label>
-      <input type="text" id="nombre" name="nombre" autocomplete="name" required>
+    <form id="formulario-contacto" autocomplete="on" novalidate>
+      <div class="form-group">
+        <label for="nombre">Nombre *</label>
+        <input 
+          type="text" 
+          id="nombre" 
+          name="nombre" 
+          autocomplete="name" 
+          required 
+          minlength="2"
+          maxlength="50"
+          aria-describedby="nombre-error">
+        <div id="nombre-error" class="error-message" aria-live="polite"></div>
+      </div>
 
-      <label for="email">Email:</label>
-      <input type="email" id="email" name="email" autocomplete="email" required>
+      <div class="form-group">
+        <label for="email">Email *</label>
+        <input 
+          type="email" 
+          id="email" 
+          name="email" 
+          autocomplete="email" 
+          required
+          maxlength="100"
+          aria-describedby="email-error">
+        <div id="email-error" class="error-message" aria-live="polite"></div>
+      </div>
 
-      <label for="mensaje">Mensaje:</label>
-      <textarea id="mensaje" name="mensaje" autocomplete="off" required></textarea>
+      <div class="form-group">
+        <label for="mensaje">Mensaje *</label>
+        <textarea 
+          id="mensaje" 
+          name="mensaje" 
+          autocomplete="off" 
+          required 
+          minlength="10"
+          maxlength="1000"
+          rows="5"
+          aria-describedby="mensaje-error"></textarea>
+        <div id="mensaje-error" class="error-message" aria-live="polite"></div>
+      </div>
 
-      <button type="submit">Enviar</button>
+      <button type="submit" aria-describedby="form-status">Enviar Mensaje</button>
 
-      <div id="successMessage" class="hidden">¡Mensaje enviado con éxito!</div>
-      <div id="errorMessage" class="hidden">Error al enviar el mensaje. Intenta de nuevo.</div>
+      <div id="form-status" aria-live="polite" role="status">
+        <div id="successMessage" class="success-message hidden">¡Mensaje enviado con éxito! Te responderemos pronto.</div>
+        <div id="errorMessage" class="error-message hidden">Error al enviar el mensaje. Por favor intenta de nuevo.</div>
+      </div>
     </form>
   </div>
 </section>
 
 <section class="faq-section" id="preguntas">
   <h2>Preguntas Frecuentes</h2>
+  <div class="faq-container" role="region" aria-label="Preguntas frecuentes">
   <div class="faq-item" data-category="envios">
-    <button class="faq-toggle" aria-expanded="false" type="button">¿A qué lugares realizan envíos?</button>
-    <div class="faq-content" hidden>
+    <button class="faq-toggle" aria-expanded="false" type="button" id="faq-1" aria-controls="faq-content-1">
+      ¿A qué lugares realizan envíos?
+    </button>
+    <div class="faq-content" hidden id="faq-content-1" aria-labelledby="faq-1">
       Realizamos envíos a todo el país. Si tienes dudas sobre tu zona, <a href="#contacto" class="faq-more">contáctanos</a>.
     </div>
   </div>
   <div class="faq-item" data-category="envios">
-    <button class="faq-toggle" aria-expanded="false" type="button">¿Cuánto cuesta el envío?</button>
-    <div class="faq-content" hidden>
+    <button class="faq-toggle" aria-expanded="false" type="button" id="faq-2" aria-controls="faq-content-2">
+      ¿Cuánto cuesta el envío?
+    </button>
+    <div class="faq-content" hidden id="faq-content-2" aria-labelledby="faq-2">
       El costo depende de tu localidad y del tamaño del paquete. Te lo informamos antes de finalizar tu compra.
     </div>
   </div>
   <div class="faq-item" data-category="envios">
-    <button class="faq-toggle" aria-expanded="false" type="button">¿Puedo retirar mi pedido en persona?</button>
-    <div class="faq-content" hidden>
+    <button class="faq-toggle" aria-expanded="false" type="button" id="faq-3" aria-controls="faq-content-3">
+      ¿Puedo retirar mi pedido en persona?
+    </button>
+    <div class="faq-content" hidden id="faq-content-3" aria-labelledby="faq-3">
       Sí, si estás en nuestra ciudad podemos coordinar un punto de retiro.
     </div>
   </div>
   <div class="faq-item" data-category="personalizacion">
-    <button class="faq-toggle" aria-expanded="false" type="button">¿Puedo personalizar mi figura?</button>
-    <div class="faq-content" hidden>
+    <button class="faq-toggle" aria-expanded="false" type="button" id="faq-4" aria-controls="faq-content-4">
+      ¿Puedo personalizar mi figura?
+    </button>
+    <div class="faq-content" hidden id="faq-content-4" aria-labelledby="faq-4">
       ¡Sí! Puedes elegir colores, tamaño, detalles y enviarnos tus ideas o imágenes de referencia.
     </div>
   </div>
   <div class="faq-item" data-category="personalizacion">
-    <button class="faq-toggle" aria-expanded="false" type="button">¿Cuánto demora una figura personalizada?</button>
-    <div class="faq-content" hidden>
+    <button class="faq-toggle" aria-expanded="false" type="button" id="faq-5" aria-controls="faq-content-5">
+      ¿Cuánto demora una figura personalizada?
+    </button>
+    <div class="faq-content" hidden id="faq-content-5" aria-labelledby="faq-5">
       El tiempo de producción suele ser entre 10 y 20 días hábiles, dependiendo del diseño.
     </div>
   </div>
   <div class="faq-item" data-category="personalizacion">
-    <button class="faq-toggle" aria-expanded="false" type="button">¿Puedo pedir una figura que no está en el catálogo?</button>
-    <div class="faq-content" hidden>
+    <button class="faq-toggle" aria-expanded="false" type="button" id="faq-6" aria-controls="faq-content-6">
+      ¿Puedo pedir una figura que no está en el catálogo?
+    </button>
+    <div class="faq-content" hidden id="faq-content-6" aria-labelledby="faq-6">
       Sí, puedes pedir figuras de personajes, mascotas u objetos personalizados. Escríbenos tu idea.
     </div>
   </div>
   <div class="faq-item" data-category="personalizacion">
-    <button class="faq-toggle" aria-expanded="false" type="button">¿Tienen stock para entrega inmediata?</button>
-    <div class="faq-content" hidden>
+    <button class="faq-toggle" aria-expanded="false" type="button" id="faq-7" aria-controls="faq-content-7">
+      ¿Tienen stock para entrega inmediata?
+    </button>
+    <div class="faq-content" hidden id="faq-content-7" aria-labelledby="faq-7">
       Algunas figuras sí, revisa las que dicen "Disponible". Las personalizadas se hacen a pedido.
     </div>
   </div>
   <div class="faq-item" data-category="devoluciones">
-    <button class="faq-toggle" aria-expanded="false" type="button">¿Puedo devolver o cambiar mi figura?</button>
-    <div class="faq-content" hidden>
+    <button class="faq-toggle" aria-expanded="false" type="button" id="faq-8" aria-controls="faq-content-8">
+      ¿Puedo devolver o cambiar mi figura?
+    </button>
+    <div class="faq-content" hidden id="faq-content-8" aria-labelledby="faq-8">
       Aceptamos devoluciones solo si la figura llegó dañada o con un error respecto a lo acordado. <a href="politicaempresa.html" class="faq-more">Consultar política</a>
     </div>
   </div>
   <div class="faq-item" data-category="devoluciones">
-    <button class="faq-toggle" aria-expanded="false" type="button">¿Qué hago si mi pedido llega dañado?</button>
-    <div class="faq-content" hidden>
+    <button class="faq-toggle" aria-expanded="false" type="button" id="faq-9" aria-controls="faq-content-9">
+      ¿Qué hago si mi pedido llega dañado?
+    </button>
+    <div class="faq-content" hidden id="faq-content-9" aria-labelledby="faq-9">
       Contáctanos dentro de las 48 horas y adjunta fotos del daño. ¡Te ayudamos a solucionarlo!
     </div>
+  </div>
   </div>
 </section>
 
@@ -437,14 +551,17 @@
   </div>
 </footer>
 
-<script src="Untitled-1.js" defer type="module"></script>
+<script src="Untitled-1.js" type="module" defer></script>
 
-<div id="gatito-widget" class="gatito-contacto">
+<!-- Contact Widget -->
+<div id="gatito-widget" class="gatito-contacto" role="complementary" aria-label="Widget de contacto">
   <div class="tenor-gif-embed" 
        data-postid="4165444084283871106" 
        data-share-method="host" 
        data-aspect-ratio="1.04" 
-       data-width="100%">
+       data-width="100%"
+       role="img"
+       aria-label="Gato jugando - Widget decorativo">
     <a href="https://tenor.com/view/ginger-cat-cat-cat-toy-playing-cat-batting-toy-gif-4165444084283871106">
       Ginger Cat Cat Toy Sticker
     </a> from 
