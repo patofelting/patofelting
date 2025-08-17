@@ -530,61 +530,73 @@ function inicializarMenuHamburguesa() {
 }
 
 // ===============================
-// CONTACTO (EmailJS)
+// CONTACTO (EmailJS) — versión con diagnóstico
 // ===============================
 function setupContactForm() {
-  const form = document.getElementById('formulario-contacto');   // 👈 id correcto
+  const form = document.getElementById('formulario-contacto');
   const successMessage = document.getElementById('successMessage');
   const errorMessage = document.getElementById('errorMessage');
   if (!form) return;
 
-  // Inicializa EmailJS si está presente (reemplaza TU_PUBLIC_KEY)
-  if (window.emailjs && emailjs.init) {
-    try { emailjs.init({ publicKey: 'o4IxJz0Zz-LQ8jYKG' }); } catch {}
+  // 1) Verifica que la librería esté cargada
+  if (!window.emailjs) {
+    console.error('EmailJS no está disponible (script no cargado).');
+    errorMessage?.classList.remove('hidden');
+    if (errorMessage) errorMessage.textContent = 'Servicio de email no disponible.';
+    return;
   }
 
-  form.addEventListener('submit', (e) => {
+  // 2) Inicializa con tu PUBLIC KEY (no la privada)
+  try {
+    emailjs.init('o4IxJz0Zz-LQ8jYKG');
+  } catch (e) {
+    console.error('Fallo al inicializar EmailJS:', e);
+  }
+
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    if (!window.emailjs || !emailjs.send) {
+    const nombre  = document.getElementById('nombre').value.trim();
+    const email   = document.getElementById('email').value.trim();
+    const mensaje = document.getElementById('mensaje').value.trim();
+
+    if (!nombre || !email || !mensaje) {
       errorMessage?.classList.remove('hidden');
-      errorMessage && (errorMessage.textContent = 'Servicio de email no disponible.');
+      if (errorMessage) errorMessage.textContent = 'Completa todos los campos.';
       setTimeout(() => errorMessage?.classList.add('hidden'), 4000);
       return;
     }
 
-    const nombre = document.getElementById('nombre').value;
-    const email = document.getElementById('email').value;
-    const mensaje = document.getElementById('mensaje').value;
+    try {
+      const res = await emailjs.send(
+        'service_89by24g',
+        'template_8mn7hdp',
+        {
+          from_name: nombre,
+          from_email: email,
+          message: mensaje
+        }
+      );
+      console.log('EmailJS OK:', res);
 
-    emailjs.send('service_89by24g', 'template_8mn7hdp', {
-      from_name: nombre,
-      from_email: email,
-      message: mensaje
-    })
-    .then(() => {
       successMessage?.classList.remove('hidden');
       errorMessage?.classList.add('hidden');
       form.reset();
       setTimeout(() => successMessage?.classList.add('hidden'), 4000);
-    }, (error) => {
-      console.error('EmailJS error:', error);
-      errorMessage?.classList.remove('hidden');
-      successMessage?.classList.add('hidden');
-      setTimeout(() => errorMessage?.classList.add('hidden'), 4000);
-    });
-  });
-}
 
-// ===============================
-// INICIALIZACIÓN GENERAL
-// ===============================
-function init() {
-  inicializarMenuHamburguesa();
-  inicializarFAQ();
-  setupContactForm();
-  inicializarEventos();
-  updateRange();
+    } catch (err) {
+      // Muestra la respuesta exacta de EmailJS (muy útil)
+      console.error('EmailJS error:', err, err?.text);
+      errorMessage?.classList.remove('hidden');
+
+      // Mensaje amigable + pista técnica
+      if (errorMessage) {
+        errorMessage.textContent = 'No se pudo enviar el email. Revisa la consola (F12) → "EmailJS error".';
+      }
+      successMessage?.classList.add('hidden');
+      setTimeout(() => errorMessage?.classList.add('hidden'), 6000);
+    }
+  });
 }
 
 // ===============================
