@@ -760,54 +760,78 @@ getElement('btn-cerrar-modal-envio')?.addEventListener('click', () => {
   setTimeout(() => modal.style.display = 'none', 300);
 });
 
+let enviandoPedido = false;
+
 getElement('form-envio')?.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (enviandoPedido) return;   // evita doble submit
+  enviandoPedido = true;
 
-  const nombre = getElement('input-nombre').value.trim();
-  const apellido = getElement('input-apellido').value.trim();
-  const telefono = getElement('input-telefono').value.trim();
-  const envio = getElement('select-envio').value;
+  const nombre    = getElement('input-nombre').value.trim();
+  const apellido  = getElement('input-apellido').value.trim();
+  const telefono  = getElement('input-telefono').value.trim();
+  const envio     = getElement('select-envio').value;
   const direccion = envio !== 'retiro' ? getElement('input-direccion').value.trim() : '';
-  const notas = getElement('input-notas').value.trim();
+  const notas     = getElement('input-notas').value.trim();
 
   if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
-    return mostrarNotificacion('Complete todos los campos obligatorios', 'error');
+    mostrarNotificacion('Complete todos los campos obligatorios', 'error');
+    enviandoPedido = false;
+    return;
   }
 
+  // Revalidar stock (NO descuenta aquí; eso ya se hizo al agregar)
   for (const item of carrito) {
     const prod = productos.find(p => p.id === item.id);
     if (!prod || prod.stock < item.cantidad) {
-      return mostrarNotificacion(`Stock insuficiente para "${item.nombre}"`, 'error');
+      mostrarNotificacion(`Stock insuficiente para "${item.nombre}"`, 'error');
+      enviandoPedido = false;
+      return;
     }
   }
 
   let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*📋 Detalles del pedido:*\n`;
-  carrito.forEach(item => mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}\n`);
+  carrito.forEach(item => {
+    mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}\n`;
+  });
 
-  const subtotal = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
+  const subtotal   = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
   const costoEnvio = envio === 'montevideo' ? 200 : envio === 'interior' ? 250 : 0;
-  const total = subtotal + costoEnvio;
+  const total      = subtotal + costoEnvio;
 
-  mensaje += `\n*💰 Total:*\nSubtotal: $U ${subtotal.toLocaleString('es-UY')}\nEnvío: $U ${costoEnvio.toLocaleString('es-UY')}\n*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
-  mensaje += `*👤 Datos del cliente:*\nNombre: ${nombre} ${apellido}\nTeléfono: ${telefono}\nMétodo de envío: ${envio === 'montevideo' ? 'Envío Montevideo ($150)' : envio === 'interior' ? 'Envío Interior ($300)' : 'Retiro en local (Gratis)'}\n`;
+  mensaje += `\n*💰 Total:*\nSubtotal: $U ${subtotal.toLocaleString('es-UY')}\n` +
+             `Envío: $U ${costoEnvio.toLocaleString('es-UY')}\n` +
+             `*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
+
+  mensaje += `*👤 Datos del cliente:*\n` +
+             `Nombre: ${nombre} ${apellido}\n` +
+             `Teléfono: ${telefono}\n` +
+             `Método de envío: ${envio === 'montevideo' ? 'Envío Montevideo ($200)' : envio === 'interior' ? 'Envío Interior ($250)' : 'Retiro en local (Gratis)'}\n`;
   if (envio !== 'retiro') mensaje += `Dirección: ${direccion}\n`;
   if (notas) mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
 
+  // Abrir WhatsApp según dispositivo (con fallback si bloquea popups)
   const numeroWhatsApp = '59893566283';
-  const url = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
-  window.open(url, '_blank') || (window.location.href = url.replace('wa.me', 'api.whatsapp.com/send?phone='));
+  const isMobile = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const base = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+  const url  = `${base}?phone=${numeroWhatsApp}&text=${encodeURIComponent(mensaje)}`;
+  const win  = window.open(url, '_blank', 'noopener,noreferrer');
+  if (!win) window.location.href = url;
 
+  // Cerrar modal y limpiar carrito (el stock no se repone)
   const modal = getElement('modal-datos-envio');
-  modal.classList.remove('visible');
+  modal?.classList.remove('visible');
   setTimeout(() => {
-    modal.style.display = 'none';
+    if (modal) modal.style.display = 'none';
     carrito = [];
     guardarCarrito();
     actualizarUI();
     mostrarNotificacion('Pedido listo para enviar por WhatsApp', 'exito');
     getElement('form-envio').reset();
-  }, 300);
+    enviandoPedido = false;
+  }, 200);
 });
+
 
 // ===============================
 // SLIDERS DE PRECIO
@@ -847,6 +871,24 @@ function preguntarStock(nombre) {
   const cuerpo = encodeURIComponent(`Hola Patofelting,\n\nMe gustaría saber cuándo estará disponible el producto: ${nombre}\n\nSaludos,\n[Tu nombre]`);
   window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
 }
+
+function abrirWhatsAppCon(mensaje, numero = '59893566283') {
+  const txt   = encodeURIComponent(mensaje);
+  const urlApi = `https://api.whatsapp.com/send?phone=${numero}&text=${txt}`;  // mobile
+  const urlWeb = `https://web.whatsapp.com/send?phone=${numero}&text=${txt}`;  // desktop
+
+  const isMobile = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const destino  = isMobile ? urlApi : urlWeb;
+
+  // Intento abrir en nueva pestaña; si el navegador lo bloquea, redirijo en la misma.
+  const w = window.open(destino, '_blank', 'noopener,noreferrer');
+  if (!w) window.location.href = destino;
+  return true;
+}
+
+
+
+
 
 // ===============================
 // INIT
