@@ -859,7 +859,10 @@ function updateRange() {
   const minPrice = getElement('min-price');
   const maxPrice = getElement('max-price');
   const range = document.querySelector('.range');
-  if (!minSlider || !maxSlider || !minPrice || !maxPrice || !range) return;
+  const thumbMin = getElement('thumb-label-min');
+  const thumbMax = getElement('thumb-label-max');
+  
+  if (!minSlider || !maxSlider || !minPrice || !maxPrice || !range || !thumbMin || !thumbMax) return;
 
   let minVal = parseInt(minSlider.value);
   let maxVal = parseInt(maxSlider.value);
@@ -869,16 +872,70 @@ function updateRange() {
   maxSlider.value = maxVal;
 
   const sliderMax = parseInt(minSlider.max);
+  const sliderWidth = minSlider.offsetWidth;
+  
+  // Actualizar posición del rango
   range.style.left = (minVal / sliderMax * 100) + '%';
   range.style.width = ((maxVal - minVal) / sliderMax * 100) + '%';
 
+  // Actualizar etiquetas de precio
   minPrice.textContent = `$U${minVal}`;
   maxPrice.textContent = `$U${maxVal}`;
+  
+  // Actualizar globos (tooltips)
+  thumbMin.textContent = `$U${minVal}`;
+  thumbMax.textContent = `$U${maxVal}`;
+  
+  // Calcular posiciones de los globos
+  const minPos = (minVal / sliderMax) * sliderWidth;
+  const maxPos = (maxVal / sliderMax) * sliderWidth;
+  
+  thumbMin.style.left = `${minPos}px`;
+  thumbMax.style.left = `${maxPos}px`;
+  
+  // Mostrar globos temporalmente al cambiar valores
+  thumbMin.style.opacity = '1';
+  thumbMax.style.opacity = '1';
+  
+  // Ocultar después de un tiempo
+  setTimeout(() => {
+    thumbMin.style.opacity = '0';
+    thumbMax.style.opacity = '0';
+  }, 2000);
 
   filtrosActuales.precioMin = minVal;
   filtrosActuales.precioMax = maxVal;
   aplicarFiltros();
 }
+
+// Agregar event listeners para mostrar globos al interactuar
+elementos.precioMinInput?.addEventListener('input', () => {
+  const thumbMin = getElement('thumb-label-min');
+  if (thumbMin) thumbMin.style.opacity = '1';
+  updateRange();
+});
+
+elementos.precioMaxInput?.addEventListener('input', () => {
+  const thumbMax = getElement('thumb-label-max');
+  if (thumbMax) thumbMax.style.opacity = '1';
+  updateRange();
+});
+
+// Mostrar globos al pasar el mouse sobre el slider
+document.querySelector('.range-slider')?.addEventListener('mouseenter', () => {
+  const thumbMin = getElement('thumb-label-min');
+  const thumbMax = getElement('thumb-label-max');
+  if (thumbMin) thumbMin.style.opacity = '1';
+  if (thumbMax) thumbMax.style.opacity = '1';
+});
+
+// Ocultar globos al salir del slider
+document.querySelector('.range-slider')?.addEventListener('mouseleave', () => {
+  const thumbMin = getElement('thumb-label-min');
+  const thumbMax = getElement('thumb-label-max');
+  if (thumbMin) thumbMin.style.opacity = '0';
+  if (thumbMax) thumbMax.style.opacity = '0';
+});
 
 // ===============================
 // OTRAS
