@@ -16,7 +16,21 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js" defer integrity="sha384-..." crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer integrity="sha384-..." crossorigin="anonymous"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+ <script>
+    document.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+    });
 
+    document.onkeydown = function(e) {
+      if (e.ctrlKey && e.shiftKey && e.key == 'I') {
+        e.preventDefault();
+      } else if (e.ctrlKey && e.shiftKey && e.key == 'J') {
+        e.preventDefault();
+      } else if (e.ctrlKey && e.key == 'U') {
+        e.preventDefault();
+      }
+    };
+  </script>
   <script>
     window.SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
     window.PLACEHOLDER_IMAGE = 'img/placeholder.png';
