@@ -1,826 +1,975 @@
+// ===============================
+// CONFIGURACIÓN GLOBAL
+// ===============================
+const PRODUCTOS_POR_PAGINA = 6;
+const LS_CARRITO_KEY = 'carrito';
+const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
-const SITE_URL = 'https://patofelting.com';
-const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'img/placeholder.png';
-const FIREBASE_URL = window.FIREBASE_URL || '';
-const SHEET_CSV_URL = window.SHEET_CSV_URL || '';
+// Firebase v10+ (SDK modular)
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getDatabase, ref, runTransaction, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-const STATE = {
-  productos: [],
-  filtrados: [],
-  pagina: 1,
-  porPagina: 12,
-  filtros: {
-    categoria: 'todos',
-    min: 0,
-    max: 3000,
-    q: ''
-  },
-  carrito: [], // {id, nombre, precio, cantidad, stock, imagenes[]}
+const db = window.firebaseDatabase || getDatabase(window.firebaseApp);
+const auth = getAuth(window.firebaseApp);
+
+// ===============================
+// ESTADO GLOBAL
+// ===============================
+let productos = [];
+let carrito = [];
+let paginaActual = 1;
+
+// Candados para evitar dobles acciones
+const busyButtons   = new WeakSet(); // doble click en el mismo botón
+const inFlightAdds  = new Set();     // mismo producto agregado 2 veces en paralelo
+let suprimirRealtime = 0;            // silencia 1+ ticks del listener para evitar “pestañeo”
+
+let filtrosActuales = {
+  precioMin: 0,
+  precioMax: 3000,
+  categoria: 'todos',
+  busqueda: ''
 };
 
-const EL = {
-  // Navegación y generales
-  galeria: document.getElementById('galeria-productos'),
-  loader: document.getElementById('product-loader'),
-  paginacion: document.getElementById('paginacion'),
+// ===============================
+// UTILIDADES
+// ===============================
+function mostrarNotificacion(mensaje, tipo = 'exito') {
+  const noti = document.createElement('div');
+  noti.className = `notificacion ${tipo}`;
+  noti.textContent = mensaje;
+  document.body.appendChild(noti);
+  requestAnimationFrame(() => noti.classList.add('show'));
+  setTimeout(() => {
+    noti.classList.remove('show');
+    setTimeout(() => noti.remove(), 250);
+  }, 2500);
+}
+const getElement = (id) => document.getElementById(id);
 
-  // Filtros
-  filtroCategoria: document.getElementById('filtro-categoria'),
-  minSlider: document.getElementById('min-slider'),
-  maxSlider: document.getElementById('max-slider'),
-  minPriceLabel: document.getElementById('min-price'),
-  maxPriceLabel: document.getElementById('max-price'),
+// Referencias DOM
+const elementos = {
+  galeriaProductos: getElement('galeria-productos'),
+  paginacion: getElement('paginacion'),
+  productoModal: getElement('producto-modal'),
+  modalContenido: getElement('modal-contenido'),
+  listaCarrito: getElement('lista-carrito'),
+  totalCarrito: getElement('total'),
+  contadorCarrito: getElement('contador-carrito'),
   inputBusqueda: document.querySelector('.input-busqueda'),
-
-  // Carrito
-  carritoBtnMain: document.getElementById('carrito-btn-main'),
-  carritoPanel: document.getElementById('carrito-panel'),
+  selectCategoria: getElement('filtro-categoria'),
+  precioMinInput: getElement('min-slider'),
+  precioMaxInput: getElement('max-slider'),
+  carritoBtnMain: getElement('carrito-btn-main'),
+  carritoPanel: getElement('carrito-panel'),
   carritoOverlay: document.querySelector('.carrito-overlay'),
-  carritoLista: document.getElementById('lista-carrito'),
-  carritoTotal: document.getElementById('total'),
-  contadorCarrito: document.getElementById('contador-carrito'),
   btnVaciarCarrito: document.querySelector('.boton-vaciar-carrito'),
   btnFinalizarCompra: document.querySelector('.boton-finalizar-compra'),
   btnCerrarCarrito: document.querySelector('.cerrar-carrito'),
-
-  // Modal producto
-  productoModal: document.getElementById('producto-modal'),
-  modalContenido: document.getElementById('modal-contenido'),
-  modalImg: document.getElementById('modal-imagen'),
-  modalThumbs: document.getElementById('modal-thumbnails'),
-  modalNombre: document.getElementById('modal-nombre'),
-  modalDescripcion: document.getElementById('modal-descripcion'),
-  modalPrecio: document.getElementById('modal-precio'),
-
-  // Aviso pre-compra + envío
-  avisoPreCompra: document.getElementById('aviso-pre-compra-modal'),
-  btnEntendidoAviso: document.getElementById('btn-entendido-aviso'),
-  btnCancelarAviso: document.getElementById('btn-cancelar-aviso'),
-
-  modalEnvio: document.getElementById('modal-datos-envio'),
-  formEnvio: document.getElementById('form-envio'),
-  resumenProductos: document.getElementById('resumen-productos'),
-  resumenTotal: document.getElementById('resumen-total'),
-  selectEnvio: document.getElementById('select-envio'),
-  btnCerrarModalEnvio: document.getElementById('btn-cerrar-modal-envio'),
-
-  // Stock “avisame”
-  stockModal: document.getElementById('stock-modal'),
-  stockForm: document.getElementById('stock-form'),
-  stockFeedback: document.getElementById('stock-modal-feedback'),
-  stockClose: document.querySelector('.modal-stock-close'),
-
-  // Contacto
-  formContacto: document.getElementById('formulario-contacto'),
-  successMessage: document.getElementById('successMessage'),
-  errorMessage: document.getElementById('errorMessage'),
+  avisoPreCompraModal: getElement('aviso-pre-compra-modal'),
+  btnEntendidoAviso: getElement('btn-entendido-aviso'),
+  btnCancelarAviso: getElement('btn-cancelar-aviso'),
+  productLoader: getElement('product-loader'),
+  hamburguesa: document.querySelector('.hamburguesa'),
+  menu: getElement('menu'),
+  aplicarRangoBtn: document.querySelector('.aplicar-rango-btn')
 };
 
-/* =========================
-   1) Utilidades
-========================= */
-const fmtUY = (n) => `$U ${Number(n || 0).toLocaleString('es-UY')}`;
-
-const slugify = (s) =>
-  (s || '')
-    .toString()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-
-function setText(el, txt) { if (el) el.textContent = txt; }
-function show(el) { if (el) el.hidden = false; }
-function hide(el) { if (el) el.hidden = true; }
-
-function ensureScriptId(id) {
-  let el = document.getElementById(id);
-  if (!el) {
-    el = document.createElement('script');
-    el.type = 'application/ld+json';
-    el.id = id;
-    document.head.appendChild(el);
-  }
-  return el;
-}
-function setJSONLD(id, obj) {
-  ensureScriptId(id).textContent = JSON.stringify(obj);
-}
-function hardenImgSEO(imgEl, { alt, width = 800, height = 800 } = {}) {
-  if (!imgEl) return;
-  if (alt) imgEl.alt = alt;
-  imgEl.loading = imgEl.loading || 'lazy';
-  imgEl.decoding = imgEl.decoding || 'async';
-  // Evita CLS si el backend no da tamaño
-  imgEl.style.aspectRatio = imgEl.style.aspectRatio || '1 / 1';
-}
-function preloadImage(href) {
-  if (!href) return;
-  const id = `preload-${href}`;
-  if (document.getElementById(id)) return;
-  const l = document.createElement('link');
-  l.id = id;
-  l.rel = 'preload';
-  l.as = 'image';
-  l.href = href;
-  document.head.appendChild(l);
-}
-
-/* =========================
-   2) Data: cargar productos
-========================= */
-async function fetchFirebaseProductos() {
-  if (!FIREBASE_URL) return null;
+// ===============================
+// CARRITO
+// ===============================
+function guardarCarrito() {
   try {
-    const res = await fetch(FIREBASE_URL, { cache: 'no-store' });
-    if (!res.ok) throw new Error('Firebase fetch error');
-    const data = await res.json();
-    // Estructura: { [id]: {nombre, precio, stock, imagenes[], descripcion, categoria}}
-    const arr = Object.entries(data || {}).map(([id, p]) => ({
-      id: Number(id) || id,
-      nombre: p?.nombre || 'Producto',
-      precio: Number(p?.precio || 0),
-      stock: Number(p?.cantidad ?? p?.stock ?? 0),
-      imagenes: Array.isArray(p?.imagenes) ? p.imagenes : (p?.imagen ? [p.imagen] : []),
-      descripcion: p?.descripcion || '',
-      categoria: p?.categoria || 'otros'
-    }));
-    return arr;
+    localStorage.setItem(LS_CARRITO_KEY, JSON.stringify(carrito));
+    actualizarContadorCarrito();
   } catch (e) {
-    console.warn('[Firebase] No se pudo obtener productos:', e);
-    return null;
+    console.error('localStorage setItem fallo:', e);
+    mostrarNotificacion('Error al guardar el carrito', 'error');
   }
 }
-
-async function fetchCSVProductos() {
-  if (!SHEET_CSV_URL) return [];
+function cargarCarrito() {
   try {
-    const res = await fetch(SHEET_CSV_URL, { cache: 'no-store' });
-    const csv = await res.text();
-    // PapaParse está cargado por script defer
-    const parsed = window.Papa.parse(csv, { header: true, dynamicTyping: true });
-    const arr = (parsed?.data || []).filter(Boolean).map((r, i) => ({
-      id: Number(r.id || i + 1),
-      nombre: r.nombre || 'Producto',
-      precio: Number(r.precio || 0),
-      stock: Number(r.cantidad ?? r.stock ?? 0),
-      imagenes: (r.imagenes || r.imagen || '')
-        .toString()
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean),
-      descripcion: r.descripcion || '',
-      categoria: r.categoria || 'otros'
-    }));
-    return arr;
+    const stored = localStorage.getItem(LS_CARRITO_KEY);
+    carrito = stored ? JSON.parse(stored) : [];
+    actualizarContadorCarrito();
   } catch (e) {
-    console.warn('[CSV] No se pudo obtener productos:', e);
-    return [];
+    console.error('localStorage getItem fallo:', e);
+    carrito = [];
+    mostrarNotificacion('Error al cargar el carrito', 'error');
   }
 }
+async function vaciarCarrito() {
+  if (carrito.length === 0) return mostrarNotificacion('El carrito ya está vacío', 'info');
 
-async function cargarProductos() {
-  show(EL.loader);
-  let productos = await fetchFirebaseProductos();
-  if (!productos || !productos.length) {
-    productos = await fetchCSVProductos();
-  }
-  hide(EL.loader);
-  STATE.productos = productos || [];
-  aplicarFiltros();
-}
-
-/* =========================
-   3) Filtros y paginación
-========================= */
-function aplicarFiltros() {
-  const { categoria, min, max, q } = STATE.filtros;
-  const qn = (q || '').trim().toLowerCase();
-
-  let lista = STATE.productos.filter(p => {
-    const byCat = (categoria === 'todos') || (p.categoria?.toLowerCase() === categoria);
-    const byPrecio = p.precio >= min && p.precio <= max;
-    const byTexto =
-      !qn ||
-      p.nombre?.toLowerCase().includes(qn) ||
-      p.descripcion?.toLowerCase().includes(qn);
-    return byCat && byPrecio && byTexto;
-  });
-
-  STATE.filtrados = lista;
-  STATE.pagina = 1;
-  renderizarProductos();
-}
-
-function paginar(arr, page, per) {
-  const start = (page - 1) * per;
-  return arr.slice(start, start + per);
-}
-
-/* =========================
-   4) Renderizado catálogo
-========================= */
-function crearCardProducto(p) {
-  const enCarrito = STATE.carrito.find(i => i.id === p.id);
-  const disponible = Math.max(0, Number(p.stock || 0) - (enCarrito?.cantidad || 0));
-  const agotado = disponible <= 0;
-  const imagen = (p.imagenes && p.imagenes[0]) || PLACEHOLDER_IMAGE;
-
-  const slug = slugify(p.nombre);
-  const productUrl = `${SITE_URL}/?producto=${encodeURIComponent(slug)}#productos`;
-  const availability = agotado ? 'http://schema.org/OutOfStock' : 'http://schema.org/InStock';
-
-  return `
-  <article class="producto-card ${agotado ? 'agotado' : ''}" data-id="${p.id}" itemscope itemtype="https://schema.org/Product">
-    <a href="${productUrl}" class="producto-link" data-id="${p.id}" itemprop="url" aria-label="Ver ${p.nombre}">
-      <img src="${imagen}" class="producto-img" itemprop="image" alt="${p.nombre}">
-    </a>
-    <h3 class="producto-nombre" itemprop="name">${p.nombre}</h3>
-    <p class="producto-precio" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
-      <meta itemprop="priceCurrency" content="UYU">
-      <span itemprop="price">${(p.precio || 0).toFixed(0)}</span>
-      <link itemprop="availability" href="${availability}">
-      <link itemprop="url" href="${productUrl}">
-    </p>
-    <div class="card-acciones">
-      <button class="boton-agregar${agotado ? ' agotado' : ''}" data-id="${p.id}" ${agotado ? 'disabled' : ''}>
-        ${agotado ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
-      </button>
-      ${agotado ? `
-       <button class="boton-aviso-stock" data-nombre="${p.nombre.replace(/'/g, "\\'")}">📩 Avisame</button>
-      ` : ''}
-    </div>
-    <button class="boton-detalles" data-id="${p.id}" aria-label="Detalles de ${p.nombre}">🔍 Ver Detalle</button>
-  </article>
-  `;
-}
-
-function postProcessCardsSEO() {
-  document.querySelectorAll('.producto-card .producto-img').forEach(img => {
-    const card = img.closest('.producto-card');
-    const name = card?.querySelector('[itemprop="name"]')?.textContent?.trim();
-    hardenImgSEO(img, { alt: name });
-  });
-}
-
-function setItemListJSONLD() {
-  const items = [...document.querySelectorAll('.producto-card [itemprop="url"]')].map((a, i) => ({
-    "@type": "ListItem",
-    "position": i + 1,
-    "url": a.href
-  }));
-  setJSONLD('ld-itemlist', {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
-    "name": "Catálogo Patofelting",
-    "itemListElement": items
-  });
-}
-
-function renderizarProductos() {
-  if (!EL.galeria) return;
-  const paginaItems = paginar(STATE.filtrados, STATE.pagina, STATE.porPagina);
-  EL.galeria.innerHTML = paginaItems.map(crearCardProducto).join('') || `
-    <div class="sin-resultados">No hay productos que coincidan.</div>`;
-
-  // SEO / UX mejoras post render
-  postProcessCardsSEO();
-  setItemListJSONLD();
-  renderizarPaginacion(STATE.filtrados.length);
-}
-
-/* =========================
-   5) Paginación
-========================= */
-function renderizarPaginacion(total) {
-  if (!EL.paginacion) return;
-  const totalPag = Math.max(1, Math.ceil(total / STATE.porPagina));
-  let html = '';
-  for (let i = 1; i <= totalPag; i++) {
-    html += `<button class="page-btn ${i === STATE.pagina ? 'active' : ''}" data-page="${i}">${i}</button>`;
-  }
-  EL.paginacion.innerHTML = html;
-
-  EL.paginacion.querySelectorAll('.page-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      STATE.pagina = Number(btn.dataset.page);
-      renderizarProductos();
-      EL.galeria?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  });
-}
-
-/* =========================
-   6) Carrito
-========================= */
-function persistCarrito() {
-  localStorage.setItem('pf_carrito_v1', JSON.stringify(STATE.carrito));
-}
-function loadCarrito() {
+  const n = carrito.length;
   try {
-    const raw = localStorage.getItem('pf_carrito_v1');
-    STATE.carrito = raw ? JSON.parse(raw) : [];
-  } catch {
-    STATE.carrito = [];
+    await Promise.all(
+      carrito.map(async (item) => {
+        const productRef = ref(db, `productos/${item.id}/stock`);
+        await runTransaction(productRef, (s) => (s || 0) + item.cantidad);
+      })
+    );
+    suprimirRealtime += n; // evita pestañeo al volver el listener
+    carrito = [];
+    guardarCarrito();
+    renderizarCarrito();
+    renderizarProductos();
+    mostrarNotificacion('Carrito vaciado y stock restaurado', 'exito');
+  } catch (error) {
+    console.error('Error al vaciar carrito:', error);
+    mostrarNotificacion('Error al vaciar el carrito', 'error');
   }
 }
 function actualizarContadorCarrito() {
-  const totalCant = STATE.carrito.reduce((a, b) => a + b.cantidad, 0);
-  setText(EL.contadorCarrito, totalCant);
-}
-function renderCarrito() {
-  if (!EL.carritoLista || !EL.carritoTotal) return;
-  if (!STATE.carrito.length) {
-    EL.carritoLista.innerHTML = `<li class="carrito-vacio">No hay productos en el carrito</li>`;
-    setText(EL.carritoTotal, fmtUY(0));
-    actualizarContadorCarrito();
-    return;
-  }
-  let html = '';
-  let total = 0;
-  STATE.carrito.forEach(item => {
-    const itemTotal = (item.precio || 0) * (item.cantidad || 0);
-    total += itemTotal;
-    html += `
-      <li class="carrito-item">
-        <span>${item.nombre} x${item.cantidad}</span>
-        <strong>${fmtUY(itemTotal)}</strong>
-        <div class="carrito-item-acciones">
-          <button class="menos" data-id="${item.id}" aria-label="Restar uno">−</button>
-          <button class="mas" data-id="${item.id}" aria-label="Sumar uno">+</button>
-          <button class="quitar" data-id="${item.id}" aria-label="Quitar del carrito">✕</button>
-        </div>
-      </li>`;
-  });
-  EL.carritoLista.innerHTML = html;
-  setText(EL.carritoTotal, `Total: ${fmtUY(total)}`);
-  actualizarContadorCarrito();
-
-  EL.carritoLista.querySelectorAll('.menos').forEach(b => b.addEventListener('click', () => cambiarCant(Number(b.dataset.id), -1)));
-  EL.carritoLista.querySelectorAll('.mas').forEach(b => b.addEventListener('click', () => cambiarCant(Number(b.dataset.id), +1)));
-  EL.carritoLista.querySelectorAll('.quitar').forEach(b => b.addEventListener('click', () => quitarDelCarrito(Number(b.dataset.id))));
-}
-function cambiarCant(id, delta) {
-  const it = STATE.carrito.find(x => x.id === id);
-  if (!it) return;
-  const p = STATE.productos.find(x => x.id === id);
-  const max = Math.max(0, Number(p?.stock || 0));
-  it.cantidad = Math.min(Math.max(1, it.cantidad + delta), Math.max(1, max));
-  if (it.cantidad <= 0) {
-    STATE.carrito = STATE.carrito.filter(x => x.id !== id);
-  }
-  persistCarrito();
-  renderCarrito();
-  renderizarProductos(); // actualiza “agotado” de cards
-}
-function quitarDelCarrito(id) {
-  STATE.carrito = STATE.carrito.filter(x => x.id !== id);
-  persistCarrito();
-  renderCarrito();
-  renderizarProductos();
-}
-function agregarAlCarrito(id) {
-  const p = STATE.productos.find(x => x.id === id);
-  if (!p) return;
-  const enCarrito = STATE.carrito.find(x => x.id === id);
-  const max = Math.max(0, Number(p.stock || 0));
-  if (max <= 0) return; // sin stock
-  if (!enCarrito) {
-    STATE.carrito.push({
-      id: p.id,
-      nombre: p.nombre,
-      precio: p.precio,
-      cantidad: 1,
-      stock: p.stock,
-      imagenes: p.imagenes || []
-    });
-  } else {
-    enCarrito.cantidad = Math.min(enCarrito.cantidad + 1, max);
-  }
-  persistCarrito();
-  renderCarrito();
-  renderizarProductos();
-}
-function toggleCarrito(open) {
-  if (!EL.carritoPanel) return;
-  if (open) {
-    EL.carritoPanel.classList.add('open');
-    EL.carritoOverlay?.classList.add('show');
-  } else {
-    EL.carritoPanel.classList.remove('open');
-    EL.carritoOverlay?.classList.remove('show');
+  const total = carrito.reduce((sum, i) => sum + i.cantidad, 0);
+  if (elementos.contadorCarrito) {
+    elementos.contadorCarrito.textContent = total;
+    elementos.contadorCarrito.classList.toggle('visible', total > 0);
   }
 }
+function toggleCarrito(forceState) {
+  if (!elementos.carritoPanel || !elementos.carritoOverlay) return;
+  const isOpen = typeof forceState === 'boolean'
+    ? forceState
+    : !elementos.carritoPanel.classList.contains('active');
 
-/* =========================
-   7) Modal de producto + SEO dinámico
-========================= */
-function mostrarModalProducto(producto) {
-  const modal = EL.productoModal;
-  const contenido = EL.modalContenido;
-  if (!modal || !contenido) return;
+  elementos.carritoPanel.classList.toggle('active', isOpen);
+  elementos.carritoOverlay.classList.toggle('active', isOpen);
+  document.body.classList.toggle('no-scroll', isOpen);
 
-  // --- SEO dinámico ---
-  const slug = slugify(producto.nombre);
-  const productURL = `${SITE_URL}/?producto=${encodeURIComponent(slug)}#productos`;
-  const oldTitle = document.title;
-  const oldDescTag = document.querySelector('meta[name="description"]');
-  const tempDesc = `Figura de fieltro "${producto.nombre}" hecha a mano en Uruguay. Precio ${fmtUY(producto.precio)}.`;
+  if (isOpen) renderizarCarrito();
+}
 
-  history.pushState({ producto: slug }, '', productURL);
-  document.title = `${producto.nombre} | Patofelting`;
+// ===============================
+// FIREBASE: CARGA Y REALTIME
+// ===============================
+async function cargarProductosDesdeFirebase() {
+  const productosRef = ref(db, 'productos');
 
-  let metaDesc = oldDescTag;
-  if (!metaDesc) {
-    metaDesc = document.createElement('meta');
-    metaDesc.setAttribute('name', 'description');
-    document.head.appendChild(metaDesc);
-  }
-  const previousDesc = metaDesc.getAttribute('content') || '';
-  metaDesc.setAttribute('content', tempDesc);
-
-  // Preload de la 1ª imagen
-  const primera = (producto.imagenes && producto.imagenes[0]) || PLACEHOLDER_IMAGE;
-  preloadImage(primera);
-
-  // JSON-LD Product
-  setJSONLD('ld-product', {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    "name": producto.nombre,
-    "image": (producto.imagenes && producto.imagenes.length) ? producto.imagenes : [PLACEHOLDER_IMAGE],
-    "description": (producto.descripcion || '').substring(0, 280),
-    "brand": { "@type": "Brand", "name": "Patofelting" },
-    "url": productURL,
-    "offers": {
-      "@type": "Offer",
-      "priceCurrency": "UYU",
-      "price": (producto.precio || 0).toFixed(0),
-      "availability": (Math.max(0, Number(producto.stock || 0) - (STATE.carrito.find(i => i.id === producto.id)?.cantidad || 0)) <= 0)
-        ? "http://schema.org/OutOfStock"
-        : "http://schema.org/InStock",
-      "url": productURL
+  try {
+    if (elementos.productLoader) {
+      elementos.productLoader.hidden = false;
+      elementos.productLoader.style.display = 'flex';
     }
+
+    const snapshot = await get(productosRef);
+    if (!snapshot.exists()) {
+      elementos.galeriaProductos.innerHTML = '<p class="sin-productos">No hay productos disponibles.</p>';
+    } else {
+      procesarDatosProductos(snapshot.val());
+      renderizarProductos();
+      actualizarCategorias();
+      actualizarUI();
+    }
+
+    if (!cargarProductosDesdeFirebase._listening) {
+      onValue(productosRef, (snap) => {
+        if (suprimirRealtime > 0) { suprimirRealtime--; return; }
+        if (!snap.exists()) productos = [];
+        else procesarDatosProductos(snap.val());
+        renderizarProductos();
+        actualizarCategorias();
+        actualizarUI();
+      }, (error) => {
+        console.error('Listener productos error:', error);
+        mostrarNotificacion('Error al recibir actualizaciones de productos', 'error');
+      });
+      cargarProductosDesdeFirebase._listening = true;
+    }
+  } catch (error) {
+    console.error('Error al cargar productos:', error);
+    mostrarNotificacion('Error al cargar productos', 'error');
+    elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos.</p>';
+  } finally {
+    if (elementos.productLoader) {
+      elementos.productLoader.style.display = 'none';
+      elementos.productLoader.hidden = true;
+    }
+  }
+}
+
+const toNum = (v) => {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'number') return isFinite(v) ? v : null;
+  const s = String(v).replace(',', '.').trim();
+  const n = parseFloat(s);
+  return isFinite(n) ? n : null;
+};
+
+function procesarDatosProductos(data) {
+  productos = Object.entries(data || {}).map(([key, p]) => {
+    if (typeof p !== 'object' || !p) return null;
+
+    const alto = toNum(p.alto);
+    const ancho = toNum(p.ancho);
+    const profundidad = toNum(p.profundidad);
+
+    const stockRaw = (p.stock !== undefined ? p.stock : p.cantidad);
+    const stock = Math.max(0, parseInt(String(stockRaw).replace(',', '.'), 10) || 0);
+
+    const adic = (p.adicionales || '').toString().trim();
+    const adicionales = (adic && adic !== '-' && adic !== '–') ? adic : '';
+
+    return {
+      id: parseInt(p.id || key, 10),
+      nombre: (p.nombre || 'Sin nombre').trim(),
+      descripcion: (p.descripcion || '').trim(),
+      precio: parseFloat(String(p.precio).replace(',', '.')) || 0,
+      stock,
+      imagenes: Array.isArray(p.imagenes)
+        ? p.imagenes.filter(img => typeof img === 'string' && img.trim())
+        : [p.imagen || PLACEHOLDER_IMAGE],
+      categoria: (p.categoria || 'otros').toLowerCase().trim(),
+      estado: (p.estado || '').trim(),
+      adicionales,
+      alto, ancho, profundidad
+    };
+  }).filter(Boolean).sort((a,b)=>a.id-b.id);
+}
+
+// ===============================
+// CARRITO: RENDER
+// ===============================
+function renderizarCarrito() {
+  if (!elementos.listaCarrito || !elementos.totalCarrito) return;
+
+  elementos.listaCarrito.innerHTML = carrito.length === 0
+    ? '<p class="carrito-vacio">Tu carrito está vacío</p>'
+    : carrito.map(item => {
+        const producto = productos.find(p => p.id === item.id) || { stock: 0 };
+        const disponibles = Math.max(0, producto.stock || 0);
+        return `
+          <li class="carrito-item" data-id="${item.id}">
+            <img src="${item.imagen}" class="carrito-item-img" alt="${item.nombre}" loading="lazy">
+            <div class="carrito-item-info">
+              <span class="carrito-item-nombre">${item.nombre}</span>
+              <span class="carrito-item-precio">$U ${item.precio.toLocaleString('es-UY')} c/u</span>
+              <div class="carrito-item-controls">
+                <button class="disminuir-cantidad" data-id="${item.id}" ${item.cantidad <= 1 ? 'disabled' : ''}>-</button>
+                <span class="carrito-item-cantidad">${item.cantidad}</span>
+                <button class="aumentar-cantidad" data-id="${item.id}" ${disponibles <= 0 ? 'disabled' : ''}>+</button>
+              </div>
+              <span class="carrito-item-subtotal">Subtotal: $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}</span>
+            </div>
+          </li>
+        `;
+      }).join('');
+
+  const total = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
+  elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
+
+  // Handlers +/- (reemplazados en cada render; no se duplican)
+  elementos.listaCarrito.querySelectorAll('.disminuir-cantidad').forEach(btn => {
+    btn.onclick = async (e) => {
+      const id = parseInt(e.currentTarget.dataset.id);
+      const item = carrito.find(i => i.id === id);
+      if (item && item.cantidad > 1) {
+        try {
+          await runTransaction(ref(db, `productos/${id}/stock`), (s) => (s || 0) + 1);
+          suprimirRealtime++; // evita pestañeo del onValue
+          const p = productos.find(x => x.id === id);
+          if (p) p.stock = (p.stock || 0) + 1;
+
+          item.cantidad--;
+          guardarCarrito();
+          renderizarCarrito();
+          renderizarProductos();
+          mostrarNotificacion(`Reducida cantidad de "${item.nombre}"`, 'info');
+        } catch (error) {
+          console.error('Error al disminuir cantidad:', error);
+          mostrarNotificacion('Error al actualizar cantidad', 'error');
+        }
+      }
+    };
   });
+  elementos.listaCarrito.querySelectorAll('.aumentar-cantidad').forEach(btn => {
+    btn.onclick = (e) => agregarAlCarrito(parseInt(e.currentTarget.dataset.id), 1, e.currentTarget);
+  });
+}
 
-  // Guardar para restaurar al cerrar
-  modal.dataset.restoreSeo = JSON.stringify({ title: oldTitle, desc: previousDesc });
+// ===============================
+// GALERÍA + PAGINACIÓN
+// ===============================
+function crearCardProducto(p) {
+  const disp = Math.max(0, p.stock || 0);
+  const agot = disp <= 0;
+  const imagen = (p.imagenes && p.imagenes[0]) || PLACEHOLDER_IMAGE;
 
-  // --- Render modal ---
-  modal.setAttribute('aria-hidden', 'false');
-  modal.classList.add('active');
-  document.body.classList.add('no-scroll');
-
-  setText(EL.modalNombre, producto.nombre);
-  setText(EL.modalDescripcion, producto.descripcion || '');
-  setText(EL.modalPrecio, fmtUY(producto.precio));
-  const img = (producto.imagenes && producto.imagenes[0]) || PLACEHOLDER_IMAGE;
-  EL.modalImg.src = img;
-  EL.modalImg.alt = producto.nombre;
-  hardenImgSEO(EL.modalImg, { alt: producto.nombre });
-
-  EL.modalThumbs.innerHTML = (producto.imagenes || []).map((src, i) => `
-    <button class="thumb ${i === 0 ? 'active' : ''}" data-src="${src}" aria-label="Imagen ${i + 1}">
-      <img src="${src}" alt="${producto.nombre} vista ${i + 1}" loading="lazy" decoding="async">
-    </button>`).join('');
-
-  EL.modalThumbs.querySelectorAll('.thumb').forEach(btn => {
-    btn.addEventListener('click', () => {
-      EL.modalThumbs.querySelectorAll('.thumb').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const src = btn.dataset.src;
-      EL.modalImg.src = src;
+  return `
+    <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}">
+      <img src="${imagen}" alt="${p.nombre}" class="producto-img" loading="lazy" decoding="async">
+      <h3 class="producto-nombre">${p.nombre}</h3>
+      <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
+      <div class="producto-stock">
+        ${agot ? `<span class="texto-agotado">Agotado</span>` : `Stock disponible: ${disp}`}
+      </div>
+      <div class="card-acciones">
+        <button class="boton-agregar${agot ? ' agotado' : ''}" data-id="${p.id}" ${agot ? 'disabled' : ''}>
+          ${agot ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
+        </button>
+        ${agot ? `<button class="boton-aviso-stock" data-nombre="${p.nombre.replace(/'/g, "\\'")}">📩 Avisame cuando haya stock</button>` : ''}
+      </div>
+      <button class="boton-detalles" data-id="${p.id}">🔍 Ver Detalle</button>
+    </div>
+  `;
+}
+function filtrarProductos() {
+  return productos.filter(p => {
+    const { precioMin, precioMax, categoria, busqueda } = filtrosActuales;
+    const b = (busqueda || '').toLowerCase();
+    return (
+      p.precio >= precioMin &&
+      p.precio <= precioMax &&
+      (categoria === 'todos' || p.categoria === categoria) &&
+      (!b || p.nombre.toLowerCase().includes(b) || p.descripcion.toLowerCase().includes(b))
+    );
+  });
+}
+// pre-carga liviana para que las imágenes aparezcan antes
+function prewarmImages(lista) {
+  try {
+    lista.forEach(p => {
+      (p.imagenes || []).slice(0, 2).forEach(src => { const im = new Image(); im.decoding = 'async'; im.src = src; });
     });
+  } catch {}
+}
+function renderizarProductos() {
+  const filtrados = filtrarProductos();
+  const inicio = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
+  const paginados = filtrados.slice(inicio, inicio + PRODUCTOS_POR_PAGINA);
+
+  elementos.galeriaProductos.innerHTML = paginados.length === 0
+    ? '<p class="sin-productos">No se encontraron productos.</p>'
+    : paginados.map(crearCardProducto).join('');
+
+  prewarmImages(paginados); // acelera percepción de carga
+
+  renderizarPaginacion(filtrados.length);
+}
+function renderizarPaginacion(total) {
+  const pages = Math.ceil(total / PRODUCTOS_POR_PAGINA);
+  if (!elementos.paginacion) return;
+  if (pages <= 1) return (elementos.paginacion.innerHTML = '');
+  elementos.paginacion.innerHTML = Array.from({ length: pages }, (_, i) => i + 1).map(page => `
+    <button class="${page === paginaActual ? 'active' : ''}" onclick="cambiarPagina(${page})">${page}</button>
+  `).join('');
+}
+window.cambiarPagina = function (page) {
+  paginaActual = page;
+  renderizarProductos();
+  const targetTop = elementos.galeriaProductos.offsetTop - 100;
+  if (window.scrollY + 10 < targetTop) window.scrollTo({ top: targetTop, behavior: 'smooth' });
+};
+
+// ===============================
+// MODAL DE PRODUCTO (click imagen = siguiente; overlay cierra)
+// ===============================
+function ensureProductModal() {
+  if (!getElement('producto-modal')) {
+    const modal = document.createElement('div');
+    modal.id = 'producto-modal';
+    modal.className = 'modal-overlay';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.innerHTML = `<div class="modal-contenido-producto" id="modal-contenido"></div>`;
+    document.body.appendChild(modal);
+  }
+  elementos.productoModal = getElement('producto-modal');
+  elementos.modalContenido = getElement('modal-contenido');
+
+  // Cierra solo si clicas el overlay
+  elementos.productoModal.addEventListener('click', (e) => {
+    if (e.target === elementos.productoModal) cerrarModal();
+  });
+  // El contenido no propaga (nunca cierra)
+  elementos.modalContenido.addEventListener('click', (e) => e.stopPropagation());
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && elementos.productoModal.classList.contains('visible')) cerrarModal();
   });
 }
 
-function cerrarModal() {
-  const modal = EL.productoModal;
-  if (!modal) return;
-  // Restaurar SEO dinámico
-  const data = modal.dataset.restoreSeo;
-  if (data) {
-    try {
-      const { title, desc } = JSON.parse(data);
-      document.title = title || 'Patofelting - Creaciones en Fieltro';
-      const metaDesc = document.querySelector('meta[name="description"]');
-      if (metaDesc && typeof desc === 'string') metaDesc.setAttribute('content', desc);
-    } catch { /* noop */ }
-    modal.dataset.restoreSeo = '';
-  }
-  // Restaurar URL limpia
-  if (location.search.includes('producto=')) {
-    const clean = `${SITE_URL}${location.hash || ''}`;
-    history.pushState({}, '', clean);
-  }
-  modal.classList.remove('active');
-  modal.setAttribute('aria-hidden', 'true');
-  document.body.classList.remove('no-scroll');
+function mostrarModalProducto(producto) {
+  ensureProductModal();
+  const cont = elementos.modalContenido;
+  if (!elementos.productoModal || !cont) return;
+
+  let currentIndex = 0;
+
+  const render = () => {
+    const disponibles = Math.max(0, producto.stock || 0);
+    const agotado = disponibles <= 0;
+
+    cont.innerHTML = `
+      <button class="cerrar-modal" aria-label="Cerrar modal" onclick="cerrarModal()">&times;</button>
+      <div class="modal-flex">
+        <div class="modal-carrusel">
+          <img id="modal-imagen" src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
+          <div class="modal-thumbnails">
+            ${producto.imagenes.map((img, i) => `
+              <img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}">
+            `).join('')}
+          </div>
+        </div>
+        <div class="modal-info">
+          <h1 class="modal-nombre">${producto.nombre}</h1>
+          <p class="modal-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
+
+          <div class="modal-descripcion">
+            ${producto.descripcion ? `<p>${producto.descripcion}</p>` : ''}
+            ${producto.adicionales ? `<p><b>Adicionales:</b> ${producto.adicionales}</p>` : ''}
+            ${(producto.alto || producto.ancho || producto.profundidad)
+              ? `<p><b>Medidas:</b> ${[producto.alto, producto.ancho, producto.profundidad].filter(Boolean).join(' x ')} cm</p>`
+              : ''}
+          </div>
+
+          <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}</p>
+
+          <div class="modal-acciones">
+            <input type="number" value="1" min="1" max="${disponibles}" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
+            <button class="boton-agregar-modal ${agotado ? 'agotado' : ''}" data-id="${producto.id}" ${agotado ? 'disabled' : ''}>
+              ${agotado ? 'Agotado' : 'Agregar al carrito'}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Cambiar imagen con click en la grande (no cierra)
+    const imgGrande = cont.querySelector('#modal-imagen');
+    imgGrande?.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      if (!producto.imagenes || producto.imagenes.length <= 1) return;
+      currentIndex = (currentIndex + 1) % producto.imagenes.length;
+      render();
+    });
+
+    cont.querySelectorAll('.thumbnail').forEach(th => th.addEventListener('click', (e) => {
+      e.stopPropagation();
+      currentIndex = parseInt(e.currentTarget.dataset.index);
+      render();
+    }));
+
+    cont.querySelector('.boton-agregar-modal')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = parseInt(e.currentTarget.dataset.id);
+      const qty = parseInt(cont.querySelector('.cantidad-modal-input').value);
+      agregarAlCarrito(id, qty, e.currentTarget);
+    });
+  };
+
+  render();
+  elementos.productoModal.classList.add('visible');
+  elementos.productoModal.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('no-scroll');
 }
-// Expone para el botón “&times;” del HTML
+function cerrarModal() {
+  if (elementos.productoModal) {
+    elementos.productoModal.classList.remove('visible');
+    elementos.productoModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('no-scroll');
+  }
+}
 window.cerrarModal = cerrarModal;
 
-/* =========================
-   8) Pre-compra y Envío
-========================= */
+// ===============================
+// AGREGAR AL CARRITO
+// ===============================
+async function agregarAlCarrito(id, cantidad = 1, boton = null) {
+  // Bloqueo por producto (idempotente ante handlers duplicados)
+  if (inFlightAdds.has(id)) return;
+  inFlightAdds.add(id);
+
+  if (!Number.isFinite(id) || id <= 0) { inFlightAdds.delete(id); return mostrarNotificacion('ID de producto inválido', 'error'); }
+
+  const producto = productos.find(p => p.id === id);
+  if (!producto) { inFlightAdds.delete(id); return mostrarNotificacion('Producto no encontrado', 'error'); }
+
+  const cantidadAgregar = Math.max(1, parseInt(cantidad));
+  if (!Number.isFinite(cantidadAgregar)) { inFlightAdds.delete(id); return mostrarNotificacion('Cantidad inválida', 'error'); }
+
+  // Candado del botón concreto
+  if (boton) {
+    if (busyButtons.has(boton)) { inFlightAdds.delete(id); return; }
+    busyButtons.add(boton);
+    boton.disabled = true;
+    boton._oldHTML = boton.innerHTML;
+    boton.innerHTML = 'Agregando <span class="spinner"></span>';
+  }
+
+  // Chequeo con stock remoto actual
+  if ((producto.stock || 0) < cantidadAgregar) {
+    if (boton) { boton.disabled = false; boton.innerHTML = boton._oldHTML; busyButtons.delete(boton); }
+    inFlightAdds.delete(id);
+    return mostrarNotificacion('Stock insuficiente', 'error');
+  }
+
+  try {
+    const productRef = ref(db, `productos/${id}/stock`);
+    const { committed } = await runTransaction(productRef, (stock) => {
+      stock = stock || 0;
+      if (stock < cantidadAgregar) return; // aborta transacción
+      return stock - cantidadAgregar;
+    });
+
+    if (!committed) throw new Error('Stock insuficiente o cambiado por otro usuario');
+
+    // Feedback inmediato local + evitar pestañeo del onValue
+    suprimirRealtime++;
+    producto.stock = Math.max(0, (producto.stock || 0) - cantidadAgregar);
+
+    const enCarrito = carrito.find(item => item.id === id);
+    if (enCarrito) enCarrito.cantidad += cantidadAgregar;
+    else carrito.push({
+      id: producto.id,
+      nombre: producto.nombre,
+      precio: producto.precio,
+      cantidad: cantidadAgregar,
+      imagen: (producto.imagenes && producto.imagenes[0]) || PLACEHOLDER_IMAGE
+    });
+
+    guardarCarrito();
+    renderizarCarrito();
+    renderizarProductos();
+    mostrarNotificacion('Producto agregado al carrito', 'exito');
+  } catch (error) {
+    console.error('Error al agregar al carrito:', error);
+    mostrarNotificacion('Error al agregar al carrito', 'error');
+  } finally {
+    if (boton) {
+      boton.disabled = false;
+      boton.innerHTML = boton._oldHTML;
+      busyButtons.delete(boton);
+    }
+    inFlightAdds.delete(id);
+  }
+}
+
+// ===============================
+// UI / FILTROS
+// ===============================
+function actualizarCategorias() {
+  if (!elementos.selectCategoria) return;
+  const cats = ['todos', ...new Set(productos.map(p => p.categoria).sort())];
+  elementos.selectCategoria.innerHTML = cats.map(cat => `<option value="${cat}">${cat.charAt(0).toUpperCase() + cat.slice(1)}</option>`).join('');
+  elementos.selectCategoria.value = filtrosActuales.categoria;
+}
+function actualizarUI() {
+  renderizarCarrito();
+  actualizarContadorCarrito();
+}
+function aplicarFiltros() {
+  paginaActual = 1;
+  renderizarProductos();
+}
+function resetearFiltros() {
+  filtrosActuales = { precioMin: 0, precioMax: 3000, categoria: 'todos', busqueda: '' };
+  if (elementos.inputBusqueda) elementos.inputBusqueda.value = '';
+  if (elementos.selectCategoria) elementos.selectCategoria.value = 'todos';
+  if (elementos.precioMinInput) elementos.precioMinInput.value = '0';
+  if (elementos.precioMaxInput) elementos.precioMaxInput.value = '3000';
+  updateRange();
+  aplicarFiltros();
+}
+
+// ===============================
+// INICIALIZACIONES ESPECÍFICAS
+// ===============================
+function inicializarFAQ() {
+  document.querySelectorAll('.faq-toggle').forEach(toggle => {
+    toggle.onclick = () => {
+      const expanded = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', !expanded);
+      toggle.nextElementSibling.hidden = expanded;
+    };
+  });
+}
+function inicializarMenuHamburguesa() {
+  const hamburguesa = elementos.hamburguesa;
+  const menu = elementos.menu;
+  if (!hamburguesa || !menu) return;
+
+  hamburguesa.onclick = () => {
+    const expanded = menu.classList.toggle('active');
+    hamburguesa.setAttribute('aria-expanded', expanded);
+    document.body.classList.toggle('no-scroll', expanded);
+  };
+  menu.querySelectorAll('a').forEach(link => link.onclick = () => {
+    menu.classList.remove('active');
+    hamburguesa.setAttribute('aria-expanded', false);
+    document.body.classList.remove('no-scroll');
+  });
+}
+function setupContactForm() {
+  const form = getElement('formulario-contacto');
+  if (!form || !window.emailjs) return;
+
+  emailjs.init("o4IxJz0Zz-LQ8jYKG");
+  form.onsubmit = (e) => {
+    e.preventDefault();
+    const nombre = getElement('nombre').value;
+    const email = getElement('email').value;
+    const mensaje = getElement('mensaje').value;
+
+    emailjs.send('service_89by24g', 'template_8mn7hdp', { from_name: nombre, from_email: email, message: mensaje })
+      .then(() => {
+        getElement('successMessage').classList.remove('hidden');
+        form.reset();
+        setTimeout(() => getElement('successMessage').classList.add('hidden'), 3000);
+      }, (error) => {
+        console.error('Error al enviar email:', error);
+        const errorMsg = getElement('errorMessage');
+        errorMsg.textContent = 'Error al enviar el mensaje. Intenta de nuevo.';
+        errorMsg.classList.remove('hidden');
+        setTimeout(() => errorMsg.classList.add('hidden'), 3000);
+      });
+  };
+}
+
+// ===============================
+// EVENTOS Y DELEGACIÓN
+// ===============================
+function initEventos() {
+  elementos.carritoBtnMain?.addEventListener('click', () => toggleCarrito(true));
+  elementos.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
+  elementos.btnCerrarCarrito?.addEventListener('click', () => toggleCarrito(false));
+
+  getElement('select-envio')?.addEventListener('change', actualizarResumenPedido);
+  elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
+  elementos.btnFinalizarCompra?.addEventListener('click', () => {
+    if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
+    elementos.avisoPreCompraModal.style.display = 'flex';
+    elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'false');
+  });
+  elementos.btnEntendidoAviso?.addEventListener('click', () => {
+    elementos.avisoPreCompraModal.style.display = 'none';
+    elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
+    const modalEnvio = getElement('modal-datos-envio');
+    if (modalEnvio) {
+      modalEnvio.style.display = 'flex';
+      modalEnvio.classList.add('visible');
+      modalEnvio.removeAttribute('hidden');
+      actualizarResumenPedido();
+    }
+  });
+  elementos.btnCancelarAviso?.addEventListener('click', () => {
+    elementos.avisoPreCompraModal.style.display = 'none';
+    elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
+  });
+
+  elementos.inputBusqueda?.addEventListener('input', (e) => {
+    filtrosActuales.busqueda = e.target.value.toLowerCase().trim();
+    aplicarFiltros();
+  });
+  elementos.selectCategoria?.addEventListener('change', (e) => {
+    filtrosActuales.categoria = e.target.value.trim();
+    aplicarFiltros();
+  });
+  elementos.precioMinInput?.addEventListener('input', updateRange);
+  elementos.precioMaxInput?.addEventListener('input', updateRange);
+  elementos.aplicarRangoBtn?.addEventListener('click', () => {
+    filtrosActuales.precioMin = parseInt(elementos.precioMinInput.value) || 0;
+    filtrosActuales.precioMax = parseInt(elementos.precioMaxInput.value) || 3000;
+    aplicarFiltros();
+  });
+
+  // Delegación en la galería (evitamos duplicados)
+  const galeria = elementos.galeriaProductos;
+  if (galeria) {
+    if (galeria._pfHandler) galeria.removeEventListener('click', galeria._pfHandler);
+    const handler = (e) => {
+      const target = e.target.closest('.boton-detalles, .boton-agregar, .boton-aviso-stock');
+      if (!target) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const card = target.closest('.producto-card');
+      const id = parseInt(card?.dataset?.id);
+      const producto = productos.find(p => p.id === id);
+      if (!producto) return;
+
+      if (target.classList.contains('boton-detalles')) {
+        mostrarModalProducto(producto);
+      } else if (target.classList.contains('boton-agregar')) {
+        agregarAlCarrito(id, 1, target);
+      } else if (target.classList.contains('boton-aviso-stock')) {
+        preguntarStock(producto.nombre);
+      }
+    };
+    galeria.addEventListener('click', handler, { passive: false });
+    galeria._pfHandler = handler;
+  }
+}
+
+// ===============================
+// RESUMEN Y ENVÍO
+// ===============================
 function actualizarResumenPedido() {
-  const cont = EL.resumenProductos;
-  const totalEl = EL.resumenTotal;
-  if (!cont || !totalEl) return;
-  if (!STATE.carrito.length) {
-    cont.innerHTML = '<p class="carrito-vacio">No hay productos en el carrito</p>';
-    setText(totalEl, fmtUY(0));
+  const resumenProductos = getElement('resumen-productos');
+  const resumenTotal = getElement('resumen-total');
+  if (!resumenProductos || !resumenTotal) return;
+
+  if (carrito.length === 0) {
+    resumenProductos.innerHTML = '<p class="carrito-vacio">No hay productos en el carrito</p>';
+    resumenTotal.textContent = '$U 0';
     return;
   }
+
+  let html = '';
   let subtotal = 0;
-  cont.innerHTML = STATE.carrito.map(item => {
-    const itemTotal = (item.precio || 0) * (item.cantidad || 0);
+  carrito.forEach(item => {
+    const itemTotal = item.precio * item.cantidad;
     subtotal += itemTotal;
-    return `
+    html += `
       <div class="resumen-item">
         <span>${item.nombre} x${item.cantidad}</span>
-        <span>${fmtUY(itemTotal)}</span>
-      </div>`;
-  }).join('');
+        <span>$U ${itemTotal.toLocaleString('es-UY')}</span>
+      </div>
+    `;
+  });
 
-  const metodo = EL.selectEnvio?.value || 'retiro';
-  const costoEnvio = metodo === 'montevideo' ? 200 : (metodo === 'interior' ? 250 : 0);
+  const envioSelect = getElement('select-envio');
+  const metodo = envioSelect?.value || 'retiro';
+  let costoEnvio = metodo === 'montevideo' ? 200 : metodo === 'interior' ? 250 : 0;
+
+  html += `
+    <div class="resumen-item resumen-subtotal">
+      <span>Subtotal:</span>
+      <span>$U ${subtotal.toLocaleString('es-UY')}</span>
+    </div>
+    ${metodo !== 'retiro' ? `
+      <div class="resumen-item resumen-envio">
+        <span>Envío (${metodo === 'montevideo' ? 'Montevideo' : 'Interior'}):</span>
+        <span>$U ${costoEnvio.toLocaleString('es-UY')}</span>
+      </div>` : ''}
+  `;
+
+  resumenProductos.innerHTML = html;
   const total = subtotal + costoEnvio;
+  resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
 
-  cont.insertAdjacentHTML('beforeend', `
-    <div class="resumen-item envio">
-      <span>Envío</span>
-      <span>${fmtUY(costoEnvio)}</span>
-    </div>`);
-  setText(totalEl, fmtUY(total));
-}
-
-/* =========================
-   9) FAQ → JSON-LD
-========================= */
-function setFAQJsonLDFromDOM() {
-  const faqs = [...document.querySelectorAll('.faq-item')]
-    .map(item => {
-      const q = item.querySelector('.faq-toggle')?.textContent?.trim();
-      const a = item.querySelector('.faq-content')?.textContent?.trim();
-      if (!q || !a) return null;
-      return {
-        "@type": "Question",
-        "name": q,
-        "acceptedAnswer": { "@type": "Answer", "text": a }
-      };
-    })
-    .filter(Boolean);
-
-  if (faqs.length) {
-    setJSONLD('ld-faq', {
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      "mainEntity": faqs
-    });
+  const grupoDireccion = getElement('grupo-direccion');
+  const inputDireccion = getElement('input-direccion');
+  if (grupoDireccion && inputDireccion) {
+    grupoDireccion.style.display = metodo === 'retiro' ? 'none' : 'flex';
+    inputDireccion.required = metodo !== 'retiro';
   }
 }
 
-/* =========================
-   10) Eventos UI
-========================= */
-function bindUI() {
-  // Filtros
-  EL.filtroCategoria?.addEventListener('change', () => {
-    STATE.filtros.categoria = EL.filtroCategoria.value;
-    aplicarFiltros();
-  });
-  EL.minSlider?.addEventListener('input', () => {
-    const v = Number(EL.minSlider.value);
-    STATE.filtros.min = v;
-    setText(EL.minPriceLabel, `$U${v}`);
-    if (v > STATE.filtros.max) {
-      STATE.filtros.max = v;
-      if (EL.maxSlider) EL.maxSlider.value = v;
-      setText(EL.maxPriceLabel, `$U${v}`);
-    }
-    aplicarFiltros();
-  });
-  EL.maxSlider?.addEventListener('input', () => {
-    const v = Number(EL.maxSlider.value);
-    STATE.filtros.max = v;
-    setText(EL.maxPriceLabel, `$U${v}`);
-    if (v < STATE.filtros.min) {
-      STATE.filtros.min = v;
-      if (EL.minSlider) EL.minSlider.value = v;
-      setText(EL.minPriceLabel, `$U${v}`);
-    }
-    aplicarFiltros();
-  });
-  EL.inputBusqueda?.addEventListener('input', (e) => {
-    STATE.filtros.q = e.target.value || '';
-    aplicarFiltros();
-  });
+getElement('btn-cerrar-modal-envio')?.addEventListener('click', () => {
+  const modal = getElement('modal-datos-envio');
+  modal.classList.remove('visible');
+  setTimeout(() => modal.style.display = 'none', 300);
+});
 
-  // Delegación en galería
-  EL.galeria?.addEventListener('click', (e) => {
-    const add = e.target.closest('.boton-agregar');
-    const det = e.target.closest('.boton-detalles');
-    const aLink = e.target.closest('.producto-link');
-    const aviso = e.target.closest('.boton-aviso-stock');
+let enviandoPedido = false;
 
-    if (add) {
-      const id = Number(add.dataset.id);
-      agregarAlCarrito(id);
-    }
-    if (det) {
-      const id = Number(det.dataset.id);
-      const p = STATE.productos.find(x => x.id === id);
-      if (p) mostrarModalProducto(p);
-    }
-    if (aLink) {
-      e.preventDefault();
-      const id = Number(aLink.dataset.id);
-      const p = STATE.productos.find(x => x.id === id);
-      if (p) mostrarModalProducto(p);
-    }
-    if (aviso) {
-      e.preventDefault();
-      abrirStockModal(aviso.dataset.nombre);
-    }
-  });
+// --- Preferir App/Escritorio, luego API móvil, por último Web
+function abrirWhatsAppPreferApp(mensaje, numero = '59893566283') {
+  const txt  = encodeURIComponent(mensaje);
+  const deep = `whatsapp://send?phone=${numero}&text=${txt}`;                 // App (móvil o desktop)
+  const api  = `https://api.whatsapp.com/send?phone=${numero}&text=${txt}`;   // Móvil: abre app
+  const web  = `https://web.whatsapp.com/send?phone=${numero}&text=${txt}`;   // Escritorio: web
+  const isMobile = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-  // Carrito UI
-  EL.carritoBtnMain?.addEventListener('click', () => toggleCarrito(true));
-  EL.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
-  EL.btnCerrarCarrito?.addEventListener('click', () => toggleCarrito(false));
-  EL.btnVaciarCarrito?.addEventListener('click', () => {
-    STATE.carrito = [];
-    persistCarrito();
-    renderCarrito();
-    renderizarProductos();
-  });
+  const onHide = () => { clearTimeout(timer); document.removeEventListener('visibilitychange', onHide); document.removeEventListener('pagehide', onHide); };
+  document.addEventListener('visibilitychange', onHide);
+  document.addEventListener('pagehide', onHide);
 
-  // Proceso de compra
-  EL.btnFinalizarCompra?.addEventListener('click', () => {
-    if (!STATE.carrito.length) {
-      alert('El carrito está vacío.');
-      return;
-    }
-    EL.avisoPreCompra?.removeAttribute('hidden');
-    EL.avisoPreCompra?.setAttribute('aria-hidden', 'false');
-  });
-  EL.btnEntendidoAviso?.addEventListener('click', () => {
-    EL.avisoPreCompra?.setAttribute('hidden', 'true');
-    abrirModalEnvio();
-  });
-  EL.btnCancelarAviso?.addEventListener('click', () => {
-    EL.avisoPreCompra?.setAttribute('hidden', 'true');
-  });
+  // 1) Intento abrir la app nativa
+  window.location.href = deep;
 
-  // Envío
-  EL.selectEnvio?.addEventListener('change', actualizarResumenPedido);
-  EL.btnCerrarModalEnvio?.addEventListener('click', () => cerrarModalEnvio());
-  EL.formEnvio?.addEventListener('submit', onSubmitEnvio);
-
-  // Stock modal
-  EL.stockClose?.addEventListener('click', cerrarStockModal);
-  EL.stockForm?.addEventListener('submit', onSubmitStock);
-
-  // Contacto
-  EL.formContacto?.addEventListener('submit', onSubmitContacto);
-
-  // Cerrar modal de producto si se hace click fuera del contenido
-  EL.productoModal?.addEventListener('click', (e) => {
-    if (e.target === EL.productoModal) cerrarModal();
-  });
-
-  // Abrir modal si viene ?producto= en la URL
-  const urlParams = new URLSearchParams(location.search);
-  const slugFromURL = urlParams.get('producto');
-  if (slugFromURL) {
-    // defer hasta tener productos
-    const observer = new MutationObserver(() => {
-      if (STATE.productos.length) {
-        const p = STATE.productos.find(x => slugify(x.nombre) === slugFromURL);
-        if (p) mostrarModalProducto(p);
-        observer.disconnect();
-      }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-  }
+  // 2) Fallback si no se abrió
+  const timer = setTimeout(() => {
+    if (document.visibilityState === 'hidden') return; // ya se abrió la app
+    window.location.href = isMobile ? api : web;
+  }, 800);
 }
 
-/* =========================
-   11) Modales auxiliares
-========================= */
-function abrirModalEnvio() {
-  if (!EL.modalEnvio) return;
-  EL.modalEnvio.removeAttribute('hidden');
-  EL.modalEnvio.setAttribute('aria-hidden', 'false');
-  actualizarResumenPedido();
-}
-function cerrarModalEnvio() {
-  EL.modalEnvio?.setAttribute('hidden', 'true');
-  EL.modalEnvio?.setAttribute('aria-hidden', 'true');
-}
-async function onSubmitEnvio(e) {
+getElement('form-envio')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  try {
-    // Construye mensaje WhatsApp (no se envía aquí, solo demo)
-    const data = new FormData(EL.formEnvio);
-    const nombre = data.get('nombre');
-    const telefono = data.get('telefono');
-    const metodo = data.get('metodo_envio');
-    const direccion = data.get('direccion') || '(retiro)';
-    const resumen = STATE.carrito.map(i => `${i.nombre} x${i.cantidad} - ${fmtUY(i.precio * i.cantidad)}`).join(' | ');
-    const total = EL.resumenTotal?.textContent || '';
+  if (enviandoPedido) return;
+  enviandoPedido = true;
 
-    const texto = encodeURIComponent(
-      `Hola! Soy ${nombre}. Quiero confirmar mi pedido:
-- Productos: ${resumen}
-- Envío: ${metodo} (${direccion})
-- Total: ${total}
-- Tel: ${telefono}`
-    );
-    const wa = `https://wa.me/59893566283?text=${texto}`;
-    window.open(wa, '_blank');
-    cerrarModalEnvio();
-    toggleCarrito(false);
-  } catch (err) {
-    alert('No se pudo preparar el pedido. Intenta nuevamente.');
-  }
-}
+  const nombre    = getElement('input-nombre').value.trim();
+  const apellido  = getElement('input-apellido').value.trim();
+  const telefono  = getElement('input-telefono').value.trim();
+  const envio     = getElement('select-envio').value;
+  const direccion = envio !== 'retiro' ? getElement('input-direccion').value.trim() : '';
+  const notas     = getElement('input-notas').value.trim();
 
-/* =========================
-   12) Aviso “Sin stock”
-========================= */
-function abrirStockModal(nombreProducto = '') {
-  if (!EL.stockModal) return;
-  EL.stockModal.removeAttribute('hidden');
-  EL.stockModal.setAttribute('aria-hidden', 'false');
-  EL.stockFeedback?.setAttribute('hidden', 'true');
-  EL.stockForm?.reset();
-  EL.stockForm?.setAttribute('data-producto', nombreProducto);
-}
-function cerrarStockModal() {
-  EL.stockModal?.setAttribute('hidden', 'true');
-  EL.stockModal?.setAttribute('aria-hidden', 'true');
-}
-function onSubmitStock(e) {
-  e.preventDefault();
-  // Aquí podrías usar EmailJS o tu endpoint para guardar avisos
-  const email = (document.getElementById('stock-email')?.value || '').trim();
-  const producto = EL.stockForm?.getAttribute('data-producto') || '';
-  if (!email) return;
-  // Demo feedback
-  EL.stockFeedback.textContent = `¡Listo! Te avisaremos cuando "${producto}" vuelva a estar disponible.`;
-  EL.stockFeedback.removeAttribute('hidden');
-  setTimeout(cerrarStockModal, 1600);
-}
-
-/* =========================
-   13) Contacto (EmailJS)
-========================= */
-function onSubmitContacto(e) {
-  e.preventDefault();
-  if (!window.emailjs) {
-    EL.errorMessage?.classList.remove('hidden');
+  if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
+    mostrarNotificacion('Complete todos los campos obligatorios', 'error');
+    enviandoPedido = false;
     return;
   }
-  const form = e.target;
-  // Configura tus credenciales de EmailJS (service_id, template_id, public_key)
-  const SERVICE_ID = 'service_xxx';
-  const TEMPLATE_ID = 'template_xxx';
-  const PUBLIC_KEY = 'xxxxxx';
-  emailjs.init(PUBLIC_KEY);
 
-  emailjs.sendForm(SERVICE_ID, TEMPLATE_ID, form)
-    .then(() => {
-      EL.successMessage?.classList.remove('hidden');
-      EL.errorMessage?.classList.add('hidden');
-      form.reset();
-    })
-    .catch(() => {
-      EL.successMessage?.classList.add('hidden');
-      EL.errorMessage?.classList.remove('hidden');
-    });
-}
+  // Revalidar stock (ya fue descontado al agregar, pero por seguridad)
+  for (const item of carrito) {
+    const prod = productos.find(p => p.id === item.id);
+    if (!prod || prod.stock < 0) {
+      mostrarNotificacion(`Stock insuficiente para "${item?.nombre || 'un producto'}"`, 'error');
+      enviandoPedido = false;
+      return;
+  } }
 
-/* =========================
-   14) Inicio
-========================= */
-async function init() {
-  loadCarrito();
-  actualizarContadorCarrito();
-  renderCarrito();
-
-  bindUI();
-  await cargarProductos();
-
-  // Delegación extra por si el HTML ya trae botones presentes
-  document.addEventListener('click', (e) => {
-    const close = e.target.closest('.cerrar-modal');
-    if (close) cerrarModal();
+  let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*📋 Detalles del pedido:*\n`;
+  carrito.forEach(item => {
+    mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}\n`;
   });
 
-  // FAQ → JSON-LD
-  setFAQJsonLDFromDOM();
+  const subtotal   = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
+  const costoEnvio = envio === 'montevideo' ? 200 : envio === 'interior' ? 250 : 0;
+  const total      = subtotal + costoEnvio;
+
+  mensaje += `\n*💰 Total:*\nSubtotal: $U ${subtotal.toLocaleString('es-UY')}\n` +
+             `Envío: $U ${costoEnvio.toLocaleString('es-UY')}\n` +
+             `*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
+
+  mensaje += `*👤 Datos del cliente:*\n` +
+             `Nombre: ${nombre} ${apellido}\n` +
+             `Teléfono: ${telefono}\n` +
+             `Método de envío: ${envio === 'montevideo' ? 'Envío Montevideo ($200)' : envio === 'interior' ? 'Envío Interior ($250)' : 'Retiro en local (Gratis)'}\n`;
+  if (envio !== 'retiro') mensaje += `Dirección: ${direccion}\n`;
+  if (notas) mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
+
+  // Abrir WhatsApp con preferencia por App/Escritorio
+  abrirWhatsAppPreferApp(mensaje, '59893566283');
+
+  // Cerrar modal y limpiar carrito (el stock NO se repone)
+  const modal = getElement('modal-datos-envio');
+  modal?.classList.remove('visible');
+  setTimeout(() => {
+    if (modal) modal.style.display = 'none';
+    carrito = [];
+    guardarCarrito();
+    actualizarUI();
+    mostrarNotificacion('Pedido listo para enviar por WhatsApp', 'exito');
+    getElement('form-envio').reset();
+    enviandoPedido = false;
+  }, 200);
+});
+
+// ===============================
+// SLIDERS DE PRECIO
+// ===============================
+function updateRange() {
+  const minSlider = elementos.precioMinInput;
+  const maxSlider = elementos.precioMaxInput;
+  const minPrice = getElement('min-price');
+  const maxPrice = getElement('max-price');
+  const range = document.querySelector('.range');
+  const thumbMin = getElement('thumb-label-min');
+  const thumbMax = getElement('thumb-label-max');
+  
+  if (!minSlider || !maxSlider || !minPrice || !maxPrice || !range || !thumbMin || !thumbMax) return;
+
+  let minVal = parseInt(minSlider.value);
+  let maxVal = parseInt(maxSlider.value);
+  if (minVal > maxVal) [minVal, maxVal] = [maxVal, minVal];
+
+  minSlider.value = minVal;
+  maxSlider.value = maxVal;
+
+  const sliderMax = parseInt(minSlider.max);
+  const sliderWidth = minSlider.offsetWidth;
+  
+  // Actualizar posición del rango
+  range.style.left = (minVal / sliderMax * 100) + '%';
+  range.style.width = ((maxVal - minVal) / sliderMax * 100) + '%';
+
+  // Actualizar etiquetas de precio
+  minPrice.textContent = `$U${minVal}`;
+  maxPrice.textContent = `$U${maxVal}`;
+  
+  // Actualizar globos (tooltips)
+  thumbMin.textContent = `$U${minVal}`;
+  thumbMax.textContent = `$U${maxVal}`;
+  
+  // Calcular posiciones de los globos
+  const minPos = (minVal / sliderMax) * sliderWidth;
+  const maxPos = (maxVal / sliderMax) * sliderWidth;
+  
+  thumbMin.style.left = `${minPos}px`;
+  thumbMax.style.left = `${maxPos}px`;
+  
+  // Mostrar globos temporalmente al cambiar valores
+  thumbMin.style.opacity = '1';
+  thumbMax.style.opacity = '1';
+  
+  // Ocultar después de un tiempo
+  setTimeout(() => {
+    thumbMin.style.opacity = '0';
+    thumbMax.style.opacity = '0';
+  }, 2000);
+
+  filtrosActuales.precioMin = minVal;
+  filtrosActuales.precioMax = maxVal;
+  aplicarFiltros();
 }
 
-document.addEventListener('DOMContentLoaded', init);
+// Agregar event listeners para mostrar globos al interactuar
+elementos.precioMinInput?.addEventListener('input', () => {
+  const thumbMin = getElement('thumb-label-min');
+  if (thumbMin) thumbMin.style.opacity = '1';
+  updateRange();
+});
+
+elementos.precioMaxInput?.addEventListener('input', () => {
+  const thumbMax = getElement('thumb-label-max');
+  if (thumbMax) thumbMax.style.opacity = '1';
+  updateRange();
+});
+
+// Mostrar globos al pasar el mouse sobre el slider
+document.querySelector('.range-slider')?.addEventListener('mouseenter', () => {
+  const thumbMin = getElement('thumb-label-min');
+  const thumbMax = getElement('thumb-label-max');
+  if (thumbMin) thumbMin.style.opacity = '1';
+  if (thumbMax) thumbMax.style.opacity = '1';
+});
+
+// Ocultar globos al salir del slider
+document.querySelector('.range-slider')?.addEventListener('mouseleave', () => {
+  const thumbMin = getElement('thumb-label-min');
+  const thumbMax = getElement('thumb-label-max');
+  if (thumbMin) thumbMin.style.opacity = '0';
+  if (thumbMax) thumbMax.style.opacity = '0';
+});
+
+// ===============================
+// OTRAS
+// ===============================
+function preguntarStock(nombre) {
+  const asunto = encodeURIComponent(`Consulta sobre disponibilidad de "${nombre}"`);
+  const cuerpo = encodeURIComponent(`Hola Patofelting,\n\nMe gustaría saber cuándo estará disponible el producto: ${nombre}\n\nSaludos,\n[Tu nombre]`);
+  window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
+}
+
+// ===============================
+// INIT
+// ===============================
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    await signInAnonymously(auth);
+    console.log('✅ Signed in anonymously to Firebase.');
+    cargarProductosDesdeFirebase();
+  } catch (error) {
+    console.error('❌ Error signing in:', error);
+    let msg = 'Error de autenticación con Firebase.';
+    if (error.code === 'auth/configuration-not-found') msg = 'Autenticación anónima no habilitada.';
+    else if (error.code === 'auth/network-request-failed') msg = 'Error de red.';
+    mostrarNotificacion(msg, 'error');
+  }
+
+  cargarCarrito();
+  ensureProductModal();
+  inicializarMenuHamburguesa();
+  inicializarFAQ();
+  setupContactForm();
+  initEventos();
+  updateRange();
+});
+
+window.agregarAlCarrito = agregarAlCarrito;
+window.preguntarStock = preguntarStock;
