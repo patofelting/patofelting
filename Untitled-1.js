@@ -1,1 +1,845 @@
-const _0x2e6549=_0x1b5b;(function(_0x461179,_0x50fa90){const _0x1df1fb=_0x1b5b,_0x48a389=_0x461179();while(!![]){try{const _0x1a0ed8=parseInt(_0x1df1fb(0x18d))/0x1*(parseInt(_0x1df1fb(0x246))/0x2)+parseInt(_0x1df1fb(0x1a5))/0x3+parseInt(_0x1df1fb(0x260))/0x4*(-parseInt(_0x1df1fb(0x1c8))/0x5)+parseInt(_0x1df1fb(0x17d))/0x6+-parseInt(_0x1df1fb(0x21d))/0x7+-parseInt(_0x1df1fb(0x120))/0x8*(-parseInt(_0x1df1fb(0x212))/0x9)+-parseInt(_0x1df1fb(0x1b5))/0xa;if(_0x1a0ed8===_0x50fa90)break;else _0x48a389['push'](_0x48a389['shift']());}catch(_0x33a2c1){_0x48a389['push'](_0x48a389['shift']());}}}(_0x1d57,0x68965));const PRODUCTOS_POR_PAGINA=0x6,LS_CARRITO_KEY=_0x2e6549(0x1bc),PLACEHOLDER_IMAGE=window[_0x2e6549(0x1eb)]||_0x2e6549(0x19a);import{getAuth,signInAnonymously}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';import{getDatabase,ref,runTransaction,onValue,get}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';const db=window[_0x2e6549(0x21e)]||getDatabase(window[_0x2e6549(0x11a)]),auth=getAuth(window[_0x2e6549(0x11a)]);let productos=[],carrito=[],paginaActual=0x1;const busyButtons=new WeakSet(),inFlightAdds=new Set();let suprimirRealtime=0x0,filtrosActuales={'precioMin':0x0,'precioMax':0xbb8,'categoria':_0x2e6549(0x137),'busqueda':''};function mostrarNotificacion(_0x26d2c5,_0x43128d=_0x2e6549(0x13b)){const _0xf483cb=_0x2e6549,_0x3d799c=document[_0xf483cb(0x267)](_0xf483cb(0x139));_0x3d799c[_0xf483cb(0x130)]=_0xf483cb(0x232)+_0x43128d,_0x3d799c[_0xf483cb(0x11e)]=_0x26d2c5,document[_0xf483cb(0x17c)][_0xf483cb(0x1b0)](_0x3d799c),requestAnimationFrame(()=>_0x3d799c['classList']['add']('show')),setTimeout(()=>{const _0x4c89cf=_0xf483cb;_0x3d799c[_0x4c89cf(0x196)]['remove']('show'),setTimeout(()=>_0x3d799c['remove'](),0xfa);},0x9c4);}const getElement=_0x4cf8d=>document['getElementById'](_0x4cf8d),elementos={'galeriaProductos':getElement(_0x2e6549(0x189)),'paginacion':getElement(_0x2e6549(0x138)),'productoModal':getElement('producto-modal'),'modalContenido':getElement(_0x2e6549(0x12d)),'listaCarrito':getElement(_0x2e6549(0x141)),'totalCarrito':getElement(_0x2e6549(0x25d)),'contadorCarrito':getElement(_0x2e6549(0x1dc)),'inputBusqueda':document[_0x2e6549(0x1a8)](_0x2e6549(0x242)),'selectCategoria':getElement('filtro-categoria'),'precioMinInput':getElement(_0x2e6549(0x1c1)),'precioMaxInput':getElement('max-slider'),'carritoBtnMain':getElement(_0x2e6549(0x156)),'carritoPanel':getElement(_0x2e6549(0x26e)),'carritoOverlay':document[_0x2e6549(0x1a8)](_0x2e6549(0x17f)),'btnVaciarCarrito':document[_0x2e6549(0x1a8)](_0x2e6549(0x198)),'btnFinalizarCompra':document[_0x2e6549(0x1a8)](_0x2e6549(0x1ab)),'btnCerrarCarrito':document[_0x2e6549(0x1a8)](_0x2e6549(0x24b)),'avisoPreCompraModal':getElement(_0x2e6549(0x1e1)),'btnEntendidoAviso':getElement('btn-entendido-aviso'),'btnCancelarAviso':getElement('btn-cancelar-aviso'),'productLoader':getElement(_0x2e6549(0x1c3)),'hamburguesa':document['querySelector']('.hamburguesa'),'menu':getElement('menu'),'aplicarRangoBtn':document[_0x2e6549(0x1a8)]('.aplicar-rango-btn')};function guardarCarrito(){const _0x56d263=_0x2e6549;try{localStorage['setItem'](LS_CARRITO_KEY,JSON[_0x56d263(0x155)](carrito)),actualizarContadorCarrito();}catch(_0x15b74d){console['error'](_0x56d263(0x178),_0x15b74d),mostrarNotificacion(_0x56d263(0x170),'error');}}function cargarCarrito(){const _0xfd4f23=_0x2e6549;try{const _0x35b032=localStorage[_0xfd4f23(0x1e7)](LS_CARRITO_KEY);carrito=_0x35b032?JSON['parse'](_0x35b032):[],actualizarContadorCarrito();}catch(_0x18ff56){console[_0xfd4f23(0x23a)]('localStorage\x20getItem\x20fallo:',_0x18ff56),carrito=[],mostrarNotificacion(_0xfd4f23(0x20c),_0xfd4f23(0x23a));}}async function vaciarCarrito(){const _0x392a72=_0x2e6549;if(carrito[_0x392a72(0x21b)]===0x0)return mostrarNotificacion(_0x392a72(0x25e),'info');const _0xe316d0=carrito[_0x392a72(0x21b)];try{await Promise[_0x392a72(0x25f)](carrito[_0x392a72(0x16a)](async _0x2ddad3=>{const _0x495d30=_0x392a72,_0x46cc03=ref(db,_0x495d30(0x223)+_0x2ddad3['id']+_0x495d30(0x14a));await runTransaction(_0x46cc03,_0x56df95=>(_0x56df95||0x0)+_0x2ddad3[_0x495d30(0x177)]);})),suprimirRealtime+=_0xe316d0,carrito=[],guardarCarrito(),renderizarCarrito(),renderizarProductos(),mostrarNotificacion('Carrito\x20vaciado\x20y\x20stock\x20restaurado',_0x392a72(0x13b));}catch(_0xbf359f){console[_0x392a72(0x23a)](_0x392a72(0x15a),_0xbf359f),mostrarNotificacion(_0x392a72(0x1d0),_0x392a72(0x23a));}}function actualizarContadorCarrito(){const _0x2d9003=_0x2e6549,_0x13b084=carrito['reduce']((_0xa36bae,_0x548f01)=>_0xa36bae+_0x548f01['cantidad'],0x0);elementos[_0x2d9003(0x127)]&&(elementos['contadorCarrito'][_0x2d9003(0x11e)]=_0x13b084,elementos['contadorCarrito'][_0x2d9003(0x196)]['toggle'](_0x2d9003(0x16d),_0x13b084>0x0));}function toggleCarrito(_0x438ec5){const _0x30c089=_0x2e6549;if(!elementos[_0x30c089(0x245)]||!elementos[_0x30c089(0x162)])return;const _0x30f8e9=typeof _0x438ec5===_0x30c089(0x190)?_0x438ec5:!elementos[_0x30c089(0x245)][_0x30c089(0x196)][_0x30c089(0x1cb)](_0x30c089(0x236));elementos[_0x30c089(0x245)][_0x30c089(0x196)][_0x30c089(0x1f1)](_0x30c089(0x236),_0x30f8e9),elementos[_0x30c089(0x162)][_0x30c089(0x196)][_0x30c089(0x1f1)](_0x30c089(0x236),_0x30f8e9),document[_0x30c089(0x17c)]['classList']['toggle'](_0x30c089(0x231),_0x30f8e9);if(_0x30f8e9)renderizarCarrito();}async function cargarProductosDesdeFirebase(){const _0x1b178b=_0x2e6549,_0x4bbf3b=ref(db,_0x1b178b(0x217));try{elementos[_0x1b178b(0x187)]&&(elementos[_0x1b178b(0x187)][_0x1b178b(0x26f)]=![],elementos[_0x1b178b(0x187)][_0x1b178b(0x12c)]['display']=_0x1b178b(0x17a));const _0x39a900=await get(_0x4bbf3b);!_0x39a900[_0x1b178b(0x197)]()?elementos[_0x1b178b(0x1cd)][_0x1b178b(0x16b)]=_0x1b178b(0x157):(procesarDatosProductos(_0x39a900[_0x1b178b(0x205)]()),renderizarProductos(),actualizarCategorias(),actualizarUI()),!cargarProductosDesdeFirebase['_listening']&&(onValue(_0x4bbf3b,_0x213bcd=>{if(suprimirRealtime>0x0){suprimirRealtime--;return;}if(!_0x213bcd['exists']())productos=[];else procesarDatosProductos(_0x213bcd['val']());renderizarProductos(),actualizarCategorias(),actualizarUI();},_0x38c2a5=>{const _0x29b474=_0x1b178b;console[_0x29b474(0x23a)]('Listener\x20productos\x20error:',_0x38c2a5),mostrarNotificacion(_0x29b474(0x257),'error');}),cargarProductosDesdeFirebase[_0x1b178b(0x250)]=!![]);}catch(_0x4ebd3a){console[_0x1b178b(0x23a)](_0x1b178b(0x13e),_0x4ebd3a),mostrarNotificacion(_0x1b178b(0x144),'error'),elementos[_0x1b178b(0x1cd)][_0x1b178b(0x16b)]=_0x1b178b(0x1ed);}finally{elementos[_0x1b178b(0x187)]&&(elementos[_0x1b178b(0x187)]['style']['display']=_0x1b178b(0x11f),elementos[_0x1b178b(0x187)][_0x1b178b(0x26f)]=!![]);}}function _0x1d57(){const _0x2215c4=['F12','min-slider','href','product-loader','toLocaleString','\x0a\x20\x20\x20\x20<div\x20class=\x22resumen-item\x20resumen-subtotal\x22>\x0a\x20\x20\x20\x20\x20\x20<span>Subtotal:</span>\x0a\x20\x20\x20\x20\x20\x20<span>$U\x20','visibilitychange','</span>\x0a\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20','10cKCsZB','$U\x200','\x22>📩\x20Avisame\x20cuando\x20haya\x20stock</button>','contains','</span>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<button\x20class=\x22aumentar-cantidad\x22\x20data-id=\x22','galeriaProductos','<p>','\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<img\x20src=\x22','Error\x20al\x20vaciar\x20el\x20carrito','onclick','log','max','mouseleave','reset','target','width','</option>','menu','.boton-agregar-modal','descripcion','contador-carrito','interior','toLowerCase','includes','forEach','aviso-pre-compra-modal','required','profundidad','onsubmit','\x20x\x20','productoModal','getItem','role','</span>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</li>\x0a\x20\x20\x20\x20\x20\x20\x20\x20','<option\x20value=\x22','PLACEHOLDER_IMAGE','producto-modal','<p\x20class=\x22error-carga\x22>No\x20se\x20pudieron\x20cargar\x20los\x20productos.</p>','input','click','key','toggle','trim','o4IxJz0Zz-LQ8jYKG','es-UY','sort','smooth','Stock\x20disponible:\x20','Complete\x20todos\x20los\x20campos\x20obligatorios','Stock\x20insuficiente\x20o\x20cambiado\x20por\x20otro\x20usuario','input-direccion','Error\x20al\x20agregar\x20al\x20carrito:','async','thumb-label-max','push','\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<li\x20class=\x22carrito-item\x22\x20data-id=\x22','find','errorMessage','replace','\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22modal-thumbnails\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20','selectCategoria','val','\x0a\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20<div\x20class=\x22card-acciones\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20<button\x20class=\x22boton-agregar','removeAttribute','DOMContentLoaded','mailto:patofelting@gmail.com?subject=','delete','Error\x20al\x20actualizar\x20cantidad','Error\x20al\x20cargar\x20el\x20carrito','filter','form-envio','_oldHTML','true','¡Hola\x20Patofelting!\x20Quiero\x20hacer\x20un\x20pedido:\x0a\x0a*📋\x20Detalles\x20del\x20pedido:*\x0a','22446VffwBC','change','stopPropagation','<div\x20class=\x22modal-contenido-producto\x22\x20id=\x22modal-contenido\x22></div>','string','productos','currentTarget','59893566283','index','length','>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<button\x20class=\x22boton-agregar-modal\x20','2465365asmJJq','firebaseDatabase','<p><b>Adicionales:</b>\x20','mouseenter','precioMax','decoding','productos/','then','.faq-toggle','<p\x20class=\x22sin-productos\x22>No\x20se\x20encontraron\x20productos.</p>','https://web.whatsapp.com/send?phone=','\x0a\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20<button\x20class=\x22boton-detalles\x22\x20data-id=\x22','.aumentar-cantidad','.disminuir-cantidad','mensaje','btnEntendidoAviso','template_8mn7hdp','closest','resumen-total','join','no-scroll','notificacion\x20','https://api.whatsapp.com/send?phone=','</p>\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22modal-acciones\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<input\x20type=\x22number\x22\x20value=\x221\x22\x20min=\x221\x22\x20max=\x22','AGOTADO','active','\x22\x20class=\x22carrito-item-img\x22\x20alt=\x22','Error\x20al\x20agregar\x20al\x20carrito','\x20c/u</span>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22carrito-item-controls\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<button\x20class=\x22disminuir-cantidad\x22\x20data-id=\x22','error','<button\x20class=\x22boton-aviso-stock\x22\x20data-nombre=\x22','send','Autenticación\x20anónima\x20no\x20habilitada.','Error\x20al\x20enviar\x20el\x20mensaje.\x20Intenta\x20de\x20nuevo.','imagenes','input-telefono','<i\x20class=\x22fas\x20fa-cart-plus\x22></i>\x20Agregar','.input-busqueda','Escape','</button>\x0a\x20\x20','carritoPanel','2NtQxub','auth/network-request-failed','</p>\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22modal-descripcion\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20','location','add','.cerrar-carrito','successMessage','Sin\x20nombre','Envío\x20Interior\x20($250)','.producto-card','_listening','</span>\x0a\x20\x20\x20\x20\x20\x20</div>','El\x20carrito\x20está\x20vacío','stock','aria-modal','btnVaciarCarrito','Producto\x20no\x20encontrado','Error\x20al\x20recibir\x20actualizaciones\x20de\x20productos','service_89by24g','$U\x20','offsetTop','Pedido\x20listo\x20para\x20enviar\x20por\x20WhatsApp','from','total','El\x20carrito\x20ya\x20está\x20vacío','all','354988tcJayS','montevideo','\x0a\x20\x20\x20\x20\x20\x20\x20\x20</button>\x0a\x20\x20\x20\x20\x20\x20\x20\x20','\x22\x20loading=\x22lazy\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22carrito-item-info\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<span\x20class=\x22carrito-item-nombre\x22>','\x22\x20class=\x22modal-img\x22\x20alt=\x22','\x0a\x20\x20','code','createElement','#modal-imagen','input-notas','Envío:\x20$U\x20','modal-datos-envio','thumb-label-min','.range-slider','carrito-panel','hidden','Error\x20al\x20enviar\x20email:','&body=','cambiarPagina','<i\x20class=\x22fas\x20fa-times-circle\x22></i>\x20Agotado','email','\x0a\x20\x20\x20\x20\x20\x20<button\x20class=\x22cerrar-modal\x22\x20aria-label=\x22Cerrar\x20modal\x22\x20onclick=\x22cerrarModal()\x22>&times;</button>\x0a\x20\x20\x20\x20\x20\x20<div\x20class=\x22modal-flex\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22modal-carrusel\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<img\x20id=\x22modal-imagen\x22\x20src=\x22','hamburguesa','<p\x20class=\x22carrito-vacio\x22>No\x20hay\x20productos\x20en\x20el\x20carrito</p>','ancho','\x22\x20data-index=\x22','boton-agregar','firebaseApp','Agregando\x20<span\x20class=\x22spinner\x22></span>','Retiro\x20en\x20local\x20(Gratis)','alto','textContent','none','8pbLhnj','visibilityState','\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22modal-info\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<h1\x20class=\x22modal-nombre\x22>','display','busqueda','precioMin','\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</button>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20','contadorCarrito','isArray','cerrarModal','modalContenido','.cantidad-modal-input','style','modal-contenido','✅\x20Signed\x20in\x20anonymously\x20to\x20Firebase.','scrollTo','className','❌\x20Error\x20signing\x20in:','🚫\x20Acción\x20no\x20permitida','\x22\x20data-id=\x22','dataset','boton-detalles','totalCarrito','todos','paginacion','div','disponible','exito','\x22\x20alt=\x22Miniatura\x20','</p>\x0a\x20\x20\x20\x20\x20\x20<div\x20class=\x22producto-stock\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20','Error\x20al\x20cargar\x20productos:','ctrlKey','\x20cm</p>','lista-carrito','toString','modal-overlay','Error\x20al\x20cargar\x20productos','</h1>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<p\x20class=\x22modal-precio\x22>$U\x20','Envío\x20Montevideo\x20($200)','listaCarrito','has','removeEventListener','/stock','aria-hidden','\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<p\x20class=\x22modal-stock\x20','precio','\x20-\x20$U\x20','resumen-productos','Disponible:\x20','\x22\x20class=\x22thumbnail\x20','*TOTAL\x20A\x20PAGAR:\x20$U\x20','remove','isFinite','stringify','carrito-btn-main','<p\x20class=\x22sin-productos\x22>No\x20hay\x20productos\x20disponibles.</p>','.boton-detalles,\x20.boton-agregar,\x20.boton-aviso-stock','carritoBtnMain','Error\x20al\x20vaciar\x20carrito:','>+</button>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<span\x20class=\x22carrito-item-subtotal\x22>Subtotal:\x20$U\x20','inputBusqueda','info','getAttribute','querySelectorAll','</span>\x0a\x20\x20\x20\x20\x20\x20\x20\x20<span>$U\x20','grupo-direccion','carritoOverlay','Error\x20de\x20red.','_pfHandler','opacity','>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20','reduce','pagehide','\x0a\x20\x20\x20\x20<button\x20class=\x22','map','innerHTML','\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20','visible','emailjs','\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20','Error\x20al\x20guardar\x20el\x20carrito','&text=','auth/configuration-not-found','userAgent','un\x20producto','keydown','categoria','cantidad','localStorage\x20setItem\x20fallo:','.thumbnail','flex','Stock\x20insuficiente\x20para\x20\x22','body','2107482HXyQKu','init','.carrito-overlay','submit','</p>','*\x0a\x0a','Montevideo','\x0a\x0aSaludos,\x0a[Tu\x20nombre]','estado','):</span>\x0a\x20\x20\x20\x20\x20\x20\x20\x20<span>$U\x20','productLoader','entries','galeria-productos','\x22\x20class=\x22cantidad-modal-input\x22\x20','\x0a\x20\x20\x20\x20\x20\x20<div\x20class=\x22resumen-item\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20<span>','retiro','24113KnStlE','disabled','\x22\x20class=\x22producto-img\x22\x20loading=\x22lazy\x22\x20decoding=\x22async\x22>\x0a\x20\x20\x20\x20\x20\x20<h3\x20class=\x22producto-nombre\x22>','boolean','preventDefault','Error\x20de\x20autenticación\x20con\x20Firebase.','setAttribute','precioMinInput','Stock\x20insuficiente','classList','exists','.boton-vaciar-carrito','Agotado','https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen','false','Producto\x20agregado\x20al\x20carrito','nombre','\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<img\x20src=\x22','imagen','select-envio','adicionales','>-</button>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<span\x20class=\x22carrito-item-cantidad\x22>','addEventListener','object','2259303tHsEyv','shiftKey','<p\x20class=\x22carrito-vacio\x22>Tu\x20carrito\x20está\x20vacío</p>','querySelector','</span>\x0a\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20','Cantidad\x20inválida','.boton-finalizar-compra','Hola\x20Patofelting,\x0a\x0aMe\x20gustaría\x20saber\x20cuándo\x20estará\x20disponible\x20el\x20producto:\x20','\x0a\x20\x20\x20\x20<div\x20class=\x22producto-card\x20','slice','avisoPreCompraModal','appendChild','boton-aviso-stock',')\x22>','\x22>\x0a\x20\x20\x20\x20\x20\x20<img\x20src=\x22','value','1728770LSUbsy','\x22\x20alt=\x22','precioMaxInput','toUpperCase','.range','left','aria-expanded','carrito','formulario-contacto','otros','<span\x20class=\x22texto-agotado\x22>Agotado</span>'];_0x1d57=function(){return _0x2215c4;};return _0x1d57();}const toNum=_0x61cfc5=>{const _0x1b37a4=_0x2e6549;if(_0x61cfc5===null||_0x61cfc5===undefined)return null;if(typeof _0x61cfc5==='number')return isFinite(_0x61cfc5)?_0x61cfc5:null;const _0x1cd870=String(_0x61cfc5)['replace'](',','.')[_0x1b37a4(0x1f2)](),_0x31fcb0=parseFloat(_0x1cd870);return isFinite(_0x31fcb0)?_0x31fcb0:null;};function procesarDatosProductos(_0x6232dd){const _0x1f7908=_0x2e6549;productos=Object[_0x1f7908(0x188)](_0x6232dd||{})['map'](([_0x334474,_0x33ad5b])=>{const _0xc79690=_0x1f7908;if(typeof _0x33ad5b!==_0xc79690(0x1a4)||!_0x33ad5b)return null;const _0x240b71=toNum(_0x33ad5b[_0xc79690(0x11d)]),_0x15841d=toNum(_0x33ad5b[_0xc79690(0x278)]),_0x27072b=toNum(_0x33ad5b[_0xc79690(0x1e3)]),_0x5caab7=_0x33ad5b[_0xc79690(0x253)]!==undefined?_0x33ad5b['stock']:_0x33ad5b[_0xc79690(0x177)],_0x3ecdfc=Math['max'](0x0,parseInt(String(_0x5caab7)['replace'](',','.'),0xa)||0x0),_0x538ccf=(_0x33ad5b[_0xc79690(0x1a1)]||'')[_0xc79690(0x142)]()[_0xc79690(0x1f2)](),_0x2e6444=_0x538ccf&&_0x538ccf!=='-'&&_0x538ccf!=='–'?_0x538ccf:'';return{'id':parseInt(_0x33ad5b['id']||_0x334474,0xa),'nombre':(_0x33ad5b[_0xc79690(0x19d)]||_0xc79690(0x24d))[_0xc79690(0x1f2)](),'descripcion':(_0x33ad5b[_0xc79690(0x1db)]||'')[_0xc79690(0x1f2)](),'precio':parseFloat(String(_0x33ad5b[_0xc79690(0x14d)])[_0xc79690(0x202)](',','.'))||0x0,'stock':_0x3ecdfc,'imagenes':Array[_0xc79690(0x128)](_0x33ad5b[_0xc79690(0x23f)])?_0x33ad5b[_0xc79690(0x23f)][_0xc79690(0x20d)](_0x28ef90=>typeof _0x28ef90===_0xc79690(0x216)&&_0x28ef90[_0xc79690(0x1f2)]()):[_0x33ad5b[_0xc79690(0x19f)]||PLACEHOLDER_IMAGE],'categoria':(_0x33ad5b[_0xc79690(0x176)]||_0xc79690(0x1be))[_0xc79690(0x1de)]()[_0xc79690(0x1f2)](),'estado':(_0x33ad5b[_0xc79690(0x185)]||'')['trim'](),'adicionales':_0x2e6444,'alto':_0x240b71,'ancho':_0x15841d,'profundidad':_0x27072b};})[_0x1f7908(0x20d)](Boolean)[_0x1f7908(0x1f5)]((_0x34a24c,_0x15ec85)=>_0x34a24c['id']-_0x15ec85['id']);}function renderizarCarrito(){const _0xac2989=_0x2e6549;if(!elementos[_0xac2989(0x147)]||!elementos[_0xac2989(0x136)])return;elementos[_0xac2989(0x147)][_0xac2989(0x16b)]=carrito[_0xac2989(0x21b)]===0x0?_0xac2989(0x1a7):carrito[_0xac2989(0x16a)](_0xba0f2f=>{const _0x320888=_0xac2989,_0x1dac4f=productos[_0x320888(0x200)](_0x5f3c0d=>_0x5f3c0d['id']===_0xba0f2f['id'])||{'stock':0x0},_0xb05e05=Math[_0x320888(0x1d3)](0x0,_0x1dac4f[_0x320888(0x253)]||0x0);return _0x320888(0x1ff)+_0xba0f2f['id']+_0x320888(0x1cf)+_0xba0f2f[_0x320888(0x19f)]+_0x320888(0x237)+_0xba0f2f['nombre']+_0x320888(0x263)+_0xba0f2f[_0x320888(0x19d)]+'</span>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<span\x20class=\x22carrito-item-precio\x22>$U\x20'+_0xba0f2f[_0x320888(0x14d)][_0x320888(0x1c4)](_0x320888(0x1f4))+_0x320888(0x239)+_0xba0f2f['id']+'\x22\x20'+(_0xba0f2f[_0x320888(0x177)]<=0x1?'disabled':'')+_0x320888(0x1a2)+_0xba0f2f[_0x320888(0x177)]+_0x320888(0x1cc)+_0xba0f2f['id']+'\x22\x20'+(_0xb05e05<=0x0?_0x320888(0x18e):'')+_0x320888(0x15b)+(_0xba0f2f[_0x320888(0x14d)]*_0xba0f2f[_0x320888(0x177)])['toLocaleString'](_0x320888(0x1f4))+_0x320888(0x1e9);})[_0xac2989(0x230)]('');const _0x392774=carrito[_0xac2989(0x167)]((_0x5436e2,_0x21d059)=>_0x5436e2+_0x21d059['precio']*_0x21d059[_0xac2989(0x177)],0x0);elementos[_0xac2989(0x136)][_0xac2989(0x11e)]='Total:\x20$U\x20'+_0x392774[_0xac2989(0x1c4)](_0xac2989(0x1f4)),elementos[_0xac2989(0x147)]['querySelectorAll'](_0xac2989(0x22a))['forEach'](_0x578283=>{const _0x43b7a7=_0xac2989;_0x578283[_0x43b7a7(0x1d1)]=async _0x543dad=>{const _0x3be61f=_0x43b7a7,_0x82a80c=parseInt(_0x543dad['currentTarget'][_0x3be61f(0x134)]['id']),_0x2e628c=carrito[_0x3be61f(0x200)](_0x181784=>_0x181784['id']===_0x82a80c);if(_0x2e628c&&_0x2e628c[_0x3be61f(0x177)]>0x1)try{await runTransaction(ref(db,_0x3be61f(0x223)+_0x82a80c+_0x3be61f(0x14a)),_0x21da5e=>(_0x21da5e||0x0)+0x1),suprimirRealtime++;const _0x16a7c9=productos[_0x3be61f(0x200)](_0x119f66=>_0x119f66['id']===_0x82a80c);if(_0x16a7c9)_0x16a7c9[_0x3be61f(0x253)]=(_0x16a7c9['stock']||0x0)+0x1;_0x2e628c[_0x3be61f(0x177)]--,guardarCarrito(),renderizarCarrito(),renderizarProductos(),mostrarNotificacion('Reducida\x20cantidad\x20de\x20\x22'+_0x2e628c[_0x3be61f(0x19d)]+'\x22',_0x3be61f(0x15d));}catch(_0x451c9c){console['error']('Error\x20al\x20disminuir\x20cantidad:',_0x451c9c),mostrarNotificacion(_0x3be61f(0x20b),'error');}};}),elementos['listaCarrito']['querySelectorAll'](_0xac2989(0x229))['forEach'](_0x246fdc=>{const _0x55a6d2=_0xac2989;_0x246fdc[_0x55a6d2(0x1d1)]=_0x11979b=>agregarAlCarrito(parseInt(_0x11979b['currentTarget'][_0x55a6d2(0x134)]['id']),0x1,_0x11979b[_0x55a6d2(0x218)]);});}function crearCardProducto(_0x37de27){const _0x4ffc2e=_0x2e6549,_0xc1a7c=Math[_0x4ffc2e(0x1d3)](0x0,_0x37de27['stock']||0x0),_0x2c43d7=_0xc1a7c<=0x0,_0x32b1ac=_0x37de27[_0x4ffc2e(0x23f)]&&_0x37de27[_0x4ffc2e(0x23f)][0x0]||PLACEHOLDER_IMAGE;return _0x4ffc2e(0x1ad)+(_0x2c43d7?'agotado':'')+_0x4ffc2e(0x133)+_0x37de27['id']+_0x4ffc2e(0x1b3)+_0x32b1ac+_0x4ffc2e(0x1b6)+_0x37de27[_0x4ffc2e(0x19d)]+_0x4ffc2e(0x18f)+_0x37de27['nombre']+'</h3>\x0a\x20\x20\x20\x20\x20\x20<p\x20class=\x22producto-precio\x22>$U\x20'+_0x37de27['precio']['toLocaleString'](_0x4ffc2e(0x1f4))+_0x4ffc2e(0x13d)+(_0x2c43d7?_0x4ffc2e(0x1bf):_0x4ffc2e(0x1f7)+_0xc1a7c)+_0x4ffc2e(0x206)+(_0x2c43d7?'\x20agotado':'')+_0x4ffc2e(0x133)+_0x37de27['id']+'\x22\x20'+(_0x2c43d7?_0x4ffc2e(0x18e):'')+_0x4ffc2e(0x166)+(_0x2c43d7?_0x4ffc2e(0x273):_0x4ffc2e(0x241))+_0x4ffc2e(0x262)+(_0x2c43d7?_0x4ffc2e(0x23b)+_0x37de27[_0x4ffc2e(0x19d)]['replace'](/'/g,'\x5c\x27')+_0x4ffc2e(0x1ca):'')+_0x4ffc2e(0x228)+_0x37de27['id']+'\x22>🔍\x20Ver\x20Detalle</button>\x0a\x20\x20\x20\x20</div>\x0a\x20\x20';}function filtrarProductos(){const _0x2c4567=_0x2e6549;return productos[_0x2c4567(0x20d)](_0x3be75b=>{const _0x254be1=_0x2c4567,{precioMin:_0x3bfa81,precioMax:_0xccd5c5,categoria:_0x4e8313,busqueda:_0x21f301}=filtrosActuales,_0x48159f=(_0x21f301||'')[_0x254be1(0x1de)]();return _0x3be75b[_0x254be1(0x14d)]>=_0x3bfa81&&_0x3be75b[_0x254be1(0x14d)]<=_0xccd5c5&&(_0x4e8313==='todos'||_0x3be75b['categoria']===_0x4e8313)&&(!_0x48159f||_0x3be75b['nombre'][_0x254be1(0x1de)]()[_0x254be1(0x1df)](_0x48159f)||_0x3be75b[_0x254be1(0x1db)][_0x254be1(0x1de)]()[_0x254be1(0x1df)](_0x48159f));});}function prewarmImages(_0x2197fd){const _0x41642c=_0x2e6549;try{_0x2197fd[_0x41642c(0x1e0)](_0x3c5b64=>{const _0x442bd7=_0x41642c;(_0x3c5b64[_0x442bd7(0x23f)]||[])['slice'](0x0,0x2)[_0x442bd7(0x1e0)](_0x235e59=>{const _0x532609=_0x442bd7,_0x54ceda=new Image();_0x54ceda[_0x532609(0x222)]=_0x532609(0x1fc),_0x54ceda['src']=_0x235e59;});});}catch{}}function renderizarProductos(){const _0x10aba9=_0x2e6549,_0x537430=filtrarProductos(),_0x3737e2=(paginaActual-0x1)*PRODUCTOS_POR_PAGINA,_0x20d95a=_0x537430[_0x10aba9(0x1ae)](_0x3737e2,_0x3737e2+PRODUCTOS_POR_PAGINA);elementos[_0x10aba9(0x1cd)]['innerHTML']=_0x20d95a[_0x10aba9(0x21b)]===0x0?_0x10aba9(0x226):_0x20d95a[_0x10aba9(0x16a)](crearCardProducto)[_0x10aba9(0x230)](''),prewarmImages(_0x20d95a),renderizarPaginacion(_0x537430['length']);}function renderizarPaginacion(_0x549060){const _0x576a41=_0x2e6549,_0x514124=Math['ceil'](_0x549060/PRODUCTOS_POR_PAGINA);if(!elementos['paginacion'])return;if(_0x514124<=0x1)return elementos[_0x576a41(0x138)][_0x576a41(0x16b)]='';elementos[_0x576a41(0x138)][_0x576a41(0x16b)]=Array[_0x576a41(0x25c)]({'length':_0x514124},(_0x31cb7b,_0x533745)=>_0x533745+0x1)['map'](_0x5d4740=>_0x576a41(0x169)+(_0x5d4740===paginaActual?_0x576a41(0x236):'')+'\x22\x20onclick=\x22cambiarPagina('+_0x5d4740+_0x576a41(0x1b2)+_0x5d4740+_0x576a41(0x244))[_0x576a41(0x230)]('');}window[_0x2e6549(0x272)]=function(_0x394df1){const _0x32ad5a=_0x2e6549;paginaActual=_0x394df1,renderizarProductos();const _0x4193f8=elementos[_0x32ad5a(0x1cd)][_0x32ad5a(0x25a)]-0x64;if(window['scrollY']+0xa<_0x4193f8)window[_0x32ad5a(0x12f)]({'top':_0x4193f8,'behavior':_0x32ad5a(0x1f6)});};function ensureProductModal(){const _0x272edb=_0x2e6549;if(!getElement(_0x272edb(0x1ec))){const _0x9c6109=document['createElement'](_0x272edb(0x139));_0x9c6109['id']=_0x272edb(0x1ec),_0x9c6109[_0x272edb(0x130)]=_0x272edb(0x143),_0x9c6109[_0x272edb(0x193)](_0x272edb(0x1e8),'dialog'),_0x9c6109[_0x272edb(0x193)](_0x272edb(0x254),_0x272edb(0x210)),_0x9c6109[_0x272edb(0x193)](_0x272edb(0x14b),'true'),_0x9c6109[_0x272edb(0x16b)]=_0x272edb(0x215),document['body'][_0x272edb(0x1b0)](_0x9c6109);}elementos[_0x272edb(0x1e6)]=getElement(_0x272edb(0x1ec)),elementos['modalContenido']=getElement(_0x272edb(0x12d)),elementos[_0x272edb(0x1e6)][_0x272edb(0x1a3)](_0x272edb(0x1ef),_0x353fed=>{const _0x731a0=_0x272edb;if(_0x353fed[_0x731a0(0x1d6)]===elementos[_0x731a0(0x1e6)])cerrarModal();}),elementos['modalContenido'][_0x272edb(0x1a3)](_0x272edb(0x1ef),_0x2834fe=>_0x2834fe['stopPropagation']()),document[_0x272edb(0x1a3)]('keydown',_0x374e84=>{const _0x3efd0f=_0x272edb;if(_0x374e84[_0x3efd0f(0x1f0)]===_0x3efd0f(0x243)&&elementos[_0x3efd0f(0x1e6)][_0x3efd0f(0x196)][_0x3efd0f(0x1cb)](_0x3efd0f(0x16d)))cerrarModal();});}function mostrarModalProducto(_0x50e5a5){const _0x424dd1=_0x2e6549;ensureProductModal();const _0xa24745=elementos[_0x424dd1(0x12a)];if(!elementos[_0x424dd1(0x1e6)]||!_0xa24745)return;let _0xa33b57=0x0;const _0x13acd8=()=>{const _0xefbd20=_0x424dd1,_0xf65cb8=Math[_0xefbd20(0x1d3)](0x0,_0x50e5a5[_0xefbd20(0x253)]||0x0),_0x27dcd8=_0xf65cb8<=0x0;_0xa24745[_0xefbd20(0x16b)]=_0xefbd20(0x275)+(_0x50e5a5[_0xefbd20(0x23f)][_0xa33b57]||PLACEHOLDER_IMAGE)+_0xefbd20(0x264)+_0x50e5a5['nombre']+_0xefbd20(0x203)+_0x50e5a5[_0xefbd20(0x23f)]['map']((_0x48ce3a,_0x5e154d)=>_0xefbd20(0x19e)+_0x48ce3a+_0xefbd20(0x151)+(_0x5e154d===_0xa33b57?'active':'')+_0xefbd20(0x279)+_0x5e154d+_0xefbd20(0x13c)+(_0x5e154d+0x1)+_0xefbd20(0x16c))[_0xefbd20(0x230)]('')+_0xefbd20(0x122)+_0x50e5a5[_0xefbd20(0x19d)]+_0xefbd20(0x145)+_0x50e5a5['precio'][_0xefbd20(0x1c4)]('es-UY')+_0xefbd20(0x248)+(_0x50e5a5[_0xefbd20(0x1db)]?_0xefbd20(0x1ce)+_0x50e5a5[_0xefbd20(0x1db)]+_0xefbd20(0x181):'')+'\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20'+(_0x50e5a5[_0xefbd20(0x1a1)]?_0xefbd20(0x21f)+_0x50e5a5[_0xefbd20(0x1a1)]+_0xefbd20(0x181):'')+_0xefbd20(0x16f)+(_0x50e5a5[_0xefbd20(0x11d)]||_0x50e5a5['ancho']||_0x50e5a5[_0xefbd20(0x1e3)]?'<p><b>Medidas:</b>\x20'+[_0x50e5a5[_0xefbd20(0x11d)],_0x50e5a5['ancho'],_0x50e5a5[_0xefbd20(0x1e3)]]['filter'](Boolean)[_0xefbd20(0x230)](_0xefbd20(0x1e5))+_0xefbd20(0x140):'')+_0xefbd20(0x14c)+(_0x27dcd8?'agotado':_0xefbd20(0x13a))+'\x22>'+(_0x27dcd8?_0xefbd20(0x235):_0xefbd20(0x150)+_0xf65cb8)+_0xefbd20(0x234)+_0xf65cb8+_0xefbd20(0x18a)+(_0x27dcd8?_0xefbd20(0x18e):'')+_0xefbd20(0x21c)+(_0x27dcd8?'agotado':'')+'\x22\x20data-id=\x22'+_0x50e5a5['id']+'\x22\x20'+(_0x27dcd8?_0xefbd20(0x18e):'')+'>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20'+(_0x27dcd8?_0xefbd20(0x199):'Agregar\x20al\x20carrito')+_0xefbd20(0x126);const _0x4e0ad6=_0xa24745[_0xefbd20(0x1a8)](_0xefbd20(0x268));_0x4e0ad6?.['addEventListener'](_0xefbd20(0x1ef),_0x375ec5=>{const _0x283041=_0xefbd20;_0x375ec5['stopPropagation']();if(!_0x50e5a5['imagenes']||_0x50e5a5['imagenes'][_0x283041(0x21b)]<=0x1)return;_0xa33b57=(_0xa33b57+0x1)%_0x50e5a5[_0x283041(0x23f)][_0x283041(0x21b)],_0x13acd8();}),_0xa24745[_0xefbd20(0x15f)](_0xefbd20(0x179))[_0xefbd20(0x1e0)](_0x1467ab=>_0x1467ab[_0xefbd20(0x1a3)]('click',_0x3f8872=>{const _0x54d0ff=_0xefbd20;_0x3f8872[_0x54d0ff(0x214)](),_0xa33b57=parseInt(_0x3f8872[_0x54d0ff(0x218)][_0x54d0ff(0x134)][_0x54d0ff(0x21a)]),_0x13acd8();})),_0xa24745[_0xefbd20(0x1a8)](_0xefbd20(0x1da))?.['addEventListener'](_0xefbd20(0x1ef),_0x4ffeeb=>{const _0xec3b14=_0xefbd20;_0x4ffeeb[_0xec3b14(0x214)]();const _0x15e394=parseInt(_0x4ffeeb[_0xec3b14(0x218)][_0xec3b14(0x134)]['id']),_0x2b0d64=parseInt(_0xa24745[_0xec3b14(0x1a8)](_0xec3b14(0x12b))[_0xec3b14(0x1b4)]);agregarAlCarrito(_0x15e394,_0x2b0d64,_0x4ffeeb['currentTarget']);});};_0x13acd8(),elementos[_0x424dd1(0x1e6)][_0x424dd1(0x196)][_0x424dd1(0x24a)](_0x424dd1(0x16d)),elementos['productoModal'][_0x424dd1(0x193)](_0x424dd1(0x14b),_0x424dd1(0x19b)),document[_0x424dd1(0x17c)][_0x424dd1(0x196)]['add'](_0x424dd1(0x231));}function cerrarModal(){const _0x44e928=_0x2e6549;elementos['productoModal']&&(elementos[_0x44e928(0x1e6)]['classList'][_0x44e928(0x153)]('visible'),elementos[_0x44e928(0x1e6)]['setAttribute']('aria-hidden',_0x44e928(0x210)),document[_0x44e928(0x17c)][_0x44e928(0x196)]['remove']('no-scroll'));}window[_0x2e6549(0x129)]=cerrarModal;async function agregarAlCarrito(_0x207e77,_0x258c79=0x1,_0x12b299=null){const _0x21d782=_0x2e6549;if(inFlightAdds[_0x21d782(0x148)](_0x207e77))return;inFlightAdds['add'](_0x207e77);if(!Number[_0x21d782(0x154)](_0x207e77)||_0x207e77<=0x0)return inFlightAdds[_0x21d782(0x20a)](_0x207e77),mostrarNotificacion('ID\x20de\x20producto\x20inválido','error');const _0x1a939c=productos[_0x21d782(0x200)](_0x2198c9=>_0x2198c9['id']===_0x207e77);if(!_0x1a939c)return inFlightAdds[_0x21d782(0x20a)](_0x207e77),mostrarNotificacion(_0x21d782(0x256),_0x21d782(0x23a));const _0x49fc59=Math['max'](0x1,parseInt(_0x258c79));if(!Number[_0x21d782(0x154)](_0x49fc59))return inFlightAdds[_0x21d782(0x20a)](_0x207e77),mostrarNotificacion(_0x21d782(0x1aa),_0x21d782(0x23a));if(_0x12b299){if(busyButtons[_0x21d782(0x148)](_0x12b299)){inFlightAdds[_0x21d782(0x20a)](_0x207e77);return;}busyButtons[_0x21d782(0x24a)](_0x12b299),_0x12b299[_0x21d782(0x18e)]=!![],_0x12b299[_0x21d782(0x20f)]=_0x12b299[_0x21d782(0x16b)],_0x12b299[_0x21d782(0x16b)]=_0x21d782(0x11b);}if((_0x1a939c[_0x21d782(0x253)]||0x0)<_0x49fc59)return _0x12b299&&(_0x12b299[_0x21d782(0x18e)]=![],_0x12b299[_0x21d782(0x16b)]=_0x12b299[_0x21d782(0x20f)],busyButtons['delete'](_0x12b299)),inFlightAdds[_0x21d782(0x20a)](_0x207e77),mostrarNotificacion(_0x21d782(0x195),_0x21d782(0x23a));try{const _0x452427=ref(db,'productos/'+_0x207e77+_0x21d782(0x14a)),{committed:_0x260e80}=await runTransaction(_0x452427,_0x158330=>{_0x158330=_0x158330||0x0;if(_0x158330<_0x49fc59)return;return _0x158330-_0x49fc59;});if(!_0x260e80)throw new Error(_0x21d782(0x1f9));suprimirRealtime++,_0x1a939c['stock']=Math[_0x21d782(0x1d3)](0x0,(_0x1a939c[_0x21d782(0x253)]||0x0)-_0x49fc59);const _0x3c7b81=carrito[_0x21d782(0x200)](_0x4f546c=>_0x4f546c['id']===_0x207e77);if(_0x3c7b81)_0x3c7b81[_0x21d782(0x177)]+=_0x49fc59;else carrito[_0x21d782(0x1fe)]({'id':_0x1a939c['id'],'nombre':_0x1a939c[_0x21d782(0x19d)],'precio':_0x1a939c['precio'],'cantidad':_0x49fc59,'imagen':_0x1a939c[_0x21d782(0x23f)]&&_0x1a939c[_0x21d782(0x23f)][0x0]||PLACEHOLDER_IMAGE});guardarCarrito(),renderizarCarrito(),renderizarProductos(),mostrarNotificacion(_0x21d782(0x19c),_0x21d782(0x13b));}catch(_0x2d3b8c){console['error'](_0x21d782(0x1fb),_0x2d3b8c),mostrarNotificacion(_0x21d782(0x238),_0x21d782(0x23a));}finally{_0x12b299&&(_0x12b299[_0x21d782(0x18e)]=![],_0x12b299[_0x21d782(0x16b)]=_0x12b299[_0x21d782(0x20f)],busyButtons['delete'](_0x12b299)),inFlightAdds[_0x21d782(0x20a)](_0x207e77);}}function actualizarCategorias(){const _0x35c772=_0x2e6549;if(!elementos[_0x35c772(0x204)])return;const _0x1faee0=['todos',...new Set(productos[_0x35c772(0x16a)](_0x5879b1=>_0x5879b1[_0x35c772(0x176)])[_0x35c772(0x1f5)]())];elementos[_0x35c772(0x204)][_0x35c772(0x16b)]=_0x1faee0[_0x35c772(0x16a)](_0x325b48=>_0x35c772(0x1ea)+_0x325b48+'\x22>'+(_0x325b48['charAt'](0x0)[_0x35c772(0x1b8)]()+_0x325b48['slice'](0x1))+_0x35c772(0x1d8))[_0x35c772(0x230)](''),elementos[_0x35c772(0x204)][_0x35c772(0x1b4)]=filtrosActuales[_0x35c772(0x176)];}function actualizarUI(){renderizarCarrito(),actualizarContadorCarrito();}function aplicarFiltros(){paginaActual=0x1,renderizarProductos();}function resetearFiltros(){const _0x527444=_0x2e6549;filtrosActuales={'precioMin':0x0,'precioMax':0xbb8,'categoria':_0x527444(0x137),'busqueda':''};if(elementos[_0x527444(0x15c)])elementos[_0x527444(0x15c)][_0x527444(0x1b4)]='';if(elementos[_0x527444(0x204)])elementos[_0x527444(0x204)]['value']='todos';if(elementos[_0x527444(0x194)])elementos[_0x527444(0x194)]['value']='0';if(elementos['precioMaxInput'])elementos[_0x527444(0x1b7)][_0x527444(0x1b4)]='3000';updateRange(),aplicarFiltros();}function inicializarFAQ(){const _0x5de41b=_0x2e6549;document[_0x5de41b(0x15f)](_0x5de41b(0x225))[_0x5de41b(0x1e0)](_0x4788ea=>{const _0xbbd83e=_0x5de41b;_0x4788ea[_0xbbd83e(0x1d1)]=()=>{const _0x1b81a7=_0xbbd83e,_0x8519c2=_0x4788ea[_0x1b81a7(0x15e)]('aria-expanded')==='true';_0x4788ea['setAttribute'](_0x1b81a7(0x1bb),!_0x8519c2),_0x4788ea['nextElementSibling']['hidden']=_0x8519c2;};});}function inicializarMenuHamburguesa(){const _0x3fcaa1=_0x2e6549,_0x1183e6=elementos[_0x3fcaa1(0x276)],_0x150806=elementos[_0x3fcaa1(0x1d9)];if(!_0x1183e6||!_0x150806)return;_0x1183e6[_0x3fcaa1(0x1d1)]=()=>{const _0x471480=_0x3fcaa1,_0x5b0eaf=_0x150806[_0x471480(0x196)][_0x471480(0x1f1)]('active');_0x1183e6[_0x471480(0x193)](_0x471480(0x1bb),_0x5b0eaf),document['body']['classList'][_0x471480(0x1f1)](_0x471480(0x231),_0x5b0eaf);},_0x150806[_0x3fcaa1(0x15f)]('a')[_0x3fcaa1(0x1e0)](_0x92a0f4=>_0x92a0f4[_0x3fcaa1(0x1d1)]=()=>{const _0x5b593c=_0x3fcaa1;_0x150806[_0x5b593c(0x196)][_0x5b593c(0x153)](_0x5b593c(0x236)),_0x1183e6['setAttribute'](_0x5b593c(0x1bb),![]),document[_0x5b593c(0x17c)][_0x5b593c(0x196)][_0x5b593c(0x153)](_0x5b593c(0x231));});}function setupContactForm(){const _0x1ef351=_0x2e6549,_0x300d99=getElement(_0x1ef351(0x1bd));if(!_0x300d99||!window[_0x1ef351(0x16e)])return;emailjs[_0x1ef351(0x17e)](_0x1ef351(0x1f3)),_0x300d99[_0x1ef351(0x1e4)]=_0x890412=>{const _0x392ef1=_0x1ef351;_0x890412[_0x392ef1(0x191)]();const _0x3c3052=getElement(_0x392ef1(0x19d))[_0x392ef1(0x1b4)],_0x2ed226=getElement(_0x392ef1(0x274))[_0x392ef1(0x1b4)],_0x3b6f24=getElement(_0x392ef1(0x22b))[_0x392ef1(0x1b4)];emailjs[_0x392ef1(0x23c)](_0x392ef1(0x258),_0x392ef1(0x22d),{'from_name':_0x3c3052,'from_email':_0x2ed226,'message':_0x3b6f24})[_0x392ef1(0x224)](()=>{const _0x104fe1=_0x392ef1;getElement(_0x104fe1(0x24c))['classList'][_0x104fe1(0x153)](_0x104fe1(0x26f)),_0x300d99[_0x104fe1(0x1d5)](),setTimeout(()=>getElement(_0x104fe1(0x24c))[_0x104fe1(0x196)]['add'](_0x104fe1(0x26f)),0xbb8);},_0x1514b0=>{const _0x4fd0b4=_0x392ef1;console[_0x4fd0b4(0x23a)](_0x4fd0b4(0x270),_0x1514b0);const _0x5ba7c4=getElement(_0x4fd0b4(0x201));_0x5ba7c4[_0x4fd0b4(0x11e)]=_0x4fd0b4(0x23e),_0x5ba7c4[_0x4fd0b4(0x196)][_0x4fd0b4(0x153)](_0x4fd0b4(0x26f)),setTimeout(()=>_0x5ba7c4[_0x4fd0b4(0x196)][_0x4fd0b4(0x24a)](_0x4fd0b4(0x26f)),0xbb8);});};}function initEventos(){const _0x407da0=_0x2e6549;elementos[_0x407da0(0x159)]?.['addEventListener'](_0x407da0(0x1ef),()=>toggleCarrito(!![])),elementos[_0x407da0(0x162)]?.[_0x407da0(0x1a3)]('click',()=>toggleCarrito(![])),elementos['btnCerrarCarrito']?.['addEventListener'](_0x407da0(0x1ef),()=>toggleCarrito(![])),getElement(_0x407da0(0x1a0))?.[_0x407da0(0x1a3)](_0x407da0(0x213),actualizarResumenPedido),elementos[_0x407da0(0x255)]?.[_0x407da0(0x1a3)](_0x407da0(0x1ef),vaciarCarrito),elementos['btnFinalizarCompra']?.['addEventListener'](_0x407da0(0x1ef),()=>{const _0x40d725=_0x407da0;if(carrito[_0x40d725(0x21b)]===0x0)return mostrarNotificacion(_0x40d725(0x252),_0x40d725(0x23a));elementos[_0x40d725(0x1af)]['style'][_0x40d725(0x123)]=_0x40d725(0x17a),elementos[_0x40d725(0x1af)][_0x40d725(0x193)]('aria-hidden','false');}),elementos[_0x407da0(0x22c)]?.[_0x407da0(0x1a3)](_0x407da0(0x1ef),()=>{const _0x3bd36b=_0x407da0;elementos[_0x3bd36b(0x1af)][_0x3bd36b(0x12c)][_0x3bd36b(0x123)]=_0x3bd36b(0x11f),elementos['avisoPreCompraModal'][_0x3bd36b(0x193)]('aria-hidden',_0x3bd36b(0x210));const _0x38c5ce=getElement(_0x3bd36b(0x26b));_0x38c5ce&&(_0x38c5ce[_0x3bd36b(0x12c)][_0x3bd36b(0x123)]=_0x3bd36b(0x17a),_0x38c5ce[_0x3bd36b(0x196)][_0x3bd36b(0x24a)](_0x3bd36b(0x16d)),_0x38c5ce[_0x3bd36b(0x207)](_0x3bd36b(0x26f)),actualizarResumenPedido());}),elementos['btnCancelarAviso']?.['addEventListener']('click',()=>{const _0x56e96d=_0x407da0;elementos[_0x56e96d(0x1af)]['style'][_0x56e96d(0x123)]=_0x56e96d(0x11f),elementos[_0x56e96d(0x1af)]['setAttribute'](_0x56e96d(0x14b),_0x56e96d(0x210));}),elementos[_0x407da0(0x15c)]?.['addEventListener'](_0x407da0(0x1ee),_0x3be0a8=>{const _0x204999=_0x407da0;filtrosActuales[_0x204999(0x124)]=_0x3be0a8[_0x204999(0x1d6)][_0x204999(0x1b4)][_0x204999(0x1de)]()[_0x204999(0x1f2)](),aplicarFiltros();}),elementos[_0x407da0(0x204)]?.['addEventListener'](_0x407da0(0x213),_0x4af304=>{const _0x142aa2=_0x407da0;filtrosActuales[_0x142aa2(0x176)]=_0x4af304['target'][_0x142aa2(0x1b4)]['trim'](),aplicarFiltros();}),elementos[_0x407da0(0x194)]?.['addEventListener']('input',updateRange),elementos['precioMaxInput']?.['addEventListener'](_0x407da0(0x1ee),updateRange),elementos['aplicarRangoBtn']?.[_0x407da0(0x1a3)](_0x407da0(0x1ef),()=>{const _0x701bfb=_0x407da0;filtrosActuales[_0x701bfb(0x125)]=parseInt(elementos[_0x701bfb(0x194)][_0x701bfb(0x1b4)])||0x0,filtrosActuales[_0x701bfb(0x221)]=parseInt(elementos[_0x701bfb(0x1b7)][_0x701bfb(0x1b4)])||0xbb8,aplicarFiltros();});const _0x1218b7=elementos['galeriaProductos'];if(_0x1218b7){if(_0x1218b7[_0x407da0(0x164)])_0x1218b7[_0x407da0(0x149)]('click',_0x1218b7['_pfHandler']);const _0x3e43f0=_0x855576=>{const _0x443d81=_0x407da0,_0x7ba0e2=_0x855576[_0x443d81(0x1d6)]['closest'](_0x443d81(0x158));if(!_0x7ba0e2)return;_0x855576[_0x443d81(0x191)](),_0x855576[_0x443d81(0x214)]();const _0x4b7f9a=_0x7ba0e2[_0x443d81(0x22e)](_0x443d81(0x24f)),_0x1a0ec6=parseInt(_0x4b7f9a?.[_0x443d81(0x134)]?.['id']),_0x5d87b2=productos[_0x443d81(0x200)](_0x4f3f2c=>_0x4f3f2c['id']===_0x1a0ec6);if(!_0x5d87b2)return;if(_0x7ba0e2[_0x443d81(0x196)][_0x443d81(0x1cb)](_0x443d81(0x135)))mostrarModalProducto(_0x5d87b2);else{if(_0x7ba0e2[_0x443d81(0x196)][_0x443d81(0x1cb)](_0x443d81(0x27a)))agregarAlCarrito(_0x1a0ec6,0x1,_0x7ba0e2);else _0x7ba0e2[_0x443d81(0x196)][_0x443d81(0x1cb)](_0x443d81(0x1b1))&&preguntarStock(_0x5d87b2[_0x443d81(0x19d)]);}};_0x1218b7[_0x407da0(0x1a3)](_0x407da0(0x1ef),_0x3e43f0,{'passive':![]}),_0x1218b7[_0x407da0(0x164)]=_0x3e43f0;}}function _0x1b5b(_0x59cee6,_0x2f96a5){const _0x1d5718=_0x1d57();return _0x1b5b=function(_0x1b5b61,_0x57fa3c){_0x1b5b61=_0x1b5b61-0x11a;let _0x109d7a=_0x1d5718[_0x1b5b61];return _0x109d7a;},_0x1b5b(_0x59cee6,_0x2f96a5);}function actualizarResumenPedido(){const _0x26edbd=_0x2e6549,_0x966f7a=getElement(_0x26edbd(0x14f)),_0x1a53bc=getElement(_0x26edbd(0x22f));if(!_0x966f7a||!_0x1a53bc)return;if(carrito[_0x26edbd(0x21b)]===0x0){_0x966f7a[_0x26edbd(0x16b)]=_0x26edbd(0x277),_0x1a53bc[_0x26edbd(0x11e)]=_0x26edbd(0x1c9);return;}let _0x45b950='',_0x5a966d=0x0;carrito['forEach'](_0x1ab459=>{const _0x303532=_0x26edbd,_0xe37681=_0x1ab459[_0x303532(0x14d)]*_0x1ab459[_0x303532(0x177)];_0x5a966d+=_0xe37681,_0x45b950+=_0x303532(0x18b)+_0x1ab459[_0x303532(0x19d)]+'\x20x'+_0x1ab459[_0x303532(0x177)]+_0x303532(0x160)+_0xe37681[_0x303532(0x1c4)](_0x303532(0x1f4))+_0x303532(0x1a9);});const _0x3b4fcf=getElement(_0x26edbd(0x1a0)),_0x4eba5e=_0x3b4fcf?.[_0x26edbd(0x1b4)]||'retiro';let _0x41e3b4=_0x4eba5e==='montevideo'?0xc8:_0x4eba5e===_0x26edbd(0x1dd)?0xfa:0x0;_0x45b950+=_0x26edbd(0x1c5)+_0x5a966d[_0x26edbd(0x1c4)](_0x26edbd(0x1f4))+_0x26edbd(0x1c7)+(_0x4eba5e!==_0x26edbd(0x18c)?'\x0a\x20\x20\x20\x20\x20\x20<div\x20class=\x22resumen-item\x20resumen-envio\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20<span>Envío\x20('+(_0x4eba5e===_0x26edbd(0x261)?_0x26edbd(0x183):'Interior')+_0x26edbd(0x186)+_0x41e3b4[_0x26edbd(0x1c4)](_0x26edbd(0x1f4))+_0x26edbd(0x251):'')+_0x26edbd(0x265),_0x966f7a[_0x26edbd(0x16b)]=_0x45b950;const _0x2a3ebb=_0x5a966d+_0x41e3b4;_0x1a53bc['textContent']=_0x26edbd(0x259)+_0x2a3ebb[_0x26edbd(0x1c4)]('es-UY');const _0xbe0b03=getElement(_0x26edbd(0x161)),_0x45f758=getElement(_0x26edbd(0x1fa));_0xbe0b03&&_0x45f758&&(_0xbe0b03['style']['display']=_0x4eba5e==='retiro'?_0x26edbd(0x11f):'flex',_0x45f758[_0x26edbd(0x1e2)]=_0x4eba5e!==_0x26edbd(0x18c));}getElement('btn-cerrar-modal-envio')?.[_0x2e6549(0x1a3)](_0x2e6549(0x1ef),()=>{const _0x55fe0f=_0x2e6549,_0x411a07=getElement(_0x55fe0f(0x26b));_0x411a07[_0x55fe0f(0x196)][_0x55fe0f(0x153)](_0x55fe0f(0x16d)),setTimeout(()=>_0x411a07[_0x55fe0f(0x12c)][_0x55fe0f(0x123)]=_0x55fe0f(0x11f),0x12c);});let enviandoPedido=![];function abrirWhatsAppPreferApp(_0x1599ff,_0x1dd31=_0x2e6549(0x219)){const _0x26cbe9=_0x2e6549,_0x370f32=encodeURIComponent(_0x1599ff),_0x376297='whatsapp://send?phone='+_0x1dd31+'&text='+_0x370f32,_0x4b9263=_0x26cbe9(0x233)+_0x1dd31+_0x26cbe9(0x171)+_0x370f32,_0x5c6699=_0x26cbe9(0x227)+_0x1dd31+'&text='+_0x370f32,_0x3fe8bf=/Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i['test'](navigator[_0x26cbe9(0x173)]),_0x148b64=()=>{const _0x335440=_0x26cbe9;clearTimeout(_0x1a13ea),document['removeEventListener']('visibilitychange',_0x148b64),document[_0x335440(0x149)](_0x335440(0x168),_0x148b64);};document[_0x26cbe9(0x1a3)](_0x26cbe9(0x1c6),_0x148b64),document[_0x26cbe9(0x1a3)](_0x26cbe9(0x168),_0x148b64),window[_0x26cbe9(0x249)][_0x26cbe9(0x1c2)]=_0x376297;const _0x1a13ea=setTimeout(()=>{const _0x283c81=_0x26cbe9;if(document[_0x283c81(0x121)]===_0x283c81(0x26f))return;window['location'][_0x283c81(0x1c2)]=_0x3fe8bf?_0x4b9263:_0x5c6699;},0x320);}getElement(_0x2e6549(0x20e))?.[_0x2e6549(0x1a3)](_0x2e6549(0x180),async _0x444924=>{const _0x462713=_0x2e6549;_0x444924[_0x462713(0x191)]();if(enviandoPedido)return;enviandoPedido=!![];const _0x355482=getElement('input-nombre')['value'][_0x462713(0x1f2)](),_0x3b9b65=getElement('input-apellido')[_0x462713(0x1b4)]['trim'](),_0x185408=getElement(_0x462713(0x240))[_0x462713(0x1b4)]['trim'](),_0x3c5ee6=getElement(_0x462713(0x1a0))['value'],_0x1673b5=_0x3c5ee6!==_0x462713(0x18c)?getElement(_0x462713(0x1fa))[_0x462713(0x1b4)][_0x462713(0x1f2)]():'',_0x5c2db6=getElement(_0x462713(0x269))[_0x462713(0x1b4)][_0x462713(0x1f2)]();if(!_0x355482||!_0x3b9b65||!_0x185408||_0x3c5ee6!=='retiro'&&!_0x1673b5){mostrarNotificacion(_0x462713(0x1f8),_0x462713(0x23a)),enviandoPedido=![];return;}for(const _0xa775e of carrito){const _0x295a1f=productos['find'](_0x3e8527=>_0x3e8527['id']===_0xa775e['id']);if(!_0x295a1f||_0x295a1f[_0x462713(0x253)]<0x0){mostrarNotificacion(_0x462713(0x17b)+(_0xa775e?.[_0x462713(0x19d)]||_0x462713(0x174))+'\x22','error'),enviandoPedido=![];return;}}let _0x1965c9=_0x462713(0x211);carrito['forEach'](_0x32ccce=>{const _0x3819b2=_0x462713;_0x1965c9+='➤\x20'+_0x32ccce[_0x3819b2(0x19d)]+'\x20x'+_0x32ccce['cantidad']+_0x3819b2(0x14e)+(_0x32ccce[_0x3819b2(0x14d)]*_0x32ccce[_0x3819b2(0x177)])['toLocaleString']('es-UY')+'\x0a';});const _0x476c5d=carrito['reduce']((_0x4e32a6,_0x4e5c70)=>_0x4e32a6+_0x4e5c70[_0x462713(0x14d)]*_0x4e5c70[_0x462713(0x177)],0x0),_0x37905e=_0x3c5ee6===_0x462713(0x261)?0xc8:_0x3c5ee6===_0x462713(0x1dd)?0xfa:0x0,_0xae2dab=_0x476c5d+_0x37905e;_0x1965c9+='\x0a*💰\x20Total:*\x0aSubtotal:\x20$U\x20'+_0x476c5d[_0x462713(0x1c4)](_0x462713(0x1f4))+'\x0a'+(_0x462713(0x26a)+_0x37905e[_0x462713(0x1c4)](_0x462713(0x1f4))+'\x0a')+(_0x462713(0x152)+_0xae2dab[_0x462713(0x1c4)](_0x462713(0x1f4))+_0x462713(0x182)),_0x1965c9+='*👤\x20Datos\x20del\x20cliente:*\x0a'+('Nombre:\x20'+_0x355482+'\x20'+_0x3b9b65+'\x0a')+('Teléfono:\x20'+_0x185408+'\x0a')+('Método\x20de\x20envío:\x20'+(_0x3c5ee6===_0x462713(0x261)?_0x462713(0x146):_0x3c5ee6===_0x462713(0x1dd)?_0x462713(0x24e):_0x462713(0x11c))+'\x0a');if(_0x3c5ee6!==_0x462713(0x18c))_0x1965c9+='Dirección:\x20'+_0x1673b5+'\x0a';if(_0x5c2db6)_0x1965c9+='\x0a*📝\x20Notas\x20adicionales:*\x0a'+_0x5c2db6;abrirWhatsAppPreferApp(_0x1965c9,_0x462713(0x219));const _0x561105=getElement(_0x462713(0x26b));_0x561105?.['classList'][_0x462713(0x153)](_0x462713(0x16d)),setTimeout(()=>{const _0x177e98=_0x462713;if(_0x561105)_0x561105[_0x177e98(0x12c)][_0x177e98(0x123)]=_0x177e98(0x11f);carrito=[],guardarCarrito(),actualizarUI(),mostrarNotificacion(_0x177e98(0x25b),'exito'),getElement('form-envio')[_0x177e98(0x1d5)](),enviandoPedido=![];},0xc8);});function updateRange(){const _0x3fbde1=_0x2e6549,_0x124213=elementos[_0x3fbde1(0x194)],_0x56f0dd=elementos['precioMaxInput'],_0x2fae9f=getElement('min-price'),_0x5027f3=getElement('max-price'),_0x23a0c8=document['querySelector'](_0x3fbde1(0x1b9)),_0x26f4b0=getElement(_0x3fbde1(0x26c)),_0x4a0296=getElement('thumb-label-max');if(!_0x124213||!_0x56f0dd||!_0x2fae9f||!_0x5027f3||!_0x23a0c8||!_0x26f4b0||!_0x4a0296)return;let _0x2060a4=parseInt(_0x124213['value']),_0x54283f=parseInt(_0x56f0dd['value']);if(_0x2060a4>_0x54283f)[_0x2060a4,_0x54283f]=[_0x54283f,_0x2060a4];_0x124213[_0x3fbde1(0x1b4)]=_0x2060a4,_0x56f0dd[_0x3fbde1(0x1b4)]=_0x54283f;const _0x156e47=parseInt(_0x124213[_0x3fbde1(0x1d3)]),_0x5c851c=_0x124213['offsetWidth'];_0x23a0c8[_0x3fbde1(0x12c)]['left']=_0x2060a4/_0x156e47*0x64+'%',_0x23a0c8[_0x3fbde1(0x12c)][_0x3fbde1(0x1d7)]=(_0x54283f-_0x2060a4)/_0x156e47*0x64+'%',_0x2fae9f[_0x3fbde1(0x11e)]='$U'+_0x2060a4,_0x5027f3[_0x3fbde1(0x11e)]='$U'+_0x54283f,_0x26f4b0['textContent']='$U'+_0x2060a4,_0x4a0296[_0x3fbde1(0x11e)]='$U'+_0x54283f;const _0x1fc98f=_0x2060a4/_0x156e47*_0x5c851c,_0x563f33=_0x54283f/_0x156e47*_0x5c851c;_0x26f4b0['style'][_0x3fbde1(0x1ba)]=_0x1fc98f+'px',_0x4a0296[_0x3fbde1(0x12c)][_0x3fbde1(0x1ba)]=_0x563f33+'px',_0x26f4b0[_0x3fbde1(0x12c)][_0x3fbde1(0x165)]='1',_0x4a0296[_0x3fbde1(0x12c)][_0x3fbde1(0x165)]='1',setTimeout(()=>{const _0x5e9e95=_0x3fbde1;_0x26f4b0[_0x5e9e95(0x12c)]['opacity']='0',_0x4a0296[_0x5e9e95(0x12c)][_0x5e9e95(0x165)]='0';},0x7d0),filtrosActuales[_0x3fbde1(0x125)]=_0x2060a4,filtrosActuales[_0x3fbde1(0x221)]=_0x54283f,aplicarFiltros();}elementos[_0x2e6549(0x194)]?.[_0x2e6549(0x1a3)](_0x2e6549(0x1ee),()=>{const _0x69395d=_0x2e6549,_0x482bcb=getElement(_0x69395d(0x26c));if(_0x482bcb)_0x482bcb[_0x69395d(0x12c)][_0x69395d(0x165)]='1';updateRange();}),elementos['precioMaxInput']?.[_0x2e6549(0x1a3)](_0x2e6549(0x1ee),()=>{const _0x8adfd4=_0x2e6549,_0x2cca43=getElement(_0x8adfd4(0x1fd));if(_0x2cca43)_0x2cca43[_0x8adfd4(0x12c)]['opacity']='1';updateRange();}),document[_0x2e6549(0x1a8)](_0x2e6549(0x26d))?.[_0x2e6549(0x1a3)](_0x2e6549(0x220),()=>{const _0x39c1a4=_0x2e6549,_0x2132d1=getElement(_0x39c1a4(0x26c)),_0x549962=getElement(_0x39c1a4(0x1fd));if(_0x2132d1)_0x2132d1[_0x39c1a4(0x12c)]['opacity']='1';if(_0x549962)_0x549962[_0x39c1a4(0x12c)][_0x39c1a4(0x165)]='1';}),document['querySelector'](_0x2e6549(0x26d))?.[_0x2e6549(0x1a3)](_0x2e6549(0x1d4),()=>{const _0x1bfb88=_0x2e6549,_0x45b84e=getElement(_0x1bfb88(0x26c)),_0x475795=getElement(_0x1bfb88(0x1fd));if(_0x45b84e)_0x45b84e[_0x1bfb88(0x12c)][_0x1bfb88(0x165)]='0';if(_0x475795)_0x475795[_0x1bfb88(0x12c)][_0x1bfb88(0x165)]='0';});function preguntarStock(_0x2c0c18){const _0x4e0a3f=_0x2e6549,_0x5c6e92=encodeURIComponent('Consulta\x20sobre\x20disponibilidad\x20de\x20\x22'+_0x2c0c18+'\x22'),_0x743e04=encodeURIComponent(_0x4e0a3f(0x1ac)+_0x2c0c18+_0x4e0a3f(0x184));window['location'][_0x4e0a3f(0x1c2)]=_0x4e0a3f(0x209)+_0x5c6e92+_0x4e0a3f(0x271)+_0x743e04;}document['addEventListener'](_0x2e6549(0x208),async()=>{const _0x59dbe1=_0x2e6549;try{await signInAnonymously(auth),console[_0x59dbe1(0x1d2)](_0x59dbe1(0x12e)),cargarProductosDesdeFirebase();}catch(_0x3019e5){console['error'](_0x59dbe1(0x131),_0x3019e5);let _0x169679=_0x59dbe1(0x192);if(_0x3019e5[_0x59dbe1(0x266)]===_0x59dbe1(0x172))_0x169679=_0x59dbe1(0x23d);else{if(_0x3019e5[_0x59dbe1(0x266)]===_0x59dbe1(0x247))_0x169679=_0x59dbe1(0x163);}mostrarNotificacion(_0x169679,_0x59dbe1(0x23a));}cargarCarrito(),ensureProductModal(),inicializarMenuHamburguesa(),inicializarFAQ(),setupContactForm(),initEventos(),updateRange();}),window['agregarAlCarrito']=agregarAlCarrito,window['preguntarStock']=preguntarStock,document['addEventListener'](_0x2e6549(0x175),_0xb740ab=>{const _0x583cc1=_0x2e6549;(_0xb740ab[_0x583cc1(0x1f0)]===_0x583cc1(0x1c0)||_0xb740ab['ctrlKey']&&_0xb740ab[_0x583cc1(0x1a6)]&&(_0xb740ab[_0x583cc1(0x1f0)]==='I'||_0xb740ab[_0x583cc1(0x1f0)]==='J'||_0xb740ab[_0x583cc1(0x1f0)]==='C')||_0xb740ab[_0x583cc1(0x13f)]&&_0xb740ab[_0x583cc1(0x1f0)]==='U'||_0xb740ab[_0x583cc1(0x13f)]&&_0xb740ab['key']==='S')&&(_0xb740ab[_0x583cc1(0x191)](),alert(_0x583cc1(0x132)));});
+/*************************************************
+ * Patofelting – JS limpio + SEO
+ * Dominio: https://patofelting.com
+ * - Catálogo desde Firebase Realtime DB (fallback CSV)
+ * - Filtros (categoría, precio, búsqueda)
+ * - Paginación
+ * - Carrito + total
+ * - Modal de producto
+ * - Flujo pre-compra + datos de envío
+ * - Contacto con EmailJS
+ * - Aviso “sin stock”
+ * - SEO: JSON-LD (ItemList, Product, FAQPage),
+ *        URL por producto (?producto=slug),
+ *        title/description dinámicos,
+ *        lazy/decoding/preload imágenes
+ **************************************************/
+
+/* =========================
+   0) Config & “estado”
+========================= */
+const SITE_URL = 'https://patofelting.com';
+const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'img/placeholder.png';
+const FIREBASE_URL = window.FIREBASE_URL || '';
+const SHEET_CSV_URL = window.SHEET_CSV_URL || '';
+
+const STATE = {
+  productos: [],
+  filtrados: [],
+  pagina: 1,
+  porPagina: 12,
+  filtros: {
+    categoria: 'todos',
+    min: 0,
+    max: 3000,
+    q: ''
+  },
+  carrito: [], // {id, nombre, precio, cantidad, stock, imagenes[]}
+};
+
+const EL = {
+  // Navegación y generales
+  galeria: document.getElementById('galeria-productos'),
+  loader: document.getElementById('product-loader'),
+  paginacion: document.getElementById('paginacion'),
+
+  // Filtros
+  filtroCategoria: document.getElementById('filtro-categoria'),
+  minSlider: document.getElementById('min-slider'),
+  maxSlider: document.getElementById('max-slider'),
+  minPriceLabel: document.getElementById('min-price'),
+  maxPriceLabel: document.getElementById('max-price'),
+  inputBusqueda: document.querySelector('.input-busqueda'),
+
+  // Carrito
+  carritoBtnMain: document.getElementById('carrito-btn-main'),
+  carritoPanel: document.getElementById('carrito-panel'),
+  carritoOverlay: document.querySelector('.carrito-overlay'),
+  carritoLista: document.getElementById('lista-carrito'),
+  carritoTotal: document.getElementById('total'),
+  contadorCarrito: document.getElementById('contador-carrito'),
+  btnVaciarCarrito: document.querySelector('.boton-vaciar-carrito'),
+  btnFinalizarCompra: document.querySelector('.boton-finalizar-compra'),
+  btnCerrarCarrito: document.querySelector('.cerrar-carrito'),
+
+  // Modal producto
+  productoModal: document.getElementById('producto-modal'),
+  modalContenido: document.getElementById('modal-contenido'),
+  modalImg: document.getElementById('modal-imagen'),
+  modalThumbs: document.getElementById('modal-thumbnails'),
+  modalNombre: document.getElementById('modal-nombre'),
+  modalDescripcion: document.getElementById('modal-descripcion'),
+  modalPrecio: document.getElementById('modal-precio'),
+
+  // Aviso pre-compra + envío
+  avisoPreCompra: document.getElementById('aviso-pre-compra-modal'),
+  btnEntendidoAviso: document.getElementById('btn-entendido-aviso'),
+  btnCancelarAviso: document.getElementById('btn-cancelar-aviso'),
+
+  modalEnvio: document.getElementById('modal-datos-envio'),
+  formEnvio: document.getElementById('form-envio'),
+  resumenProductos: document.getElementById('resumen-productos'),
+  resumenTotal: document.getElementById('resumen-total'),
+  selectEnvio: document.getElementById('select-envio'),
+  btnCerrarModalEnvio: document.getElementById('btn-cerrar-modal-envio'),
+
+  // Stock “avisame”
+  stockModal: document.getElementById('stock-modal'),
+  stockForm: document.getElementById('stock-form'),
+  stockFeedback: document.getElementById('stock-modal-feedback'),
+  stockClose: document.querySelector('.modal-stock-close'),
+
+  // Contacto
+  formContacto: document.getElementById('formulario-contacto'),
+  successMessage: document.getElementById('successMessage'),
+  errorMessage: document.getElementById('errorMessage'),
+};
+
+/* =========================
+   1) Utilidades
+========================= */
+const fmtUY = (n) => `$U ${Number(n || 0).toLocaleString('es-UY')}`;
+
+const slugify = (s) =>
+  (s || '')
+    .toString()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+
+function setText(el, txt) { if (el) el.textContent = txt; }
+function show(el) { if (el) el.hidden = false; }
+function hide(el) { if (el) el.hidden = true; }
+
+function ensureScriptId(id) {
+  let el = document.getElementById(id);
+  if (!el) {
+    el = document.createElement('script');
+    el.type = 'application/ld+json';
+    el.id = id;
+    document.head.appendChild(el);
+  }
+  return el;
+}
+function setJSONLD(id, obj) {
+  ensureScriptId(id).textContent = JSON.stringify(obj);
+}
+function hardenImgSEO(imgEl, { alt, width = 800, height = 800 } = {}) {
+  if (!imgEl) return;
+  if (alt) imgEl.alt = alt;
+  imgEl.loading = imgEl.loading || 'lazy';
+  imgEl.decoding = imgEl.decoding || 'async';
+  // Evita CLS si el backend no da tamaño
+  imgEl.style.aspectRatio = imgEl.style.aspectRatio || '1 / 1';
+}
+function preloadImage(href) {
+  if (!href) return;
+  const id = `preload-${href}`;
+  if (document.getElementById(id)) return;
+  const l = document.createElement('link');
+  l.id = id;
+  l.rel = 'preload';
+  l.as = 'image';
+  l.href = href;
+  document.head.appendChild(l);
+}
+
+/* =========================
+   2) Data: cargar productos
+========================= */
+async function fetchFirebaseProductos() {
+  if (!FIREBASE_URL) return null;
+  try {
+    const res = await fetch(FIREBASE_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Firebase fetch error');
+    const data = await res.json();
+    // Estructura: { [id]: {nombre, precio, stock, imagenes[], descripcion, categoria}}
+    const arr = Object.entries(data || {}).map(([id, p]) => ({
+      id: Number(id) || id,
+      nombre: p?.nombre || 'Producto',
+      precio: Number(p?.precio || 0),
+      stock: Number(p?.cantidad ?? p?.stock ?? 0),
+      imagenes: Array.isArray(p?.imagenes) ? p.imagenes : (p?.imagen ? [p.imagen] : []),
+      descripcion: p?.descripcion || '',
+      categoria: p?.categoria || 'otros'
+    }));
+    return arr;
+  } catch (e) {
+    console.warn('[Firebase] No se pudo obtener productos:', e);
+    return null;
+  }
+}
+
+async function fetchCSVProductos() {
+  if (!SHEET_CSV_URL) return [];
+  try {
+    const res = await fetch(SHEET_CSV_URL, { cache: 'no-store' });
+    const csv = await res.text();
+    // PapaParse está cargado por script defer
+    const parsed = window.Papa.parse(csv, { header: true, dynamicTyping: true });
+    const arr = (parsed?.data || []).filter(Boolean).map((r, i) => ({
+      id: Number(r.id || i + 1),
+      nombre: r.nombre || 'Producto',
+      precio: Number(r.precio || 0),
+      stock: Number(r.cantidad ?? r.stock ?? 0),
+      imagenes: (r.imagenes || r.imagen || '')
+        .toString()
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean),
+      descripcion: r.descripcion || '',
+      categoria: r.categoria || 'otros'
+    }));
+    return arr;
+  } catch (e) {
+    console.warn('[CSV] No se pudo obtener productos:', e);
+    return [];
+  }
+}
+
+async function cargarProductos() {
+  show(EL.loader);
+  let productos = await fetchFirebaseProductos();
+  if (!productos || !productos.length) {
+    productos = await fetchCSVProductos();
+  }
+  hide(EL.loader);
+  STATE.productos = productos || [];
+  aplicarFiltros();
+}
+
+/* =========================
+   3) Filtros y paginación
+========================= */
+function aplicarFiltros() {
+  const { categoria, min, max, q } = STATE.filtros;
+  const qn = (q || '').trim().toLowerCase();
+
+  let lista = STATE.productos.filter(p => {
+    const byCat = (categoria === 'todos') || (p.categoria?.toLowerCase() === categoria);
+    const byPrecio = p.precio >= min && p.precio <= max;
+    const byTexto =
+      !qn ||
+      p.nombre?.toLowerCase().includes(qn) ||
+      p.descripcion?.toLowerCase().includes(qn);
+    return byCat && byPrecio && byTexto;
+  });
+
+  STATE.filtrados = lista;
+  STATE.pagina = 1;
+  renderizarProductos();
+}
+
+function paginar(arr, page, per) {
+  const start = (page - 1) * per;
+  return arr.slice(start, start + per);
+}
+
+/* =========================
+   4) Renderizado catálogo
+========================= */
+function crearCardProducto(p) {
+  const enCarrito = STATE.carrito.find(i => i.id === p.id);
+  const disponible = Math.max(0, Number(p.stock || 0) - (enCarrito?.cantidad || 0));
+  const agotado = disponible <= 0;
+  const imagen = (p.imagenes && p.imagenes[0]) || PLACEHOLDER_IMAGE;
+
+  const slug = slugify(p.nombre);
+  const productUrl = `${SITE_URL}/?producto=${encodeURIComponent(slug)}#productos`;
+  const availability = agotado ? 'http://schema.org/OutOfStock' : 'http://schema.org/InStock';
+
+  return `
+  <article class="producto-card ${agotado ? 'agotado' : ''}" data-id="${p.id}" itemscope itemtype="https://schema.org/Product">
+    <a href="${productUrl}" class="producto-link" data-id="${p.id}" itemprop="url" aria-label="Ver ${p.nombre}">
+      <img src="${imagen}" class="producto-img" itemprop="image" alt="${p.nombre}">
+    </a>
+    <h3 class="producto-nombre" itemprop="name">${p.nombre}</h3>
+    <p class="producto-precio" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+      <meta itemprop="priceCurrency" content="UYU">
+      <span itemprop="price">${(p.precio || 0).toFixed(0)}</span>
+      <link itemprop="availability" href="${availability}">
+      <link itemprop="url" href="${productUrl}">
+    </p>
+    <div class="card-acciones">
+      <button class="boton-agregar${agotado ? ' agotado' : ''}" data-id="${p.id}" ${agotado ? 'disabled' : ''}>
+        ${agotado ? '<i class="fas fa-times-circle"></i> Agotado' : '<i class="fas fa-cart-plus"></i> Agregar'}
+      </button>
+      ${agotado ? `
+       <button class="boton-aviso-stock" data-nombre="${p.nombre.replace(/'/g, "\\'")}">📩 Avisame</button>
+      ` : ''}
+    </div>
+    <button class="boton-detalles" data-id="${p.id}" aria-label="Detalles de ${p.nombre}">🔍 Ver Detalle</button>
+  </article>
+  `;
+}
+
+function postProcessCardsSEO() {
+  document.querySelectorAll('.producto-card .producto-img').forEach(img => {
+    const card = img.closest('.producto-card');
+    const name = card?.querySelector('[itemprop="name"]')?.textContent?.trim();
+    hardenImgSEO(img, { alt: name });
+  });
+}
+
+function setItemListJSONLD() {
+  const items = [...document.querySelectorAll('.producto-card [itemprop="url"]')].map((a, i) => ({
+    "@type": "ListItem",
+    "position": i + 1,
+    "url": a.href
+  }));
+  setJSONLD('ld-itemlist', {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": "Catálogo Patofelting",
+    "itemListElement": items
+  });
+}
+
+function renderizarProductos() {
+  if (!EL.galeria) return;
+  const paginaItems = paginar(STATE.filtrados, STATE.pagina, STATE.porPagina);
+  EL.galeria.innerHTML = paginaItems.map(crearCardProducto).join('') || `
+    <div class="sin-resultados">No hay productos que coincidan.</div>`;
+
+  // SEO / UX mejoras post render
+  postProcessCardsSEO();
+  setItemListJSONLD();
+  renderizarPaginacion(STATE.filtrados.length);
+}
+
+/* =========================
+   5) Paginación
+========================= */
+function renderizarPaginacion(total) {
+  if (!EL.paginacion) return;
+  const totalPag = Math.max(1, Math.ceil(total / STATE.porPagina));
+  let html = '';
+  for (let i = 1; i <= totalPag; i++) {
+    html += `<button class="page-btn ${i === STATE.pagina ? 'active' : ''}" data-page="${i}">${i}</button>`;
+  }
+  EL.paginacion.innerHTML = html;
+
+  EL.paginacion.querySelectorAll('.page-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      STATE.pagina = Number(btn.dataset.page);
+      renderizarProductos();
+      EL.galeria?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+}
+
+/* =========================
+   6) Carrito
+========================= */
+function persistCarrito() {
+  localStorage.setItem('pf_carrito_v1', JSON.stringify(STATE.carrito));
+}
+function loadCarrito() {
+  try {
+    const raw = localStorage.getItem('pf_carrito_v1');
+    STATE.carrito = raw ? JSON.parse(raw) : [];
+  } catch {
+    STATE.carrito = [];
+  }
+}
+function actualizarContadorCarrito() {
+  const totalCant = STATE.carrito.reduce((a, b) => a + b.cantidad, 0);
+  setText(EL.contadorCarrito, totalCant);
+}
+function renderCarrito() {
+  if (!EL.carritoLista || !EL.carritoTotal) return;
+  if (!STATE.carrito.length) {
+    EL.carritoLista.innerHTML = `<li class="carrito-vacio">No hay productos en el carrito</li>`;
+    setText(EL.carritoTotal, fmtUY(0));
+    actualizarContadorCarrito();
+    return;
+  }
+  let html = '';
+  let total = 0;
+  STATE.carrito.forEach(item => {
+    const itemTotal = (item.precio || 0) * (item.cantidad || 0);
+    total += itemTotal;
+    html += `
+      <li class="carrito-item">
+        <span>${item.nombre} x${item.cantidad}</span>
+        <strong>${fmtUY(itemTotal)}</strong>
+        <div class="carrito-item-acciones">
+          <button class="menos" data-id="${item.id}" aria-label="Restar uno">−</button>
+          <button class="mas" data-id="${item.id}" aria-label="Sumar uno">+</button>
+          <button class="quitar" data-id="${item.id}" aria-label="Quitar del carrito">✕</button>
+        </div>
+      </li>`;
+  });
+  EL.carritoLista.innerHTML = html;
+  setText(EL.carritoTotal, `Total: ${fmtUY(total)}`);
+  actualizarContadorCarrito();
+
+  EL.carritoLista.querySelectorAll('.menos').forEach(b => b.addEventListener('click', () => cambiarCant(Number(b.dataset.id), -1)));
+  EL.carritoLista.querySelectorAll('.mas').forEach(b => b.addEventListener('click', () => cambiarCant(Number(b.dataset.id), +1)));
+  EL.carritoLista.querySelectorAll('.quitar').forEach(b => b.addEventListener('click', () => quitarDelCarrito(Number(b.dataset.id))));
+}
+function cambiarCant(id, delta) {
+  const it = STATE.carrito.find(x => x.id === id);
+  if (!it) return;
+  const p = STATE.productos.find(x => x.id === id);
+  const max = Math.max(0, Number(p?.stock || 0));
+  it.cantidad = Math.min(Math.max(1, it.cantidad + delta), Math.max(1, max));
+  if (it.cantidad <= 0) {
+    STATE.carrito = STATE.carrito.filter(x => x.id !== id);
+  }
+  persistCarrito();
+  renderCarrito();
+  renderizarProductos(); // actualiza “agotado” de cards
+}
+function quitarDelCarrito(id) {
+  STATE.carrito = STATE.carrito.filter(x => x.id !== id);
+  persistCarrito();
+  renderCarrito();
+  renderizarProductos();
+}
+function agregarAlCarrito(id) {
+  const p = STATE.productos.find(x => x.id === id);
+  if (!p) return;
+  const enCarrito = STATE.carrito.find(x => x.id === id);
+  const max = Math.max(0, Number(p.stock || 0));
+  if (max <= 0) return; // sin stock
+  if (!enCarrito) {
+    STATE.carrito.push({
+      id: p.id,
+      nombre: p.nombre,
+      precio: p.precio,
+      cantidad: 1,
+      stock: p.stock,
+      imagenes: p.imagenes || []
+    });
+  } else {
+    enCarrito.cantidad = Math.min(enCarrito.cantidad + 1, max);
+  }
+  persistCarrito();
+  renderCarrito();
+  renderizarProductos();
+}
+function toggleCarrito(open) {
+  if (!EL.carritoPanel) return;
+  if (open) {
+    EL.carritoPanel.classList.add('open');
+    EL.carritoOverlay?.classList.add('show');
+  } else {
+    EL.carritoPanel.classList.remove('open');
+    EL.carritoOverlay?.classList.remove('show');
+  }
+}
+
+/* =========================
+   7) Modal de producto + SEO dinámico
+========================= */
+function mostrarModalProducto(producto) {
+  const modal = EL.productoModal;
+  const contenido = EL.modalContenido;
+  if (!modal || !contenido) return;
+
+  // --- SEO dinámico ---
+  const slug = slugify(producto.nombre);
+  const productURL = `${SITE_URL}/?producto=${encodeURIComponent(slug)}#productos`;
+  const oldTitle = document.title;
+  const oldDescTag = document.querySelector('meta[name="description"]');
+  const tempDesc = `Figura de fieltro "${producto.nombre}" hecha a mano en Uruguay. Precio ${fmtUY(producto.precio)}.`;
+
+  history.pushState({ producto: slug }, '', productURL);
+  document.title = `${producto.nombre} | Patofelting`;
+
+  let metaDesc = oldDescTag;
+  if (!metaDesc) {
+    metaDesc = document.createElement('meta');
+    metaDesc.setAttribute('name', 'description');
+    document.head.appendChild(metaDesc);
+  }
+  const previousDesc = metaDesc.getAttribute('content') || '';
+  metaDesc.setAttribute('content', tempDesc);
+
+  // Preload de la 1ª imagen
+  const primera = (producto.imagenes && producto.imagenes[0]) || PLACEHOLDER_IMAGE;
+  preloadImage(primera);
+
+  // JSON-LD Product
+  setJSONLD('ld-product', {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": producto.nombre,
+    "image": (producto.imagenes && producto.imagenes.length) ? producto.imagenes : [PLACEHOLDER_IMAGE],
+    "description": (producto.descripcion || '').substring(0, 280),
+    "brand": { "@type": "Brand", "name": "Patofelting" },
+    "url": productURL,
+    "offers": {
+      "@type": "Offer",
+      "priceCurrency": "UYU",
+      "price": (producto.precio || 0).toFixed(0),
+      "availability": (Math.max(0, Number(producto.stock || 0) - (STATE.carrito.find(i => i.id === producto.id)?.cantidad || 0)) <= 0)
+        ? "http://schema.org/OutOfStock"
+        : "http://schema.org/InStock",
+      "url": productURL
+    }
+  });
+
+  // Guardar para restaurar al cerrar
+  modal.dataset.restoreSeo = JSON.stringify({ title: oldTitle, desc: previousDesc });
+
+  // --- Render modal ---
+  modal.setAttribute('aria-hidden', 'false');
+  modal.classList.add('active');
+  document.body.classList.add('no-scroll');
+
+  setText(EL.modalNombre, producto.nombre);
+  setText(EL.modalDescripcion, producto.descripcion || '');
+  setText(EL.modalPrecio, fmtUY(producto.precio));
+  const img = (producto.imagenes && producto.imagenes[0]) || PLACEHOLDER_IMAGE;
+  EL.modalImg.src = img;
+  EL.modalImg.alt = producto.nombre;
+  hardenImgSEO(EL.modalImg, { alt: producto.nombre });
+
+  EL.modalThumbs.innerHTML = (producto.imagenes || []).map((src, i) => `
+    <button class="thumb ${i === 0 ? 'active' : ''}" data-src="${src}" aria-label="Imagen ${i + 1}">
+      <img src="${src}" alt="${producto.nombre} vista ${i + 1}" loading="lazy" decoding="async">
+    </button>`).join('');
+
+  EL.modalThumbs.querySelectorAll('.thumb').forEach(btn => {
+    btn.addEventListener('click', () => {
+      EL.modalThumbs.querySelectorAll('.thumb').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const src = btn.dataset.src;
+      EL.modalImg.src = src;
+    });
+  });
+}
+
+function cerrarModal() {
+  const modal = EL.productoModal;
+  if (!modal) return;
+  // Restaurar SEO dinámico
+  const data = modal.dataset.restoreSeo;
+  if (data) {
+    try {
+      const { title, desc } = JSON.parse(data);
+      document.title = title || 'Patofelting - Creaciones en Fieltro';
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc && typeof desc === 'string') metaDesc.setAttribute('content', desc);
+    } catch { /* noop */ }
+    modal.dataset.restoreSeo = '';
+  }
+  // Restaurar URL limpia
+  if (location.search.includes('producto=')) {
+    const clean = `${SITE_URL}${location.hash || ''}`;
+    history.pushState({}, '', clean);
+  }
+  modal.classList.remove('active');
+  modal.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('no-scroll');
+}
+// Expone para el botón “&times;” del HTML
+window.cerrarModal = cerrarModal;
+
+/* =========================
+   8) Pre-compra y Envío
+========================= */
+function actualizarResumenPedido() {
+  const cont = EL.resumenProductos;
+  const totalEl = EL.resumenTotal;
+  if (!cont || !totalEl) return;
+  if (!STATE.carrito.length) {
+    cont.innerHTML = '<p class="carrito-vacio">No hay productos en el carrito</p>';
+    setText(totalEl, fmtUY(0));
+    return;
+  }
+  let subtotal = 0;
+  cont.innerHTML = STATE.carrito.map(item => {
+    const itemTotal = (item.precio || 0) * (item.cantidad || 0);
+    subtotal += itemTotal;
+    return `
+      <div class="resumen-item">
+        <span>${item.nombre} x${item.cantidad}</span>
+        <span>${fmtUY(itemTotal)}</span>
+      </div>`;
+  }).join('');
+
+  const metodo = EL.selectEnvio?.value || 'retiro';
+  const costoEnvio = metodo === 'montevideo' ? 200 : (metodo === 'interior' ? 250 : 0);
+  const total = subtotal + costoEnvio;
+
+  cont.insertAdjacentHTML('beforeend', `
+    <div class="resumen-item envio">
+      <span>Envío</span>
+      <span>${fmtUY(costoEnvio)}</span>
+    </div>`);
+  setText(totalEl, fmtUY(total));
+}
+
+/* =========================
+   9) FAQ → JSON-LD
+========================= */
+function setFAQJsonLDFromDOM() {
+  const faqs = [...document.querySelectorAll('.faq-item')]
+    .map(item => {
+      const q = item.querySelector('.faq-toggle')?.textContent?.trim();
+      const a = item.querySelector('.faq-content')?.textContent?.trim();
+      if (!q || !a) return null;
+      return {
+        "@type": "Question",
+        "name": q,
+        "acceptedAnswer": { "@type": "Answer", "text": a }
+      };
+    })
+    .filter(Boolean);
+
+  if (faqs.length) {
+    setJSONLD('ld-faq', {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": faqs
+    });
+  }
+}
+
+/* =========================
+   10) Eventos UI
+========================= */
+function bindUI() {
+  // Filtros
+  EL.filtroCategoria?.addEventListener('change', () => {
+    STATE.filtros.categoria = EL.filtroCategoria.value;
+    aplicarFiltros();
+  });
+  EL.minSlider?.addEventListener('input', () => {
+    const v = Number(EL.minSlider.value);
+    STATE.filtros.min = v;
+    setText(EL.minPriceLabel, `$U${v}`);
+    if (v > STATE.filtros.max) {
+      STATE.filtros.max = v;
+      if (EL.maxSlider) EL.maxSlider.value = v;
+      setText(EL.maxPriceLabel, `$U${v}`);
+    }
+    aplicarFiltros();
+  });
+  EL.maxSlider?.addEventListener('input', () => {
+    const v = Number(EL.maxSlider.value);
+    STATE.filtros.max = v;
+    setText(EL.maxPriceLabel, `$U${v}`);
+    if (v < STATE.filtros.min) {
+      STATE.filtros.min = v;
+      if (EL.minSlider) EL.minSlider.value = v;
+      setText(EL.minPriceLabel, `$U${v}`);
+    }
+    aplicarFiltros();
+  });
+  EL.inputBusqueda?.addEventListener('input', (e) => {
+    STATE.filtros.q = e.target.value || '';
+    aplicarFiltros();
+  });
+
+  // Delegación en galería
+  EL.galeria?.addEventListener('click', (e) => {
+    const add = e.target.closest('.boton-agregar');
+    const det = e.target.closest('.boton-detalles');
+    const aLink = e.target.closest('.producto-link');
+    const aviso = e.target.closest('.boton-aviso-stock');
+
+    if (add) {
+      const id = Number(add.dataset.id);
+      agregarAlCarrito(id);
+    }
+    if (det) {
+      const id = Number(det.dataset.id);
+      const p = STATE.productos.find(x => x.id === id);
+      if (p) mostrarModalProducto(p);
+    }
+    if (aLink) {
+      e.preventDefault();
+      const id = Number(aLink.dataset.id);
+      const p = STATE.productos.find(x => x.id === id);
+      if (p) mostrarModalProducto(p);
+    }
+    if (aviso) {
+      e.preventDefault();
+      abrirStockModal(aviso.dataset.nombre);
+    }
+  });
+
+  // Carrito UI
+  EL.carritoBtnMain?.addEventListener('click', () => toggleCarrito(true));
+  EL.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
+  EL.btnCerrarCarrito?.addEventListener('click', () => toggleCarrito(false));
+  EL.btnVaciarCarrito?.addEventListener('click', () => {
+    STATE.carrito = [];
+    persistCarrito();
+    renderCarrito();
+    renderizarProductos();
+  });
+
+  // Proceso de compra
+  EL.btnFinalizarCompra?.addEventListener('click', () => {
+    if (!STATE.carrito.length) {
+      alert('El carrito está vacío.');
+      return;
+    }
+    EL.avisoPreCompra?.removeAttribute('hidden');
+    EL.avisoPreCompra?.setAttribute('aria-hidden', 'false');
+  });
+  EL.btnEntendidoAviso?.addEventListener('click', () => {
+    EL.avisoPreCompra?.setAttribute('hidden', 'true');
+    abrirModalEnvio();
+  });
+  EL.btnCancelarAviso?.addEventListener('click', () => {
+    EL.avisoPreCompra?.setAttribute('hidden', 'true');
+  });
+
+  // Envío
+  EL.selectEnvio?.addEventListener('change', actualizarResumenPedido);
+  EL.btnCerrarModalEnvio?.addEventListener('click', () => cerrarModalEnvio());
+  EL.formEnvio?.addEventListener('submit', onSubmitEnvio);
+
+  // Stock modal
+  EL.stockClose?.addEventListener('click', cerrarStockModal);
+  EL.stockForm?.addEventListener('submit', onSubmitStock);
+
+  // Contacto
+  EL.formContacto?.addEventListener('submit', onSubmitContacto);
+
+  // Cerrar modal de producto si se hace click fuera del contenido
+  EL.productoModal?.addEventListener('click', (e) => {
+    if (e.target === EL.productoModal) cerrarModal();
+  });
+
+  // Abrir modal si viene ?producto= en la URL
+  const urlParams = new URLSearchParams(location.search);
+  const slugFromURL = urlParams.get('producto');
+  if (slugFromURL) {
+    // defer hasta tener productos
+    const observer = new MutationObserver(() => {
+      if (STATE.productos.length) {
+        const p = STATE.productos.find(x => slugify(x.nombre) === slugFromURL);
+        if (p) mostrarModalProducto(p);
+        observer.disconnect();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+}
+
+/* =========================
+   11) Modales auxiliares
+========================= */
+function abrirModalEnvio() {
+  if (!EL.modalEnvio) return;
+  EL.modalEnvio.removeAttribute('hidden');
+  EL.modalEnvio.setAttribute('aria-hidden', 'false');
+  actualizarResumenPedido();
+}
+function cerrarModalEnvio() {
+  EL.modalEnvio?.setAttribute('hidden', 'true');
+  EL.modalEnvio?.setAttribute('aria-hidden', 'true');
+}
+async function onSubmitEnvio(e) {
+  e.preventDefault();
+  try {
+    // Construye mensaje WhatsApp (no se envía aquí, solo demo)
+    const data = new FormData(EL.formEnvio);
+    const nombre = data.get('nombre');
+    const telefono = data.get('telefono');
+    const metodo = data.get('metodo_envio');
+    const direccion = data.get('direccion') || '(retiro)';
+    const resumen = STATE.carrito.map(i => `${i.nombre} x${i.cantidad} - ${fmtUY(i.precio * i.cantidad)}`).join(' | ');
+    const total = EL.resumenTotal?.textContent || '';
+
+    const texto = encodeURIComponent(
+      `Hola! Soy ${nombre}. Quiero confirmar mi pedido:
+- Productos: ${resumen}
+- Envío: ${metodo} (${direccion})
+- Total: ${total}
+- Tel: ${telefono}`
+    );
+    const wa = `https://wa.me/59800000000?text=${texto}`;
+    window.open(wa, '_blank');
+    cerrarModalEnvio();
+    toggleCarrito(false);
+  } catch (err) {
+    alert('No se pudo preparar el pedido. Intenta nuevamente.');
+  }
+}
+
+/* =========================
+   12) Aviso “Sin stock”
+========================= */
+function abrirStockModal(nombreProducto = '') {
+  if (!EL.stockModal) return;
+  EL.stockModal.removeAttribute('hidden');
+  EL.stockModal.setAttribute('aria-hidden', 'false');
+  EL.stockFeedback?.setAttribute('hidden', 'true');
+  EL.stockForm?.reset();
+  EL.stockForm?.setAttribute('data-producto', nombreProducto);
+}
+function cerrarStockModal() {
+  EL.stockModal?.setAttribute('hidden', 'true');
+  EL.stockModal?.setAttribute('aria-hidden', 'true');
+}
+function onSubmitStock(e) {
+  e.preventDefault();
+  // Aquí podrías usar EmailJS o tu endpoint para guardar avisos
+  const email = (document.getElementById('stock-email')?.value || '').trim();
+  const producto = EL.stockForm?.getAttribute('data-producto') || '';
+  if (!email) return;
+  // Demo feedback
+  EL.stockFeedback.textContent = `¡Listo! Te avisaremos cuando "${producto}" vuelva a estar disponible.`;
+  EL.stockFeedback.removeAttribute('hidden');
+  setTimeout(cerrarStockModal, 1600);
+}
+
+/* =========================
+   13) Contacto (EmailJS)
+========================= */
+function onSubmitContacto(e) {
+  e.preventDefault();
+  if (!window.emailjs) {
+    EL.errorMessage?.classList.remove('hidden');
+    return;
+  }
+  const form = e.target;
+  // Configura tus credenciales de EmailJS (service_id, template_id, public_key)
+  const SERVICE_ID = 'service_xxx';
+  const TEMPLATE_ID = 'template_xxx';
+  const PUBLIC_KEY = 'xxxxxx';
+  emailjs.init(PUBLIC_KEY);
+
+  emailjs.sendForm(SERVICE_ID, TEMPLATE_ID, form)
+    .then(() => {
+      EL.successMessage?.classList.remove('hidden');
+      EL.errorMessage?.classList.add('hidden');
+      form.reset();
+    })
+    .catch(() => {
+      EL.successMessage?.classList.add('hidden');
+      EL.errorMessage?.classList.remove('hidden');
+    });
+}
+
+/* =========================
+   14) Inicio
+========================= */
+async function init() {
+  loadCarrito();
+  actualizarContadorCarrito();
+  renderCarrito();
+
+  bindUI();
+  await cargarProductos();
+
+  // Delegación extra por si el HTML ya trae botones presentes
+  document.addEventListener('click', (e) => {
+    const close = e.target.closest('.cerrar-modal');
+    if (close) cerrarModal();
+  });
+
+  // FAQ → JSON-LD
+  setFAQJsonLDFromDOM();
+}
+
+document.addEventListener('DOMContentLoaded', init);
