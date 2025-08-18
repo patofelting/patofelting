@@ -1,23 +1,4 @@
-/*************************************************
- * Patofelting – JS limpio + SEO
- * Dominio: https://patofelting.com
- * - Catálogo desde Firebase Realtime DB (fallback CSV)
- * - Filtros (categoría, precio, búsqueda)
- * - Paginación
- * - Carrito + total
- * - Modal de producto
- * - Flujo pre-compra + datos de envío
- * - Contacto con EmailJS
- * - Aviso “sin stock”
- * - SEO: JSON-LD (ItemList, Product, FAQPage),
- *        URL por producto (?producto=slug),
- *        title/description dinámicos,
- *        lazy/decoding/preload imágenes
- **************************************************/
 
-/* =========================
-   0) Config & “estado”
-========================= */
 const SITE_URL = 'https://patofelting.com';
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'img/placeholder.png';
 const FIREBASE_URL = window.FIREBASE_URL || '';
