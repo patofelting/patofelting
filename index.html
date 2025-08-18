@@ -13,14 +13,14 @@
       </pattern>
     </defs>
   </svg>
-  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js" defer integrity="sha384-..." crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer integrity="sha384-..." crossorigin="anonymous"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  
+
   <script>
     window.SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwvzHZQN3CQarSDqjk_nShegf8F4ydARvkSK55VabxbCi9m8RuGf2Nyy9ScriFRfGdhZd0P54VS5z/pub?output=csv';
     window.PLACEHOLDER_IMAGE = 'img/placeholder.png';
-    window.FIREBASE_URL = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json'; 
+    window.FIREBASE_URL = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json';
   </script>
 
   <!-- Firebase: expone app y db en window -->
@@ -45,9 +45,10 @@
     window.firebaseApp = app;
     window.firebaseDatabase = database;
   </script>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https://i.imgur.com; font-src 'self' https://cdnjs.cloudflare.com; object-src 'none';">
 </head>
 <body oncontextmenu="return true;">
-  
+
 <nav class="nav">
   <div class="nav-container">
     <!-- LOGO -->
@@ -72,7 +73,7 @@
     <ul class="menu" id="menu">
       <li><a href="#inicio">Inicio</a></li>
       <li><a href="#sobre">Sobre mí</a></li>
-      
+
       <li><a href="#productos">Productos</a></li>
       <li><a href="#contacto">Contacto</a></li>
       <li><a href="#preguntas">Preguntas</a></li>
@@ -264,8 +265,8 @@
         </div>
         <div class="form-grupo" id="grupo-direccion">
           <label for="input-direccion">Dirección*</label>
-          <input type="text" id="input-direccion" name="direccion" placeholder="Ej: Av. 18 de Julio 1234" required>
-          <small class="ayuda-texto">Solo si seleccionás envío</small>
+          <input type="text" id="input-direccion" name="direccion" placeholder="Ej: Av. 18 de Julio 1234"
+                    <small class="ayuda-texto">Solo si seleccionás envío</small>
         </div>
         <div class="form-grupo">
           <label for="select-envio">Método de envío*</label>
@@ -335,77 +336,77 @@
 
 <section class="faq-section" id="preguntas">
     <h2>Preguntas Frecuentes</h2>
-    
+
     <div class="faq-item" data-category="envios">
       <button class="faq-toggle" aria-expanded="false">¿A qué lugares realizan envíos?</button>
       <div class="faq-content" hidden>
         Realizamos envíos a todo el país a través de agencias de confianza. Si tienes dudas sobre tu zona, <a href="#contacto" class="faq-more">contáctanos</a>.
       </div>
     </div>
-    
+
     <div class="faq-item" data-category="envios">
       <button class="faq-toggle" aria-expanded="false">¿Cuánto cuesta el envío?</button>
       <div class="faq-content" hidden>
         El costo depende de tu localidad y del tamaño del paquete. Te lo informamos antes de finalizar tu compra.
       </div>
     </div>
-    
+
     <div class="faq-item" data-category="envios">
       <button class="faq-toggle" aria-expanded="false">¿Cuánto tarda en despacharse mi pedido?</button>
       <div class="faq-content" hidden>
         Los envíos se despachan por agencias de confianza. Generalmente tardamos entre 2 y 5 días hábiles en preparar y enviar tu pedido. Recibirás el número de seguimiento por email una vez despachado.
       </div>
     </div>
-    
+
     <div class="faq-item" data-category="envios">
       <button class="faq-toggle" aria-expanded="false">¿Puedo retirar mi pedido en persona?</button>
       <div class="faq-content" hidden>
         Sí, si estás en nuestra ciudad podemos coordinar un punto de retiro. El tiempo de preparación es el mismo (2-5 días hábiles).
       </div>
     </div>
-    
+
     <div class="faq-item" data-category="envios">
       <button class="faq-toggle" aria-expanded="false">¿Cómo hago seguimiento a mi envío?</button>
       <div class="faq-content" hidden>
         Una vez despachado tu pedido, te enviaremos por email el número de seguimiento y el link para rastrear tu paquete con la agencia de transporte.
       </div>
     </div>
-    
+
     <div class="faq-item" data-category="personalizacion">
       <button class="faq-toggle" aria-expanded="false">¿Puedo personalizar mi figura?</button>
       <div class="faq-content" hidden>
         ¡Sí! Puedes elegir colores, tamaño, detalles y enviarnos tus ideas o imágenes de referencia.
       </div>
     </div>
-    
+
     <div class="faq-item" data-category="personalizacion">
       <button class="faq-toggle" aria-expanded="false">¿Cuánto demora una figura personalizada?</button>
       <div class="faq-content" hidden>
         El tiempo de producción suele ser entre 10 y 20 días hábiles (más 2-5 días para despacho). Te mantendremos informado durante el proceso.
       </div>
     </div>
-    
+
     <div class="faq-item" data-category="personalizacion">
       <button class="faq-toggle" aria-expanded="false">¿Puedo pedir una figura que no está en el catálogo?</button>
       <div class="faq-content" hidden>
         Sí, hacemos figuras personalizadas de personajes, mascotas u objetos. Escríbenos tu idea para cotizar tiempo y costo.
       </div>
     </div>
-    
+
     <div class="faq-item" data-category="stock">
       <button class="faq-toggle" aria-expanded="false">¿Tienen stock para entrega inmediata?</button>
       <div class="faq-content" hidden>
         Las figuras marcadas como "Disponible" tienen stock y se despachan en 2-5 días hábiles. Las personalizadas se hacen a pedido.
       </div>
     </div>
-    
+
     <div class="faq-item" data-category="devoluciones">
       <button class="faq-toggle" aria-expanded="false">¿Puedo devolver o cambiar mi figura?</button>
       <div class="faq-content" hidden>
         Aceptamos devoluciones solo si la figura llegó dañada o con error respecto a lo acordado. <a href="politicaempresa.html" class="faq-more">Ver política completa</a>
       </div>
     </div>
-    
+
     <div class="faq-item" data-category="devoluciones">
       <button class="faq-toggle" aria-expanded="false">¿Qué hago si mi pedido llega dañado?</button>
       <div class="faq-content" hidden>
@@ -442,8 +443,6 @@
     <p>© 2025 Patofelting. Hecho con ♥ en Uruguay.</p>
   </div>
 </footer>
-
-
 
   <script src="Untitled-1.js" defer type="module"></script>
 </body>
