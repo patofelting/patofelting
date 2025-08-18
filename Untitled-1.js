@@ -973,3 +973,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 window.agregarAlCarrito = agregarAlCarrito;
 window.preguntarStock = preguntarStock;
+
+
+
+// Bloquear clic derecho
+document.addEventListener("contextmenu", e => e.preventDefault());
+
+// Bloquear F12 y Ctrl+Shift+I
+document.addEventListener("keydown", e => {
+  if (e.key === "F12" || (e.ctrlKey && e.shiftKey && e.key === "I")) {
+    e.preventDefault();
+    alert("Acción no permitida 🚫");
+  }
+});
