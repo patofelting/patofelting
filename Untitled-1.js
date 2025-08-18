@@ -738,7 +738,7 @@ async function onSubmitEnvio(e) {
 - Total: ${total}
 - Tel: ${telefono}`
     );
-    const wa = `https://wa.me/59800000000?text=${texto}`;
+    const wa = `https://wa.me/59893566283?text=${texto}`;
     window.open(wa, '_blank');
     cerrarModalEnvio();
     toggleCarrito(false);
