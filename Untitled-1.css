@@ -203,6 +203,39 @@ blockquote {
   transition: all .5s ease; transform-style: preserve-3d; will-change: transform, box-shadow;
   opacity: 0; transform: translateY(20px); animation: fadeInUp .6s ease forwards;
 }
+
+/* --- Banda diagonal "De nuevo en stock" --- */
+.producto-card .ribbon {
+  position: absolute;
+  top: 14px;
+  left: -44px;
+  transform: rotate(-45deg);
+  background: linear-gradient(135deg, #7ed957, #53b44b);
+  color: #fff;
+  padding: 8px 48px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+  border-radius: 4px;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.25);
+  z-index: 5;
+  pointer-events: none; /* no interferir con clicks */
+}
+.producto-card .ribbon.ribbon-back {
+  background: linear-gradient(135deg, #7ed957, #45a13f);
+}
+@media (max-width: 600px) {
+  .producto-card .ribbon {
+    top: 10px;
+    left: -38px;
+    padding: 6px 40px;
+    font-size: 0.78rem;
+    border-radius: 3px;
+  }
+}
+
 /* Resplandor artesanal al fondo */
 .producto-card::before {
   content: ""; position: absolute; inset: 0;
