@@ -5,18 +5,10 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
-// === NUEVO: Persistencia "De nuevo en stock" ===
-const LS_PREV_STOCK_KEY    = 'pf_prev_stock';
-const LS_BACK_IN_STOCK_KEY = 'pf_back_in_stock_until';
-const BACK_IN_STOCK_DUR_MS = 1000 * 60 * 60 * 24 * 5; // 5 días
+// --- GLOBAL: ventana de visibilidad para "De nuevo en stock" ---
+const BACK_IN_STOCK_DUR_MS = 1000 * 60 * 60 * 24 * 5; // 5 días (ajustable)
 
-function loadMapLS(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch { return {}; } }
-function saveMapLS(key, obj) { try { localStorage.setItem(key, JSON.stringify(obj)); } catch {} }
-
-let prevStockById = loadMapLS(LS_PREV_STOCK_KEY);
-let backInStockUntilById = loadMapLS(LS_BACK_IN_STOCK_KEY);
-
-// Estilos de la cinta inyectados por JS para evitar editar el CSS
+// Estilos de la cinta (inyectados por JS para no editar CSS)
 const RIBBON_CSS = `
 .producto-card .ribbon {
   position: absolute;
@@ -40,15 +32,13 @@ const RIBBON_CSS = `
   background: linear-gradient(135deg, #7ed957, #45a13f);
 }
 @media (max-width: 600px) {
-  .producto-card .ribbon {
-    top: 10px; left: -38px; padding: 6px 40px; font-size: 0.78rem; border-radius: 3px;
-  }
+  .producto-card .ribbon { top: 10px; left: -38px; padding: 6px 40px; font-size: 0.78rem; border-radius: 3px; }
 }
 `;
 
 // Firebase v10+ (SDK modular)
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getDatabase, ref, runTransaction, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, runTransaction, onValue, get, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const db = window.firebaseDatabase || getDatabase(window.firebaseApp);
 const auth = getAuth(window.firebaseApp);
@@ -64,6 +54,9 @@ let paginaActual = 1;
 const busyButtons   = new WeakSet(); // doble click en el mismo botón
 const inFlightAdds  = new Set();     // mismo producto agregado 2 veces en paralelo
 let suprimirRealtime = 0;            // silencia 1+ ticks del listener para evitar “pestañeo”
+
+// Memoria local para detectar transición 0 -> >0 y escribir restockedAt
+const prevStockById = {};
 
 let filtrosActuales = {
   precioMin: 0,
@@ -238,7 +231,7 @@ const toNum = (v) => {
 };
 
 // ===============================
-// NORMALIZAR + DETECTAR REINGRESO
+// NORMALIZAR + REINGRESO GLOBAL
 // ===============================
 function procesarDatosProductos(data) {
   const now = Date.now();
@@ -259,14 +252,22 @@ function procesarDatosProductos(data) {
     const id = parseInt(p.id || key, 10);
     const nombre = (p.nombre || 'Sin nombre').trim();
 
-    // Detectar transición 0 -> >0 y marcar ventana de “reingreso”
-    const prev = toNum(prevStockById[id]);
+    // Lectura global: restockedAt desde Firebase
+    const restockedAt = toNum(p.restockedAt);
+
+    // Detección de transición local (0 -> >0) para escribir restockedAt una sola vez
+    const prev = prevStockById[id];
     if (prev === 0 && stock > 0) {
-      backInStockUntilById[id] = now + BACK_IN_STOCK_DUR_MS;
+      try {
+        // Grabar timestamp del servidor para que todos lo vean
+        update(ref(db, `productos/${id}`), { restockedAt: serverTimestamp() });
+      } catch (e) { /* no bloquear flujo si falla */ }
       mostrarNotificacion(`"${nombre}" ¡de nuevo en stock!`, 'exito');
     }
     prevStockById[id] = stock;
-    const isBackInStock = (backInStockUntilById[id] || 0) > now && stock > 0;
+
+    // Cinta visible si está dentro de la ventana y hay stock
+    const backInStock = !!(stock > 0 && restockedAt && (now - restockedAt) < BACK_IN_STOCK_DUR_MS);
 
     return {
       id,
@@ -281,12 +282,10 @@ function procesarDatosProductos(data) {
       estado: (p.estado || '').trim(),
       adicionales,
       alto, ancho, profundidad,
-      backInStock: isBackInStock
+      backInStock,
+      restockedAt
     };
   }).filter(Boolean).sort((a,b)=>a.id-b.id);
-
-  saveMapLS(LS_PREV_STOCK_KEY, prevStockById);
-  saveMapLS(LS_BACK_IN_STOCK_KEY, backInStockUntilById);
 }
 
 // ===============================
@@ -475,7 +474,7 @@ function mostrarModalProducto(producto) {
           <img id="modal-imagen" src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
           <div class="modal-thumbnails">
             ${producto.imagenes.map((img, i) => `
-              <img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}">
+              <img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="i" alt="Miniatura ${i + 1}">
             `).join('')}
           </div>
         </div>
