@@ -5,6 +5,17 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
+// === NUEVO: Persistencia "De nuevo en stock" ===
+const LS_PREV_STOCK_KEY    = 'pf_prev_stock';
+const LS_BACK_IN_STOCK_KEY = 'pf_back_in_stock_until';
+const BACK_IN_STOCK_DUR_MS = 1000 * 60 * 60 * 24 * 5; // 5 días
+
+function loadMapLS(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch { return {}; } }
+function saveMapLS(key, obj) { try { localStorage.setItem(key, JSON.stringify(obj)); } catch {} }
+
+let prevStockById = loadMapLS(LS_PREV_STOCK_KEY);
+let backInStockUntilById = loadMapLS(LS_BACK_IN_STOCK_KEY);
+
 // Firebase v10+ (SDK modular)
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getDatabase, ref, runTransaction, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
@@ -197,9 +208,12 @@ const toNum = (v) => {
 };
 
 function procesarDatosProductos(data) {
+  const now = Date.now();
   productos = Object.entries(data || {}).map(([key, p]) => {
     if (typeof p !== 'object' || !p) return null;
 
+    const id = parseInt(p.id || key, 10);
+    const nombre = (p.nombre || 'Sin nombre').trim();
     const alto = toNum(p.alto);
     const ancho = toNum(p.ancho);
     const profundidad = toNum(p.profundidad);
@@ -210,9 +224,18 @@ function procesarDatosProductos(data) {
     const adic = (p.adicionales || '').toString().trim();
     const adicionales = (adic && adic !== '-' && adic !== '–') ? adic : '';
 
+    // Detectar transición de stock 0 → >0
+    const prev = toNum(prevStockById[id]);
+    if (prev === 0 && stock > 0) {
+      backInStockUntilById[id] = now + BACK_IN_STOCK_DUR_MS;
+      mostrarNotificacion(`"${nombre}" ¡de nuevo en stock!`, 'exito');
+    }
+    prevStockById[id] = stock;
+    const backInStock = (backInStockUntilById[id] || 0) > now && stock > 0;
+
     return {
-      id: parseInt(p.id || key, 10),
-      nombre: (p.nombre || 'Sin nombre').trim(),
+      id,
+      nombre,
       descripcion: (p.descripcion || '').trim(),
       precio: parseFloat(String(p.precio).replace(',', '.')) || 0,
       stock,
@@ -222,9 +245,14 @@ function procesarDatosProductos(data) {
       categoria: (p.categoria || 'otros').toLowerCase().trim(),
       estado: (p.estado || '').trim(),
       adicionales,
-      alto, ancho, profundidad
+      alto, ancho, profundidad,
+      backInStock
     };
   }).filter(Boolean).sort((a,b)=>a.id-b.id);
+
+  // Persistir mapas en localStorage
+  saveMapLS(LS_PREV_STOCK_KEY, prevStockById);
+  saveMapLS(LS_BACK_IN_STOCK_KEY, backInStockUntilById);
 }
 
 // ===============================
@@ -294,9 +322,11 @@ function crearCardProducto(p) {
   const disp = Math.max(0, p.stock || 0);
   const agot = disp <= 0;
   const imagen = (p.imagenes && p.imagenes[0]) || PLACEHOLDER_IMAGE;
+  const ribbonHTML = (!agot && p.backInStock) ? `<span class="ribbon ribbon-back">¡De nuevo en stock!</span>` : '';
 
   return `
     <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}">
+      ${ribbonHTML}
       <img src="${imagen}" alt="${p.nombre}" class="producto-img" loading="lazy" decoding="async">
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
