@@ -872,7 +872,7 @@ blockquote {
 .ribbon {
   position: absolute; top: 15px; left: -35px; width: 180px; text-align: center;
   padding: 6px 0; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
-  transform: rotate(-45deg); transform-origin: center; z-index: 10; pointer-events: none;
+  transform: rotate(-45deg); transform-origin: center; z-index: 20; pointer-events: none;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 

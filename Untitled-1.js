@@ -225,6 +225,8 @@ const toNum = (v) => {
 };
 
 function procesarDatosProductos(data) {
+  const now = Date.now(); // Compute once for efficiency
+  
   productos = Object.entries(data || {}).map(([key, p]) => {
     if (typeof p !== 'object' || !p) return null;
 
@@ -243,8 +245,9 @@ function procesarDatosProductos(data) {
     
     // Check for back-in-stock transition (0 -> >0)
     const prevStock = prevStockById[id];
-    if (prevStock === 0 && stock > 0) {
-      backInStockUntilById[id] = Date.now() + BACK_IN_STOCK_DUR_MS;
+    const wasNotSet = !backInStockUntilById[id];
+    if (prevStock === 0 && stock > 0 && wasNotSet) {
+      backInStockUntilById[id] = now + BACK_IN_STOCK_DUR_MS;
       mostrarNotificacion(`"${nombre}" ¡de nuevo en stock!`, 'exito');
     }
     
@@ -252,7 +255,7 @@ function procesarDatosProductos(data) {
     prevStockById[id] = stock;
     
     // Compute back-in-stock flag
-    const backInStock = (backInStockUntilById[id] || 0) > Date.now() && stock > 0;
+    const backInStock = (backInStockUntilById[id] || 0) > now && stock > 0;
 
     return {
       id,
