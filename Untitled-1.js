@@ -209,6 +209,8 @@ const toNum = (v) => {
 
 function procesarDatosProductos(data) {
   const now = Date.now();
+  const backInStockNames = []; // Collect names for batch notification
+  
   productos = Object.entries(data || {}).map(([key, p]) => {
     if (typeof p !== 'object' || !p) return null;
 
@@ -225,10 +227,10 @@ function procesarDatosProductos(data) {
     const adicionales = (adic && adic !== '-' && adic !== '–') ? adic : '';
 
     // Detectar transición de stock 0 → >0
-    const prev = toNum(prevStockById[id]);
+    const prev = toNum(prevStockById[id]) || 0;
     if (prev === 0 && stock > 0) {
       backInStockUntilById[id] = now + BACK_IN_STOCK_DUR_MS;
-      mostrarNotificacion(`"${nombre}" ¡de nuevo en stock!`, 'exito');
+      backInStockNames.push(nombre);
     }
     prevStockById[id] = stock;
     const backInStock = (backInStockUntilById[id] || 0) > now && stock > 0;
@@ -253,6 +255,17 @@ function procesarDatosProductos(data) {
   // Persistir mapas en localStorage
   saveMapLS(LS_PREV_STOCK_KEY, prevStockById);
   saveMapLS(LS_BACK_IN_STOCK_KEY, backInStockUntilById);
+  
+  // Show batch notification if any products came back in stock
+  if (backInStockNames.length > 0) {
+    if (backInStockNames.length === 1) {
+      mostrarNotificacion(`"${backInStockNames[0]}" ¡de nuevo en stock!`, 'exito');
+    } else if (backInStockNames.length <= 3) {
+      mostrarNotificacion(`${backInStockNames.length} productos de nuevo en stock: ${backInStockNames.join(', ')}`, 'exito');
+    } else {
+      mostrarNotificacion(`${backInStockNames.length} productos de nuevo en stock!`, 'exito');
+    }
+  }
 }
 
 // ===============================
