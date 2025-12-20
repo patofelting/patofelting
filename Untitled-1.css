@@ -870,30 +870,56 @@ blockquote {
    Back-in-Stock Ribbon
 ========================= */
 .ribbon {
-  position: absolute; top: 18px; left: -38px; width: 200px; text-align: center;
-  padding: 8px 0; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;
-  transform: rotate(-45deg); transform-origin: center; z-index: 20; pointer-events: none;
-  box-shadow: 0 3px 12px rgba(0,0,0,0.25);
-  line-height: 1.2;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: linear-gradient(135deg, #43c160 0%, #2d9241 100%);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  z-index: 20;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(67, 193, 96, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 1;
+  backdrop-filter: blur(4px);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
 }
 
-.ribbon-back {
-  background: linear-gradient(135deg, #2d9241 0%, #43c160 100%);
-  color: #ffffff;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.8);
-  border-top: 1px solid rgba(255,255,255,0.2);
-  border-bottom: 1px solid rgba(0,0,0,0.2);
+.ribbon-back::before {
+  content: "★";
+  font-size: 0.8rem;
+  color: #fff;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.15); }
 }
 
 @media (max-width: 768px) {
   .ribbon {
-    top: 15px; left: -40px; width: 180px; font-size: 0.75rem; padding: 7px 0;
+    top: 10px;
+    right: 10px;
+    font-size: 0.65rem;
+    padding: 5px 10px;
   }
 }
 
 @media (max-width: 480px) {
   .ribbon {
-    top: 12px; left: -42px; width: 160px; font-size: 0.7rem; padding: 6px 0;
+    top: 8px;
+    right: 8px;
+    font-size: 0.6rem;
+    padding: 4px 8px;
+    gap: 3px;
   }
 }
 
