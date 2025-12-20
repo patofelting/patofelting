@@ -5,6 +5,47 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
+// === NUEVO: Persistencia "De nuevo en stock" ===
+const LS_PREV_STOCK_KEY    = 'pf_prev_stock';
+const LS_BACK_IN_STOCK_KEY = 'pf_back_in_stock_until';
+const BACK_IN_STOCK_DUR_MS = 1000 * 60 * 60 * 24 * 5; // 5 días
+
+function loadMapLS(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch { return {}; } }
+function saveMapLS(key, obj) { try { localStorage.setItem(key, JSON.stringify(obj)); } catch {} }
+
+let prevStockById = loadMapLS(LS_PREV_STOCK_KEY);
+let backInStockUntilById = loadMapLS(LS_BACK_IN_STOCK_KEY);
+
+// Estilos de la cinta inyectados por JS para evitar editar el CSS
+const RIBBON_CSS = `
+.producto-card .ribbon {
+  position: absolute;
+  top: 14px;
+  left: -44px;
+  transform: rotate(-45deg);
+  background: linear-gradient(135deg, #7ed957, #53b44b);
+  color: #fff;
+  padding: 8px 48px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+  border-radius: 4px;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.25);
+  z-index: 5;
+  pointer-events: none;
+}
+.producto-card .ribbon.ribbon-back {
+  background: linear-gradient(135deg, #7ed957, #45a13f);
+}
+@media (max-width: 600px) {
+  .producto-card .ribbon {
+    top: 10px; left: -38px; padding: 6px 40px; font-size: 0.78rem; border-radius: 3px;
+  }
+}
+`;
+
 // Firebase v10+ (SDK modular)
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getDatabase, ref, runTransaction, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
@@ -196,7 +237,12 @@ const toNum = (v) => {
   return isFinite(n) ? n : null;
 };
 
+// ===============================
+// NORMALIZAR + DETECTAR REINGRESO
+// ===============================
 function procesarDatosProductos(data) {
+  const now = Date.now();
+
   productos = Object.entries(data || {}).map(([key, p]) => {
     if (typeof p !== 'object' || !p) return null;
 
@@ -210,9 +256,21 @@ function procesarDatosProductos(data) {
     const adic = (p.adicionales || '').toString().trim();
     const adicionales = (adic && adic !== '-' && adic !== '–') ? adic : '';
 
+    const id = parseInt(p.id || key, 10);
+    const nombre = (p.nombre || 'Sin nombre').trim();
+
+    // Detectar transición 0 -> >0 y marcar ventana de “reingreso”
+    const prev = toNum(prevStockById[id]);
+    if (prev === 0 && stock > 0) {
+      backInStockUntilById[id] = now + BACK_IN_STOCK_DUR_MS;
+      mostrarNotificacion(`"${nombre}" ¡de nuevo en stock!`, 'exito');
+    }
+    prevStockById[id] = stock;
+    const isBackInStock = (backInStockUntilById[id] || 0) > now && stock > 0;
+
     return {
-      id: parseInt(p.id || key, 10),
-      nombre: (p.nombre || 'Sin nombre').trim(),
+      id,
+      nombre,
       descripcion: (p.descripcion || '').trim(),
       precio: parseFloat(String(p.precio).replace(',', '.')) || 0,
       stock,
@@ -222,9 +280,13 @@ function procesarDatosProductos(data) {
       categoria: (p.categoria || 'otros').toLowerCase().trim(),
       estado: (p.estado || '').trim(),
       adicionales,
-      alto, ancho, profundidad
+      alto, ancho, profundidad,
+      backInStock: isBackInStock
     };
   }).filter(Boolean).sort((a,b)=>a.id-b.id);
+
+  saveMapLS(LS_PREV_STOCK_KEY, prevStockById);
+  saveMapLS(LS_BACK_IN_STOCK_KEY, backInStockUntilById);
 }
 
 // ===============================
@@ -295,8 +357,13 @@ function crearCardProducto(p) {
   const agot = disp <= 0;
   const imagen = (p.imagenes && p.imagenes[0]) || PLACEHOLDER_IMAGE;
 
+  const ribbonHTML = (!agot && p.backInStock)
+    ? `<span class="ribbon ribbon-back">¡De nuevo en stock!</span>`
+    : '';
+
   return `
     <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}">
+      ${ribbonHTML}
       <img src="${imagen}" alt="${p.nombre}" class="producto-img" loading="lazy" decoding="async">
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
@@ -960,6 +1027,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (error.code === 'auth/configuration-not-found') msg = 'Autenticación anónima no habilitada.';
     else if (error.code === 'auth/network-request-failed') msg = 'Error de red.';
     mostrarNotificacion(msg, 'error');
+  }
+
+  // Inyectar estilos de la cinta si no existen
+  if (!document.getElementById('pf-back-in-stock-ribbon-css')) {
+    const style = document.createElement('style');
+    style.id = 'pf-back-in-stock-ribbon-css';
+    style.textContent = RIBBON_CSS;
+    document.head.appendChild(style);
   }
 
   cargarCarrito();
