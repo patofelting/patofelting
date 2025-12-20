@@ -5,6 +5,11 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
+// Back-in-stock ribbon config
+const LS_PREV_STOCK_KEY = 'pf_prev_stock';
+const LS_BACK_IN_STOCK_KEY = 'pf_back_in_stock_until';
+const BACK_IN_STOCK_DUR_MS = 1000 * 60 * 60 * 24 * 5; // 5 days
+
 // Firebase v10+ (SDK modular)
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getDatabase, ref, runTransaction, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
@@ -18,6 +23,10 @@ const auth = getAuth(window.firebaseApp);
 let productos = [];
 let carrito = [];
 let paginaActual = 1;
+
+// Back-in-stock tracking
+let prevStockById = loadMapLS(LS_PREV_STOCK_KEY);
+let backInStockUntilById = loadMapLS(LS_BACK_IN_STOCK_KEY);
 
 // Candados para evitar dobles acciones
 const busyButtons   = new WeakSet(); // doble click en el mismo botón
@@ -34,6 +43,25 @@ let filtrosActuales = {
 // ===============================
 // UTILIDADES
 // ===============================
+// localStorage helpers for back-in-stock tracking
+function loadMapLS(key) {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : {};
+  } catch (e) {
+    console.error(`Error loading ${key} from localStorage:`, e);
+    return {};
+  }
+}
+
+function saveMapLS(key, obj) {
+  try {
+    localStorage.setItem(key, JSON.stringify(obj));
+  } catch (e) {
+    console.error(`Error saving ${key} to localStorage:`, e);
+  }
+}
+
 function mostrarNotificacion(mensaje, tipo = 'exito') {
   const noti = document.createElement('div');
   noti.className = `notificacion ${tipo}`;
@@ -210,9 +238,25 @@ function procesarDatosProductos(data) {
     const adic = (p.adicionales || '').toString().trim();
     const adicionales = (adic && adic !== '-' && adic !== '–') ? adic : '';
 
+    const id = parseInt(p.id || key, 10);
+    const nombre = (p.nombre || 'Sin nombre').trim();
+    
+    // Check for back-in-stock transition (0 -> >0)
+    const prevStock = prevStockById[id];
+    if (prevStock === 0 && stock > 0) {
+      backInStockUntilById[id] = Date.now() + BACK_IN_STOCK_DUR_MS;
+      mostrarNotificacion(`"${nombre}" ¡de nuevo en stock!`, 'exito');
+    }
+    
+    // Update previous stock
+    prevStockById[id] = stock;
+    
+    // Compute back-in-stock flag
+    const backInStock = (backInStockUntilById[id] || 0) > Date.now() && stock > 0;
+
     return {
-      id: parseInt(p.id || key, 10),
-      nombre: (p.nombre || 'Sin nombre').trim(),
+      id,
+      nombre,
       descripcion: (p.descripcion || '').trim(),
       precio: parseFloat(String(p.precio).replace(',', '.')) || 0,
       stock,
@@ -222,9 +266,14 @@ function procesarDatosProductos(data) {
       categoria: (p.categoria || 'otros').toLowerCase().trim(),
       estado: (p.estado || '').trim(),
       adicionales,
-      alto, ancho, profundidad
+      alto, ancho, profundidad,
+      backInStock
     };
   }).filter(Boolean).sort((a,b)=>a.id-b.id);
+  
+  // Persist tracking data to localStorage
+  saveMapLS(LS_PREV_STOCK_KEY, prevStockById);
+  saveMapLS(LS_BACK_IN_STOCK_KEY, backInStockUntilById);
 }
 
 // ===============================
@@ -294,9 +343,13 @@ function crearCardProducto(p) {
   const disp = Math.max(0, p.stock || 0);
   const agot = disp <= 0;
   const imagen = (p.imagenes && p.imagenes[0]) || PLACEHOLDER_IMAGE;
+  
+  // Ribbon for back-in-stock products
+  const ribbonHTML = (!agot && p.backInStock) ? '<span class="ribbon ribbon-back">¡De nuevo en stock!</span>' : '';
 
   return `
     <div class="producto-card ${agot ? 'agotado' : ''}" data-id="${p.id}">
+      ${ribbonHTML}
       <img src="${imagen}" alt="${p.nombre}" class="producto-img" loading="lazy" decoding="async">
       <h3 class="producto-nombre">${p.nombre}</h3>
       <p class="producto-precio">$U ${p.precio.toLocaleString('es-UY')}</p>
