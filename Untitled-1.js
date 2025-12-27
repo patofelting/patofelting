@@ -4,13 +4,14 @@
 // ===============================
 const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
+const LS_STOCK_SEEN_KEY = 'pf_last_stock_by_id'; // recuerda último stock visto por producto
 const PLACEHOLDER_IMAGE =
   window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
 // Ventana visible para el badge "De nuevo en stock"
 const BACK_IN_STOCK_DUR_MS = 1000 * 60 * 60 * 24 * 5; // 5 días
 
-// Badge estilo "prolijo / premium"
+// Badge estilo "macOS / vítreo" más visible
 const BADGE_CSS = `
 .producto-card { position: relative; overflow: hidden; }
 
@@ -22,20 +23,23 @@ const BADGE_CSS = `
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 9px 14px;
   border-radius: 999px;
 
-  background: rgba(255,255,255,0.72);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: linear-gradient(180deg, rgba(52,199,89,0.90), rgba(48,209,88,0.85));
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
 
-  border: 1px solid rgba(0,0,0,0.06);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.10);
+  border: 1px solid rgba(13,110,35,0.18);
+  box-shadow:
+    0 10px 25px rgba(0,0,0,0.15),
+    inset 0 1px 0 rgba(255,255,255,0.45);
 
   font-weight: 800;
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   letter-spacing: .02em;
-  color: rgba(16, 102, 32, 0.95);
+  color: #0b2f16;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.35);
   user-select: none;
   pointer-events: none;
 
@@ -43,11 +47,13 @@ const BADGE_CSS = `
 }
 
 .producto-card .badge-restock .dot {
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   border-radius: 999px;
-  background: #2ecc71;
-  box-shadow: 0 0 0 4px rgba(46, 204, 113, 0.20);
+  background: #eafff0;
+  box-shadow:
+    0 0 0 5px rgba(255,255,255,0.35),
+    0 0 0 1px rgba(13,110,35,0.25);
 }
 
 @keyframes pfBadgeIn {
@@ -56,7 +62,7 @@ const BADGE_CSS = `
 }
 
 @media (max-width: 600px) {
-  .producto-card .badge-restock { top: 10px; left: 10px; padding: 7px 10px; font-size: 0.74rem; }
+  .producto-card .badge-restock { top: 10px; left: 10px; padding: 8px 12px; font-size: 0.78rem; }
 }
 `;
 
@@ -87,6 +93,8 @@ let suprimirRealtime = 0;
 
 // Para detectar restock real (0 -> >0) en la sesión
 const prevStockById = {};
+// Persistimos también entre sesiones para detectar 0 -> >0 aunque recargues
+const lastStockById = cargarMapaUltimoStock();
 // Evita spamear toasts en la sesión
 const restockToastShown = new Set();
 
@@ -120,6 +128,20 @@ const toNum = (v) => {
   const n = parseFloat(s);
   return isFinite(n) ? n : null;
 };
+
+function cargarMapaUltimoStock() {
+  try {
+    const raw = localStorage.getItem(LS_STOCK_SEEN_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+function guardarMapaUltimoStock() {
+  try {
+    localStorage.setItem(LS_STOCK_SEEN_KEY, JSON.stringify(lastStockById));
+  } catch {}
+}
 
 // ===============================
 // DOM REFS
@@ -272,7 +294,7 @@ async function cargarProductosDesdeFirebase() {
 function procesarDatosProductos(data) {
   const now = Date.now();
 
-  productos = Object.entries(data || {}).map(([key, p]) => {
+  const nuevos = Object.entries(data || {}).map(([key, p]) => {
     if (typeof p !== 'object' || !p) return null;
 
     const alto = toNum(p.alto);
@@ -290,15 +312,17 @@ function procesarDatosProductos(data) {
 
     const restockedAt = toNum(p.restockedAt);
 
-    // ✅ Regla: SOLO para productos que estuvieron agotados y vuelven a stock
+    // Detectar restock real 0 -> >0 (sesión + persistido)
     const prev = prevStockById[id];
+    const lastSeen = typeof lastStockById[id] === 'number' ? lastStockById[id] : toNum(lastStockById[id]);
 
-    // Restock real: 0 -> >0
-    const wentFromZero = (prev === 0 && stock > 0);
+    const wentFromZero = ((prev === 0 || lastSeen === 0) && stock > 0);
 
-    // Fallback: si hay stock y no hay restockedAt, lo seteamos
-    // Esto ayuda si el restock pasó cuando nadie estaba mirando.
-    const shouldStampRestockedAt = (stock > 0 && !restockedAt && wentFromZero);
+    // Sellar restockedAt cuando vuelve a entrar stock.
+    // - Si no existe, sellamos.
+    // - Si existe pero quedó viejo y nuevamente repusiste (0->>), lo actualizamos para que el badge reaparezca.
+    const restockWindowExpired = restockedAt && (now - restockedAt) > BACK_IN_STOCK_DUR_MS;
+    const shouldStampRestockedAt = (stock > 0) && (wentFromZero) && (!restockedAt || restockWindowExpired);
 
     if (shouldStampRestockedAt) {
       try {
@@ -307,12 +331,14 @@ function procesarDatosProductos(data) {
     }
 
     // Notificación (solo si detectamos 0 -> >0 en esta sesión)
-    if (wentFromZero && !restockToastShown.has(id)) {
+    if ((prev === 0 && stock > 0) && !restockToastShown.has(id)) {
       restockToastShown.add(id);
       mostrarNotificacion(`"${nombre}" volvió a estar disponible`, 'exito');
     }
 
+    // Actualizar memorias
     prevStockById[id] = stock;
+    lastStockById[id] = stock;
 
     // Badge visible si: hay stock, hay restockedAt y está dentro de ventana de 5 días
     const backInStock = !!(stock > 0 && restockedAt && (now - restockedAt) < BACK_IN_STOCK_DUR_MS);
@@ -334,6 +360,10 @@ function procesarDatosProductos(data) {
       restockedAt
     };
   }).filter(Boolean).sort((a,b)=>a.id-b.id);
+
+  productos = nuevos;
+  // Persistimos el mapa de último stock tras procesar
+  guardarMapaUltimoStock();
 }
 
 // ===============================
@@ -403,7 +433,7 @@ function crearCardProducto(p) {
   const agot = disp <= 0;
   const imagen = (p.imagenes && p.imagenes[0]) || PLACEHOLDER_IMAGE;
 
-  // ✅ Badge premium (solo si NO está agotado y está en ventana de restock)
+  // Badge macOS (solo si NO está agotado y está en ventana de restock)
   const badgeHTML = (!agot && p.backInStock)
     ? `<div class="badge-restock"><span class="dot"></span>De nuevo en stock</div>`
     : '';
@@ -763,7 +793,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   cargarCarrito();
   ensureProductModal();
-  initEventos(); 
+  initEventos();
 });
 
 window.agregarAlCarrito = agregarAlCarrito;
