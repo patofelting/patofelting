@@ -253,41 +253,40 @@ function procesarDatosProductos(data) {
     const nombre = (p.nombre || 'Sin nombre').trim();
 
     // Leer timestamp de restock del servidor
-      // Leer timestamp de restock del servidor (solo si fue un restock real)
     const restockedAt = p.restockedAt ? toNum(p.restockedAt) : null;
 
     // Obtener stock anterior desde memoria local
     const prevStock = prevStockById[id];
-    const fueAgotado = prevStock === 0;           // antes estaba en 0
-    const ahoraDisponible = stock > 0;            // ahora tiene stock
-    const esNuevoProducto = prevStock === undefined; // primera vez que lo vemos
+    const fueAgotado = prevStock === 0;
+    const ahoraDisponible = stock > 0;
+    const esNuevoProducto = prevStock === undefined;
 
     let triggerRestock = false;
 
-    // Solo consideramos un "verdadero restock" si:
-    // - Antes estaba en 0 (o era nuevo y ahora tiene stock, pero NO queremos cinta en nuevos)
-    // - Ahora tiene stock > 0
-    // - Y no es un producto completamente nuevo (para evitar cinta en productos recién creados con stock)
     if (fueAgotado && ahoraDisponible && !esNuevoProducto) {
       triggerRestock = true;
 
-      // Solo escribimos restockedAt si no existe aún (evita sobrescribir)
       if (!restockedAt) {
         update(ref(db, `productos/${id}`), { restockedAt: serverTimestamp() })
-          .catch(() => {}); // falla silenciosamente
+          .catch(() => {}); // silencioso
 
         mostrarNotificacion(`"${nombre}" ¡de nuevo en stock!`, 'exito');
       }
     }
 
-    // Actualizar memoria local del stock para futuras comparaciones
+    // Limpieza automática: borrar restockedAt después de 5 días
+    if (restockedAt && (now - restockedAt) >= BACK_IN_STOCK_DUR_MS) {
+      update(ref(db, `productos/${id}`), { restockedAt: null }).catch(() => {});
+    }
+
+    // Actualizar memoria local para la próxima actualización
     prevStockById[id] = stock;
 
-    // Mostrar cinta SOLO si hubo un restock real (existe restockedAt) y está dentro de los 5 días
+    // Mostrar la cinta SOLO si existe restockedAt y está dentro de los 5 días
     const backInStock = !!(
       stock > 0 &&
-      restockedAt &&  // <-- clave: solo si tiene timestamp (significa que fue un restock real)
-      (Date.now() - restockedAt) < BACK_IN_STOCK_DUR_MS
+      restockedAt &&
+      (now - restockedAt) < BACK_IN_STOCK_DUR_MS
     );
 
     return {
@@ -495,7 +494,7 @@ function mostrarModalProducto(producto) {
           <img id="modal-imagen" src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
           <div class="modal-thumbnails">
             ${producto.imagenes.map((img, i) => `
-              <img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="i" alt="Miniatura ${i + 1}">
+              <img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}">
             `).join('')}
           </div>
         </div>
@@ -990,9 +989,7 @@ function updateRange() {
     thumbMax.style.opacity = '0';
   }, 2000);
 
-  filtrosActuales.precioMin = minVal;
-  filtrosActuales.precioMax = maxVal;
-  aplicarFiltros();
+  // REMOVIDO: ya no aplica filtros aquí (solo visual)
 }
 
 // Agregar event listeners para mostrar globos al interactuar
