@@ -866,4 +866,59 @@ blockquote {
 }
 .gatito-contacto.oculto { opacity: 0; pointer-events: none; }
 
+.producto-card .ribbon {
+  position: absolute;
+  top: 12px;
+  left: -48px;
+  width: 180px;
+  transform: rotate(-45deg);
+  background: linear-gradient(135deg, #ffd700, #ffb300); /* Dorado premium */
+  color: #1a1a1a;
+  padding: 8px 0;
+  font-weight: 900;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  text-align: center;
+  z-index: 10;
+  pointer-events: none;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
+}
+
+.producto-card .ribbon::before,
+.producto-card .ribbon::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+}
+
+.producto-card .ribbon::before {
+  left: 0;
+  border-top: 8px solid #cc9900;
+}
+
+.producto-card .ribbon::after {
+  right: 0;
+  border-top: 8px solid #cc9900;
+}
+
+.producto-card .ribbon.ribbon-back {
+  background: linear-gradient(135deg, #ffd700, #ffb300);
+}
+
+@media (max-width: 600px) {
+  .producto-card .ribbon {
+    top: 10px;
+    left: -42px;
+    width: 160px;
+    font-size: 0.76rem;
+    padding: 6px 0;
+  }
+}
 
