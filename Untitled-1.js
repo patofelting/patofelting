@@ -64,7 +64,9 @@ const BADGE_CSS = `
 }
 `;
 
-// Firebase v10+ (SDK modular)
+// ===============================
+// FIREBASE (SDK modular v10+)
+// ===============================
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getDatabase, ref, runTransaction, onValue, get, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
@@ -84,8 +86,9 @@ const inFlightAdds  = new Set();     // mismo producto agregado 2 veces en paral
 let suprimirRealtime = 0;            // silencia 1+ ticks del listener para evitar “pestañeo”
 
 // Memorias para detectar transición 0 -> >0 y escribir restockedAt
-const prevStockById = {};                   // memoria de sesión
-const lastStockById = cargarMapaUltimoStock(); // memoria persistida entre sesiones
+const prevStockById = {};                    // sesión
+const lastStockById = cargarMapaUltimoStock(); // persistido
+const restockToastShown = new Set();         // evita toasts repetidos por sesión
 
 let filtrosActuales = {
   precioMin: 0,
@@ -132,7 +135,9 @@ function guardarMapaUltimoStock() {
   } catch {}
 }
 
-// Referencias DOM
+// ===============================
+// DOM REFS
+// ===============================
 const elementos = {
   galeriaProductos: getElement('galeria-productos'),
   paginacion: getElement('paginacion'),
@@ -264,7 +269,9 @@ async function cargarProductosDesdeFirebase() {
   } catch (error) {
     console.error('Error al cargar productos:', error);
     mostrarNotificacion('Error al cargar productos', 'error');
-    elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos.</p>';
+    if (elementos.galeriaProductos) {
+      elementos.galeriaProductos.innerHTML = '<p class="error-carga">No se pudieron cargar los productos.</p>';
+    }
   } finally {
     if (elementos.productLoader) {
       elementos.productLoader.style.display = 'none';
@@ -295,10 +302,9 @@ function procesarDatosProductos(data) {
     const id = parseInt(p.id || key, 10);
     const nombre = (p.nombre || 'Sin nombre').trim();
 
-    // Lectura global: restockedAt desde Firebase
     const restockedAt = toNum(p.restockedAt);
 
-    // Detección de transición 0 -> >0 (sesión + persistido) para sellar restockedAt una sola vez por reposición
+    // Solo marcar como "de nuevo en stock" cuando vos lo reponés: 0 -> >0
     const prev = prevStockById[id];
     const lastSeen = typeof lastStockById[id] === 'number' ? lastStockById[id] : toNum(lastStockById[id]);
     const wentFromZero = ((prev === 0 || lastSeen === 0) && stock > 0);
@@ -310,11 +316,10 @@ function procesarDatosProductos(data) {
       try {
         update(ref(db, `productos/${id}`), { restockedAt: serverTimestamp() });
       } catch {}
-    }
-
-    // Notificación solo si en ESTA sesión vimos 0 -> >0
-    if ((prev === 0 && stock > 0)) {
-      mostrarNotificacion(`"${nombre}" ¡de nuevo en stock!`, 'exito');
+      if (!restockToastShown.has(id)) {
+        restockToastShown.add(id);
+        mostrarNotificacion(`"${nombre}" ¡de nuevo en stock!`, 'exito');
+      }
     }
 
     // Actualizar memorias
@@ -377,7 +382,6 @@ function renderizarCarrito() {
   const total = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
   elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
 
-  // Handlers +/- (reemplazados en cada render; no se duplican)
   elementos.listaCarrito.querySelectorAll('.disminuir-cantidad').forEach(btn => {
     btn.onclick = async (e) => {
       const id = parseInt(e.currentTarget.dataset.id);
@@ -438,39 +442,45 @@ function crearCardProducto(p) {
     </div>
   `;
 }
+
 function filtrarProductos() {
-  return productos.filter(p => {
-    const { precioMin, precioMax, categoria, busqueda } = filtrosActuales;
-    const b = (busqueda || '').toLowerCase();
-    return (
-      p.precio >= precioMin &&
-      p.precio <= precioMax &&
-      (categoria === 'todos' || p.categoria === categoria) &&
-      (!b || p.nombre.toLowerCase().includes(b) || p.descripcion.toLowerCase().includes(b))
-    );
-  });
+  const { precioMin, precioMax, categoria, busqueda } = filtrosActuales;
+  const b = (busqueda || '').toLowerCase();
+  return productos.filter(p =>
+    p.precio >= precioMin &&
+    p.precio <= precioMax &&
+    (categoria === 'todos' || p.categoria === categoria) &&
+    (!b || p.nombre.toLowerCase().includes(b) || p.descripcion.toLowerCase().includes(b))
+  );
 }
-// pre-carga liviana para que las imágenes aparezcan antes
+
 function prewarmImages(lista) {
   try {
     lista.forEach(p => {
-      (p.imagenes || []).slice(0, 2).forEach(src => { const im = new Image(); im.decoding = 'async'; im.src = src; });
+      (p.imagenes || []).slice(0, 2).forEach(src => {
+        const im = new Image();
+        im.decoding = 'async';
+        im.src = src;
+      });
     });
   } catch {}
 }
+
 function renderizarProductos() {
   const filtrados = filtrarProductos();
   const inicio = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
   const paginados = filtrados.slice(inicio, inicio + PRODUCTOS_POR_PAGINA);
 
+  if (!elementos.galeriaProductos) return;
+
   elementos.galeriaProductos.innerHTML = paginados.length === 0
     ? '<p class="sin-productos">No se encontraron productos.</p>'
     : paginados.map(crearCardProducto).join('');
 
-  prewarmImages(paginados); // acelera percepción de carga
-
+  prewarmImages(paginados);
   renderizarPaginacion(filtrados.length);
 }
+
 function renderizarPaginacion(total) {
   const pages = Math.ceil(total / PRODUCTOS_POR_PAGINA);
   if (!elementos.paginacion) return;
@@ -479,15 +489,16 @@ function renderizarPaginacion(total) {
     <button class="${page === paginaActual ? 'active' : ''}" onclick="cambiarPagina(${page})">${page}</button>
   `).join('');
 }
+
 window.cambiarPagina = function (page) {
   paginaActual = page;
   renderizarProductos();
-  const targetTop = elementos.galeriaProductos.offsetTop - 100;
+  const targetTop = (elementos.galeriaProductos?.offsetTop || 0) - 100;
   if (window.scrollY + 10 < targetTop) window.scrollTo({ top: targetTop, behavior: 'smooth' });
 };
 
 // ===============================
-// MODAL DE PRODUCTO (click imagen = siguiente; overlay cierra)
+// MODAL DE PRODUCTO
 // ===============================
 function ensureProductModal() {
   if (!getElement('producto-modal')) {
@@ -503,11 +514,9 @@ function ensureProductModal() {
   elementos.productoModal = getElement('producto-modal');
   elementos.modalContenido = getElement('modal-contenido');
 
-  // Cierra solo si clicas el overlay
   elementos.productoModal.addEventListener('click', (e) => {
     if (e.target === elementos.productoModal) cerrarModal();
   });
-  // El contenido no propaga (nunca cierra)
   elementos.modalContenido.addEventListener('click', (e) => e.stopPropagation());
 
   document.addEventListener('keydown', (e) => {
@@ -561,7 +570,6 @@ function mostrarModalProducto(producto) {
       </div>
     `;
 
-    // Cambiar imagen con click en la grande (no cierra)
     const imgGrande = cont.querySelector('#modal-imagen');
     imgGrande?.addEventListener('click', (ev) => {
       ev.stopPropagation();
@@ -570,11 +578,13 @@ function mostrarModalProducto(producto) {
       render();
     });
 
-    cont.querySelectorAll('.thumbnail').forEach(th => th.addEventListener('click', (e) => {
-      e.stopPropagation();
-      currentIndex = parseInt(e.currentTarget.dataset.index, 10);
-      render();
-    }));
+    cont.querySelectorAll('.thumbnail').forEach(th =>
+      th.addEventListener('click', (e) => {
+        e.stopPropagation();
+        currentIndex = parseInt(e.currentTarget.dataset.index, 10);
+        render();
+      })
+    );
 
     cont.querySelector('.boton-agregar-modal')?.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -589,6 +599,7 @@ function mostrarModalProducto(producto) {
   elementos.productoModal.setAttribute('aria-hidden', 'false');
   document.body.classList.add('no-scroll');
 }
+
 function cerrarModal() {
   if (elementos.productoModal) {
     elementos.productoModal.classList.remove('visible');
@@ -688,18 +699,9 @@ function aplicarFiltros() {
   paginaActual = 1;
   renderizarProductos();
 }
-function resetearFiltros() {
-  filtrosActuales = { precioMin: 0, precioMax: 3000, categoria: 'todos', busqueda: '' };
-  if (elementos.inputBusqueda) elementos.inputBusqueda.value = '';
-  if (elementos.selectCategoria) elementos.selectCategoria.value = 'todos';
-  if (elementos.precioMinInput) elementos.precioMinInput.value = '0';
-  if (elementos.precioMaxInput) elementos.precioMaxInput.value = '3000';
-  updateRange();
-  aplicarFiltros();
-}
 
 // ===============================
-// INICIALIZACIONES ESPECÍFICAS
+// INICIALIZACIONES ESPECÍFICAS (opcional según tu sitio)
 // ===============================
 function inicializarFAQ() {
   document.querySelectorAll('.faq-toggle').forEach(toggle => {
@@ -725,350 +727,6 @@ function inicializarMenuHamburguesa() {
     hamburguesa.setAttribute('aria-expanded', false);
     document.body.classList.remove('no-scroll');
   });
-}
-function setupContactForm() {
-  const form = getElement('formulario-contacto');
-  if (!form || !window.emailjs) return;
-
-  emailjs.init("o4IxJz0Zz-LQ8jYKG");
-  form.onsubmit = (e) => {
-    e.preventDefault();
-    const nombre = getElement('nombre').value;
-    const email = getElement('email').value;
-    const mensaje = getElement('mensaje').value;
-
-    emailjs.send('service_89by24g', 'template_8mn7hdp', { from_name: nombre, from_email: email, message: mensaje })
-      .then(() => {
-        getElement('successMessage').classList.remove('hidden');
-        form.reset();
-        setTimeout(() => getElement('successMessage').classList.add('hidden'), 3000);
-      }, (error) => {
-        console.error('Error al enviar email:', error);
-        const errorMsg = getElement('errorMessage');
-        errorMsg.textContent = 'Error al enviar el mensaje. Intenta de nuevo.';
-        errorMsg.classList.remove('hidden');
-        setTimeout(() => errorMsg.classList.add('hidden'), 3000);
-      });
-  };
-}
-
-// ===============================
-// EVENTOS Y DELEGACIÓN
-// ===============================
-function initEventos() {
-  elementos.carritoBtnMain?.addEventListener('click', () => toggleCarrito(true));
-  elementos.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
-  elementos.btnCerrarCarrito?.addEventListener('click', () => toggleCarrito(false));
-
-  getElement('select-envio')?.addEventListener('change', actualizarResumenPedido);
-  elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
-  elementos.btnFinalizarCompra?.addEventListener('click', () => {
-    if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
-    elementos.avisoPreCompraModal.style.display = 'flex';
-    elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'false');
-  });
-  elementos.btnEntendidoAviso?.addEventListener('click', () => {
-    elementos.avisoPreCompraModal.style.display = 'none';
-    elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
-    const modalEnvio = getElement('modal-datos-envio');
-    if (modalEnvio) {
-      modalEnvio.style.display = 'flex';
-      modalEnvio.classList.add('visible');
-      modalEnvio.removeAttribute('hidden');
-      actualizarResumenPedido();
-    }
-  });
-  elementos.btnCancelarAviso?.addEventListener('click', () => {
-    elementos.avisoPreCompraModal.style.display = 'none';
-    elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
-  });
-
-  elementos.inputBusqueda?.addEventListener('input', (e) => {
-    filtrosActuales.busqueda = e.target.value.toLowerCase().trim();
-    aplicarFiltros();
-  });
-  elementos.selectCategoria?.addEventListener('change', (e) => {
-    filtrosActuales.categoria = e.target.value.trim();
-    aplicarFiltros();
-  });
-  elementos.precioMinInput?.addEventListener('input', updateRange);
-  elementos.precioMaxInput?.addEventListener('input', updateRange);
-  elementos.aplicarRangoBtn?.addEventListener('click', () => {
-    filtrosActuales.precioMin = parseInt(elementos.precioMinInput.value) || 0;
-    filtrosActuales.precioMax = parseInt(elementos.precioMaxInput.value) || 3000;
-    aplicarFiltros();
-  });
-
-  // Delegación en la galería (evitamos duplicados)
-  const galeria = elementos.galeriaProductos;
-  if (galeria) {
-    if (galeria._pfHandler) galeria.removeEventListener('click', galeria._pfHandler);
-    const handler = (e) => {
-      const target = e.target.closest('.boton-detalles, .boton-agregar, .boton-aviso-stock');
-      if (!target) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const card = target.closest('.producto-card');
-      const id = parseInt(card?.dataset?.id);
-      const producto = productos.find(p => p.id === id);
-      if (!producto) return;
-
-      if (target.classList.contains('boton-detalles')) {
-        mostrarModalProducto(producto);
-      } else if (target.classList.contains('boton-agregar')) {
-        agregarAlCarrito(id, 1, target);
-      } else if (target.classList.contains('boton-aviso-stock')) {
-        preguntarStock(producto.nombre);
-      }
-    };
-    galeria.addEventListener('click', handler, { passive: false });
-    galeria._pfHandler = handler;
-  }
-}
-
-// ===============================
-// RESUMEN Y ENVÍO
-// ===============================
-function actualizarResumenPedido() {
-  const resumenProductos = getElement('resumen-productos');
-  const resumenTotal = getElement('resumen-total');
-  if (!resumenProductos || !resumenTotal) return;
-
-  if (carrito.length === 0) {
-    resumenProductos.innerHTML = '<p class="carrito-vacio">No hay productos en el carrito</p>';
-    resumenTotal.textContent = '$U 0';
-    return;
-  }
-
-  let html = '';
-  let subtotal = 0;
-  carrito.forEach(item => {
-    const itemTotal = item.precio * item.cantidad;
-    subtotal += itemTotal;
-    html += `
-      <div class="resumen-item">
-        <span>${item.nombre} x${item.cantidad}</span>
-        <span>$U ${itemTotal.toLocaleString('es-UY')}</span>
-      </div>
-    `;
-  });
-
-  const envioSelect = getElement('select-envio');
-  const metodo = envioSelect?.value || 'retiro';
-  let costoEnvio = metodo === 'montevideo' ? 200 : metodo === 'interior' ? 250 : 0;
-
-  html += `
-    <div class="resumen-item resumen-subtotal">
-      <span>Subtotal:</span>
-      <span>$U ${subtotal.toLocaleString('es-UY')}</span>
-    </div>
-    ${metodo !== 'retiro' ? `
-      <div class="resumen-item resumen-envio">
-        <span>Envío (${metodo === 'montevideo' ? 'Montevideo' : 'Interior'}):</span>
-        <span>$U ${costoEnvio.toLocaleString('es-UY')}</span>
-      </div>` : ''}
-  `;
-
-  resumenProductos.innerHTML = html;
-  const total = subtotal + costoEnvio;
-  resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
-
-  const grupoDireccion = getElement('grupo-direccion');
-  const inputDireccion = getElement('input-direccion');
-  if (grupoDireccion && inputDireccion) {
-    grupoDireccion.style.display = metodo === 'retiro' ? 'none' : 'flex';
-    inputDireccion.required = metodo !== 'retiro';
-  }
-}
-
-getElement('btn-cerrar-modal-envio')?.addEventListener('click', () => {
-  const modal = getElement('modal-datos-envio');
-  modal.classList.remove('visible');
-  setTimeout(() => modal.style.display = 'none', 300);
-});
-
-let enviandoPedido = false;
-
-// --- Preferir App/Escritorio, luego API móvil, por último Web
-function abrirWhatsAppPreferApp(mensaje, numero = '59893566283') {
-  const txt  = encodeURIComponent(mensaje);
-  const deep = `whatsapp://send?phone=${numero}&text=${txt}`;                 // App (móvil o desktop)
-  const api  = `https://api.whatsapp.com/send?phone=${numero}&text=${txt}`;   // Móvil: abre app
-  const web  = `https://web.whatsapp.com/send?phone=${numero}&text=${txt}`;   // Escritorio: web
-  const isMobile = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-  const onHide = () => { clearTimeout(timer); document.removeEventListener('visibilitychange', onHide); document.removeEventListener('pagehide', onHide); };
-  document.addEventListener('visibilitychange', onHide);
-  document.addEventListener('pagehide', onHide);
-
-  // 1) Intento abrir la app nativa
-  window.location.href = deep;
-
-  // 2) Fallback si no se abrió
-  const timer = setTimeout(() => {
-    if (document.visibilityState === 'hidden') return; // ya se abrió la app
-    window.location.href = isMobile ? api : web;
-  }, 800);
-}
-
-getElement('form-envio')?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  if (enviandoPedido) return;
-  enviandoPedido = true;
-
-  const nombre    = getElement('input-nombre').value.trim();
-  const apellido  = getElement('input-apellido').value.trim();
-  const telefono  = getElement('input-telefono').value.trim();
-  const envio     = getElement('select-envio').value;
-  const direccion = envio !== 'retiro' ? getElement('input-direccion').value.trim() : '';
-  const notas     = getElement('input-notas').value.trim();
-
-  if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
-    mostrarNotificacion('Complete todos los campos obligatorios', 'error');
-    enviandoPedido = false;
-    return;
-  }
-
-  // Revalidar stock (ya fue descontado al agregar, pero por seguridad)
-  for (const item of carrito) {
-    const prod = productos.find(p => p.id === item.id);
-    if (!prod || prod.stock < 0) {
-      mostrarNotificacion(`Stock insuficiente para "${item?.nombre || 'un producto'}"`, 'error');
-      enviandoPedido = false;
-      return;
-  } }
-
-  let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*📋 Detalles del pedido:*\n`;
-  carrito.forEach(item => {
-    mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}\n`;
-  });
-
-  const subtotal   = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
-  const costoEnvio = envio === 'montevideo' ? 200 : envio === 'interior' ? 250 : 0;
-  const total      = subtotal + costoEnvio;
-
-  mensaje += `\n*💰 Total:*\nSubtotal: $U ${subtotal.toLocaleString('es-UY')}\n` +
-             `Envío: $U ${costoEnvio.toLocaleString('es-UY')}\n` +
-             `*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
-
-  mensaje += `*👤 Datos del cliente:*\n` +
-             `Nombre: ${nombre} ${apellido}\n` +
-             `Teléfono: ${telefono}\n` +
-             `Método de envío: ${envio === 'montevideo' ? 'Envío Montevideo ($200)' : envio === 'interior' ? 'Envío Interior ($250)' : 'Retiro en local (Gratis)'}\n`;
-  if (envio !== 'retiro') mensaje += `Dirección: ${direccion}\n`;
-  if (notas) mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
-
-  // Abrir WhatsApp con preferencia por App/Escritorio
-  abrirWhatsAppPreferApp(mensaje, '59893566283');
-
-  // Cerrar modal y limpiar carrito (el stock NO se repone)
-  const modal = getElement('modal-datos-envio');
-  modal?.classList.remove('visible');
-  setTimeout(() => {
-    if (modal) modal.style.display = 'none';
-    carrito = [];
-    guardarCarrito();
-    actualizarUI();
-    mostrarNotificacion('Pedido listo para enviar por WhatsApp', 'exito');
-    getElement('form-envio').reset();
-    enviandoPedido = false;
-  }, 200);
-});
-
-// ===============================
-// SLIDERS DE PRECIO
-// ===============================
-function updateRange() {
-  const minSlider = elementos.precioMinInput;
-  const maxSlider = elementos.precioMaxInput;
-  const minPrice = getElement('min-price');
-  const maxPrice = getElement('max-price');
-  const range = document.querySelector('.range');
-  const thumbMin = getElement('thumb-label-min');
-  const thumbMax = getElement('thumb-label-max');
-  
-  if (!minSlider || !maxSlider || !minPrice || !maxPrice || !range || !thumbMin || !thumbMax) return;
-
-  let minVal = parseInt(minSlider.value);
-  let maxVal = parseInt(maxSlider.value);
-  if (minVal > maxVal) [minVal, maxVal] = [maxVal, minVal];
-
-  minSlider.value = minVal;
-  maxSlider.value = maxVal;
-
-  const sliderMax = parseInt(minSlider.max);
-  const sliderWidth = minSlider.offsetWidth;
-  
-  // Actualizar posición del rango
-  range.style.left = (minVal / sliderMax * 100) + '%';
-  range.style.width = ((maxVal - minVal) / sliderMax * 100) + '%';
-
-  // Actualizar etiquetas de precio
-  minPrice.textContent = `$U${minVal}`;
-  maxPrice.textContent = `$U${maxVal}`;
-  
-  // Actualizar globos (tooltips)
-  thumbMin.textContent = `$U${minVal}`;
-  thumbMax.textContent = `$U${maxVal}`;
-  
-  // Calcular posiciones de los globos
-  const minPos = (minVal / sliderMax) * sliderWidth;
-  const maxPos = (maxVal / sliderMax) * sliderWidth;
-  
-  thumbMin.style.left = `${minPos}px`;
-  thumbMax.style.left = `${maxPos}px`;
-  
-  // Mostrar globos temporalmente al cambiar valores
-  thumbMin.style.opacity = '1';
-  thumbMax.style.opacity = '1';
-  
-  // Ocultar después de un tiempo
-  setTimeout(() => {
-    thumbMin.style.opacity = '0';
-    thumbMax.style.opacity = '0';
-  }, 2000);
-
-  filtrosActuales.precioMin = minVal;
-  filtrosActuales.precioMax = maxVal;
-  aplicarFiltros();
-}
-
-// Agregar event listeners para mostrar globos al interactuar
-elementos.precioMinInput?.addEventListener('input', () => {
-  const thumbMin = getElement('thumb-label-min');
-  if (thumbMin) thumbMin.style.opacity = '1';
-  updateRange();
-});
-
-elementos.precioMaxInput?.addEventListener('input', () => {
-  const thumbMax = getElement('thumb-label-max');
-  if (thumbMax) thumbMax.style.opacity = '1';
-  updateRange();
-});
-
-// Mostrar globos al pasar el mouse sobre el slider
-document.querySelector('.range-slider')?.addEventListener('mouseenter', () => {
-  const thumbMin = getElement('thumb-label-min');
-  const thumbMax = getElement('thumb-label-max');
-  if (thumbMin) thumbMin.style.opacity = '1';
-  if (thumbMax) thumbMax.style.opacity = '1';
-});
-
-// Ocultar globos al salir del slider
-document.querySelector('.range-slider')?.addEventListener('mouseleave', () => {
-  const thumbMin = getElement('thumb-label-min');
-  const thumbMax = getElement('thumb-label-max');
-  if (thumbMin) thumbMin.style.opacity = '0';
-  if (thumbMax) thumbMax.style.opacity = '0';
-});
-
-// ===============================
-// OTRAS
-// ===============================
-function preguntarStock(nombre) {
-  const asunto = encodeURIComponent(`Consulta sobre disponibilidad de "${nombre}"`);
-  const cuerpo = encodeURIComponent(`Hola Patofelting,\n\nMe gustaría saber cuándo estará disponible el producto: ${nombre}\n\nSaludos,\n[Tu nombre]`);
-  window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
 }
 
 // ===============================
@@ -1099,10 +757,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   ensureProductModal();
   inicializarMenuHamburguesa();
   inicializarFAQ();
-  setupContactForm();
-  initEventos();
-  updateRange();
+  actualizarUI();
 });
 
 window.agregarAlCarrito = agregarAlCarrito;
-window.preguntarStock = preguntarStock;
