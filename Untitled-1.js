@@ -4,10 +4,11 @@
 const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const LS_STOCK_SEEN_KEY = 'pf_last_stock_by_id'; // persistir último stock visto por producto
-const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
+const PLACEHOLDER_IMAGE =
+  window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
-// --- GLOBAL: ventana de visibilidad para "De nuevo en stock" ---
-const BACK_IN_STOCK_DUR_MS = 1000 * 60 * 60 * 24 * 5; // 5 días (ajustable)
+// Ventana visible para el badge "De nuevo en stock"
+const BACK_IN_STOCK_DUR_MS = 1000 * 60 * 60 * 24 * 5; // 5 días
 
 // Badge estilo macOS / vítreo
 const BADGE_CSS = `
@@ -65,10 +66,12 @@ const BADGE_CSS = `
 `;
 
 // ===============================
-// FIREBASE (SDK modular v10+)
+// FIREBASE IMPORTS
 // ===============================
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getDatabase, ref, runTransaction, onValue, get, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import {
+  getDatabase, ref, runTransaction, onValue, get, update, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const db = window.firebaseDatabase || getDatabase(window.firebaseApp);
 const auth = getAuth(window.firebaseApp);
@@ -80,15 +83,14 @@ let productos = [];
 let carrito = [];
 let paginaActual = 1;
 
-// Candados para evitar dobles acciones
-const busyButtons   = new WeakSet(); // doble click en el mismo botón
-const inFlightAdds  = new Set();     // mismo producto agregado 2 veces en paralelo
-let suprimirRealtime = 0;            // silencia 1+ ticks del listener para evitar “pestañeo”
+const busyButtons   = new WeakSet();
+const inFlightAdds  = new Set();
+let suprimirRealtime = 0;
 
-// Memorias para detectar transición 0 -> >0 y escribir restockedAt
-const prevStockById = {};                    // sesión
+// Para detectar restock real (0 -> >0)
+const prevStockById = {};                   // sesión
 const lastStockById = cargarMapaUltimoStock(); // persistido
-const restockToastShown = new Set();         // evita toasts repetidos por sesión
+const restockToastShown = new Set();        // evita toasts repetidos
 
 let filtrosActuales = {
   precioMin: 0,
@@ -199,7 +201,7 @@ async function vaciarCarrito() {
         await runTransaction(productRef, (s) => (s || 0) + item.cantidad);
       })
     );
-    suprimirRealtime += n; // evita pestañeo al volver el listener
+    suprimirRealtime += n;
     carrito = [];
     guardarCarrito();
     renderizarCarrito();
@@ -281,7 +283,7 @@ async function cargarProductosDesdeFirebase() {
 }
 
 // ===============================
-// NORMALIZAR + RESTOCK
+// NORMALIZAR + RESTOCK REAL
 // ===============================
 function procesarDatosProductos(data) {
   const now = Date.now();
@@ -304,11 +306,12 @@ function procesarDatosProductos(data) {
 
     const restockedAt = toNum(p.restockedAt);
 
-    // Solo marcar como "de nuevo en stock" cuando vos lo reponés: 0 -> >0
+    // Detectar transición 0 -> >0 (sesión + persistido)
     const prev = prevStockById[id];
     const lastSeen = typeof lastStockById[id] === 'number' ? lastStockById[id] : toNum(lastStockById[id]);
     const wentFromZero = ((prev === 0 || lastSeen === 0) && stock > 0);
 
+    // Re-sello cuando reponés
     const restockWindowExpired = restockedAt && (now - restockedAt) > BACK_IN_STOCK_DUR_MS;
     const shouldStampRestockedAt = (stock > 0) && wentFromZero && (!restockedAt || restockWindowExpired);
 
@@ -326,7 +329,7 @@ function procesarDatosProductos(data) {
     prevStockById[id] = stock;
     lastStockById[id] = stock;
 
-    // Badge visible si: hay stock, hay timestamp y está dentro de ventana
+    // Badge visible si: hay stock, hay restockedAt y está dentro de ventana de 5 días
     const backInStock = !!(stock > 0 && restockedAt && (now - restockedAt) < BACK_IN_STOCK_DUR_MS);
 
     return {
@@ -389,7 +392,7 @@ function renderizarCarrito() {
       if (item && item.cantidad > 1) {
         try {
           await runTransaction(ref(db, `productos/${id}/stock`), (s) => (s || 0) + 1);
-          suprimirRealtime++; // evita pestañeo del onValue
+          suprimirRealtime++;
           const p = productos.find(x => x.id === id);
           if (p) p.stock = (p.stock || 0) + 1;
 
@@ -539,31 +542,31 @@ function mostrarModalProducto(producto) {
       <button class="cerrar-modal" aria-label="Cerrar modal" onclick="cerrarModal()">&times;</button>
       <div class="modal-flex">
         <div class="modal-carrusel">
-          <img id="modal-imagen" src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
+          <img id="modal-imagen" src="\${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="\${producto.nombre}">
           <div class="modal-thumbnails">
-            ${producto.imagenes.map((img, i) => `
-              <img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}">
+            \${producto.imagenes.map((img, i) => `
+              <img src="\${img}" class="thumbnail \${i === currentIndex ? 'active' : ''}" data-index="\${i}" alt="Miniatura \${i + 1}">
             `).join('')}
           </div>
         </div>
         <div class="modal-info">
-          <h1 class="modal-nombre">${producto.nombre}</h1>
-          <p class="modal-precio">$U ${producto.precio.toLocaleString('es-UY')}</p>
+          <h1 class="modal-nombre">\${producto.nombre}</h1>
+          <p class="modal-precio">$U \${producto.precio.toLocaleString('es-UY')}</p>
 
           <div class="modal-descripcion">
-            ${producto.descripcion ? `<p>${producto.descripcion}</p>` : ''}
-            ${producto.adicionales ? `<p><b>Adicionales:</b> ${producto.adicionales}</p>` : ''}
-            ${(producto.alto || producto.ancho || producto.profundidad)
-              ? `<p><b>Medidas:</b> ${[producto.alto, producto.ancho, producto.profundidad].filter(Boolean).join(' x ')} cm</p>`
+            \${producto.descripcion ? `<p>\${producto.descripcion}</p>` : ''}
+            \${producto.adicionales ? `<p><b>Adicionales:</b> \${producto.adicionales}</p>` : ''}
+            \${(producto.alto || producto.ancho || producto.profundidad)
+              ? `<p><b>Medidas:</b> \${[producto.alto, producto.ancho, producto.profundidad].filter(Boolean).join(' x ')} cm</p>`
               : ''}
           </div>
 
-          <p class="modal-stock ${agotado ? 'agotado' : 'disponible'}">${agotado ? 'AGOTADO' : `Disponible: ${disponibles}`}</p>
+          <p class="modal-stock \${agotado ? 'agotado' : 'disponible'}">\${agotado ? 'AGOTADO' : \`Disponible: \${disponibles}\`}</p>
 
           <div class="modal-acciones">
-            <input type="number" value="1" min="1" max="${disponibles}" class="cantidad-modal-input" ${agotado ? 'disabled' : ''}>
-            <button class="boton-agregar-modal ${agotado ? 'agotado' : ''}" data-id="${producto.id}" ${agotado ? 'disabled' : ''}>
-              ${agotado ? 'Agotado' : 'Agregar al carrito'}
+            <input type="number" value="1" min="1" max="\${disponibles}" class="cantidad-modal-input" \${agotado ? 'disabled' : ''}>
+            <button class="boton-agregar-modal \${agotado ? 'agotado' : ''}" data-id="\${producto.id}" \${agotado ? 'disabled' : ''}>
+              \${agotado ? 'Agotado' : 'Agregar al carrito'}
             </button>
           </div>
         </div>
@@ -613,19 +616,16 @@ window.cerrarModal = cerrarModal;
 // AGREGAR AL CARRITO
 // ===============================
 async function agregarAlCarrito(id, cantidad = 1, boton = null) {
-  // Bloqueo por producto (idempotente ante handlers duplicados)
   if (inFlightAdds.has(id)) return;
   inFlightAdds.add(id);
 
   if (!Number.isFinite(id) || id <= 0) { inFlightAdds.delete(id); return mostrarNotificacion('ID de producto inválido', 'error'); }
-
   const producto = productos.find(p => p.id === id);
   if (!producto) { inFlightAdds.delete(id); return mostrarNotificacion('Producto no encontrado', 'error'); }
 
   const cantidadAgregar = Math.max(1, parseInt(cantidad, 10));
   if (!Number.isFinite(cantidadAgregar)) { inFlightAdds.delete(id); return mostrarNotificacion('Cantidad inválida', 'error'); }
 
-  // Candado del botón concreto
   if (boton) {
     if (busyButtons.has(boton)) { inFlightAdds.delete(id); return; }
     busyButtons.add(boton);
@@ -634,7 +634,6 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
     boton.innerHTML = 'Agregando <span class="spinner"></span>';
   }
 
-  // Chequeo con stock remoto actual
   if ((producto.stock || 0) < cantidadAgregar) {
     if (boton) { boton.disabled = false; boton.innerHTML = boton._oldHTML; busyButtons.delete(boton); }
     inFlightAdds.delete(id);
@@ -645,13 +644,12 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
     const productRef = ref(db, `productos/${id}/stock`);
     const { committed } = await runTransaction(productRef, (stock) => {
       stock = stock || 0;
-      if (stock < cantidadAgregar) return; // aborta transacción
+      if (stock < cantidadAgregar) return;
       return stock - cantidadAgregar;
     });
 
     if (!committed) throw new Error('Stock insuficiente o cambiado por otro usuario');
 
-    // Feedback inmediato local + evitar pestañeo del onValue
     suprimirRealtime++;
     producto.stock = Math.max(0, (producto.stock || 0) - cantidadAgregar);
 
@@ -688,7 +686,7 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
 function actualizarCategorias() {
   if (!elementos.selectCategoria) return;
   const cats = ['todos', ...new Set(productos.map(p => p.categoria).sort())];
-  elementos.selectCategoria.innerHTML = cats.map(cat => `<option value="${cat}">${cat.charAt(0).toUpperCase() + cat.slice(1)}</option>`).join('');
+  elementos.selectCategoria.innerHTML = cats.map(cat => `<option value="\${cat}">\${cat.charAt(0).toUpperCase() + cat.slice(1)}</option>`).join('');
   elementos.selectCategoria.value = filtrosActuales.categoria;
 }
 function actualizarUI() {
@@ -701,38 +699,26 @@ function aplicarFiltros() {
 }
 
 // ===============================
-// INICIALIZACIONES ESPECÍFICAS (opcional según tu sitio)
+// OTRAS
 // ===============================
-function inicializarFAQ() {
-  document.querySelectorAll('.faq-toggle').forEach(toggle => {
-    toggle.onclick = () => {
-      const expanded = toggle.getAttribute('aria-expanded') === 'true';
-      toggle.setAttribute('aria-expanded', !expanded);
-      toggle.nextElementSibling.hidden = expanded;
-    };
-  });
-}
-function inicializarMenuHamburguesa() {
-  const hamburguesa = elementos.hamburguesa;
-  const menu = elementos.menu;
-  if (!hamburguesa || !menu) return;
-
-  hamburguesa.onclick = () => {
-    const expanded = menu.classList.toggle('active');
-    hamburguesa.setAttribute('aria-expanded', expanded);
-    document.body.classList.toggle('no-scroll', expanded);
-  };
-  menu.querySelectorAll('a').forEach(link => link.onclick = () => {
-    menu.classList.remove('active');
-    hamburguesa.setAttribute('aria-expanded', false);
-    document.body.classList.remove('no-scroll');
-  });
+function preguntarStock(nombre) {
+  const asunto = encodeURIComponent(`Consulta sobre disponibilidad de "\${nombre}"`);
+  const cuerpo = encodeURIComponent(`Hola Patofelting,\n\nMe gustaría saber cuándo estará disponible el producto: \${nombre}\n\nSaludos,\n[Tu nombre]`);
+  window.location.href = `mailto:patofelting@gmail.com?subject=\${asunto}&body=\${cuerpo}`;
 }
 
 // ===============================
 // INIT
 // ===============================
 document.addEventListener('DOMContentLoaded', async () => {
+  // Inyectar CSS del badge (si no existe)
+  if (!document.getElementById('pf-restock-badge-css')) {
+    const style = document.createElement('style');
+    style.id = 'pf-restock-badge-css';
+    style.textContent = BADGE_CSS;
+    document.head.appendChild(style);
+  }
+
   try {
     await signInAnonymously(auth);
     console.log('✅ Signed in anonymously to Firebase.');
@@ -745,19 +731,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     mostrarNotificacion(msg, 'error');
   }
 
-  // Inyectar estilos del badge macOS si no existen
-  if (!document.getElementById('pf-restock-badge-css')) {
-    const style = document.createElement('style');
-    style.id = 'pf-restock-badge-css';
-    style.textContent = BADGE_CSS;
-    document.head.appendChild(style);
-  }
-
   cargarCarrito();
   ensureProductModal();
-  inicializarMenuHamburguesa();
-  inicializarFAQ();
   actualizarUI();
 });
 
 window.agregarAlCarrito = agregarAlCarrito;
+window.preguntarStock = preguntarStock;
