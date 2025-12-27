@@ -3,36 +3,50 @@
 // ===============================
 const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
-const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
+const PLACEHOLDER_IMAGE =
+  window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
 // --- GLOBAL: ventana de visibilidad para "De nuevo en stock" ---
 const BACK_IN_STOCK_DUR_MS = 1000 * 60 * 60 * 24 * 5; // 5 días (ajustable)
 
 // Estilos de la cinta (inyectados por JS para no editar CSS)
 const RIBBON_CSS = `
+.producto-card { position: relative; overflow: hidden; }
+
 .producto-card .ribbon {
   position: absolute;
   top: 14px;
-  left: -44px;
+  left: -46px;
   transform: rotate(-45deg);
-  background: linear-gradient(135deg, #7ed957, #53b44b);
+  background: linear-gradient(135deg, #7ed957, #45a13f);
   color: #fff;
-  padding: 8px 48px;
-  font-weight: 800;
-  font-size: 0.85rem;
-  letter-spacing: 0.02em;
+  padding: 8px 52px;
+  font-weight: 900;
+  font-size: 0.82rem;
+  letter-spacing: .04em;
   text-transform: uppercase;
-  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-  border-radius: 4px;
-  text-shadow: 0 1px 0 rgba(0,0,0,0.25);
+  box-shadow: 0 10px 22px rgba(0,0,0,.16);
+  border-radius: 6px;
   z-index: 5;
   pointer-events: none;
+
+  /* animación sutil */
+  animation: pfRibbonPop .38s ease-out both;
 }
-.producto-card .ribbon.ribbon-back {
-  background: linear-gradient(135deg, #7ed957, #45a13f);
+
+@keyframes pfRibbonPop {
+  from { opacity: 0; transform: rotate(-45deg) translateY(-10px) scale(.98); }
+  to   { opacity: 1; transform: rotate(-45deg) translateY(0) scale(1); }
 }
+
 @media (max-width: 600px) {
-  .producto-card .ribbon { top: 10px; left: -38px; padding: 6px 40px; font-size: 0.78rem; border-radius: 3px; }
+  .producto-card .ribbon {
+    top: 10px;
+    left: -40px;
+    padding: 6px 44px;
+    font-size: 0.76rem;
+    border-radius: 5px;
+  }
 }
 `;
 
@@ -57,6 +71,8 @@ let suprimirRealtime = 0;            // silencia 1+ ticks del listener para evit
 
 // Memoria local para detectar transición 0 -> >0 y escribir restockedAt
 const prevStockById = {};
+// Evita spamear notificaciones en la sesión
+const restockToastShown = new Set();
 
 let filtrosActuales = {
   precioMin: 0,
@@ -255,16 +271,27 @@ function procesarDatosProductos(data) {
     // Lectura global: restockedAt desde Firebase
     const restockedAt = toNum(p.restockedAt);
 
-    // Detección de transición local (0 -> >0) para escribir restockedAt una sola vez
+    // ===== NUEVO: detectar "nuevo producto" y/o "restock" =====
     const prev = prevStockById[id];
-    if (prev === 0 && stock > 0) {
+    const isNewProduct = (prev === undefined);      // nuevo en catálogo
+    const wentFromZero = (prev === 0 && stock > 0); // restock real
+
+    // Si hay stock y no hay restockedAt, lo seteamos una vez.
+    const shouldStampRestockedAt = (stock > 0 && !restockedAt && (isNewProduct || wentFromZero));
+    if (shouldStampRestockedAt) {
       try {
-        // Grabar timestamp del servidor para que todos lo vean
         update(ref(db, `productos/${id}`), { restockedAt: serverTimestamp() });
-      } catch (e) { /* no bloquear flujo si falla */ }
+      } catch (e) { /* no bloquear */ }
+    }
+
+    // Notificación prolija y sin spam en la sesión
+    if (stock > 0 && (isNewProduct || wentFromZero) && !restockToastShown.has(id)) {
+      restockToastShown.add(id);
       mostrarNotificacion(`"${nombre}" ¡de nuevo en stock!`, 'exito');
     }
+
     prevStockById[id] = stock;
+    // =========================================================
 
     // Cinta visible si está dentro de la ventana y hay stock
     const backInStock = !!(stock > 0 && restockedAt && (now - restockedAt) < BACK_IN_STOCK_DUR_MS);
@@ -474,7 +501,7 @@ function mostrarModalProducto(producto) {
           <img id="modal-imagen" src="${producto.imagenes[currentIndex] || PLACEHOLDER_IMAGE}" class="modal-img" alt="${producto.nombre}">
           <div class="modal-thumbnails">
             ${producto.imagenes.map((img, i) => `
-              <img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="i" alt="Miniatura ${i + 1}">
+              <img src="${img}" class="thumbnail ${i === currentIndex ? 'active' : ''}" data-index="${i}" alt="Miniatura ${i + 1}">
             `).join('')}
           </div>
         </div>
@@ -927,7 +954,7 @@ function updateRange() {
   const range = document.querySelector('.range');
   const thumbMin = getElement('thumb-label-min');
   const thumbMax = getElement('thumb-label-max');
-  
+
   if (!minSlider || !maxSlider || !minPrice || !maxPrice || !range || !thumbMin || !thumbMax) return;
 
   let minVal = parseInt(minSlider.value);
@@ -939,7 +966,7 @@ function updateRange() {
 
   const sliderMax = parseInt(minSlider.max);
   const sliderWidth = minSlider.offsetWidth;
-  
+
   // Actualizar posición del rango
   range.style.left = (minVal / sliderMax * 100) + '%';
   range.style.width = ((maxVal - minVal) / sliderMax * 100) + '%';
@@ -947,22 +974,22 @@ function updateRange() {
   // Actualizar etiquetas de precio
   minPrice.textContent = `$U${minVal}`;
   maxPrice.textContent = `$U${maxVal}`;
-  
+
   // Actualizar globos (tooltips)
   thumbMin.textContent = `$U${minVal}`;
   thumbMax.textContent = `$U${maxVal}`;
-  
+
   // Calcular posiciones de los globos
   const minPos = (minVal / sliderMax) * sliderWidth;
   const maxPos = (maxVal / sliderMax) * sliderWidth;
-  
+
   thumbMin.style.left = `${minPos}px`;
   thumbMax.style.left = `${maxPos}px`;
-  
+
   // Mostrar globos temporalmente al cambiar valores
   thumbMin.style.opacity = '1';
   thumbMax.style.opacity = '1';
-  
+
   // Ocultar después de un tiempo
   setTimeout(() => {
     thumbMin.style.opacity = '0';
