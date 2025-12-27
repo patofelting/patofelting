@@ -763,7 +763,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   cargarCarrito();
   ensureProductModal();
-  initEventos();
+  initEventos(); 
 });
 
 window.agregarAlCarrito = agregarAlCarrito;
