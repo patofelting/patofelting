@@ -253,32 +253,41 @@ function procesarDatosProductos(data) {
     const nombre = (p.nombre || 'Sin nombre').trim();
 
     // Leer timestamp de restock del servidor
+      // Leer timestamp de restock del servidor (solo si fue un restock real)
     const restockedAt = p.restockedAt ? toNum(p.restockedAt) : null;
 
-    // Obtener stock anterior desde memoria local (o undefined si es nuevo)
+    // Obtener stock anterior desde memoria local
     const prevStock = prevStockById[id];
-    const fueAgotado = prevStock === 0;
-    const ahoraDisponible = stock > 0;
+    const fueAgotado = prevStock === 0;           // antes estaba en 0
+    const ahoraDisponible = stock > 0;            // ahora tiene stock
+    const esNuevoProducto = prevStock === undefined; // primera vez que lo vemos
 
-    // Si detectamos un verdadero restock (0 → >0) y aún no tiene timestamp
-    if (fueAgotado && ahoraDisponible && !restockedAt) {
-      update(ref(db, `productos/${id}`), { restockedAt: serverTimestamp() })
-        .catch(() => {}); // silencioso
+    let triggerRestock = false;
 
-      mostrarNotificacion(`"${nombre}" ¡de nuevo en stock!`, 'exito');
+    // Solo consideramos un "verdadero restock" si:
+    // - Antes estaba en 0 (o era nuevo y ahora tiene stock, pero NO queremos cinta en nuevos)
+    // - Ahora tiene stock > 0
+    // - Y no es un producto completamente nuevo (para evitar cinta en productos recién creados con stock)
+    if (fueAgotado && ahoraDisponible && !esNuevoProducto) {
+      triggerRestock = true;
+
+      // Solo escribimos restockedAt si no existe aún (evita sobrescribir)
+      if (!restockedAt) {
+        update(ref(db, `productos/${id}`), { restockedAt: serverTimestamp() })
+          .catch(() => {}); // falla silenciosamente
+
+        mostrarNotificacion(`"${nombre}" ¡de nuevo en stock!`, 'exito');
+      }
     }
 
-    // Actualizar memoria local para la próxima actualización
+    // Actualizar memoria local del stock para futuras comparaciones
     prevStockById[id] = stock;
 
-    // Mostrar la cinta SOLO si:
-    // - hay stock
-    // - existe restockedAt (fue un restock real)
-    // - está dentro de los 5 días
+    // Mostrar cinta SOLO si hubo un restock real (existe restockedAt) y está dentro de los 5 días
     const backInStock = !!(
       stock > 0 &&
-      restockedAt &&
-      (now - restockedAt) < BACK_IN_STOCK_DUR_MS
+      restockedAt &&  // <-- clave: solo si tiene timestamp (significa que fue un restock real)
+      (Date.now() - restockedAt) < BACK_IN_STOCK_DUR_MS
     );
 
     return {
