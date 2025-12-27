@@ -263,15 +263,24 @@ function procesarDatosProductos(data) {
 
     let triggerRestock = false;
 
-    if (fueAgotado && ahoraDisponible && !esNuevoProducto) {
-      triggerRestock = true;
+ const tieneRestockManual = p.restock_manual > 0;
 
+    if ((fueAgotado && ahoraDisponible && !esNuevoProducto && tieneRestockManual) || 
+        (esNuevoProducto && ahoraDisponible && tieneRestockManual)) {
+      
       if (!restockedAt) {
-        update(ref(db, `productos/${id}`), { restockedAt: serverTimestamp() })
-          .catch(() => {}); // silencioso
-
+        update(ref(db, `productos/${id}`), { 
+          restockedAt: serverTimestamp(),
+          restock_manual: 0  // ← reseteamos para que no se active de nuevo
+        }).catch(() => {});
+        
         mostrarNotificacion(`"${nombre}" ¡de nuevo en stock!`, 'exito');
       }
+    }
+
+    // Limpieza automática después de 5 días
+    if (restockedAt && (now - restockedAt) >= BACK_IN_STOCK_DUR_MS) {
+      update(ref(db, `productos/${id}`), { restockedAt: null }).catch(() => {});
     }
 
     // Limpieza automática: borrar restockedAt después de 5 días
