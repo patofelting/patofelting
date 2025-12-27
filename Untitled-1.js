@@ -10,17 +10,12 @@ const BACK_IN_STOCK_DUR_MS = 1000 * 60 * 60 * 24 * 5; // 5 días
 
 // Estilos de la cinta (inyectados por JS)
 const RIBBON_CSS = `
-.producto-card {
-  position: relative;
-  overflow: hidden;
-}
-
 .producto-card .ribbon {
   position: absolute;
   top: 14px;
   left: -44px;
   transform: rotate(-45deg);
-  background: linear-gradient(135deg, #7ed957, #45a13f);
+  background: linear-gradient(135deg, #ff7eb3, #ff758c);
   color: #fff;
   padding: 8px 48px;
   font-weight: 800;
@@ -32,6 +27,11 @@ const RIBBON_CSS = `
   text-shadow: 0 1px 0 rgba(0,0,0,0.25);
   z-index: 5;
   pointer-events: none;
+  animation: ribbonPulse 2s infinite;
+}
+
+.producto-card .ribbon.ribbon-back {
+  background: linear-gradient(135deg, #7ed957, #45a13f);
   animation: ribbonPulse 3s infinite;
 }
 
@@ -88,6 +88,11 @@ const auth = getAuth(window.firebaseApp);
 let productos = [];
 let carrito = [];
 let paginaActual = 1;
+
+// Candados para evitar dobles acciones
+const busyButtons = new WeakSet();
+const inFlightAdds = new Set();
+let suprimirRealtime = 0;
 
 // Memoria para detectar transición 0 -> >0
 const prevStockById = {};
@@ -176,13 +181,15 @@ function cargarCarrito() {
 async function vaciarCarrito() {
   if (carrito.length === 0) return mostrarNotificacion('El carrito ya está vacío', 'info');
 
+  const n = carrito.length;
   try {
-    // Restaurar stock para cada item
-    for (const item of carrito) {
-      const productRef = ref(db, `productos/${item.id}/stock`);
-      await runTransaction(productRef, (s) => (s || 0) + item.cantidad);
-    }
-    
+    await Promise.all(
+      carrito.map(async (item) => {
+        const productRef = ref(db, `productos/${item.id}/stock`);
+        await runTransaction(productRef, (s) => (s || 0) + item.cantidad);
+      })
+    );
+    suprimirRealtime += n;
     carrito = [];
     guardarCarrito();
     renderizarCarrito();
@@ -253,15 +260,17 @@ function procesarDatosProductos(data) {
       // Asignar timestamp actual
       restockedAt = now;
       
-      // Intentar guardar en Firebase
-      try {
-        update(ref(db, `productos/${id}`), { 
-          restockedAt: serverTimestamp() 
-        });
-        console.log(`✅ restockedAt guardado para producto ${id}`);
-      } catch (e) {
-        console.error('Error guardando restockedAt:', e);
-      }
+      // Intentar guardar en Firebase (pero no bloquear el flujo)
+      setTimeout(async () => {
+        try {
+          await update(ref(db, `productos/${id}`), { 
+            restockedAt: serverTimestamp() 
+          });
+          console.log(`✅ restockedAt guardado para producto ${id}`);
+        } catch (e) {
+          console.error('Error guardando restockedAt:', e);
+        }
+      }, 100);
       
       // Mostrar notificación (solo una vez)
       if (!prevStockById[id + '_notified']) {
@@ -336,6 +345,7 @@ function renderizarCarrito() {
       if (item && item.cantidad > 1) {
         try {
           await runTransaction(ref(db, `productos/${id}/stock`), (s) => (s || 0) + 1);
+          suprimirRealtime++;
           const p = productos.find(x => x.id === id);
           if (p) p.stock = (p.stock || 0) + 1;
 
@@ -353,10 +363,7 @@ function renderizarCarrito() {
   });
   
   elementos.listaCarrito.querySelectorAll('.aumentar-cantidad').forEach(btn => {
-    btn.onclick = (e) => {
-      const id = parseInt(e.currentTarget.dataset.id);
-      agregarAlCarrito(id, 1);
-    };
+    btn.onclick = (e) => agregarAlCarrito(parseInt(e.currentTarget.dataset.id), 1, e.currentTarget);
   });
 }
 
@@ -464,7 +471,7 @@ window.cambiarPagina = function (page) {
 };
 
 // ===============================
-// MODAL DE PRODUCTO
+// MODAL DE PRODUCTO (CORREGIDO)
 // ===============================
 function ensureProductModal() {
   if (!getElement('producto-modal')) {
@@ -486,6 +493,13 @@ function ensureProductModal() {
       cerrarModal();
     }
   });
+  
+  // Evitar que el click en el contenido cierre el modal
+  if (elementos.modalContenido) {
+    elementos.modalContenido.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && elementos.productoModal && elementos.productoModal.classList.contains('visible')) {
@@ -600,56 +614,54 @@ function cerrarModal() {
 window.cerrarModal = cerrarModal;
 
 // ===============================
-// AGREGAR AL CARRITO (CORREGIDO)
+// AGREGAR AL CARRITO
 // ===============================
 async function agregarAlCarrito(id, cantidad = 1, boton = null) {
-  console.log('Agregando al carrito, ID:', id, 'Cantidad:', cantidad);
+  if (inFlightAdds.has(id)) return;
+  inFlightAdds.add(id);
 
-  if (!Number.isFinite(id) || id <= 0) {
-    return mostrarNotificacion('ID de producto inválido', 'error');
+  if (!Number.isFinite(id) || id <= 0) { 
+    inFlightAdds.delete(id); 
+    return mostrarNotificacion('ID de producto inválido', 'error'); 
   }
 
   const producto = productos.find(p => p.id === id);
-  if (!producto) {
-    return mostrarNotificacion('Producto no encontrado', 'error');
+  if (!producto) { 
+    inFlightAdds.delete(id); 
+    return mostrarNotificacion('Producto no encontrado', 'error'); 
   }
 
   const cantidadAgregar = Math.max(1, parseInt(cantidad));
-  if (!Number.isFinite(cantidadAgregar)) {
-    return mostrarNotificacion('Cantidad inválida', 'error');
+  if (!Number.isFinite(cantidadAgregar)) { 
+    inFlightAdds.delete(id); 
+    return mostrarNotificacion('Cantidad inválida', 'error'); 
+  }
+
+  if (boton) {
+    if (busyButtons.has(boton)) { inFlightAdds.delete(id); return; }
+    busyButtons.add(boton);
+    boton.disabled = true;
+    boton._oldHTML = boton.innerHTML;
+    boton.innerHTML = 'Agregando <span class="spinner"></span>';
   }
 
   if ((producto.stock || 0) < cantidadAgregar) {
+    if (boton) { boton.disabled = false; boton.innerHTML = boton._oldHTML; busyButtons.delete(boton); }
+    inFlightAdds.delete(id);
     return mostrarNotificacion('Stock insuficiente', 'error');
-  }
-
-  // Estado del botón si se proporciona
-  let oldHTML = '';
-  if (boton) {
-    oldHTML = boton.innerHTML;
-    boton.disabled = true;
-    boton.innerHTML = 'Agregando...';
   }
 
   try {
     const productRef = ref(db, `productos/${id}/stock`);
     const { committed } = await runTransaction(productRef, (stock) => {
       stock = stock || 0;
-      console.log(`Stock actual en Firebase: ${stock}, Queremos restar: ${cantidadAgregar}`);
-      if (stock < cantidadAgregar) {
-        console.log('Stock insuficiente en Firebase');
-        return;
-      }
-      const nuevoStock = stock - cantidadAgregar;
-      console.log('Nuevo stock será:', nuevoStock);
-      return nuevoStock;
+      if (stock < cantidadAgregar) return;
+      return stock - cantidadAgregar;
     });
 
-    if (!committed) {
-      throw new Error('Stock insuficiente o cambiado por otro usuario');
-    }
+    if (!committed) throw new Error('Stock insuficiente o cambiado por otro usuario');
 
-    // Actualizar localmente
+    suprimirRealtime++;
     producto.stock = Math.max(0, (producto.stock || 0) - cantidadAgregar);
 
     const enCarrito = carrito.find(item => item.id === id);
@@ -668,15 +680,17 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
     guardarCarrito();
     renderizarCarrito();
     renderizarProductos();
-    mostrarNotificacion(`"${producto.nombre}" agregado al carrito`, 'exito');
+    mostrarNotificacion('Producto agregado al carrito', 'exito');
   } catch (error) {
     console.error('Error al agregar al carrito:', error);
     mostrarNotificacion('Error al agregar al carrito', 'error');
   } finally {
     if (boton) {
       boton.disabled = false;
-      boton.innerHTML = oldHTML;
+      boton.innerHTML = boton._oldHTML;
+      busyButtons.delete(boton);
     }
+    inFlightAdds.delete(id);
   }
 }
 
@@ -790,7 +804,7 @@ function setupContactForm() {
 }
 
 // ===============================
-// EVENTOS Y DELEGACIÓN (COMPLETAMENTE CORREGIDO)
+// EVENTOS Y DELEGACIÓN (CORREGIDO)
 // ===============================
 function initEventos() {
   // Inicializar elementos primero
@@ -809,7 +823,7 @@ function initEventos() {
     elementos.btnCerrarCarrito.addEventListener('click', () => toggleCarrito(false));
   }
 
-  // Filtros de búsqueda
+  // Filtros de búsqueda (CORREGIDO)
   if (elementos.inputBusqueda) {
     elementos.inputBusqueda.addEventListener('input', (e) => {
       filtrosActuales.busqueda = e.target.value.toLowerCase().trim();
@@ -882,42 +896,47 @@ function initEventos() {
     });
   }
 
-  // DELEGACIÓN DE EVENTOS EN LA GALERÍA - SIMPLIFICADA
-  document.addEventListener('click', (e) => {
-    // Ver Detalle
-    if (e.target.classList.contains('boton-detalles') || e.target.closest('.boton-detalles')) {
-      const boton = e.target.classList.contains('boton-detalles') ? e.target : e.target.closest('.boton-detalles');
-      const id = parseInt(boton.getAttribute('data-id'));
+  // DELEGACIÓN DE EVENTOS EN LA GALERÍA (CORREGIDO)
+  if (elementos.galeriaProductos) {
+    // Remover handler anterior si existe
+    if (elementos.galeriaProductos._pfHandler) {
+      elementos.galeriaProductos.removeEventListener('click', elementos.galeriaProductos._pfHandler);
+    }
+    
+    const galeriaHandler = (e) => {
+      // Buscar el botón clickeado
+      const botonDetalles = e.target.closest('.boton-detalles');
+      const botonAgregar = e.target.closest('.boton-agregar');
+      const botonAviso = e.target.closest('.boton-aviso-stock');
+      
+      if (!botonDetalles && !botonAgregar && !botonAviso) return;
+      
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const card = e.target.closest('.producto-card');
+      if (!card) return;
+      
+      const id = parseInt(card.getAttribute('data-id'));
+      if (isNaN(id)) return;
+      
       const producto = productos.find(p => p.id === id);
-      if (producto) {
+      if (!producto) return;
+      
+      if (botonDetalles) {
+        console.log('Mostrando modal para producto:', producto.nombre);
         mostrarModalProducto(producto);
+      } else if (botonAgregar) {
+        agregarAlCarrito(id, 1, botonAgregar);
+      } else if (botonAviso) {
+        const nombreProducto = botonAviso.getAttribute('data-nombre') || producto.nombre;
+        preguntarStock(nombreProducto);
       }
-      e.preventDefault();
-      e.stopPropagation();
-    }
+    };
     
-    // Agregar al carrito desde galería
-    else if (e.target.classList.contains('boton-agregar') || e.target.closest('.boton-agregar')) {
-      const boton = e.target.classList.contains('boton-agregar') ? e.target : e.target.closest('.boton-agregar');
-      const id = parseInt(boton.getAttribute('data-id'));
-      if (!isNaN(id)) {
-        agregarAlCarrito(id, 1, boton);
-      }
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
-    // Avisar stock
-    else if (e.target.classList.contains('boton-aviso-stock') || e.target.closest('.boton-aviso-stock')) {
-      const boton = e.target.classList.contains('boton-aviso-stock') ? e.target : e.target.closest('.boton-aviso-stock');
-      const nombre = boton.getAttribute('data-nombre');
-      if (nombre) {
-        preguntarStock(nombre);
-      }
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  });
+    elementos.galeriaProductos.addEventListener('click', galeriaHandler);
+    elementos.galeriaProductos._pfHandler = galeriaHandler;
+  }
 
   // Selector de envío
   const selectEnvio = getElement('select-envio');
@@ -1058,6 +1077,7 @@ function manejarSubmitEnvio(e) {
   if (isMobile) {
     window.location.href = `https://api.whatsapp.com/send?phone=${numero}&text=${txt}`;
   } else {
+    window.location.href = `https://web.whatsapp.com/send?phone=${numero}&text=${txt}`;
     window.open(`https://web.whatsapp.com/send?phone=${numero}&text=${txt}`, '_blank');
   }
 
@@ -1143,7 +1163,7 @@ function updateRange() {
 function preguntarStock(nombre) {
   const asunto = encodeURIComponent(`Consulta sobre disponibilidad de "${nombre}"`);
   const cuerpo = encodeURIComponent(`Hola Patofelting,\n\nMe gustaría saber cuándo estará disponible el producto: ${nombre}\n\nSaludos,\n[Tu nombre]`);
-  window.open(`mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`, '_blank');
+  window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
 }
 
 // ===============================
@@ -1172,6 +1192,10 @@ async function cargarProductosDesdeFirebase() {
 
     if (!cargarProductosDesdeFirebase._listening) {
       onValue(productosRef, (snap) => {
+        if (suprimirRealtime > 0) { 
+          suprimirRealtime--; 
+          return; 
+        }
         if (!snap.exists()) {
           productos = [];
         } else {
