@@ -252,22 +252,34 @@ function procesarDatosProductos(data) {
     const id = parseInt(p.id || key, 10);
     const nombre = (p.nombre || 'Sin nombre').trim();
 
-    // Lectura global: restockedAt desde Firebase
-    const restockedAt = toNum(p.restockedAt);
+    // Leer timestamp de restock del servidor
+    const restockedAt = p.restockedAt ? toNum(p.restockedAt) : null;
 
-    // Detección de transición local (0 -> >0) para escribir restockedAt una sola vez
-    const prev = prevStockById[id];
-    if (prev === 0 && stock > 0) {
-      try {
-        // Grabar timestamp del servidor para que todos lo vean
-        update(ref(db, `productos/${id}`), { restockedAt: serverTimestamp() });
-      } catch (e) { /* no bloquear flujo si falla */ }
+    // Obtener stock anterior desde memoria local (o undefined si es nuevo)
+    const prevStock = prevStockById[id];
+    const fueAgotado = prevStock === 0;
+    const ahoraDisponible = stock > 0;
+
+    // Si detectamos un verdadero restock (0 → >0) y aún no tiene timestamp
+    if (fueAgotado && ahoraDisponible && !restockedAt) {
+      update(ref(db, `productos/${id}`), { restockedAt: serverTimestamp() })
+        .catch(() => {}); // silencioso
+
       mostrarNotificacion(`"${nombre}" ¡de nuevo en stock!`, 'exito');
     }
+
+    // Actualizar memoria local para la próxima actualización
     prevStockById[id] = stock;
 
-    // Cinta visible si está dentro de la ventana y hay stock
-    const backInStock = !!(stock > 0 && restockedAt && (now - restockedAt) < BACK_IN_STOCK_DUR_MS);
+    // Mostrar la cinta SOLO si:
+    // - hay stock
+    // - existe restockedAt (fue un restock real)
+    // - está dentro de los 5 días
+    const backInStock = !!(
+      stock > 0 &&
+      restockedAt &&
+      (now - restockedAt) < BACK_IN_STOCK_DUR_MS
+    );
 
     return {
       id,
@@ -285,7 +297,7 @@ function procesarDatosProductos(data) {
       backInStock,
       restockedAt
     };
-  }).filter(Boolean).sort((a,b)=>a.id-b.id);
+  }).filter(Boolean).sort((a, b) => a.id - b.id);
 }
 
 // ===============================
