@@ -5,59 +5,79 @@ const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
 const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
-// Ventana de visibilidad (5 días)
+// Ventana de visibilidad para reingresos (5 días)
 const BACK_IN_STOCK_DUR_MS = 1000 * 60 * 60 * 24 * 5;
 
-// === DISEÑO MINIMALISTA KAWAII - CSS DE CINTA ===
+// === DISEÑO MINIMALISTA KAWAII - Mac Style ===
 const RIBBON_CSS = `
 .producto-card .ribbon {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(126, 217, 87, 0.9);
-  backdrop-filter: blur(4px);
+  top: 12px;
+  right: 12px;
+  background: rgba(126, 217, 87, 0.95);
+  backdrop-filter: blur(8px);
   color: #fff;
-  padding: 4px 12px;
+  padding: 4px 14px;
   font-weight: 500;
   font-size: 0.75rem;
   border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   z-index: 5;
   pointer-events: none;
   animation: kawaiiPulse 2.5s ease-in-out infinite;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   letter-spacing: 0.3px;
+  border: 1px solid rgba(255,255,255,0.2);
 }
 
 @keyframes kawaiiPulse {
-  0%, 100% { opacity: 0.85; transform: scale(1); }
+  0%, 100% { opacity: 0.9; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.02); }
 }
 
 @media (max-width: 600px) {
   .producto-card .ribbon {
-    top: 6px;
-    right: 6px;
+    top: 8px;
+    right: 8px;
     font-size: 0.7rem;
-    padding: 3px 10px;
+    padding: 3px 12px;
   }
 }
 `;
 
-// Firebase v10+
+// Firebase v10+ SDK Modular
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getDatabase, ref, runTransaction, onValue, get, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // ===============================
-// VERIFICACIÓN DE FIREBASE
+// CONFIGURACIÓN Y VERIFICACIÓN DE FIREBASE
 // ===============================
 let db, auth;
 try {
-  if (!window.firebaseApp) throw new Error('Firebase no inicializado');
-  db = window.firebaseDatabase || getDatabase(window.firebaseApp);
+  // TU CONFIGURACIÓN CORRECTA
+  const firebaseConfig = {
+    apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
+    authDomain: "patofelting-b188f.firebaseapp.com",
+    databaseURL: "https://patofelting-b188f-default-rtdb.firebaseio.com", // ‼️ SIN espacio al final
+    projectId: "patofelting-b188f",
+    storageBucket: "patofelting-b188f.appspot.com",
+    messagingSenderId: "858377467588",
+    appId: "1:858377467588:web:cade9de05ebccc17f87b91"
+  };
+
+  if (!window.firebaseApp) {
+    // Inicializar Firebase SOLO si no está inicializado
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
+    window.firebaseApp = initializeApp(firebaseConfig);
+  }
+  
+  db = getDatabase(window.firebaseApp);
   auth = getAuth(window.firebaseApp);
+  
+  console.log('✅ Firebase inicializado correctamente');
 } catch (error) {
-  console.error('❌', error.message);
+  console.error('❌ ERROR CRÍTICO:', error.message);
+  mostrarNotificacion('Error: Firebase no configurado correctamente', 'error');
 }
 
 // ===============================
@@ -130,7 +150,6 @@ function guardarCarrito() {
     actualizarContadorCarrito();
   } catch (e) {
     console.error('localStorage error:', e);
-    mostrarNotificacion('Error al guardar el carrito', 'error');
   }
 }
 function cargarCarrito() {
@@ -150,7 +169,7 @@ function actualizarContadorCarrito() {
 }
 
 // ===============================
-// PROCESAMIENTO DE PRODUCTOS (LÓGICA 0->>0 CORREGIDA)
+// PROCESAMIENTO DE PRODUCTOS
 // ===============================
 function procesarDatosProductos(data) {
   const now = Date.now();
@@ -163,7 +182,7 @@ function procesarDatosProductos(data) {
     const stock = Math.max(0, parseInt(String(p.stock ?? p.cantidad).replace(',', '.'), 10) || 0);
     const restockedAt = p.restockedAt ? parseFloat(p.restockedAt) : null;
 
-    // LÓGICA ROBUSTA: Mostrar cinta si hay stock y timestamp es reciente
+    // LÓGICA CORRECTA: Mostrar cinta si hay stock y timestamp es reciente
     const backInStock = !!(stock > 0 && restockedAt && (now - restockedAt) < BACK_IN_STOCK_DUR_MS);
 
     return {
@@ -187,38 +206,34 @@ function procesarDatosProductos(data) {
 }
 
 // ===============================
-// DETECCIÓN Y ETIQUETADO EN TIEMPO REAL
+// DETECCIÓN AUTOMÁTICA DE REINGRESOS DESDE GOOGLE SHEETS
 // ===============================
-async function verificarYEtiquetarReingresos() {
+async function verificarReingresosDesdeSheets() {
   if (!db) return;
 
   const productosRef = ref(db, 'productos');
   
-  onValue(productosRef, async (snapshot) => {
+  onValue(productosRef, (snapshot) => {
     if (!snapshot.exists()) return;
 
     const data = snapshot.val();
     const updates = {};
 
-    for (const [key, producto] of Object.entries(data)) {
+    Object.entries(data).forEach(([key, producto]) => {
       const id = parseInt(producto.id || key, 10);
       const stockActual = Math.max(0, parseInt(String(producto.stock ?? producto.cantidad).replace(',', '.'), 10) || 0);
       const restockedAt = producto.restockedAt ? parseFloat(producto.restockedAt) : null;
       
-      // Si hay stock pero no hay timestamp, es un reingreso
+      // Si hay stock PERO no hay timestamp, es un reingreso desde Sheets
       if (stockActual > 0 && !restockedAt) {
         updates[`${id}/restockedAt`] = serverTimestamp();
+        console.log(`📦 Reingreso detectado: ${producto.nombre}`);
       }
-    }
+    });
 
-    // Aplicar actualizaciones solo si hay cambios
+    // Aplicar actualizaciones si hay cambios
     if (Object.keys(updates).length > 0) {
-      try {
-        await update(ref(db, 'productos'), updates);
-        console.log('✅ Reingresos detectados y etiquetados:', Object.keys(updates).length);
-      } catch (e) {
-        console.error('Error etiquetando reingresos:', e);
-      }
+      update(ref(db, 'productos'), updates).catch(e => console.error('Error etiquetando:', e));
     }
   });
 }
@@ -473,7 +488,7 @@ window.cambiarPagina = function(page) {
 // INICIALIZACIÓN
 // ===============================
 document.addEventListener('DOMContentLoaded', async () => {
-  // Inyectar CSS minimalista
+  // Inyectar CSS minimalista al inicio
   const style = document.createElement('style');
   style.id = 'pf-back-in-stock-ribbon-css';
   style.textContent = RIBBON_CSS;
@@ -485,7 +500,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       await signInAnonymously(auth);
       console.log('✅ Auth anónima exitosa');
-      verificarYEtiquetarReingresos(); // Importante: ejecutar primero
+      verificarReingresosDesdeSheets(); // Detecta reingresos automáticamente
       cargarProductosDesdeFirebase();
     } catch (e) {
       console.error('❌ Auth error:', e);
