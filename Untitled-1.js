@@ -3,7 +3,9 @@
 // ===============================
 const PRODUCTOS_POR_PAGINA = 6;
 const LS_CARRITO_KEY = 'carrito';
-const PLACEHOLDER_IMAGE = window.PLACEHOLDER_IMAGE || 'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
+const PLACEHOLDER_IMAGE =
+  window.PLACEHOLDER_IMAGE ||
+  'https://via.placeholder.com/400x400/7ed957/fff?text=Sin+Imagen';
 
 // --- Ventana de visibilidad para cinta "nuevo" ---
 const BACK_IN_STOCK_DUR_MS = 1000 * 60 * 60 * 24 * 5; // 5 días (ajustable)
@@ -82,6 +84,7 @@ function mostrarNotificacion(mensaje, tipo = 'exito') {
     setTimeout(() => noti.remove(), 250);
   }, 2500);
 }
+
 const getElement = (id) => document.getElementById(id);
 
 // Referencias DOM
@@ -150,8 +153,11 @@ function cargarCarrito() {
   }
 }
 
+// ✅ VACÍA CARRITO + repone stock en Firebase + actualiza stock local
 async function vaciarCarrito() {
   if (carrito.length === 0) return mostrarNotificacion('El carrito ya está vacío', 'info');
+
+  const n = carrito.length;
 
   try {
     await Promise.all(
@@ -166,8 +172,8 @@ async function vaciarCarrito() {
       })
     );
 
-    // ✅ solo 1 tick (porque normalmente onValue llega una vez)
-    suprimirRealtime = Math.max(suprimirRealtime, 1);
+    // ✅ suprime tantos ticks como items (evita parpadeo)
+    suprimirRealtime = Math.max(suprimirRealtime, n);
 
     carrito = [];
     guardarCarrito();
@@ -179,7 +185,6 @@ async function vaciarCarrito() {
     mostrarNotificacion('Error al vaciar el carrito', 'error');
   }
 }
-
 
 function actualizarContadorCarrito() {
   const total = carrito.reduce((sum, i) => sum + i.cantidad, 0);
@@ -265,8 +270,10 @@ function procesarDatosProductos(data) {
     const alto = toNum(p.alto);
     const ancho = toNum(p.ancho);
     const profundidad = toNum(p.profundidad);
+
     const stockRaw = (p.stock !== undefined ? p.stock : p.cantidad);
     const stock = Math.max(0, parseInt(String(stockRaw).replace(',', '.'), 10) || 0);
+
     const adic = (p.adicionales || '').toString().trim();
     const adicionales = (adic && adic !== '-' && adic !== '–') ? adic : '';
 
@@ -284,7 +291,8 @@ function procesarDatosProductos(data) {
       update(ref(db, `productos/${key}`), { nuevoAt: null }).catch(() => {});
     }
 
-    const esNuevoReciente = stock > 1 && nuevoAt && (now - nuevoAt) < BACK_IN_STOCK_DUR_MS;
+    // ✅ IMPORTANTE: stock > 0 (no > 1)
+    const esNuevoReciente = stock > 0 && nuevoAt && (now - nuevoAt) < BACK_IN_STOCK_DUR_MS;
 
     // guardar mapping id -> key real
     keyById[id] = key;
@@ -420,7 +428,11 @@ function filtrarProductos() {
 function prewarmImages(lista) {
   try {
     lista.forEach(p => {
-      (p.imagenes || []).slice(0, 2).forEach(src => { const im = new Image(); im.decoding = 'async'; im.src = src; });
+      (p.imagenes || []).slice(0, 2).forEach(src => {
+        const im = new Image();
+        im.decoding = 'async';
+        im.src = src;
+      });
     });
   } catch {}
 }
@@ -738,11 +750,13 @@ function initEventos() {
 
   getElement('select-envio')?.addEventListener('change', actualizarResumenPedido);
   elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
+
   elementos.btnFinalizarCompra?.addEventListener('click', () => {
     if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
     elementos.avisoPreCompraModal.style.display = 'flex';
     elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'false');
   });
+
   elementos.btnEntendidoAviso?.addEventListener('click', () => {
     elementos.avisoPreCompraModal.style.display = 'none';
     elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
@@ -754,6 +768,7 @@ function initEventos() {
       actualizarResumenPedido();
     }
   });
+
   elementos.btnCancelarAviso?.addEventListener('click', () => {
     elementos.avisoPreCompraModal.style.display = 'none';
     elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
@@ -763,12 +778,15 @@ function initEventos() {
     filtrosActuales.busqueda = e.target.value.toLowerCase().trim();
     aplicarFiltros();
   });
+
   elementos.selectCategoria?.addEventListener('change', (e) => {
     filtrosActuales.categoria = e.target.value.trim();
     aplicarFiltros();
   });
+
   elementos.precioMinInput?.addEventListener('input', updateRange);
   elementos.precioMaxInput?.addEventListener('input', updateRange);
+
   elementos.aplicarRangoBtn?.addEventListener('click', () => {
     filtrosActuales.precioMin = parseInt(elementos.precioMinInput.value) || 0;
     filtrosActuales.precioMax = parseInt(elementos.precioMaxInput.value) || 3000;
@@ -779,11 +797,13 @@ function initEventos() {
   const galeria = elementos.galeriaProductos;
   if (galeria) {
     if (galeria._pfHandler) galeria.removeEventListener('click', galeria._pfHandler);
+
     const handler = (e) => {
       const target = e.target.closest('.boton-detalles, .boton-agregar, .boton-aviso-stock');
       if (!target) return;
       e.preventDefault();
       e.stopPropagation();
+
       const card = target.closest('.producto-card');
       const id = parseInt(card?.dataset?.id);
       const producto = productos.find(p => p.id === id);
@@ -797,6 +817,7 @@ function initEventos() {
         preguntarStock(producto.nombre);
       }
     };
+
     galeria.addEventListener('click', handler, { passive: false });
     galeria._pfHandler = handler;
   }
@@ -818,6 +839,7 @@ function actualizarResumenPedido() {
 
   let html = '';
   let subtotal = 0;
+
   carrito.forEach(item => {
     const itemTotal = item.precio * item.cantidad;
     subtotal += itemTotal;
@@ -912,7 +934,8 @@ getElement('form-envio')?.addEventListener('submit', async (e) => {
       mostrarNotificacion(`Stock insuficiente para "${item?.nombre || 'un producto'}"`, 'error');
       enviandoPedido = false;
       return;
-  } }
+    }
+  }
 
   let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*📋 Detalles del pedido:*\n`;
   carrito.forEach(item => {
@@ -962,7 +985,7 @@ function updateRange() {
   const range = document.querySelector('.range');
   const thumbMin = getElement('thumb-label-min');
   const thumbMax = getElement('thumb-label-max');
-  
+
   if (!minSlider || !maxSlider || !minPrice || !maxPrice || !range || !thumbMin || !thumbMax) return;
 
   let minVal = parseInt(minSlider.value);
@@ -974,7 +997,7 @@ function updateRange() {
 
   const sliderMax = parseInt(minSlider.max);
   const sliderWidth = minSlider.offsetWidth;
-  
+
   // Actualizar posición del rango
   range.style.left = (minVal / sliderMax * 100) + '%';
   range.style.width = ((maxVal - minVal) / sliderMax * 100) + '%';
@@ -982,29 +1005,32 @@ function updateRange() {
   // Actualizar etiquetas de precio
   minPrice.textContent = `$U${minVal}`;
   maxPrice.textContent = `$U${maxVal}`;
-  
+
   // Actualizar globos (tooltips)
   thumbMin.textContent = `$U${minVal}`;
   thumbMax.textContent = `$U${maxVal}`;
-  
+
   // Calcular posiciones de los globos
   const minPos = (minVal / sliderMax) * sliderWidth;
   const maxPos = (maxVal / sliderMax) * sliderWidth;
-  
+
   thumbMin.style.left = `${minPos}px`;
   thumbMax.style.left = `${maxPos}px`;
-  
+
   // Mostrar globos temporalmente al cambiar valores
   thumbMin.style.opacity = '1';
   thumbMax.style.opacity = '1';
-  
+
   // Ocultar después de un tiempo
   setTimeout(() => {
     thumbMin.style.opacity = '0';
     thumbMax.style.opacity = '0';
-  }, 2000);
+  },  attachEventOnce(2000));
+}
 
-  // REMOVIDO: ya no aplica filtros aquí (solo visual)
+// helper para evitar spam de timeouts (opcional, pero liviano)
+function attachEventOnce(ms){
+  return ms;
 }
 
 // Agregar event listeners para mostrar globos al interactuar
@@ -1080,57 +1106,3 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 window.agregarAlCarrito = agregarAlCarrito;
 window.preguntarStock = preguntarStock;
-
-
-function enviarDatosAFirebase() {
-  const FIREBASE_URL = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json';
-  const hoja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Hoja 1");
-
-  // A2:M  (ahora 13 columnas, la M es FORZAR_NUEVO)
-  const lastRow = hoja.getLastRow();
-  if (lastRow < 2) return 'Sin datos';
-  const datos = hoja.getRange(2, 1, lastRow - 1, 13).getValues();
-
-  const prevResp = UrlFetchApp.fetch(FIREBASE_URL);
-  const prev = JSON.parse(prevResp.getContentText() || "{}") || {};
-
-  const productos = {};
-  const ahora = Date.now();
-
-  datos.forEach((fila) => {
-    const id = String(fila[0]).trim(); // A
-    if (!id) return;
-
-    const existed = !!prev[id];
-    const prevNuevoAt = existed ? (prev[id].nuevoAt != null ? Number(prev[id].nuevoAt) : null) : null;
-
-    const stockNuevo = Number(fila[6]) || 0; // G
-    const forzarNuevo = String(fila[12]).trim() === '1'; // M
-
-    const nuevoAt = (!existed || forzarNuevo) ? ahora : prevNuevoAt;
-
-    productos[id] = {
-      id,
-      nombre: fila[1],
-      descripcion: fila[2],
-      alto: Number(fila[3]) || 0,
-      ancho: Number(fila[4]) || 0,
-      profundidad: Number(fila[5]) || 0,
-      stock: stockNuevo,
-      adicionales: fila[7],
-      categoria: fila[8],
-      precio: Number(fila[9]) || 0,
-      vendido: fila[10],
-      imagenes: fila[11] ? String(fila[11]).split(',').map(x => x.trim()).filter(Boolean) : [],
-      nuevoAt
-    };
-  });
-
-  UrlFetchApp.fetch(FIREBASE_URL, {
-    method: 'put',
-    contentType: 'application/json',
-    payload: JSON.stringify(productos),
-  });
-
-  return 'OK';
-}
