@@ -264,15 +264,20 @@ function procesarDatosProductos(data) {
     let triggerRestock = false;
 
 const tieneRestockManual = p.restock_manual > 0;
+const prevRestockManual = prevStockById[`restock_manual_${id}`] || 0;
 
-if (tieneRestockManual && !restockedAt && ahoraDisponible) {
-  update(ref(db, `productos/${id}`), { 
+// Solo disparar si es un restock manual recién activado
+if (tieneRestockManual && !restockedAt && ahoraDisponible && prevRestockManual === 0) {
+  update(ref(db, `productos/${id}`), {
     restockedAt: serverTimestamp(),
     restock_manual: 0
   }).catch(() => {});
-
   mostrarNotificacion(`"${nombre}" ¡de nuevo en stock!`, 'exito');
 }
+
+// Guardar valor anterior de restock_manual para evitar múltiples triggers
+prevStockById[`restock_manual_${id}`] = p.restock_manual || 0;
+
 
 
     // Limpieza automática después de 5 días
