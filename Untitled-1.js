@@ -235,75 +235,50 @@ const toNum = (v) => {
 // ===============================
 function procesarDatosProductos(data) {
   const now = Date.now();
-
   productos = Object.entries(data || {}).map(([key, p]) => {
     if (typeof p !== 'object' || !p) return null;
 
     const alto = toNum(p.alto);
     const ancho = toNum(p.ancho);
     const profundidad = toNum(p.profundidad);
-
     const stockRaw = (p.stock !== undefined ? p.stock : p.cantidad);
     const stock = Math.max(0, parseInt(String(stockRaw).replace(',', '.'), 10) || 0);
-
     const adic = (p.adicionales || '').toString().trim();
     const adicionales = (adic && adic !== '-' && adic !== '–') ? adic : '';
-
     const id = parseInt(p.id || key, 10);
     const nombre = (p.nombre || 'Sin nombre').trim();
 
-    // Leer timestamp de restock del servidor
-        // Leer timestamp de restock del servidor
     const restockedAt = p.restockedAt ? toNum(p.restockedAt) : null;
-    // Obtener stock anterior desde memoria local
+
     const prevStock = prevStockById[id];
-    const fueAgotado = prevStock === 0;
-    const ahoraDisponible = stock > 0;
     const esNuevoProducto = prevStock === undefined;
-    let triggerRestock = false;
-    const tieneRestockManual = p.restock_manual > 0;
+
+    // Lógica de restock manual
+    const tieneRestockManual = (p.restock_manual || 0) > 0;
     const prevRestockManual = prevStockById[`restock_manual_${id}`] || 0;
     const restockReciente = tieneRestockManual && prevRestockManual === 0;
-    if (restockReciente && !restockedAt && ahoraDisponible) {
-      // Marcar restock solo si vino desde Firebase y stock > 0
+
+    if (restockReciente && !restockedAt && stock > 0) {
       update(ref(db, `productos/${id}`), {
         restockedAt: serverTimestamp(),
-        restock_manual: 0 // se resetea solo una vez
+        restock_manual: 0
       }).catch(() => {});
       mostrarNotificacion(`"${nombre}" ¡de nuevo en stock!`, 'exito');
     }
-    // Guardar restock_manual anterior para evitar repetir la activación
+
+    // Guardar estado anterior de restock_manual
     prevStockById[`restock_manual_${id}`] = p.restock_manual || 0;
-    // Limpieza automática después de 5 días
-    if (restockedAt && (now - restockedAt) >= BACK_IN_STOCK_DUR_MS) {
-      update(ref(db, `productos/${id}`), { restockedAt: null }).catch(() => {});
-    }
-  
-    // Actualizar memoria local para la próxima actualización
-    prevStockById[id] = stock;
-    // Mostrar la cinta SOLO si existe restockedAt y está dentro de los 5 días
-  
-
-
-
 
     // Limpieza automática después de 5 días
     if (restockedAt && (now - restockedAt) >= BACK_IN_STOCK_DUR_MS) {
       update(ref(db, `productos/${id}`), { restockedAt: null }).catch(() => {});
     }
 
-  
-   
-
-    // Actualizar memoria local para la próxima actualización
+    // Actualizar stock anterior
     prevStockById[id] = stock;
 
-    // Mostrar la cinta SOLO si existe restockedAt y está dentro de los 5 días
-    const backInStock = !!(
-      stock > 0 &&
-      restockedAt &&
-      (now - restockedAt) < BACK_IN_STOCK_DUR_MS
-    );
+    // Cinta solo si hay restockedAt reciente
+    const backInStock = stock > 0 && restockedAt && (now - restockedAt) < BACK_IN_STOCK_DUR_MS;
 
     return {
       id,
