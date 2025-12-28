@@ -253,32 +253,36 @@ function procesarDatosProductos(data) {
     const nombre = (p.nombre || 'Sin nombre').trim();
 
     // Leer timestamp de restock del servidor
+        // Leer timestamp de restock del servidor
     const restockedAt = p.restockedAt ? toNum(p.restockedAt) : null;
-
     // Obtener stock anterior desde memoria local
     const prevStock = prevStockById[id];
     const fueAgotado = prevStock === 0;
     const ahoraDisponible = stock > 0;
     const esNuevoProducto = prevStock === undefined;
-
     let triggerRestock = false;
-
-const tieneRestockManual = p.restock_manual > 0;
-const prevRestockManual  = prevStockById[`restock_manual_${id}`] || 0;
-const restockReciente    = tieneRestockManual && prevRestockManual === 0;
-
-if (restockReciente && !restockedAt && ahoraDisponible) {
-  // Marcar restock solo si vino desde Firebase y stock > 0
-  update(ref(db, `productos/${id}`), {
-    restockedAt: serverTimestamp(),
-    restock_manual: 0 // se resetea solo una vez
-  }).catch(() => {});
-
-  mostrarNotificacion(`"${nombre}" ¡de nuevo en stock!`, 'exito');
-}
-
-// Guardar restock_manual anterior para evitar repetir la activación
-prevStockById[`restock_manual_${id}`] = p.restock_manual || 0;
+    const tieneRestockManual = p.restock_manual > 0;
+    const prevRestockManual = prevStockById[`restock_manual_${id}`] || 0;
+    const restockReciente = tieneRestockManual && prevRestockManual === 0;
+    if (restockReciente && !restockedAt && ahoraDisponible) {
+      // Marcar restock solo si vino desde Firebase y stock > 0
+      update(ref(db, `productos/${id}`), {
+        restockedAt: serverTimestamp(),
+        restock_manual: 0 // se resetea solo una vez
+      }).catch(() => {});
+      mostrarNotificacion(`"${nombre}" ¡de nuevo en stock!`, 'exito');
+    }
+    // Guardar restock_manual anterior para evitar repetir la activación
+    prevStockById[`restock_manual_${id}`] = p.restock_manual || 0;
+    // Limpieza automática después de 5 días
+    if (restockedAt && (now - restockedAt) >= BACK_IN_STOCK_DUR_MS) {
+      update(ref(db, `productos/${id}`), { restockedAt: null }).catch(() => {});
+    }
+  
+    // Actualizar memoria local para la próxima actualización
+    prevStockById[id] = stock;
+    // Mostrar la cinta SOLO si existe restockedAt y está dentro de los 5 días
+  
 
 
 
