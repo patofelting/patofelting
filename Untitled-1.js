@@ -153,16 +153,22 @@ function cargarCarrito() {
 async function vaciarCarrito() {
   if (carrito.length === 0) return mostrarNotificacion('El carrito ya está vacío', 'info');
 
-  const n = carrito.length;
   try {
     await Promise.all(
       carrito.map(async (item) => {
         const key = getDbKeyFromId(item.id);
         const productRef = ref(db, `productos/${key}/stock`);
         await runTransaction(productRef, (s) => (s || 0) + item.cantidad);
+
+        // ✅ actualizar stock local para que se vea ya
+        const p = productos.find(x => x.id === item.id);
+        if (p) p.stock = (p.stock || 0) + item.cantidad;
       })
     );
-    suprimirRealtime += n; // evita pestañeo al volver el listener
+
+    // ✅ solo 1 tick (porque normalmente onValue llega una vez)
+    suprimirRealtime = Math.max(suprimirRealtime, 1);
+
     carrito = [];
     guardarCarrito();
     renderizarCarrito();
@@ -173,6 +179,7 @@ async function vaciarCarrito() {
     mostrarNotificacion('Error al vaciar el carrito', 'error');
   }
 }
+
 
 function actualizarContadorCarrito() {
   const total = carrito.reduce((sum, i) => sum + i.cantidad, 0);
