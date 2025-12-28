@@ -264,19 +264,22 @@ function procesarDatosProductos(data) {
     let triggerRestock = false;
 
 const tieneRestockManual = p.restock_manual > 0;
-const prevRestockManual = prevStockById[`restock_manual_${id}`] || 0;
+const prevRestockManual  = prevStockById[`restock_manual_${id}`] || 0;
+const restockReciente    = tieneRestockManual && prevRestockManual === 0;
 
-// Solo disparar si es un restock manual recién activado
-if (tieneRestockManual && !restockedAt && ahoraDisponible && prevRestockManual === 0) {
+if (restockReciente && !restockedAt && ahoraDisponible) {
+  // Marcar restock solo si vino desde Firebase y stock > 0
   update(ref(db, `productos/${id}`), {
     restockedAt: serverTimestamp(),
-    restock_manual: 0
+    restock_manual: 0 // se resetea solo una vez
   }).catch(() => {});
+
   mostrarNotificacion(`"${nombre}" ¡de nuevo en stock!`, 'exito');
 }
 
-// Guardar valor anterior de restock_manual para evitar múltiples triggers
+// Guardar restock_manual anterior para evitar repetir la activación
 prevStockById[`restock_manual_${id}`] = p.restock_manual || 0;
+
 
 
 
@@ -285,10 +288,8 @@ prevStockById[`restock_manual_${id}`] = p.restock_manual || 0;
       update(ref(db, `productos/${id}`), { restockedAt: null }).catch(() => {});
     }
 
-    // Limpieza automática: borrar restockedAt después de 5 días
-    if (restockedAt && (now - restockedAt) >= BACK_IN_STOCK_DUR_MS) {
-      update(ref(db, `productos/${id}`), { restockedAt: null }).catch(() => {});
-    }
+  
+   
 
     // Actualizar memoria local para la próxima actualización
     prevStockById[id] = stock;
