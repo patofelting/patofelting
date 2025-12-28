@@ -1080,3 +1080,57 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 window.agregarAlCarrito = agregarAlCarrito;
 window.preguntarStock = preguntarStock;
+
+
+function enviarDatosAFirebase() {
+  const FIREBASE_URL = 'https://patofelting-b188f-default-rtdb.firebaseio.com/productos.json';
+  const hoja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Hoja 1");
+
+  // A2:M  (ahora 13 columnas, la M es FORZAR_NUEVO)
+  const lastRow = hoja.getLastRow();
+  if (lastRow < 2) return 'Sin datos';
+  const datos = hoja.getRange(2, 1, lastRow - 1, 13).getValues();
+
+  const prevResp = UrlFetchApp.fetch(FIREBASE_URL);
+  const prev = JSON.parse(prevResp.getContentText() || "{}") || {};
+
+  const productos = {};
+  const ahora = Date.now();
+
+  datos.forEach((fila) => {
+    const id = String(fila[0]).trim(); // A
+    if (!id) return;
+
+    const existed = !!prev[id];
+    const prevNuevoAt = existed ? (prev[id].nuevoAt != null ? Number(prev[id].nuevoAt) : null) : null;
+
+    const stockNuevo = Number(fila[6]) || 0; // G
+    const forzarNuevo = String(fila[12]).trim() === '1'; // M
+
+    const nuevoAt = (!existed || forzarNuevo) ? ahora : prevNuevoAt;
+
+    productos[id] = {
+      id,
+      nombre: fila[1],
+      descripcion: fila[2],
+      alto: Number(fila[3]) || 0,
+      ancho: Number(fila[4]) || 0,
+      profundidad: Number(fila[5]) || 0,
+      stock: stockNuevo,
+      adicionales: fila[7],
+      categoria: fila[8],
+      precio: Number(fila[9]) || 0,
+      vendido: fila[10],
+      imagenes: fila[11] ? String(fila[11]).split(',').map(x => x.trim()).filter(Boolean) : [],
+      nuevoAt
+    };
+  });
+
+  UrlFetchApp.fetch(FIREBASE_URL, {
+    method: 'put',
+    contentType: 'application/json',
+    payload: JSON.stringify(productos),
+  });
+
+  return 'OK';
+}
