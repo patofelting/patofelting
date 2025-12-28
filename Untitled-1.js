@@ -284,7 +284,7 @@ function procesarDatosProductos(data) {
       update(ref(db, `productos/${key}`), { nuevoAt: null }).catch(() => {});
     }
 
-    const esNuevoReciente = stock > 0 && nuevoAt && (now - nuevoAt) < BACK_IN_STOCK_DUR_MS;
+    const esNuevoReciente = stock > 1 && nuevoAt && (now - nuevoAt) < BACK_IN_STOCK_DUR_MS;
 
     // guardar mapping id -> key real
     keyById[id] = key;
