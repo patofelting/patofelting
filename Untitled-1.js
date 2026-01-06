@@ -1106,3 +1106,117 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 window.agregarAlCarrito = agregarAlCarrito;
 window.preguntarStock = preguntarStock;
+
+
+
+
+
+
+
+
+
+
+
+
+// ===============================
+// FIREBASE ANALYTICS INTEGRATION
+// ===============================
+
+async function inicializarFirebaseAnalytics() {
+    try {
+        // Asegurar que Firebase está inicializado
+        if (!window.firebaseApp) {
+            console.warn('Firebase App no está inicializado');
+            return;
+        }
+        
+        // Importar Analytics dinámicamente
+        const { getAnalytics, logEvent, setAnalyticsCollectionEnabled } = 
+            await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js");
+        
+        // Inicializar Analytics
+        const analytics = getAnalytics(window.firebaseApp);
+        setAnalyticsCollectionEnabled(analytics, true);
+        
+        // Evento de sesión inicial
+        logEvent(analytics, 'session_start');
+        logEvent(analytics, 'page_view', {
+            page_title: document.title,
+            page_location: window.location.href,
+            page_path: window.location.pathname
+        });
+        
+        console.log('📊 Firebase Analytics inicializado');
+        
+        // Función para registrar eventos personalizados
+        window.registrarEventoAnalytics = (nombreEvento, parametros = {}) => {
+            logEvent(analytics, nombreEvento, parametros);
+            console.log(`📊 Evento registrado: ${nombreEvento}`, parametros);
+        };
+        
+        // Registrar eventos de interacción del usuario
+        
+        // 1. Cuando agregan al carrito
+        const originalAgregarAlCarrito = window.agregarAlCarrito;
+        window.agregarAlCarrito = function(id, cantidad = 1, boton = null) {
+            registrarEventoAnalytics('add_to_cart', {
+                item_id: id.toString(),
+                item_name: productos.find(p => p.id === id)?.nombre || 'Producto',
+                quantity: cantidad,
+                price: productos.find(p => p.id === id)?.precio || 0
+            });
+            return originalAgregarAlCarrito(id, cantidad, boton);
+        };
+        
+        // 2. Cuando ven detalles del producto
+        document.addEventListener('click', function(e) {
+            const detallesBtn = e.target.closest('.boton-detalles');
+            if (detallesBtn) {
+                const id = parseInt(detallesBtn.dataset.id);
+                const producto = productos.find(p => p.id === id);
+                if (producto) {
+                    registrarEventoAnalytics('view_item', {
+                        item_id: id.toString(),
+                        item_name: producto.nombre,
+                        price: producto.precio
+                    });
+                }
+            }
+        });
+        
+        // 3. Cuando buscan productos
+        if (elementos.inputBusqueda) {
+            let timeoutBusqueda;
+            elementos.inputBusqueda.addEventListener('input', function(e) {
+                clearTimeout(timeoutBusqueda);
+                timeoutBusqueda = setTimeout(() => {
+                    if (e.target.value.trim().length > 2) {
+                        registrarEventoAnalytics('search', {
+                            search_term: e.target.value
+                        });
+                    }
+                }, 1000);
+            });
+        }
+        
+        // 4. Cuando abren el carrito
+        if (elementos.carritoBtnMain) {
+            elementos.carritoBtnMain.addEventListener('click', function() {
+                registrarEventoAnalytics('view_cart', {
+                    item_count: carrito.length,
+                    total_value: carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0)
+                });
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Error al inicializar Analytics:', error);
+    }
+}
+
+// Inicializar cuando el DOM esté listo
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', inicializarFirebaseAnalytics);
+} else {
+    inicializarFirebaseAnalytics();
+}
