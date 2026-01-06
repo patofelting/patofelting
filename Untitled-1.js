@@ -42,6 +42,9 @@ const RIBBON_CSS = `
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getDatabase, ref, runTransaction, onValue, get, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+// Añade analytics a tus imports existentes
+import { getAnalytics, logEvent, setAnalyticsCollectionEnabled } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
+
 const db = window.firebaseDatabase || getDatabase(window.firebaseApp);
 const auth = getAuth(window.firebaseApp);
 
