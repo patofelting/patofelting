@@ -1,4 +1,13 @@
 // Configuración de Firebase
+
+
+const analytics = getAnalytics(window.firebaseApp);
+setAnalyticsCollectionEnabled(analytics, true);
+
+
+logEvent(analytics, 'session_start');
+
+
   const cfg = {
     apiKey: "AIzaSyD261TL6XuBp12rUNCcMKyP7_nMaCVYc7Y",
     authDomain: "patofelting-b188f.firebaseapp.com",
