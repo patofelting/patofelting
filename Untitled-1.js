@@ -49,6 +49,30 @@ const db = window.firebaseDatabase || getDatabase(window.firebaseApp);
 const auth = getAuth(window.firebaseApp);
 
 // ===============================
+// INICIALIZACIÓN DE ANALYTICS
+// ===============================
+let analytics = null;
+try {
+    if (window.firebaseApp) {
+        analytics = getAnalytics(window.firebaseApp);
+        setAnalyticsCollectionEnabled(analytics, true);
+        console.log('📊 Firebase Analytics inicializado');
+    }
+} catch (error) {
+    console.warn('⚠️ No se pudo inicializar Analytics:', error);
+}
+
+function registrarEventoAnalytics(nombreEvento, parametros = {}) {
+    if (!analytics) return;
+    try {
+        logEvent(analytics, nombreEvento, parametros);
+        console.log(`📊 Evento registrado: ${nombreEvento}`, parametros);
+    } catch (error) {
+        console.warn('Error Analytics:', error);
+    }
+}
+
+// ===============================
 // ESTADO GLOBAL
 // ===============================
 let productos = [];
@@ -58,7 +82,7 @@ let paginaActual = 1;
 // Candados para evitar dobles acciones
 const busyButtons   = new WeakSet(); // doble click en el mismo botón
 const inFlightAdds  = new Set();     // mismo producto agregado 2 veces en paralelo
-let suprimirRealtime = 0;            // silencia 1+ ticks del listener para evitar “pestañeo”
+let suprimirRealtime = 0;            // silencia 1+ ticks del listener para evitar "pestañeo"
 
 // Map: id -> key real en Firebase (IMPORTANTÍSIMO)
 const keyById = {}; // ej: { 12: "-Nabc123..." } o { 12: "12" }
@@ -583,7 +607,7 @@ function cerrarModal() {
 window.cerrarModal = cerrarModal;
 
 // ===============================
-// AGREGAR AL CARRITO
+// AGREGAR AL CARRITO (MODIFICADA PARA INCLUIR ANALYTICS)
 // ===============================
 async function agregarAlCarrito(id, cantidad = 1, boton = null) {
   // Bloqueo por producto (idempotente ante handlers duplicados)
@@ -644,6 +668,16 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
     renderizarCarrito();
     renderizarProductos();
     mostrarNotificacion('Producto agregado al carrito', 'exito');
+    
+    // 📊 REGISTRAR EVENTO DE ANALYTICS
+    registrarEventoAnalytics('add_to_cart', {
+      item_id: id.toString(),
+      item_name: producto.nombre,
+      quantity: cantidadAgregar,
+      price: producto.precio,
+      currency: 'UYU'
+    });
+    
   } catch (error) {
     console.error('Error al agregar al carrito:', error);
     mostrarNotificacion('Error al agregar al carrito', 'error');
@@ -747,7 +781,15 @@ function setupContactForm() {
 // EVENTOS Y DELEGACIÓN
 // ===============================
 function initEventos() {
-  elementos.carritoBtnMain?.addEventListener('click', () => toggleCarrito(true));
+  elementos.carritoBtnMain?.addEventListener('click', () => {
+    toggleCarrito(true);
+    // 📊 REGISTRAR EVENTO DE ANALYTICS
+    registrarEventoAnalytics('view_cart', {
+      item_count: carrito.length,
+      total_value: carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0)
+    });
+  });
+  
   elementos.carritoOverlay?.addEventListener('click', () => toggleCarrito(false));
   elementos.btnCerrarCarrito?.addEventListener('click', () => toggleCarrito(false));
 
@@ -756,6 +798,18 @@ function initEventos() {
 
   elementos.btnFinalizarCompra?.addEventListener('click', () => {
     if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
+    
+    // 📊 REGISTRAR EVENTO DE ANALYTICS
+    registrarEventoAnalytics('begin_checkout', {
+      items: carrito.map(item => ({
+        item_id: item.id.toString(),
+        item_name: item.nombre,
+        quantity: item.cantidad,
+        price: item.precio
+      })),
+      value: carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0)
+    });
+    
     elementos.avisoPreCompraModal.style.display = 'flex';
     elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'false');
   });
@@ -785,6 +839,12 @@ function initEventos() {
   elementos.selectCategoria?.addEventListener('change', (e) => {
     filtrosActuales.categoria = e.target.value.trim();
     aplicarFiltros();
+    
+    // 📊 REGISTRAR EVENTO DE ANALYTICS
+    registrarEventoAnalytics('select_filter', {
+      filter_type: 'category',
+      filter_value: e.target.value
+    });
   });
 
   elementos.precioMinInput?.addEventListener('input', updateRange);
@@ -814,6 +874,13 @@ function initEventos() {
 
       if (target.classList.contains('boton-detalles')) {
         mostrarModalProducto(producto);
+        // 📊 REGISTRAR EVENTO DE ANALYTICS
+        registrarEventoAnalytics('view_item', {
+          item_id: id.toString(),
+          item_name: producto.nombre,
+          price: producto.precio,
+          currency: 'UYU'
+        });
       } else if (target.classList.contains('boton-agregar')) {
         agregarAlCarrito(id, 1, target);
       } else if (target.classList.contains('boton-aviso-stock')) {
@@ -960,6 +1027,20 @@ getElement('form-envio')?.addEventListener('submit', async (e) => {
   if (envio !== 'retiro') mensaje += `Dirección: ${direccion}\n`;
   if (notas) mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
 
+  // 📊 REGISTRAR EVENTO DE ANALYTICS (PURCHASE)
+  registrarEventoAnalytics('purchase', {
+    transaction_id: 'pedido_' + Date.now(),
+    value: total,
+    currency: 'UYU',
+    items: carrito.map(item => ({
+      item_id: item.id.toString(),
+      item_name: item.nombre,
+      quantity: item.cantidad,
+      price: item.precio
+    })),
+    shipping: costoEnvio
+  });
+
   // Abrir WhatsApp con preferencia por App/Escritorio
   abrirWhatsAppPreferApp(mensaje, '59893566283');
 
@@ -1028,12 +1109,7 @@ function updateRange() {
   setTimeout(() => {
     thumbMin.style.opacity = '0';
     thumbMax.style.opacity = '0';
-  },  attachEventOnce(2000));
-}
-
-// helper para evitar spam de timeouts (opcional, pero liviano)
-function attachEventOnce(ms){
-  return ms;
+  },  2000);
 }
 
 // Agregar event listeners para mostrar globos al interactuar
@@ -1075,12 +1151,68 @@ function preguntarStock(nombre) {
 }
 
 // ===============================
-// INIT
+// CONTADOR DE VISITAS EN REALTIME DATABASE (BACKUP)
+// ===============================
+async function contarVisitaRealtimeDB() {
+    try {
+        const db = window.firebaseDatabase || getDatabase(window.firebaseApp);
+        
+        // Contador total de visitas
+        const totalRef = ref(db, 'stats/visits');
+        await runTransaction(totalRef, (current) => (current || 0) + 1);
+        
+        // Contador por día
+        const today = new Date().toISOString().split('T')[0];
+        const dailyRef = ref(db, `stats/daily/${today}`);
+        await runTransaction(dailyRef, (current) => (current || 0) + 1);
+        
+        console.log('✅ Visita contada en Realtime Database');
+    } catch (error) {
+        console.warn('No se pudo contar visita:', error);
+    }
+}
+
+// ===============================
+// CONFIGURACIÓN DE EVENTOS DE BÚSQUEDA PARA ANALYTICS
+// ===============================
+function setupBusquedaAnalytics() {
+    if (!elementos.inputBusqueda) return;
+    
+    let searchTimeout;
+    elementos.inputBusqueda.addEventListener('input', function(e) {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            const term = e.target.value.trim();
+            if (term.length >= 2) {
+                registrarEventoAnalytics('search', {
+                    search_term: term
+                });
+            }
+        }, 1000);
+    });
+}
+
+// ===============================
+// INIT PRINCIPAL
 // ===============================
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     await signInAnonymously(auth);
     console.log('✅ Signed in anonymously to Firebase.');
+    
+    // 📊 REGISTRAR EVENTOS INICIALES DE ANALYTICS
+    if (analytics) {
+      registrarEventoAnalytics('session_start');
+      registrarEventoAnalytics('page_view', {
+        page_title: document.title,
+        page_location: window.location.href,
+        page_path: window.location.pathname
+      });
+    }
+    
+    // CONTAR VISITA EN REALTIME DATABASE (BACKUP)
+    contarVisitaRealtimeDB();
+    
     cargarProductosDesdeFirebase();
   } catch (error) {
     console.error('❌ Error signing in:', error);
@@ -1103,123 +1235,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   inicializarMenuHamburguesa();
   inicializarFAQ();
   setupContactForm();
+  setupBusquedaAnalytics();
   initEventos();
   updateRange();
 });
 
 window.agregarAlCarrito = agregarAlCarrito;
 window.preguntarStock = preguntarStock;
-
-
-
-
-
-
-
-
-
-
-
-
-// ===============================
-// FIREBASE ANALYTICS INTEGRATION
-// ===============================
-
-async function inicializarFirebaseAnalytics() {
-    try {
-        // Asegurar que Firebase está inicializado
-        if (!window.firebaseApp) {
-            console.warn('Firebase App no está inicializado');
-            return;
-        }
-        
-        // Importar Analytics dinámicamente
-        const { getAnalytics, logEvent, setAnalyticsCollectionEnabled } = 
-            await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js");
-        
-        // Inicializar Analytics
-        const analytics = getAnalytics(window.firebaseApp);
-        setAnalyticsCollectionEnabled(analytics, true);
-        
-        // Evento de sesión inicial
-        logEvent(analytics, 'session_start');
-        logEvent(analytics, 'page_view', {
-            page_title: document.title,
-            page_location: window.location.href,
-            page_path: window.location.pathname
-        });
-        
-        console.log('📊 Firebase Analytics inicializado');
-        
-        // Función para registrar eventos personalizados
-        window.registrarEventoAnalytics = (nombreEvento, parametros = {}) => {
-            logEvent(analytics, nombreEvento, parametros);
-            console.log(`📊 Evento registrado: ${nombreEvento}`, parametros);
-        };
-        
-        // Registrar eventos de interacción del usuario
-        
-        // 1. Cuando agregan al carrito
-        const originalAgregarAlCarrito = window.agregarAlCarrito;
-        window.agregarAlCarrito = function(id, cantidad = 1, boton = null) {
-            registrarEventoAnalytics('add_to_cart', {
-                item_id: id.toString(),
-                item_name: productos.find(p => p.id === id)?.nombre || 'Producto',
-                quantity: cantidad,
-                price: productos.find(p => p.id === id)?.precio || 0
-            });
-            return originalAgregarAlCarrito(id, cantidad, boton);
-        };
-        
-        // 2. Cuando ven detalles del producto
-        document.addEventListener('click', function(e) {
-            const detallesBtn = e.target.closest('.boton-detalles');
-            if (detallesBtn) {
-                const id = parseInt(detallesBtn.dataset.id);
-                const producto = productos.find(p => p.id === id);
-                if (producto) {
-                    registrarEventoAnalytics('view_item', {
-                        item_id: id.toString(),
-                        item_name: producto.nombre,
-                        price: producto.precio
-                    });
-                }
-            }
-        });
-        
-        // 3. Cuando buscan productos
-        if (elementos.inputBusqueda) {
-            let timeoutBusqueda;
-            elementos.inputBusqueda.addEventListener('input', function(e) {
-                clearTimeout(timeoutBusqueda);
-                timeoutBusqueda = setTimeout(() => {
-                    if (e.target.value.trim().length > 2) {
-                        registrarEventoAnalytics('search', {
-                            search_term: e.target.value
-                        });
-                    }
-                }, 1000);
-            });
-        }
-        
-        // 4. Cuando abren el carrito
-        if (elementos.carritoBtnMain) {
-            elementos.carritoBtnMain.addEventListener('click', function() {
-                registrarEventoAnalytics('view_cart', {
-                    item_count: carrito.length,
-                    total_value: carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0)
-                });
-            });
-        }
-        
-    } catch (error) {
-        console.error('❌ Error al inicializar Analytics:', error);
-    }
-}
-
-// Inicializar cuando el DOM esté listo
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', inicializarFirebaseAnalytics);
-} else {
-    inicializarFirebaseAnalytics();
-}
