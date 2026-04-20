@@ -70,14 +70,14 @@ export default async function handler(req, res) {
         surname: datosCliente.apellido,
         phone: { number: datosCliente.telefono },
       },
-      back_urls: {
-        success: `${SITE_URL}/pago-exitoso.html`,
-        failure: `${SITE_URL}/pago-fallido.html`,
-        pending: `${SITE_URL}/pago-pendiente.html`,
-      },
+   back_urls: {
+  success: 'https://www.patofelting.com/pago-exitoso.html',
+  failure: 'https://www.patofelting.com/pago-fallido.html',
+  pending: 'https://www.patofelting.com/pago-pendiente.html',
+},
       auto_return:        'approved',
       external_reference: externalReference,
-      notification_url:   `${SITE_URL}/api/webhook-mp`,
+      notification_url: 'https://www.patofelting.com/api/webhook-mp',
       // Métodos de pago disponibles en Uruguay
       payment_methods: {
         excluded_payment_types: [],
