@@ -2,6 +2,8 @@
 // Vercel Serverless Function — crea una preferencia de pago en Mercado Pago
 // Colocá este archivo en: /api/crear-preferencia.js
 
+const SITE_URL = process.env.FRONTEND_URL || 'https://www.patofelting.com';
+
 export default async function handler(req, res) {
   // Solo aceptar POST
   if (req.method !== 'POST') {
@@ -9,7 +11,7 @@ export default async function handler(req, res) {
   }
 
   // CORS: permitir requests desde tu dominio
-  res.setHeader('Access-Control-Allow-Origin', process.env.FRONTEND_URL || '*');
+  res.setHeader('Access-Control-Allow-Origin', SITE_URL);
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -69,17 +71,17 @@ export default async function handler(req, res) {
         phone: { number: datosCliente.telefono },
       },
       back_urls: {
-        success: `${process.env.FRONTEND_URL}/pago-exitoso.html`,
-        failure: `${process.env.FRONTEND_URL}/pago-fallido.html`,
-        pending: `${process.env.FRONTEND_URL}/pago-pendiente.html`,
+        success: `${SITE_URL}/pago-exitoso.html`,
+        failure: `${SITE_URL}/pago-fallido.html`,
+        pending: `${SITE_URL}/pago-pendiente.html`,
       },
       auto_return:        'approved',
       external_reference: externalReference,
-      notification_url:   `${process.env.VERCEL_URL || process.env.FRONTEND_URL}/api/webhook-mp`,
+      notification_url:   `${SITE_URL}/api/webhook-mp`,
       // Métodos de pago disponibles en Uruguay
       payment_methods: {
         excluded_payment_types: [],
-        installments: 1, // sin cuotas (ajustá si querés)
+        installments: 1,
       },
       // Metadata extra (para el webhook)
       metadata: {
@@ -108,8 +110,8 @@ export default async function handler(req, res) {
 
     // Devolver la URL de pago al frontend
     return res.status(200).json({
-      url:               data.init_point,         // URL de producción
-      url_sandbox:       data.sandbox_init_point,  // URL de prueba
+      url:               data.init_point,
+      url_sandbox:       data.sandbox_init_point,
       preferenceId:      data.id,
       externalReference,
     });
