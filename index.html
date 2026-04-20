@@ -59,7 +59,8 @@
     window.firebaseApp = app;
     window.firebaseDatabase = database;
   </script>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https://i.imgur.com; font-src 'self' https://cdnjs.cloudflare.com; object-src 'none';">
+  <!-- FIX 3: CSP actualizada con connect-src para Firebase y soporte de más dominios de imagen -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https://i.imgur.com https://*.googleusercontent.com; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self' https://*.firebaseio.com https://*.googleapis.com; object-src 'none';">
 </head>
 <body oncontextmenu="return true;">
 
@@ -277,10 +278,11 @@
           <label for="input-telefono">Teléfono*</label>
           <input type="tel" id="input-telefono" name="telefono" placeholder="Ej: 099123456" required>
         </div>
+        <!-- FIX 1: input-direccion tenía el > de cierre faltante -->
         <div class="form-grupo" id="grupo-direccion">
           <label for="input-direccion">Dirección*</label>
-          <input type="text" id="input-direccion" name="direccion" placeholder="Ej: Av. 18 de Julio 1234"
-                    <small class="ayuda-texto">Solo si seleccionás envío</small>
+          <input type="text" id="input-direccion" name="direccion" placeholder="Ej: Av. 18 de Julio 1234">
+          <small class="ayuda-texto">Solo si seleccionás envío</small>
         </div>
         <div class="form-grupo">
           <label for="select-envio">Método de envío*</label>
@@ -303,8 +305,9 @@
             <span id="resumen-total">$U 0</span>
           </div>
         </div>
+        <!-- FIX 2: botón actualizado de WhatsApp a Mercado Pago -->
         <button type="submit" class="boton-confirmar-envio">
-          <i class="fab fa-whatsapp"></i> Enviar pedido por WhatsApp
+          💳 Pagar con Mercado Pago
         </button>
       </form>
     </div>
@@ -434,7 +437,7 @@
     <div class="footer-brand">
       <img src="img/patofeltinglogo.jpg" alt="Patofelting logo" class="footer-logo" />
       <h2>Patofelting</h2>
-      <p>Artesanía uruguaya, realizada con pasión</p>
+      <p>Artesanía uruguaya, realizada con pasión</p>
     </div>
     <nav class="footer-nav">
       <a href="#productos">Productos</a>
