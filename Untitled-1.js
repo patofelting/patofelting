@@ -957,32 +957,21 @@ getElement('btn-cerrar-modal-envio')?.addEventListener('click', () => {
 
 let enviandoPedido = false;
 
-// --- Preferir App/Escritorio, luego API móvil, por último Web
-function abrirWhatsAppPreferApp(mensaje, numero = '59893566283') {
-  const txt  = encodeURIComponent(mensaje);
-  const deep = `whatsapp://send?phone=${numero}&text=${txt}`;                 // App (móvil o desktop)
-  const api  = `https://api.whatsapp.com/send?phone=${numero}&text=${txt}`;   // Móvil: abre app
-  const web  = `https://web.whatsapp.com/send?phone=${numero}&text=${txt}`;   // Escritorio: web
-  const isMobile = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-  const onHide = () => { clearTimeout(timer); document.removeEventListener('visibilitychange', onHide); document.removeEventListener('pagehide', onHide); };
-  document.addEventListener('visibilitychange', onHide);
-  document.addEventListener('pagehide', onHide);
-
-  // 1) Intento abrir la app nativa
-  window.location.href = deep;
-
-  // 2) Fallback si no se abrió
-  const timer = setTimeout(() => {
-    if (document.visibilityState === 'hidden') return; // ya se abrió la app
-    window.location.href = isMobile ? api : web;
-  }, 800);
-}
-
+// ===============================
+// FORMULARIO DE ENVÍO CON MERCADO PAGO
+// ===============================
 getElement('form-envio')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (enviandoPedido) return;
   enviandoPedido = true;
+
+  // Mostrar estado de carga en el botón
+  const btnSubmit = e.target.querySelector('button[type="submit"]');
+  const textoOriginal = btnSubmit?.innerHTML;
+  if (btnSubmit) {
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = 'Procesando... <span class="spinner"></span>';
+  }
 
   const nombre    = getElement('input-nombre').value.trim();
   const apellido  = getElement('input-apellido').value.trim();
@@ -991,71 +980,88 @@ getElement('form-envio')?.addEventListener('submit', async (e) => {
   const direccion = envio !== 'retiro' ? getElement('input-direccion').value.trim() : '';
   const notas     = getElement('input-notas').value.trim();
 
+  // Validaciones
   if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
     mostrarNotificacion('Complete todos los campos obligatorios', 'error');
+    if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
     enviandoPedido = false;
     return;
   }
 
-  // Revalidar stock (ya fue descontado al agregar, pero por seguridad)
+  // Revalidar stock local
   for (const item of carrito) {
     const prod = productos.find(p => p.id === item.id);
     if (!prod || prod.stock < 0) {
       mostrarNotificacion(`Stock insuficiente para "${item?.nombre || 'un producto'}"`, 'error');
+      if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
       enviandoPedido = false;
       return;
     }
   }
 
-  let mensaje = `¡Hola Patofelting! Quiero hacer un pedido:\n\n*📋 Detalles del pedido:*\n`;
-  carrito.forEach(item => {
-    mensaje += `➤ ${item.nombre} x${item.cantidad} - $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}\n`;
-  });
+  try {
+    // ─────────────────────────────────────────────
+    // Llamar a la Serverless Function en Vercel
+    // ─────────────────────────────────────────────
+    const response = await fetch('/api/crear-preferencia', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        carrito,
+        datosCliente: { nombre, apellido, telefono, envio, direccion, notas },
+      }),
+    });
 
-  const subtotal   = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
-  const costoEnvio = envio === 'montevideo' ? 200 : envio === 'interior' ? 250 : 0;
-  const total      = subtotal + costoEnvio;
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Error del servidor: ${response.status}`);
+    }
 
-  mensaje += `\n*💰 Total:*\nSubtotal: $U ${subtotal.toLocaleString('es-UY')}\n` +
-             `Envío: $U ${costoEnvio.toLocaleString('es-UY')}\n` +
-             `*TOTAL A PAGAR: $U ${total.toLocaleString('es-UY')}*\n\n`;
+    const { url, url_sandbox } = await response.json();
 
-  mensaje += `*👤 Datos del cliente:*\n` +
-             `Nombre: ${nombre} ${apellido}\n` +
-             `Teléfono: ${telefono}\n` +
-             `Método de envío: ${envio === 'montevideo' ? 'Envío Montevideo ($200)' : envio === 'interior' ? 'Envío Interior ($250)' : 'Retiro en local (Gratis)'}\n`;
-  if (envio !== 'retiro') mensaje += `Dirección: ${direccion}\n`;
-  if (notas) mensaje += `\n*📝 Notas adicionales:*\n${notas}`;
+    // 📊 Analytics
+    registrarEventoAnalytics('purchase_redirect', {
+      items: carrito.map(item => ({
+        item_id:   item.id.toString(),
+        item_name: item.nombre,
+        quantity:  item.cantidad,
+        price:     item.precio,
+      })),
+      value:    carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0),
+      currency: 'UYU',
+    });
 
-  // 📊 REGISTRAR EVENTO DE ANALYTICS (PURCHASE)
-  registrarEventoAnalytics('purchase', {
-    transaction_id: 'pedido_' + Date.now(),
-    value: total,
-    currency: 'UYU',
-    items: carrito.map(item => ({
-      item_id: item.id.toString(),
-      item_name: item.nombre,
-      quantity: item.cantidad,
-      price: item.precio
-    })),
-    shipping: costoEnvio
-  });
+    // Cerrar modal
+    const modal = getElement('modal-datos-envio');
+    modal?.classList.remove('visible');
+    setTimeout(() => { if (modal) modal.style.display = 'none'; }, 300);
 
-  // Abrir WhatsApp con preferencia por App/Escritorio
-  abrirWhatsAppPreferApp(mensaje, '59893566283');
-
-  // Cerrar modal y limpiar carrito (el stock NO se repone)
-  const modal = getElement('modal-datos-envio');
-  modal?.classList.remove('visible');
-  setTimeout(() => {
-    if (modal) modal.style.display = 'none';
+    // Limpiar carrito localmente (el stock ya fue descontado al agregar)
     carrito = [];
     guardarCarrito();
     actualizarUI();
-    mostrarNotificacion('Pedido listo para enviar por WhatsApp', 'exito');
     getElement('form-envio').reset();
+
+    mostrarNotificacion('Redirigiendo a Mercado Pago...', 'exito');
+
+    // ─────────────────────────────────────────────
+    // Redirigir a Mercado Pago
+    // Usá url_sandbox para pruebas, url para producción
+    // ─────────────────────────────────────────────
+    const esSandbox = false; // ← cambiá a true para pruebas
+    setTimeout(() => {
+      window.location.href = esSandbox ? url_sandbox : url;
+    }, 800);
+
+  } catch (error) {
+    console.error('Error al procesar pago:', error);
+    mostrarNotificacion(
+      error.message || 'Error al conectar con Mercado Pago. Intentá de nuevo.',
+      'error'
+    );
+    if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
     enviandoPedido = false;
-  }, 200);
+  }
 });
 
 // ===============================
@@ -1193,6 +1199,25 @@ function setupBusquedaAnalytics() {
 }
 
 // ===============================
+// DETECCIÓN DE RETORNO DE MERCADO PAGO
+// ===============================
+function detectarRetornoMercadoPago() {
+  const params = new URLSearchParams(window.location.search);
+  const status = params.get('status') || params.get('collection_status');
+
+  if (status === 'approved') {
+    mostrarNotificacion('¡Pago aprobado! Tu pedido está confirmado 🎉', 'exito');
+    window.history.replaceState({}, document.title, window.location.pathname);
+  } else if (status === 'failure') {
+    mostrarNotificacion('El pago fue rechazado. Podés intentarlo de nuevo.', 'error');
+    window.history.replaceState({}, document.title, window.location.pathname);
+  } else if (status === 'pending') {
+    mostrarNotificacion('Tu pago está pendiente. Te avisaremos cuando se confirme.', 'info');
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+}
+
+// ===============================
 // INIT PRINCIPAL
 // ===============================
 document.addEventListener('DOMContentLoaded', async () => {
@@ -1212,6 +1237,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // CONTAR VISITA EN REALTIME DATABASE (BACKUP)
     contarVisitaRealtimeDB();
+    
+    // DETECTAR RETORNO DE MERCADO PAGO
+    detectarRetornoMercadoPago();
     
     cargarProductosDesdeFirebase();
   } catch (error) {
