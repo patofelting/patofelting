@@ -1,0 +1,410 @@
+/* ===============================
+   VARIABLES & BASE (Apple-like + artesanal)
+   =============================== */
+:root {
+  /* Base */
+  --notebook-bg: #f8f6f0;
+  --paper-white: #fffef8;
+  --line-blue: #a8d0ff;
+  --red-margin: #ff6b6b;
+  --ink-blue: #1e3a8a;
+  --ink-black: #1f2937;
+  --pencil-gray: #5b6776;
+
+  /* Patofelting brand */
+  --primary-green: #43c160;
+  --soft-green: #b4f1d9;
+  --dark-green: #28705b;
+
+  /* Surfaces */
+  --surface: #ffffff;
+  --surface-2: #f7faf9;
+
+  /* Radius / Elevation */
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow-soft: 0 10px 30px rgba(0,0,0,.08);
+  --shadow-hover: 0 16px 40px rgba(0,0,0,.12);
+
+  /* Notebook spacing */
+  --line-height-notebook: 28px;
+  --margin-left: 80px;
+}
+
+/* Tema acuarela */
+:root[data-theme="acuarela"]{
+  --notebook-bg:#f0f9ff;
+  --paper-white:#ffffff;
+  --line-blue:#a8e6ff;
+  --red-margin:#ff8e8e;
+  --primary-green:#3fbf9f;
+  --soft-green:#c7f7ef;
+  --dark-green:#1e6f66;
+  --surface:#ffffff;
+  --surface-2:#f5fbff;
+}
+/* efecto acuarela sutil para el fondo */
+:root[data-theme="acuarela"] body::before{
+  content:"";
+  position:fixed;inset:0;
+  background: radial-gradient(1200px 600px at 15% 10%, rgba(167,239,255,.25), transparent 60%),
+              radial-gradient(900px 500px at 85% 20%, rgba(255,200,233,.22), transparent 60%),
+              radial-gradient(700px 400px at 40% 90%, rgba(186,255,210,.22), transparent 60%);
+  pointer-events:none;z-index:-1;
+}
+
+/* Tema lana */
+:root[data-theme="lana"]{
+  --notebook-bg:#fff5f5;
+  --paper-white:#fffaf0;
+  --line-blue:#ffd6e7;
+  --red-margin:#ff7a7a;
+  --primary-green:#ce7c5a;
+  --soft-green:#ffd9c7;
+  --dark-green:#7c3f2b;
+  --surface:#fffdf8;
+  --surface-2:#fff7ef;
+}
+/* textura de lana sutil */
+:root[data-theme="lana"] body{
+  background-image:
+    radial-gradient(#fff4e6 1px, transparent 1px),
+    radial-gradient(#ffe9d6 1px, transparent 1px);
+  background-size: 24px 24px, 24px 24px;
+  background-position: 0 0, 12px 12px;
+}
+
+/* ===============================
+   RESET + BODY
+   =============================== */
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+}
+body{
+  font-family: 'Kalam', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--notebook-bg);
+  color: var(--ink-black);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ===============================
+   NAV
+   =============================== */
+.blog-nav{
+  position:fixed;top:0;width:100%;
+  background: color-mix(in srgb, var(--paper-white) 92%, #fff 8%);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid color-mix(in srgb, var(--line-blue) 60%, #000 0%);
+  z-index:1000;padding:.8rem 0;
+}
+.nav-container{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;gap:1rem}
+.back-home{display:flex;align-items:center;gap:.5rem;color:var(--dark-green);text-decoration:none;font-weight:600}
+.back-home:focus-visible{outline:3px solid var(--primary-green);outline-offset:3px;border-radius:10px}
+.back-home:hover{color:var(--primary-green)}
+.blog-logo{display:flex;align-items:center;gap:1rem}
+.logo-small{width:40px;height:40px;border-radius:50%;object-fit:cover}
+.blog-logo span{font-family:'Dancing Script', cursive;font-size:1.5rem;color:var(--dark-green);font-weight:700}
+
+/* Theme toggle (inyectado por JS) */
+.theme-toggle{
+  border:1px solid color-mix(in srgb, var(--dark-green) 30%, #000 0%);
+  background:var(--surface);
+  border-radius:999px;
+  padding:.45rem .9rem;
+  font-weight:700;
+  cursor:pointer;
+  box-shadow:var(--shadow-soft);
+}
+.theme-toggle:hover{transform:translateY(-1px);box-shadow:var(--shadow-hover)}
+.theme-toggle:active{transform:translateY(0) scale(.98)}
+
+/* ===============================
+   HEADER
+   =============================== */
+.blog-header{margin-top:90px;padding:1.6rem 0}
+.blog-title{font-family:'Dancing Script', cursive;font-size:clamp(2.2rem,3.5vw,3.6rem);color:var(--dark-green);text-align:center;margin-bottom:.6rem}
+.blog-subtitle{font-size:1.05rem;text-align:center;color:var(--pencil-gray);font-style:italic}
+
+/* ===============================
+   NOTEBOOK PAGE
+   =============================== */
+.notebook-page{
+  background: var(--paper-white);
+  margin: 2rem auto;
+  max-width: 980px;
+  box-shadow: var(--shadow-soft), inset 0 0 0 1px rgba(0,0,0,.03);
+  position: relative;
+  padding: 2.4rem 0;
+  border-radius: var(--radius);
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent calc(var(--line-height-notebook) - 1px),
+    var(--line-blue) var(--line-height-notebook)
+  );
+  background-size:100% var(--line-height-notebook);
+}
+.red-margin{position:absolute;left:var(--margin-left);top:0;bottom:0;width:2px;background:var(--red-margin);opacity:.8}
+
+/* ===============================
+   ENTRY
+   =============================== */
+.entry-content{padding:0 40px 0 calc(var(--margin-left) + 2rem);min-height: 300px}
+.entry-date{font-size:.86rem;color:var(--pencil-gray);margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+.entry-title{font-family:'Dancing Script', cursive;font-size:clamp(1.8rem,2.8vw,3rem);color:var(--ink-blue);margin-bottom:1.1rem;line-height:1.18;opacity:.96}
+/* costura animada al entrar */
+.entry-title.stitch-animation{
+  background:
+    linear-gradient(to right, color-mix(in srgb, var(--red-margin) 80%, #000 0%) 0 0) left bottom/0 3px no-repeat;
+  animation: stitch 1.2s ease forwards;
+}
+@keyframes stitch{to{background-size:100% 3px}}
+
+.entry-text{font-size:1.08rem;line-height:var(--line-height-notebook);color:var(--ink-black);margin-bottom:1.4rem}
+.entry-text p{margin-bottom:1rem}
+.entry-text strong{color:var(--dark-green)}
+.entry-text em{color:var(--ink-blue)}
+
+/* ===============================
+   GALLERY (mosaico + lightbox CSS-only)
+   =============================== */
+.media-gallery{
+  --gap: 14px;
+  display:grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--gap);
+  margin: 1.6rem 0 0;
+}
+.gallery-item{
+  grid-column: span 4; /* 3 por fila en desktop */
+  display:block;
+  border-radius: var(--radius-sm);
+  overflow:hidden;
+  box-shadow: var(--shadow-soft);
+  background: var(--surface);
+  transform: translateZ(0);
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  border:1px solid color-mix(in srgb, var(--line-blue) 35%, #000 0%);
+  position:relative;
+}
+.gallery-item:hover{transform:translateY(-3px) scale(1.02);box-shadow:var(--shadow-hover)}
+.gallery-item img{width:100%;height:100%;object-fit:cover;display:block;aspect-ratio:4/3;}
+
+@media (max-width: 900px){
+  .gallery-item{grid-column: span 6;} /* 2 por fila */
+}
+@media (max-width: 560px){
+  .gallery-item{grid-column: span 12;} /* 1 por fila */
+}
+
+/* LIGHTBOX */
+.lightbox{
+  position:fixed; inset:0; display:none;
+  place-items:center; background: rgba(15,18,20,.76);
+  z-index:1200; padding: 5vh 4vw;
+}
+.lightbox:target{display:grid}
+.lightbox img, .lightbox iframe{
+  max-width:min(1200px, 92vw); max-height: 82vh;
+  border-radius: 16px; background:#000;
+  box-shadow: 0 20px 60px rgba(0,0,0,.45);
+}
+.lb-close{
+  position:fixed; top:18px; right:18px;
+  width:42px; height:42px; border-radius:999px; display:grid; place-items:center;
+  background: color-mix(in srgb, #fff 85%, var(--paper-white) 15%);
+  box-shadow: var(--shadow-soft);
+  text-decoration:none; font-weight:900; color:#333;
+  border:1px solid #e5e7eb;
+}
+.lb-close:focus-visible{outline:3px solid #fff; outline-offset:3px}
+
+/* ===============================
+   CALLOUTS / CARDS / TESTIMONIOS (estilo sutil)
+   =============================== */
+.handwritten-note{
+  background: color-mix(in srgb, #ffeb3b 22%, #fff 78%);
+  border-left: 4px solid #ffc107;
+  padding: 1.3rem;
+  margin: 1.6rem 0;
+  font-family:'Dancing Script', cursive;
+  font-size: 1.2rem; color: var(--ink-blue);
+  position: relative; transform: rotate(-.4deg);
+}
+.current-mindset{
+  background: color-mix(in srgb, var(--primary-green) 10%, #fff 90%);
+  border: 2px dashed var(--primary-green);
+  padding: 1.4rem; margin: 1.6rem 0;
+  font-family:'Dancing Script', cursive; font-size:1.25rem; color:var(--dark-green);
+  text-align:center; border-radius: var(--radius);
+}
+
+/* ===============================
+   FOOTER
+   =============================== */
+.blog-footer{background:var(--dark-green);color:white;text-align:center;padding:3rem 2rem;margin-top:3rem}
+.signature{font-family:'Dancing Script', cursive;font-size:2.2rem;color:var(--soft-green);margin:1rem 0}
+.footer-links{display:flex;gap:1.2rem;justify-content:center;flex-wrap:wrap}
+.footer-links a{color:var(--soft-green);text-decoration:none;font-weight:600}
+.footer-links a:hover{color:white;text-decoration:underline}
+
+/* ===============================
+   UTILS + ACCESSIBILITY
+   =============================== */
+.blog-entry[data-entry-id]{scroll-margin-top:100px}
+:focus-visible{outline:3px solid var(--primary-green);outline-offset:3px;border-radius:10px}
+a,button{cursor:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22><path d=%22M20 12H4m8 8-8-8 8-8%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/></svg>') 12 12, pointer}
+button:active{transform:scale(.98)}
+
+.reading-time{
+  position: fixed;
+  bottom: 20px; left: 20px;
+  background: var(--surface);
+  padding: .5rem 1rem; border-radius: 999px;
+  box-shadow: var(--shadow-soft);
+  font-size: .9rem; color: var(--pencil-gray);
+  z-index: 1000;
+}
+
+/* ===============================
+   RESPONSIVE TWEAKS
+   =============================== */
+@media (max-width: 768px){
+  .nav-container{flex-direction:column;gap:.6rem}
+  .blog-title{font-size:clamp(2rem,6vw,2.6rem)}
+  .entry-content{padding:0 1rem 0 calc(var(--margin-left) + 1rem)}
+  :root{--margin-left:40px;--line-height-notebook:24px}
+}
+@media (max-width: 460px){
+  .reading-time{left: 10px; bottom: 12px}
+}
+
+/* ======= EXISTING POLAROID / INDEX / POSTIT preserved (no structural change) ======= */
+/* Minimal necessary to avoid regressions from the original file */
+.polaroid-gallery{display:flex;flex-wrap:wrap;gap:1rem}
+.polaroid-img{background:var(--surface);border-radius:12px;padding:.6rem 0 .9rem;box-shadow:var(--shadow-soft)}
+.polaroid-img img{width:100%;display:block;border-radius:8px}
+.polaroid-caption{font-size:.95rem;font-family:'Dancing Script', cursive;color:#a8846b;text-align:center;margin-top:.2em}
+#blog-index.hidden{display:none}
+.index-toggle{display:none}
+.postit{background:#ffeb3b;padding:1rem;border:2px dashed #c9a600;border-radius:10px;font-family:'Dancing Script', cursive;box-shadow:var(--shadow-soft);user-select:none}
+.postit:hover{transform:translateY(-3px) scale(1.02)}
+
+
+/* ========== CAROUSEL PRO (Apple-like artesanal) ========== */
+/* ========== CAROUSEL PRO (responsive, Apple-like) ========== */
+
+/* Base común */
+.carousel-pro{
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  /* evita que el contenedor sea más alto que la imagen activa */
+  transition: height .35s ease;
+}
+
+.carousel-pro img,
+.carousel-pro iframe,
+.carousel-pro video{
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+  /* mantén proporción agradable si la imagen aún no conoce su alto */
+  aspect-ratio: 4 / 3;
+  border-radius: calc(var(--radius) - 6px);
+  box-shadow: 0 12px 34px rgba(0,0,0,.12);
+}
+
+/* ===================== Modo SLIDE ===================== */
+/* Usado cuando el contenedor tiene class="carousel-pro" (sin 'fade') */
+.carousel-pro .carousel-track{
+  display: flex;
+  will-change: transform;
+  transition: transform .5s cubic-bezier(.4,0,.2,1);
+  min-height: 240px; /* anti‑CLS mientras carga */
+}
+.carousel-pro .carousel-slide{
+  flex: 0 0 100%;
+  padding: clamp(6px, 1vw, 12px);
+  display: grid;
+  place-items: center;
+}
+
+/* ===================== Modo FADE ====================== */
+/* Actívalo con class="carousel-pro fade" en el contenedor */
+.carousel-pro.fade .carousel-track{
+  position: relative;
+  min-height: 240px; /* anti‑CLS mientras carga */
+}
+.carousel-pro.fade .carousel-slide{
+  position: absolute;
+  inset: 0;
+  padding: clamp(6px, 1vw, 12px);
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transform: scale(.985);
+  transition: opacity .6s cubic-bezier(.4,0,.2,1), transform .6s ease;
+}
+.carousel-pro.fade .carousel-slide.active{
+  opacity: 1;
+  transform: scale(1.02);
+}
+
+/* ================= Controles & Dots =================== */
+.carousel-pro .carousel-nav{
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-between;
+  padding: 0 .5rem;
+  pointer-events: none; /* sólo los botones reciben eventos */
+}
+.carousel-pro .carousel-btn{
+  pointer-events: auto;
+  width: 40px; height: 40px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: color-mix(in srgb, var(--paper-white) 92%, #fff 8%);
+  backdrop-filter: blur(6px);
+  display: grid; place-items: center;
+  font-size: 1.15rem;
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease;
+  box-shadow: var(--shadow-soft);
+}
+.carousel-pro .carousel-btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow-hover); }
+
+.carousel-pro .carousel-indicators{
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  bottom: 10px;
+  display: flex; gap: 8px;
+}
+.carousel-pro .carousel-indicators button{
+  width: 9px; height: 9px; border-radius: 999px; border: 0;
+  background: rgba(255,255,255,.55);
+  cursor: pointer;
+  transition: transform .25s, background .25s;
+}
+.carousel-pro .carousel-indicators button.active{
+  background: var(--primary-green);
+  transform: scale(1.25);
+}
+
+/* ================ Responsive tweaks =================== */
+@media (max-width: 640px){
+  .carousel-pro img,
+  .carousel-pro iframe,
+  .carousel-pro video{
+    aspect-ratio: 1 / 1; /* más cuadradito en mobile */
+  }
+}
