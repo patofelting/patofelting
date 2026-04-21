@@ -922,7 +922,7 @@ blockquote {
   }
 }
 
-confirmacion-transferencia {
+.confirmacion-transferencia {
   display: flex;
   flex-direction: column;
   gap: 0;
