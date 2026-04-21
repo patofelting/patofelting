@@ -751,45 +751,62 @@ window.seleccionarMetodoPago = function(metodo) {
   }
 };
 
+// ===============================
+// CONFIRMAR PEDIDO POR TRANSFERENCIA (CORREGIDO)
+// ===============================
+
 let enviandoTransferencia = false;
 
 window.confirmarPedidoTransferencia = async function() {
-  if (enviandoTransferencia) return;
+  // Evitar doble envío
+  if (enviandoTransferencia) {
+    console.warn('⚠️ Ya hay un pedido en proceso');
+    return;
+  }
 
-  const nombre    = getElement('input-nombre')?.value.trim();
-  const apellido  = getElement('input-apellido')?.value.trim();
-  const telefono  = getElement('input-telefono')?.value.trim();
-  const envio     = getElement('select-envio')?.value;
+  // Obtener datos del formulario
+  const nombre = getElement('input-nombre')?.value.trim();
+  const apellido = getElement('input-apellido')?.value.trim();
+  const telefono = getElement('input-telefono')?.value.trim();
+  const envio = getElement('select-envio')?.value;
   const direccion = envio !== 'retiro' ? getElement('input-direccion')?.value.trim() : '';
-  const notas     = getElement('input-notas')?.value.trim() || '';
+  const notas = getElement('input-notas')?.value.trim() || '';
 
+  // Validaciones
   if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
     return mostrarNotificacion('Completá todos los campos obligatorios', 'error');
   }
 
-  if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
-
-   enviandoTransferencia = false;
-  if (btnConfirmar) {
-    btnConfirmar.disabled = false;
-    btnConfirmar.innerHTML = '✅ Confirmar pedido';
+  if (carrito.length === 0) {
+    return mostrarNotificacion('El carrito está vacío', 'error');
   }
 
-  const subtotal = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
-  const costoEnvio = envio === 'montevideo' ? 200 : envio === 'interior' ? 250 : 0;
-  const total = subtotal + costoEnvio;
+  // ✅ ACTIVAR FLAG y BOTÓN DE CARGA
+  enviandoTransferencia = true;
+  const btnConfirmar = getElement('btn-confirmar-transferencia');
+  if (btnConfirmar) {
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerHTML = 'Procesando... <span class="spinner"></span>';
+  }
 
-  const resumenProductos = carrito.map(item =>
-    `• ${item.nombre} x${item.cantidad} — $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`
-  ).join('\n');
+  try {
+    // Calcular totales
+    const subtotal = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
+    const costoEnvio = envio === 'montevideo' ? 200 : envio === 'interior' ? 250 : 0;
+    const total = subtotal + costoEnvio;
 
-  const metodoEnvioTexto = envio === 'retiro' ? 'Retiro en local' :
-                           envio === 'montevideo' ? `Envío Montevideo (+$U 200) — ${direccion}` :
-                           `Envío Interior (+$U 250) — ${direccion}`;
+    const resumenProductos = carrito.map(item =>
+      `• ${item.nombre} x${item.cantidad} — $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`
+    ).join('\n');
 
-  const fechaPedido = new Date().toLocaleString('es-UY', { timeZone: 'America/Montevideo' });
+    const metodoEnvioTexto = envio === 'retiro' ? 'Retiro en local' :
+                             envio === 'montevideo' ? `Envío Montevideo (+$U 200) — ${direccion}` :
+                             `Envío Interior (+$U 250) — ${direccion}`;
 
-  const mensajeWA = encodeURIComponent(
+    const fechaPedido = new Date().toLocaleString('es-UY', { timeZone: 'America/Montevideo' });
+
+    // Mensaje WhatsApp
+    const mensajeWA = encodeURIComponent(
 `🛍️ *NUEVO PEDIDO - TRANSFERENCIA*
 
 👤 *Cliente:* ${nombre} ${apellido}
@@ -811,65 +828,57 @@ CI: ${TRANSFERENCIA_CONFIG.ci}
 Cuenta: ${TRANSFERENCIA_CONFIG.numeroCuenta}
 
 _Por favor adjuntá el comprobante de pago a este mensaje_ 🙏`
-  );
+    );
 
-  const cuerpoEmail =
-`NUEVO PEDIDO - PAGO POR TRANSFERENCIA
-======================================
-Fecha: ${fechaPedido}
+    // Registrar Analytics
+    registrarEventoAnalytics('purchase_transfer_initiated', {
+      value: total,
+      currency: 'UYU',
+      items: carrito.map(item => ({
+        item_id: item.id.toString(),
+        item_name: item.nombre,
+        quantity: item.cantidad,
+        price: item.precio
+      }))
+    });
 
-DATOS DEL CLIENTE
------------------
-Nombre: ${nombre} ${apellido}
-Teléfono: ${telefono}
+    // Enviar email de notificación (si EmailJS está disponible)
+    if (window.emailjs) {
+      try {
+        const cuerpoEmail = `NUEVO PEDIDO - PAGO POR TRANSFERENCIA\n======================================\nFecha: ${fechaPedido}\n\nDATOS DEL CLIENTE\n-----------------\nNombre: ${nombre} ${apellido}\nTeléfono: ${telefono}\n\nPRODUCTOS\n---------\n${carrito.map(item => `${item.nombre} x${item.cantidad} — $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`).join('\n')}\n\nENVÍO\n-----\n${metodoEnvioTexto}\n${notas ? `Notas: ${notas}` : ''}\n\nRESUMEN\n-------\nSubtotal: $U ${subtotal.toLocaleString('es-UY')}\n${costoEnvio > 0 ? `Envío: $U ${costoEnvio.toLocaleString('es-UY')}` : ''}\nTOTAL: $U ${total.toLocaleString('es-UY')}`;
 
-PRODUCTOS
----------
-${carrito.map(item => `${item.nombre} x${item.cantidad} — $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`).join('\n')}
+        await emailjs.send('service_89by24g', 'template_8mn7hdp', {
+          from_name: `${nombre} ${apellido}`,
+          from_email: TRANSFERENCIA_CONFIG.email,
+          message: cuerpoEmail,
+          subject: `🛍️ Nuevo pedido transferencia - ${nombre} ${apellido}`
+        });
+      } catch (err) {
+        console.warn('EmailJS error (no crítico):', err);
+      }
+    }
 
-ENVÍO
------
-${metodoEnvioTexto}
-${notas ? `Notas: ${notas}` : ''}
+    // ✅ LIMPIAR CARRITO Y ACTUALIZAR UI
+    carrito = [];
+    guardarCarrito();
+    actualizarUI();
 
-RESUMEN
--------
-Subtotal: $U ${subtotal.toLocaleString('es-UY')}
-${costoEnvio > 0 ? `Envío: $U ${costoEnvio.toLocaleString('es-UY')}` : ''}
-TOTAL: $U ${total.toLocaleString('es-UY')}`;
+    // ✅ MOSTRAR MODAL CON DATOS BANCARIOS
+    mostrarModalDatosBancarios(total, mensajeWA, { nombre, apellido });
+    document.body.classList.add('no-scroll');
 
-  registrarEventoAnalytics('purchase_transfer_initiated', {
-    value: total,
-    currency: 'UYU',
-    items: carrito.map(item => ({
-      item_id: item.id.toString(),
-      item_name: item.nombre,
-      quantity: item.cantidad,
-      price: item.precio
-    }))
-  });
-
-  if (window.emailjs) {
-    try {
-      await emailjs.send('service_89by24g', 'template_8mn7hdp', {
-        from_name: `${nombre} ${apellido}`,
-        from_email: TRANSFERENCIA_CONFIG.email,
-        message: cuerpoEmail,
-        subject: `🛍️ Nuevo pedido transferencia - ${nombre} ${apellido}`
-      });
-    } catch (err) {
-      console.warn('EmailJS error (no crítico):', err);
+  } catch (error) {
+    console.error('❌ Error en confirmarPedidoTransferencia:', error);
+    mostrarNotificacion('Ocurrió un error al procesar tu pedido', 'error');
+  } finally {
+    // ✅ RESETEAR FLAG Y BOTÓN AL FINAL
+    enviandoTransferencia = false;
+    if (btnConfirmar) {
+      btnConfirmar.disabled = false;
+      btnConfirmar.innerHTML = '✅ Confirmar pedido';
     }
   }
-
-  // ✅ NUEVO BLOQUE - Reemplaza lo anterior
-  carrito = [];
-  guardarCarrito();
-  actualizarUI();
-  mostrarModalDatosBancarios(total, mensajeWA, { nombre, apellido });
-  document.body.classList.add('no-scroll');
 };
-
 // ============================================================
 // ① MOSTRAR MODAL DATOS BANCARIOS (VERSIÓN MEJORADA)
 // ============================================================
