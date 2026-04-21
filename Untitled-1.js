@@ -862,111 +862,163 @@ TOTAL: $U ${total.toLocaleString('es-UY')}`;
     }
   }
 
-  mostrarModalDatosBancarios(total, mensajeWA);
-
+  // ✅ NUEVO BLOQUE - Reemplaza lo anterior
   carrito = [];
   guardarCarrito();
   actualizarUI();
-  getElement('form-envio')?.reset();
+  mostrarModalDatosBancarios(total, mensajeWA, { nombre, apellido });
+  document.body.classList.add('no-scroll');
+};
 
+// ============================================================
+// ① MOSTRAR MODAL DATOS BANCARIOS (VERSIÓN MEJORADA)
+// ============================================================
+
+function mostrarModalDatosBancarios(total, mensajeWA, datosCliente) {
+  // Toma el contenido del modal de envío y lo reemplaza con la pantalla de éxito
+  const modalEnvioContenido = document.querySelector('.modal-envio-contenido');
+  if (!modalEnvioContenido) return;
+ 
+  // Asegurar que el modal de envío siga visible
+  const modalEnvio = getElement('modal-datos-envio');
+  if (modalEnvio) {
+    modalEnvio.removeAttribute('hidden');
+    modalEnvio.style.display = 'flex';
+    modalEnvio.classList.add('visible');
+  }
+ 
+  modalEnvioContenido.innerHTML = `
+    <div class="confirmacion-transferencia">
+ 
+      <!-- Encabezado de éxito -->
+      <div class="confirmacion-header">
+        <div class="confirmacion-check">
+          <svg viewBox="0 0 52 52" class="checkmark-svg">
+            <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+            <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+          </svg>
+        </div>
+        <h2 class="confirmacion-titulo">¡Pedido registrado!</h2>
+        <p class="confirmacion-subtitulo">Realizá la transferencia para confirmar tu compra</p>
+      </div>
+ 
+      <!-- Pasos -->
+      <div class="confirmacion-pasos">
+        <div class="paso paso-activo">
+          <span class="paso-num">1</span>
+          <span class="paso-texto">Pedido registrado ✓</span>
+        </div>
+        <div class="paso-linea"></div>
+        <div class="paso paso-activo">
+          <span class="paso-num">2</span>
+          <span class="paso-texto">Transferí el total</span>
+        </div>
+        <div class="paso-linea"></div>
+        <div class="paso">
+          <span class="paso-num">3</span>
+          <span class="paso-texto">Envianos el comprobante</span>
+        </div>
+        <div class="paso-linea"></div>
+        <div class="paso">
+          <span class="paso-num">4</span>
+          <span class="paso-texto">Confirmamos y despachamos 🎉</span>
+        </div>
+      </div>
+ 
+      <!-- Total destacado -->
+      <div class="confirmacion-total-box">
+        <span class="confirmacion-total-label">Total a transferir</span>
+        <span class="confirmacion-total-monto">$U ${total.toLocaleString('es-UY')}</span>
+      </div>
+ 
+      <!-- Datos bancarios -->
+      <div class="confirmacion-banco">
+        <h3 class="confirmacion-banco-titulo">🏦 Datos para la transferencia</h3>
+ 
+        <div class="banco-fila">
+          <span class="banco-fila-label">Banco</span>
+          <span class="banco-fila-valor">${TRANSFERENCIA_CONFIG.banco}</span>
+        </div>
+        <div class="banco-fila">
+          <span class="banco-fila-label">Titular</span>
+          <span class="banco-fila-valor">${TRANSFERENCIA_CONFIG.titular}</span>
+        </div>
+        <div class="banco-fila">
+          <span class="banco-fila-label">CI</span>
+          <span class="banco-fila-valor">${TRANSFERENCIA_CONFIG.ci}</span>
+        </div>
+        <div class="banco-fila banco-fila-cuenta">
+          <span class="banco-fila-label">N° de cuenta</span>
+          <button class="banco-copiar-btn" onclick="copiarDatoBanco('${TRANSFERENCIA_CONFIG.numeroCuenta}', this)">
+            <span class="banco-copiar-valor">${TRANSFERENCIA_CONFIG.numeroCuenta}</span>
+            <span class="banco-copiar-icono">📋 Copiar</span>
+          </button>
+        </div>
+      </div>
+ 
+      <!-- Instrucción -->
+      <p class="confirmacion-instruccion">
+        Una vez realizada la transferencia, envianos el comprobante por WhatsApp o email. 
+        Confirmamos tu pedido en menos de 24 hs hábiles. 🕐
+      </p>
+ 
+      <!-- Acciones principales -->
+      <div class="confirmacion-acciones">
+        <a href="https://wa.me/${TRANSFERENCIA_CONFIG.whatsapp}?text=${mensajeWA}"
+           target="_blank" rel="noopener"
+           class="confirmacion-btn-wa">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+          Enviar comprobante por WhatsApp
+        </a>
+ 
+        <a href="mailto:${TRANSFERENCIA_CONFIG.email}?subject=${encodeURIComponent('Comprobante de transferencia - Patofelting')}&body=${encodeURIComponent('Hola! Te envío el comprobante de mi transferencia.\n\nNombre: ' + (datosCliente?.nombre || '') + ' ' + (datosCliente?.apellido || ''))}"
+           class="confirmacion-btn-email">
+          ✉️ Enviar por Email
+        </a>
+      </div>
+ 
+      <!-- Cerrar -->
+      <button onclick="cerrarConfirmacionTransferencia()" class="confirmacion-btn-cerrar">
+        Listo, ya transferí →
+      </button>
+ 
+    </div>
+  `;
+}
+
+// ============================================================
+// ② NUEVA FUNCIÓN para cerrar la pantalla de confirmación
+// ============================================================
+
+window.cerrarConfirmacionTransferencia = function() {
   const modalEnvio = getElement('modal-datos-envio');
   if (modalEnvio) {
     modalEnvio.classList.remove('visible');
-    setTimeout(() => { modalEnvio.style.display = 'none'; }, 300);
-  }
-
-  enviandoTransferencia = false;
-  if (btnConfirmar) {
-    btnConfirmar.disabled = false;
-    btnConfirmar.innerHTML = '✅ Confirmar pedido';
-  }
-};
-
-function mostrarModalDatosBancarios(total, mensajeWA) {
-  let modal = getElement('modal-datos-bancarios');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'modal-datos-bancarios';
-    modal.className = 'modal-overlay';
-    modal.style.zIndex = '9999';
-    document.body.appendChild(modal);
-  }
-
-  modal.innerHTML = `
-    <div class="modal-contenido-banco" onclick="event.stopPropagation()">
-      <div class="banco-header">
-        <span class="banco-icono">🏦</span>
-        <h2>¡Pedido registrado!</h2>
-        <p>Realizá la transferencia y envianos el comprobante</p>
-      </div>
-
-      <div class="banco-datos">
-        <div class="banco-dato-row">
-          <span class="banco-label">Banco</span>
-          <span class="banco-valor">${TRANSFERENCIA_CONFIG.banco}</span>
-        </div>
-        <div class="banco-dato-row">
-          <span class="banco-label">Titular</span>
-          <span class="banco-valor">${TRANSFERENCIA_CONFIG.titular}</span>
-        </div>
-        <div class="banco-dato-row">
-          <span class="banco-label">CI</span>
-          <span class="banco-valor">${TRANSFERENCIA_CONFIG.ci}</span>
-        </div>
-        <div class="banco-dato-row">
-          <span class="banco-label">N° Cuenta</span>
-          <span class="banco-valor copiable" onclick="copiarAlPortapapeles('${TRANSFERENCIA_CONFIG.numeroCuenta}', this)">
-            ${TRANSFERENCIA_CONFIG.numeroCuenta} <span class="copy-hint">📋 Tocar para copiar</span>
-          </span>
-        </div>
-        <div class="banco-dato-row banco-total-row">
-          <span class="banco-label">Total a transferir</span>
-          <span class="banco-valor banco-total">$U ${total.toLocaleString('es-UY')}</span>
-        </div>
-      </div>
-
-      <p class="banco-instruccion">
-        Una vez realizada la transferencia, envianos el comprobante por WhatsApp o email para confirmar tu pedido.
-      </p>
-
-      <div class="banco-acciones">
-        <a href="https://wa.me/${TRANSFERENCIA_CONFIG.whatsapp}?text=${mensajeWA}"
-           target="_blank" rel="noopener"
-           class="btn-whatsapp-banco">
-          📱 Enviar comprobante por WhatsApp
-        </a>
-        <a href="mailto:${TRANSFERENCIA_CONFIG.email}?subject=${encodeURIComponent('Comprobante de transferencia - Patofelting')}&body=${encodeURIComponent('Hola! Adjunto el comprobante de mi transferencia.')}"
-           class="btn-email-banco">
-          ✉️ Enviar por Email
-        </a>
-        <button onclick="cerrarModalBanco()" class="btn-cerrar-banco">
-          Cerrar
-        </button>
-      </div>
-    </div>
-  `;
-
-  modal.style.display = 'flex';
-  modal.onclick = (e) => { if (e.target === modal) cerrarModalBanco(); };
-}
-
-window.cerrarModalBanco = function() {
-  const modal = getElement('modal-datos-bancarios');
-  if (modal) {
-    modal.style.opacity = '0';
-    setTimeout(() => { modal.style.display = 'none'; modal.style.opacity = '1'; }, 300);
-  }
-};
-
-window.copiarAlPortapapeles = function(texto, el) {
-  navigator.clipboard.writeText(texto).then(() => {
-    el.classList.add('copiado');
-    const hint = el.querySelector('.copy-hint');
-    if (hint) hint.textContent = '✅ Copiado!';
     setTimeout(() => {
-      el.classList.remove('copiado');
-      if (hint) hint.textContent = '📋 Tocar para copiar';
-    }, 2000);
+      modalEnvio.style.display = 'none';
+      modalEnvio.setAttribute('hidden', '');
+    }, 300);
+  }
+  document.body.classList.remove('no-scroll');
+};
+
+// ============================================================
+// ③ NUEVA FUNCIÓN para copiar datos bancarios con feedback
+// ============================================================
+
+window.copiarDatoBanco = function(texto, btn) {
+  navigator.clipboard.writeText(texto).then(() => {
+    const icono = btn.querySelector('.banco-copiar-icono');
+    if (icono) {
+      icono.textContent = '✅ Copiado!';
+      btn.classList.add('copiado');
+      setTimeout(() => {
+        icono.textContent = '📋 Copiar';
+        btn.classList.remove('copiado');
+      }, 2500);
+    }
   });
 };
 
@@ -1337,36 +1389,36 @@ function initEventos() {
 
   // ✅ NUEVO: Listener con selector de método de pago
   elementos.btnFinalizarCompra?.addEventListener('click', () => {
-  if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
-  
-  registrarEventoAnalytics('begin_checkout', {
-    items: carrito.map(item => ({
-      item_id: item.id.toString(),
-      item_name: item.nombre,
-      quantity: item.cantidad,
-      price: item.precio
-    })),
-    value: carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0)
+    if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
+    
+    registrarEventoAnalytics('begin_checkout', {
+      items: carrito.map(item => ({
+        item_id: item.id.toString(),
+        item_name: item.nombre,
+        quantity: item.cantidad,
+        price: item.precio
+      })),
+      value: carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0)
+    });
+    
+    elementos.avisoPreCompraModal.removeAttribute('hidden');
+    elementos.avisoPreCompraModal.style.display = 'flex';
+    elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'false');
   });
-  
-  elementos.avisoPreCompraModal.removeAttribute('hidden');  // ← NUEVA
-  elementos.avisoPreCompraModal.style.display = 'flex';
-  elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'false');
-});
 
   // ✅ NUEVO: Abre selector de pago en lugar de ir directo a envío
-elementos.btnEntendidoAviso?.addEventListener('click', () => {
-  elementos.avisoPreCompraModal.style.display = 'none';
-  elementos.avisoPreCompraModal.setAttribute('hidden', '');   // ← NUEVA
-  elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
-  abrirSelectorPago();
-});
+  elementos.btnEntendidoAviso?.addEventListener('click', () => {
+    elementos.avisoPreCompraModal.style.display = 'none';
+    elementos.avisoPreCompraModal.setAttribute('hidden', '');
+    elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
+    abrirSelectorPago();
+  });
 
   elementos.btnCancelarAviso?.addEventListener('click', () => {
-  elementos.avisoPreCompraModal.style.display = 'none';
-  elementos.avisoPreCompraModal.setAttribute('hidden', '');   // ← NUEVA
-  elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
-});
+    elementos.avisoPreCompraModal.style.display = 'none';
+    elementos.avisoPreCompraModal.setAttribute('hidden', '');
+    elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
+  });
 
   elementos.inputBusqueda?.addEventListener('input', (e) => {
     filtrosActuales.busqueda = e.target.value.toLowerCase().trim();
