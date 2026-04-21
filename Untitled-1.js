@@ -16,7 +16,7 @@ const TRANSFERENCIA_CONFIG = {
   titular: 'Patofelting',
   ci: '5.123.456-7',          // ← CAMBIÁ por tu CI real
   numeroCuenta: '001300996-00002.', 
-  numeroCuentaReal: '00130099600002', // ← CAMBIÁ por tu número de cuenta real
+   // ← CAMBIÁ por tu número de cuenta real
   whatsapp: '+59893566283',
   whatsappDisplay: '+598 93 566 283',
   email: 'patofelting@gmail.com'
