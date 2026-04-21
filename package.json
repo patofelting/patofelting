@@ -2,8 +2,7 @@
   "name": "patofelting",
   "version": "1.0.0",
   "private": true,
-  "description": "Blog con Firebase Realtime Database",
   "dependencies": {
-    "firebase": "^10.7.0"
+    "firebase-admin": "^12.0.0"
   }
 }
