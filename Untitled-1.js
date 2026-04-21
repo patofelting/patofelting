@@ -1337,33 +1337,36 @@ function initEventos() {
 
   // ✅ NUEVO: Listener con selector de método de pago
   elementos.btnFinalizarCompra?.addEventListener('click', () => {
-    if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
-    
-    registrarEventoAnalytics('begin_checkout', {
-      items: carrito.map(item => ({
-        item_id: item.id.toString(),
-        item_name: item.nombre,
-        quantity: item.cantidad,
-        price: item.precio
-      })),
-      value: carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0)
-    });
-    
-    elementos.avisoPreCompraModal.style.display = 'flex';
-    elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'false');
+  if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
+  
+  registrarEventoAnalytics('begin_checkout', {
+    items: carrito.map(item => ({
+      item_id: item.id.toString(),
+      item_name: item.nombre,
+      quantity: item.cantidad,
+      price: item.precio
+    })),
+    value: carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0)
   });
+  
+  elementos.avisoPreCompraModal.removeAttribute('hidden');  // ← NUEVA
+  elementos.avisoPreCompraModal.style.display = 'flex';
+  elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'false');
+});
 
   // ✅ NUEVO: Abre selector de pago en lugar de ir directo a envío
-  elementos.btnEntendidoAviso?.addEventListener('click', () => {
-    elementos.avisoPreCompraModal.style.display = 'none';
-    elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
-    abrirSelectorPago();
-  });
+elementos.btnEntendidoAviso?.addEventListener('click', () => {
+  elementos.avisoPreCompraModal.style.display = 'none';
+  elementos.avisoPreCompraModal.setAttribute('hidden', '');   // ← NUEVA
+  elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
+  abrirSelectorPago();
+});
 
   elementos.btnCancelarAviso?.addEventListener('click', () => {
-    elementos.avisoPreCompraModal.style.display = 'none';
-    elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
-  });
+  elementos.avisoPreCompraModal.style.display = 'none';
+  elementos.avisoPreCompraModal.setAttribute('hidden', '');   // ← NUEVA
+  elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
+});
 
   elementos.inputBusqueda?.addEventListener('input', (e) => {
     filtrosActuales.busqueda = e.target.value.toLowerCase().trim();
