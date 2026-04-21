@@ -1,16 +1,11 @@
 // api/crear-preferencia.js
-// Vercel Serverless Function — crea una preferencia de pago en Mercado Pago
-// Colocá este archivo en: /api/crear-preferencia.js
-
 const SITE_URL = process.env.FRONTEND_URL || 'https://www.patofelting.com';
 
 export default async function handler(req, res) {
-  // Solo aceptar POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método no permitido' });
   }
 
-  // CORS: permitir requests desde tu dominio
   res.setHeader('Access-Control-Allow-Origin', SITE_URL);
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -20,7 +15,6 @@ export default async function handler(req, res) {
   try {
     const { carrito, datosCliente } = req.body;
 
-    // Validaciones básicas
     if (!carrito || !Array.isArray(carrito) || carrito.length === 0) {
       return res.status(400).json({ error: 'Carrito vacío o inválido' });
     }
@@ -34,12 +28,12 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Configuración del servidor incompleta' });
     }
 
-    // Calcular costo de envío
+    console.log('Token usado:', ACCESS_TOKEN.slice(0, 10) + '...');
+
     const costoEnvio =
       datosCliente.envio === 'montevideo' ? 200 :
       datosCliente.envio === 'interior'   ? 250 : 0;
 
-    // Armar items para Mercado Pago
     const items = carrito.map(item => ({
       id:          String(item.id),
       title:       item.nombre,
@@ -48,7 +42,6 @@ export default async function handler(req, res) {
       currency_id: 'UYU',
     }));
 
-    // Agregar envío como item si corresponde
     if (costoEnvio > 0) {
       items.push({
         id:          'envio',
@@ -59,10 +52,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // ID único del pedido
     const externalReference = `pedido_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
-    // Payload para MP
     const preferencia = {
       items,
       payer: {
@@ -70,27 +61,25 @@ export default async function handler(req, res) {
         surname: datosCliente.apellido,
         phone: { number: datosCliente.telefono },
       },
-   back_urls: {
-  success: 'https://www.patofelting.com/pago-exitoso.html',
-  failure: 'https://www.patofelting.com/pago-fallido.html',
-  pending: 'https://www.patofelting.com/pago-pendiente.html',
-},
+      back_urls: {
+        success: 'https://www.patofelting.com/pago-exitoso.html',
+        failure: 'https://www.patofelting.com/pago-fallido.html',
+        pending: 'https://www.patofelting.com/pago-pendiente.html',
+      },
       auto_return:        'approved',
       external_reference: externalReference,
-    // notification_url: 'https://www.patofelting.com/api/webhook-mp', // comentado para pruebas
-      // Métodos de pago disponibles en Uruguay
       payment_methods: {
         excluded_payment_types: [],
         installments: 1,
       },
-      // Metadata extra (para el webhook)
       metadata: {
         datosCliente: JSON.stringify(datosCliente),
         notas: datosCliente.notas || '',
       },
     };
 
-    // Llamar a la API de Mercado Pago
+    console.log('Preferencia a enviar:', JSON.stringify(preferencia));
+
     const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method:  'POST',
       headers: {
@@ -100,15 +89,16 @@ export default async function handler(req, res) {
       body: JSON.stringify(preferencia),
     });
 
-    if (!mpResponse.ok) {
-      const errorData = await mpResponse.json();
-      console.error('Error de MP:', errorData);
-      return res.status(502).json({ error: 'Error al crear preferencia en Mercado Pago', detalle: errorData });
-    }
-
     const data = await mpResponse.json();
 
-    // Devolver la URL de pago al frontend
+    if (!mpResponse.ok) {
+      console.error('Error de MP completo:', JSON.stringify(data));
+      return res.status(502).json({ 
+        error: 'Error al crear preferencia en Mercado Pago', 
+        detalle: data 
+      });
+    }
+
     return res.status(200).json({
       url:               data.init_point,
       url_sandbox:       data.sandbox_init_point,
@@ -118,6 +108,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Error en crear-preferencia:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+    return res.status(500).json({ error: 'Error interno del servidor', detalle: error.message });
   }
 }
