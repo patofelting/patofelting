@@ -10,6 +10,17 @@ const PLACEHOLDER_IMAGE =
 // --- Ventana de visibilidad para cinta "nuevo" ---
 const BACK_IN_STOCK_DUR_MS = 1000 * 60 * 60 * 24 * 5; // 5 días (ajustable)
 
+// ── Configuración de transferencia ──────────────────────────
+const TRANSFERENCIA_CONFIG = {
+  banco: 'BROU (Banco República)',
+  titular: 'Patofelting',
+  ci: '5.123.456-7',          // ← CAMBIÁ por tu CI real
+  numeroCuenta: '001-123456-7', // ← CAMBIÁ por tu número de cuenta real
+  whatsapp: '+59893566283',
+  whatsappDisplay: '+598 93 566 283',
+  email: 'patofelting@gmail.com'
+};
+
 // Estilos de la cinta (inyectados por JS para no editar CSS)
 const RIBBON_CSS = `
 .producto-card .ribbon {
@@ -80,12 +91,12 @@ let carrito = [];
 let paginaActual = 1;
 
 // Candados para evitar dobles acciones
-const busyButtons   = new WeakSet(); // doble click en el mismo botón
-const inFlightAdds  = new Set();     // mismo producto agregado 2 veces en paralelo
-let suprimirRealtime = 0;            // silencia 1+ ticks del listener para evitar "pestañeo"
+const busyButtons   = new WeakSet();
+const inFlightAdds  = new Set();
+let suprimirRealtime = 0;
 
-// Map: id -> key real en Firebase (IMPORTANTÍSIMO)
-const keyById = {}; // ej: { 12: "-Nabc123..." } o { 12: "12" }
+// Map: id -> key real en Firebase
+const keyById = {};
 
 // ===============================
 // FILTROS
@@ -151,7 +162,6 @@ const toNum = (v) => {
 };
 
 function getDbKeyFromId(id) {
-  // fallback: si tu Firebase usa la key = id, esto sigue funcionando
   return keyById[id] ?? String(id);
 }
 
@@ -180,7 +190,6 @@ function cargarCarrito() {
   }
 }
 
-// ✅ VACÍA CARRITO + repone stock en Firebase + actualiza stock local
 async function vaciarCarrito() {
   if (carrito.length === 0) return mostrarNotificacion('El carrito ya está vacío', 'info');
 
@@ -193,13 +202,11 @@ async function vaciarCarrito() {
         const productRef = ref(db, `productos/${key}/stock`);
         await runTransaction(productRef, (s) => (s || 0) + item.cantidad);
 
-        // ✅ actualizar stock local para que se vea ya
         const p = productos.find(x => x.id === item.id);
         if (p) p.stock = (p.stock || 0) + item.cantidad;
       })
     );
 
-    // ✅ suprime tantos ticks como items (evita parpadeo)
     suprimirRealtime = Math.max(suprimirRealtime, n);
 
     carrito = [];
@@ -282,13 +289,9 @@ async function cargarProductosDesdeFirebase() {
   }
 }
 
-// ===============================
-// NORMALIZAR + CINTA SOLO PARA "PRODUCTO NUEVO DESDE SHEETS"
-// ===============================
 function procesarDatosProductos(data) {
   const now = Date.now();
 
-  // reset map id->key en cada snapshot para que no quede basura
   for (const k in keyById) delete keyById[k];
 
   productos = Object.entries(data || {}).map(([key, p]) => {
@@ -309,23 +312,18 @@ function procesarDatosProductos(data) {
 
     const nombre = (p.nombre || 'Sin nombre').trim();
 
-    // ✅ SOLO "nuevo desde Sheets": campo nuevoAt (timestamp number)
     const nuevoAt = toNum(p.nuevoAt);
 
-    // Limpieza automática después de 5 días (solo para nuevos)
     if (nuevoAt && (now - nuevoAt) >= BACK_IN_STOCK_DUR_MS) {
-      // ojo: usar KEY real, NO id
       update(ref(db, `productos/${key}`), { nuevoAt: null }).catch(() => {});
     }
 
-    // ✅ IMPORTANTE: stock > 0 (no > 1)
     const esNuevoReciente = stock > 0 && nuevoAt && (now - nuevoAt) < BACK_IN_STOCK_DUR_MS;
 
-    // guardar mapping id -> key real
     keyById[id] = key;
 
     return {
-      _key: key, // key real en firebase
+      _key: key,
       id,
       nombre,
       descripcion: (p.descripcion || '').trim(),
@@ -338,7 +336,7 @@ function procesarDatosProductos(data) {
       estado: (p.estado || '').trim(),
       adicionales,
       alto, ancho, profundidad,
-      backInStock: !!esNuevoReciente, // reutilizamos el nombre para no tocar CSS/HTML
+      backInStock: !!esNuevoReciente,
       nuevoAt
     };
   }).filter(Boolean).sort((a, b) => a.id - b.id);
@@ -375,7 +373,6 @@ function renderizarCarrito() {
   const total = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
   elementos.totalCarrito.textContent = `Total: $U ${total.toLocaleString('es-UY')}`;
 
-  // Handlers +/- (reemplazados en cada render; no se duplican)
   elementos.listaCarrito.querySelectorAll('.disminuir-cantidad').forEach(btn => {
     btn.onclick = async (e) => {
       const id = parseInt(e.currentTarget.dataset.id);
@@ -384,7 +381,7 @@ function renderizarCarrito() {
         try {
           const key = getDbKeyFromId(id);
           await runTransaction(ref(db, `productos/${key}/stock`), (s) => (s || 0) + 1);
-          suprimirRealtime++; // evita pestañeo del onValue
+          suprimirRealtime++;
           const p = productos.find(x => x.id === id);
           if (p) p.stock = (p.stock || 0) + 1;
 
@@ -451,7 +448,6 @@ function filtrarProductos() {
   });
 }
 
-// pre-carga liviana para que las imágenes aparezcan antes
 function prewarmImages(lista) {
   try {
     lista.forEach(p => {
@@ -473,7 +469,7 @@ function renderizarProductos() {
     ? '<p class="sin-productos">No se encontraron productos.</p>'
     : paginados.map(crearCardProducto).join('');
 
-  prewarmImages(paginados); // acelera percepción de carga
+  prewarmImages(paginados);
   renderizarPaginacion(filtrados.length);
 }
 
@@ -494,7 +490,7 @@ window.cambiarPagina = function (page) {
 };
 
 // ===============================
-// MODAL DE PRODUCTO (click imagen = siguiente; overlay cierra)
+// MODAL DE PRODUCTO
 // ===============================
 function ensureProductModal() {
   if (!getElement('producto-modal')) {
@@ -510,11 +506,9 @@ function ensureProductModal() {
   elementos.productoModal = getElement('producto-modal');
   elementos.modalContenido = getElement('modal-contenido');
 
-  // Cierra solo si clicas el overlay
   elementos.productoModal.addEventListener('click', (e) => {
     if (e.target === elementos.productoModal) cerrarModal();
   });
-  // El contenido no propaga (nunca cierra)
   elementos.modalContenido.addEventListener('click', (e) => e.stopPropagation());
 
   document.addEventListener('keydown', (e) => {
@@ -568,7 +562,6 @@ function mostrarModalProducto(producto) {
       </div>
     `;
 
-    // Cambiar imagen con click en la grande (no cierra)
     const imgGrande = cont.querySelector('#modal-imagen');
     imgGrande?.addEventListener('click', (ev) => {
       ev.stopPropagation();
@@ -607,10 +600,9 @@ function cerrarModal() {
 window.cerrarModal = cerrarModal;
 
 // ===============================
-// AGREGAR AL CARRITO (MODIFICADA PARA INCLUIR ANALYTICS)
+// AGREGAR AL CARRITO
 // ===============================
 async function agregarAlCarrito(id, cantidad = 1, boton = null) {
-  // Bloqueo por producto (idempotente ante handlers duplicados)
   if (inFlightAdds.has(id)) return;
   inFlightAdds.add(id);
 
@@ -622,7 +614,6 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
   const cantidadAgregar = Math.max(1, parseInt(cantidad));
   if (!Number.isFinite(cantidadAgregar)) { inFlightAdds.delete(id); return mostrarNotificacion('Cantidad inválida', 'error'); }
 
-  // Candado del botón concreto
   if (boton) {
     if (busyButtons.has(boton)) { inFlightAdds.delete(id); return; }
     busyButtons.add(boton);
@@ -631,7 +622,6 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
     boton.innerHTML = 'Agregando <span class="spinner"></span>';
   }
 
-  // Chequeo con stock remoto actual (local)
   if ((producto.stock || 0) < cantidadAgregar) {
     if (boton) { boton.disabled = false; boton.innerHTML = boton._oldHTML; busyButtons.delete(boton); }
     inFlightAdds.delete(id);
@@ -644,13 +634,12 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
 
     const { committed } = await runTransaction(productRef, (stock) => {
       stock = stock || 0;
-      if (stock < cantidadAgregar) return; // aborta transacción
+      if (stock < cantidadAgregar) return;
       return stock - cantidadAgregar;
     });
 
     if (!committed) throw new Error('Stock insuficiente o cambiado por otro usuario');
 
-    // Feedback inmediato local + evitar pestañeo del onValue
     suprimirRealtime++;
     producto.stock = Math.max(0, (producto.stock || 0) - cantidadAgregar);
 
@@ -669,7 +658,6 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
     renderizarProductos();
     mostrarNotificacion('Producto agregado al carrito', 'exito');
     
-    // 📊 REGISTRAR EVENTO DE ANALYTICS
     registrarEventoAnalytics('add_to_cart', {
       item_id: id.toString(),
       item_name: producto.nombre,
@@ -719,6 +707,558 @@ function resetearFiltros() {
   if (elementos.precioMaxInput) elementos.precioMaxInput.value = '3000';
   updateRange();
   aplicarFiltros();
+}
+
+// ===============================
+// MÉTODOS DE PAGO (NUEVO)
+// ===============================
+
+// Abrir modal selector de método de pago
+function abrirSelectorPago() {
+  const modalEnvio = getElement('modal-datos-envio');
+  if (modalEnvio) {
+    modalEnvio.style.display = 'flex';
+    modalEnvio.classList.add('visible');
+    modalEnvio.removeAttribute('hidden');
+    actualizarResumenPedido();
+  }
+
+  const selectorPago = getElement('selector-metodo-pago');
+  if (selectorPago) selectorPago.style.display = 'block';
+
+  document.querySelectorAll('.metodo-pago-btn').forEach(b => b.classList.remove('selected'));
+  const seccionMP = getElement('seccion-mercadopago');
+  const seccionTrans = getElement('seccion-transferencia');
+  if (seccionMP) seccionMP.style.display = 'none';
+  if (seccionTrans) seccionTrans.style.display = 'none';
+}
+
+window.seleccionarMetodoPago = function(metodo) {
+  document.querySelectorAll('.metodo-pago-btn').forEach(b => b.classList.remove('selected'));
+  const btn = document.querySelector(`.metodo-pago-btn[data-metodo="${metodo}"]`);
+  if (btn) btn.classList.add('selected');
+
+  const seccionMP = getElement('seccion-mercadopago');
+  const seccionTrans = getElement('seccion-transferencia');
+
+  if (metodo === 'mercadopago') {
+    if (seccionMP) seccionMP.style.display = 'block';
+    if (seccionTrans) seccionTrans.style.display = 'none';
+  } else {
+    if (seccionTrans) seccionTrans.style.display = 'block';
+    if (seccionMP) seccionMP.style.display = 'none';
+  }
+};
+
+let enviandoTransferencia = false;
+
+window.confirmarPedidoTransferencia = async function() {
+  if (enviandoTransferencia) return;
+
+  const nombre    = getElement('input-nombre')?.value.trim();
+  const apellido  = getElement('input-apellido')?.value.trim();
+  const telefono  = getElement('input-telefono')?.value.trim();
+  const envio     = getElement('select-envio')?.value;
+  const direccion = envio !== 'retiro' ? getElement('input-direccion')?.value.trim() : '';
+  const notas     = getElement('input-notas')?.value.trim() || '';
+
+  if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
+    return mostrarNotificacion('Completá todos los campos obligatorios', 'error');
+  }
+
+  if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
+
+  enviandoTransferencia = true;
+  const btnConfirmar = getElement('btn-confirmar-transferencia');
+  if (btnConfirmar) {
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerHTML = 'Procesando... <span class="spinner"></span>';
+  }
+
+  const subtotal = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
+  const costoEnvio = envio === 'montevideo' ? 200 : envio === 'interior' ? 250 : 0;
+  const total = subtotal + costoEnvio;
+
+  const resumenProductos = carrito.map(item =>
+    `• ${item.nombre} x${item.cantidad} — $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`
+  ).join('\n');
+
+  const metodoEnvioTexto = envio === 'retiro' ? 'Retiro en local' :
+                           envio === 'montevideo' ? `Envío Montevideo (+$U 200) — ${direccion}` :
+                           `Envío Interior (+$U 250) — ${direccion}`;
+
+  const fechaPedido = new Date().toLocaleString('es-UY', { timeZone: 'America/Montevideo' });
+
+  const mensajeWA = encodeURIComponent(
+`🛍️ *NUEVO PEDIDO - TRANSFERENCIA*
+
+👤 *Cliente:* ${nombre} ${apellido}
+📞 *Teléfono:* ${telefono}
+📅 *Fecha:* ${fechaPedido}
+
+📦 *Productos:*
+${resumenProductos}
+
+🚚 *Envío:* ${metodoEnvioTexto}
+${notas ? `📝 *Notas:* ${notas}` : ''}
+
+💰 *TOTAL A TRANSFERIR: $U ${total.toLocaleString('es-UY')}*
+
+📋 *Datos bancarios:*
+Banco: ${TRANSFERENCIA_CONFIG.banco}
+Titular: ${TRANSFERENCIA_CONFIG.titular}
+CI: ${TRANSFERENCIA_CONFIG.ci}
+Cuenta: ${TRANSFERENCIA_CONFIG.numeroCuenta}
+
+_Por favor adjuntá el comprobante de pago a este mensaje_ 🙏`
+  );
+
+  const cuerpoEmail =
+`NUEVO PEDIDO - PAGO POR TRANSFERENCIA
+======================================
+Fecha: ${fechaPedido}
+
+DATOS DEL CLIENTE
+-----------------
+Nombre: ${nombre} ${apellido}
+Teléfono: ${telefono}
+
+PRODUCTOS
+---------
+${carrito.map(item => `${item.nombre} x${item.cantidad} — $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`).join('\n')}
+
+ENVÍO
+-----
+${metodoEnvioTexto}
+${notas ? `Notas: ${notas}` : ''}
+
+RESUMEN
+-------
+Subtotal: $U ${subtotal.toLocaleString('es-UY')}
+${costoEnvio > 0 ? `Envío: $U ${costoEnvio.toLocaleString('es-UY')}` : ''}
+TOTAL: $U ${total.toLocaleString('es-UY')}`;
+
+  registrarEventoAnalytics('purchase_transfer_initiated', {
+    value: total,
+    currency: 'UYU',
+    items: carrito.map(item => ({
+      item_id: item.id.toString(),
+      item_name: item.nombre,
+      quantity: item.cantidad,
+      price: item.precio
+    }))
+  });
+
+  if (window.emailjs) {
+    try {
+      await emailjs.send('service_89by24g', 'template_8mn7hdp', {
+        from_name: `${nombre} ${apellido}`,
+        from_email: TRANSFERENCIA_CONFIG.email,
+        message: cuerpoEmail,
+        subject: `🛍️ Nuevo pedido transferencia - ${nombre} ${apellido}`
+      });
+    } catch (err) {
+      console.warn('EmailJS error (no crítico):', err);
+    }
+  }
+
+  mostrarModalDatosBancarios(total, mensajeWA);
+
+  carrito = [];
+  guardarCarrito();
+  actualizarUI();
+  getElement('form-envio')?.reset();
+
+  const modalEnvio = getElement('modal-datos-envio');
+  if (modalEnvio) {
+    modalEnvio.classList.remove('visible');
+    setTimeout(() => { modalEnvio.style.display = 'none'; }, 300);
+  }
+
+  enviandoTransferencia = false;
+  if (btnConfirmar) {
+    btnConfirmar.disabled = false;
+    btnConfirmar.innerHTML = '✅ Confirmar pedido';
+  }
+};
+
+function mostrarModalDatosBancarios(total, mensajeWA) {
+  let modal = getElement('modal-datos-bancarios');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-datos-bancarios';
+    modal.className = 'modal-overlay';
+    modal.style.zIndex = '9999';
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div class="modal-contenido-banco" onclick="event.stopPropagation()">
+      <div class="banco-header">
+        <span class="banco-icono">🏦</span>
+        <h2>¡Pedido registrado!</h2>
+        <p>Realizá la transferencia y envianos el comprobante</p>
+      </div>
+
+      <div class="banco-datos">
+        <div class="banco-dato-row">
+          <span class="banco-label">Banco</span>
+          <span class="banco-valor">${TRANSFERENCIA_CONFIG.banco}</span>
+        </div>
+        <div class="banco-dato-row">
+          <span class="banco-label">Titular</span>
+          <span class="banco-valor">${TRANSFERENCIA_CONFIG.titular}</span>
+        </div>
+        <div class="banco-dato-row">
+          <span class="banco-label">CI</span>
+          <span class="banco-valor">${TRANSFERENCIA_CONFIG.ci}</span>
+        </div>
+        <div class="banco-dato-row">
+          <span class="banco-label">N° Cuenta</span>
+          <span class="banco-valor copiable" onclick="copiarAlPortapapeles('${TRANSFERENCIA_CONFIG.numeroCuenta}', this)">
+            ${TRANSFERENCIA_CONFIG.numeroCuenta} <span class="copy-hint">📋 Tocar para copiar</span>
+          </span>
+        </div>
+        <div class="banco-dato-row banco-total-row">
+          <span class="banco-label">Total a transferir</span>
+          <span class="banco-valor banco-total">$U ${total.toLocaleString('es-UY')}</span>
+        </div>
+      </div>
+
+      <p class="banco-instruccion">
+        Una vez realizada la transferencia, envianos el comprobante por WhatsApp o email para confirmar tu pedido.
+      </p>
+
+      <div class="banco-acciones">
+        <a href="https://wa.me/${TRANSFERENCIA_CONFIG.whatsapp}?text=${mensajeWA}"
+           target="_blank" rel="noopener"
+           class="btn-whatsapp-banco">
+          📱 Enviar comprobante por WhatsApp
+        </a>
+        <a href="mailto:${TRANSFERENCIA_CONFIG.email}?subject=${encodeURIComponent('Comprobante de transferencia - Patofelting')}&body=${encodeURIComponent('Hola! Adjunto el comprobante de mi transferencia.')}"
+           class="btn-email-banco">
+          ✉️ Enviar por Email
+        </a>
+        <button onclick="cerrarModalBanco()" class="btn-cerrar-banco">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  `;
+
+  modal.style.display = 'flex';
+  modal.onclick = (e) => { if (e.target === modal) cerrarModalBanco(); };
+}
+
+window.cerrarModalBanco = function() {
+  const modal = getElement('modal-datos-bancarios');
+  if (modal) {
+    modal.style.opacity = '0';
+    setTimeout(() => { modal.style.display = 'none'; modal.style.opacity = '1'; }, 300);
+  }
+};
+
+window.copiarAlPortapapeles = function(texto, el) {
+  navigator.clipboard.writeText(texto).then(() => {
+    el.classList.add('copiado');
+    const hint = el.querySelector('.copy-hint');
+    if (hint) hint.textContent = '✅ Copiado!';
+    setTimeout(() => {
+      el.classList.remove('copiado');
+      if (hint) hint.textContent = '📋 Tocar para copiar';
+    }, 2000);
+  });
+};
+
+// ===============================
+// RESUMEN Y ENVÍO
+// ===============================
+function actualizarResumenPedido() {
+  const resumenProductos = getElement('resumen-productos');
+  const resumenTotal = getElement('resumen-total');
+  if (!resumenProductos || !resumenTotal) return;
+
+  if (carrito.length === 0) {
+    resumenProductos.innerHTML = '<p class="carrito-vacio">No hay productos en el carrito</p>';
+    resumenTotal.textContent = '$U 0';
+    return;
+  }
+
+  let html = '';
+  let subtotal = 0;
+
+  carrito.forEach(item => {
+    const itemTotal = item.precio * item.cantidad;
+    subtotal += itemTotal;
+    html += `
+      <div class="resumen-item">
+        <span>${item.nombre} x${item.cantidad}</span>
+        <span>$U ${itemTotal.toLocaleString('es-UY')}</span>
+      </div>
+    `;
+  });
+
+  const envioSelect = getElement('select-envio');
+  const metodo = envioSelect?.value || 'retiro';
+  let costoEnvio = metodo === 'montevideo' ? 200 : metodo === 'interior' ? 250 : 0;
+
+  html += `
+    <div class="resumen-item resumen-subtotal">
+      <span>Subtotal:</span>
+      <span>$U ${subtotal.toLocaleString('es-UY')}</span>
+    </div>
+    ${metodo !== 'retiro' ? `
+      <div class="resumen-item resumen-envio">
+        <span>Envío (${metodo === 'montevideo' ? 'Montevideo' : 'Interior'}):</span>
+        <span>$U ${costoEnvio.toLocaleString('es-UY')}</span>
+      </div>` : ''}
+  `;
+
+  resumenProductos.innerHTML = html;
+  const total = subtotal + costoEnvio;
+  resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
+
+  const grupoDireccion = getElement('grupo-direccion');
+  const inputDireccion = getElement('input-direccion');
+  if (grupoDireccion && inputDireccion) {
+    grupoDireccion.style.display = metodo === 'retiro' ? 'none' : 'flex';
+    inputDireccion.required = metodo !== 'retiro';
+  }
+}
+
+// ===============================
+// FORMULARIO DE ENVÍO CON MERCADO PAGO
+// ===============================
+getElement('form-envio')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (enviandoPedido) return;
+  enviandoPedido = true;
+
+  const btnSubmit = e.target.querySelector('button[type="submit"]');
+  const textoOriginal = btnSubmit?.innerHTML;
+  if (btnSubmit) {
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = 'Procesando... <span class="spinner"></span>';
+  }
+
+  const nombre    = getElement('input-nombre').value.trim();
+  const apellido  = getElement('input-apellido').value.trim();
+  const telefono  = getElement('input-telefono').value.trim();
+  const envio     = getElement('select-envio').value;
+  const direccion = envio !== 'retiro' ? getElement('input-direccion').value.trim() : '';
+  const notas     = getElement('input-notas').value.trim();
+
+  if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
+    mostrarNotificacion('Complete todos los campos obligatorios', 'error');
+    if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
+    enviandoPedido = false;
+    return;
+  }
+
+  for (const item of carrito) {
+    const prod = productos.find(p => p.id === item.id);
+    if (!prod || prod.stock < 0) {
+      mostrarNotificacion(`Stock insuficiente para "${item?.nombre || 'un producto'}"`, 'error');
+      if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
+      enviandoPedido = false;
+      return;
+    }
+  }
+
+  try {
+    const response = await fetch('/api/crear-preferencia', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        carrito,
+        datosCliente: { nombre, apellido, telefono, envio, direccion, notas },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Error del servidor: ${response.status}`);
+    }
+
+    const { url, url_sandbox } = await response.json();
+
+    registrarEventoAnalytics('purchase_redirect', {
+      items: carrito.map(item => ({
+        item_id:   item.id.toString(),
+        item_name: item.nombre,
+        quantity:  item.cantidad,
+        price:     item.precio,
+      })),
+      value:    carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0),
+      currency: 'UYU',
+    });
+
+    const modal = getElement('modal-datos-envio');
+    modal?.classList.remove('visible');
+    setTimeout(() => { if (modal) modal.style.display = 'none'; }, 300);
+
+    carrito = [];
+    guardarCarrito();
+    actualizarUI();
+    getElement('form-envio').reset();
+
+    mostrarNotificacion('Redirigiendo a Mercado Pago...', 'exito');
+
+    const esSandbox = false;
+    setTimeout(() => {
+      window.location.href = esSandbox ? url_sandbox : url;
+    }, 800);
+
+  } catch (error) {
+    console.error('Error al procesar pago:', error);
+    mostrarNotificacion(
+      error.message || 'Error al conectar con Mercado Pago. Intentá de nuevo.',
+      'error'
+    );
+    if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
+    enviandoPedido = false;
+  }
+});
+
+let enviandoPedido = false;
+
+getElement('btn-cerrar-modal-envio')?.addEventListener('click', () => {
+  const modal = getElement('modal-datos-envio');
+  modal.classList.remove('visible');
+  setTimeout(() => modal.style.display = 'none', 300);
+});
+
+// ===============================
+// SLIDERS DE PRECIO
+// ===============================
+function updateRange() {
+  const minSlider = elementos.precioMinInput;
+  const maxSlider = elementos.precioMaxInput;
+  const minPrice = getElement('min-price');
+  const maxPrice = getElement('max-price');
+  const range = document.querySelector('.range');
+  const thumbMin = getElement('thumb-label-min');
+  const thumbMax = getElement('thumb-label-max');
+
+  if (!minSlider || !maxSlider || !minPrice || !maxPrice || !range || !thumbMin || !thumbMax) return;
+
+  let minVal = parseInt(minSlider.value);
+  let maxVal = parseInt(maxSlider.value);
+  if (minVal > maxVal) [minVal, maxVal] = [maxVal, minVal];
+
+  minSlider.value = minVal;
+  maxSlider.value = maxVal;
+
+  const sliderMax = parseInt(minSlider.max);
+  const sliderWidth = minSlider.offsetWidth;
+
+  range.style.left = (minVal / sliderMax * 100) + '%';
+  range.style.width = ((maxVal - minVal) / sliderMax * 100) + '%';
+
+  minPrice.textContent = `$U${minVal}`;
+  maxPrice.textContent = `$U${maxVal}`;
+
+  thumbMin.textContent = `$U${minVal}`;
+  thumbMax.textContent = `$U${maxVal}`;
+
+  const minPos = (minVal / sliderMax) * sliderWidth;
+  const maxPos = (maxVal / sliderMax) * sliderWidth;
+
+  thumbMin.style.left = `${minPos}px`;
+  thumbMax.style.left = `${maxPos}px`;
+
+  thumbMin.style.opacity = '1';
+  thumbMax.style.opacity = '1';
+
+  setTimeout(() => {
+    thumbMin.style.opacity = '0';
+    thumbMax.style.opacity = '0';
+  }, 2000);
+}
+
+elementos.precioMinInput?.addEventListener('input', () => {
+  const thumbMin = getElement('thumb-label-min');
+  if (thumbMin) thumbMin.style.opacity = '1';
+  updateRange();
+});
+
+elementos.precioMaxInput?.addEventListener('input', () => {
+  const thumbMax = getElement('thumb-label-max');
+  if (thumbMax) thumbMax.style.opacity = '1';
+  updateRange();
+});
+
+document.querySelector('.range-slider')?.addEventListener('mouseenter', () => {
+  const thumbMin = getElement('thumb-label-min');
+  const thumbMax = getElement('thumb-label-max');
+  if (thumbMin) thumbMin.style.opacity = '1';
+  if (thumbMax) thumbMax.style.opacity = '1';
+});
+
+document.querySelector('.range-slider')?.addEventListener('mouseleave', () => {
+  const thumbMin = getElement('thumb-label-min');
+  const thumbMax = getElement('thumb-label-max');
+  if (thumbMin) thumbMin.style.opacity = '0';
+  if (thumbMax) thumbMax.style.opacity = '0';
+});
+
+// ===============================
+// OTRAS
+// ===============================
+function preguntarStock(nombre) {
+  const asunto = encodeURIComponent(`Consulta sobre disponibilidad de "${nombre}"`);
+  const cuerpo = encodeURIComponent(`Hola Patofelting,\n\nMe gustaría saber cuándo estará disponible el producto: ${nombre}\n\nSaludos,\n[Tu nombre]`);
+  window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
+}
+
+async function contarVisitaRealtimeDB() {
+    try {
+        const db = window.firebaseDatabase || getDatabase(window.firebaseApp);
+        
+        const totalRef = ref(db, 'stats/visits');
+        await runTransaction(totalRef, (current) => (current || 0) + 1);
+        
+        const today = new Date().toISOString().split('T')[0];
+        const dailyRef = ref(db, `stats/daily/${today}`);
+        await runTransaction(dailyRef, (current) => (current || 0) + 1);
+        
+        console.log('✅ Visita contada en Realtime Database');
+    } catch (error) {
+        console.warn('No se pudo contar visita:', error);
+    }
+}
+
+function setupBusquedaAnalytics() {
+    if (!elementos.inputBusqueda) return;
+    
+    let searchTimeout;
+    elementos.inputBusqueda.addEventListener('input', function(e) {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            const term = e.target.value.trim();
+            if (term.length >= 2) {
+                registrarEventoAnalytics('search', {
+                    search_term: term
+                });
+            }
+        }, 1000);
+    });
+}
+
+function detectarRetornoMercadoPago() {
+  const params = new URLSearchParams(window.location.search);
+  const status = params.get('status') || params.get('collection_status');
+
+  if (status === 'approved') {
+    mostrarNotificacion('¡Pago aprobado! Tu pedido está confirmado 🎉', 'exito');
+    window.history.replaceState({}, document.title, window.location.pathname);
+  } else if (status === 'failure') {
+    mostrarNotificacion('El pago fue rechazado. Podés intentarlo de nuevo.', 'error');
+    window.history.replaceState({}, document.title, window.location.pathname);
+  } else if (status === 'pending') {
+    mostrarNotificacion('Tu pago está pendiente. Te avisaremos cuando se confirme.', 'info');
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
 }
 
 // ===============================
@@ -783,7 +1323,6 @@ function setupContactForm() {
 function initEventos() {
   elementos.carritoBtnMain?.addEventListener('click', () => {
     toggleCarrito(true);
-    // 📊 REGISTRAR EVENTO DE ANALYTICS
     registrarEventoAnalytics('view_cart', {
       item_count: carrito.length,
       total_value: carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0)
@@ -796,10 +1335,10 @@ function initEventos() {
   getElement('select-envio')?.addEventListener('change', actualizarResumenPedido);
   elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
 
+  // ✅ NUEVO: Listener con selector de método de pago
   elementos.btnFinalizarCompra?.addEventListener('click', () => {
     if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
     
-    // 📊 REGISTRAR EVENTO DE ANALYTICS
     registrarEventoAnalytics('begin_checkout', {
       items: carrito.map(item => ({
         item_id: item.id.toString(),
@@ -814,16 +1353,11 @@ function initEventos() {
     elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'false');
   });
 
+  // ✅ NUEVO: Abre selector de pago en lugar de ir directo a envío
   elementos.btnEntendidoAviso?.addEventListener('click', () => {
     elementos.avisoPreCompraModal.style.display = 'none';
     elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'true');
-    const modalEnvio = getElement('modal-datos-envio');
-    if (modalEnvio) {
-      modalEnvio.style.display = 'flex';
-      modalEnvio.classList.add('visible');
-      modalEnvio.removeAttribute('hidden');
-      actualizarResumenPedido();
-    }
+    abrirSelectorPago();
   });
 
   elementos.btnCancelarAviso?.addEventListener('click', () => {
@@ -840,7 +1374,6 @@ function initEventos() {
     filtrosActuales.categoria = e.target.value.trim();
     aplicarFiltros();
     
-    // 📊 REGISTRAR EVENTO DE ANALYTICS
     registrarEventoAnalytics('select_filter', {
       filter_type: 'category',
       filter_value: e.target.value
@@ -856,7 +1389,6 @@ function initEventos() {
     aplicarFiltros();
   });
 
-  // Delegación en la galería (evitamos duplicados)
   const galeria = elementos.galeriaProductos;
   if (galeria) {
     if (galeria._pfHandler) galeria.removeEventListener('click', galeria._pfHandler);
@@ -874,7 +1406,6 @@ function initEventos() {
 
       if (target.classList.contains('boton-detalles')) {
         mostrarModalProducto(producto);
-        // 📊 REGISTRAR EVENTO DE ANALYTICS
         registrarEventoAnalytics('view_item', {
           item_id: id.toString(),
           item_name: producto.nombre,
@@ -894,330 +1425,6 @@ function initEventos() {
 }
 
 // ===============================
-// RESUMEN Y ENVÍO
-// ===============================
-function actualizarResumenPedido() {
-  const resumenProductos = getElement('resumen-productos');
-  const resumenTotal = getElement('resumen-total');
-  if (!resumenProductos || !resumenTotal) return;
-
-  if (carrito.length === 0) {
-    resumenProductos.innerHTML = '<p class="carrito-vacio">No hay productos en el carrito</p>';
-    resumenTotal.textContent = '$U 0';
-    return;
-  }
-
-  let html = '';
-  let subtotal = 0;
-
-  carrito.forEach(item => {
-    const itemTotal = item.precio * item.cantidad;
-    subtotal += itemTotal;
-    html += `
-      <div class="resumen-item">
-        <span>${item.nombre} x${item.cantidad}</span>
-        <span>$U ${itemTotal.toLocaleString('es-UY')}</span>
-      </div>
-    `;
-  });
-
-  const envioSelect = getElement('select-envio');
-  const metodo = envioSelect?.value || 'retiro';
-  let costoEnvio = metodo === 'montevideo' ? 200 : metodo === 'interior' ? 250 : 0;
-
-  html += `
-    <div class="resumen-item resumen-subtotal">
-      <span>Subtotal:</span>
-      <span>$U ${subtotal.toLocaleString('es-UY')}</span>
-    </div>
-    ${metodo !== 'retiro' ? `
-      <div class="resumen-item resumen-envio">
-        <span>Envío (${metodo === 'montevideo' ? 'Montevideo' : 'Interior'}):</span>
-        <span>$U ${costoEnvio.toLocaleString('es-UY')}</span>
-      </div>` : ''}
-  `;
-
-  resumenProductos.innerHTML = html;
-  const total = subtotal + costoEnvio;
-  resumenTotal.textContent = `$U ${total.toLocaleString('es-UY')}`;
-
-  const grupoDireccion = getElement('grupo-direccion');
-  const inputDireccion = getElement('input-direccion');
-  if (grupoDireccion && inputDireccion) {
-    grupoDireccion.style.display = metodo === 'retiro' ? 'none' : 'flex';
-    inputDireccion.required = metodo !== 'retiro';
-  }
-}
-
-getElement('btn-cerrar-modal-envio')?.addEventListener('click', () => {
-  const modal = getElement('modal-datos-envio');
-  modal.classList.remove('visible');
-  setTimeout(() => modal.style.display = 'none', 300);
-});
-
-let enviandoPedido = false;
-
-// ===============================
-// FORMULARIO DE ENVÍO CON MERCADO PAGO
-// ===============================
-getElement('form-envio')?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  if (enviandoPedido) return;
-  enviandoPedido = true;
-
-  // Mostrar estado de carga en el botón
-  const btnSubmit = e.target.querySelector('button[type="submit"]');
-  const textoOriginal = btnSubmit?.innerHTML;
-  if (btnSubmit) {
-    btnSubmit.disabled = true;
-    btnSubmit.innerHTML = 'Procesando... <span class="spinner"></span>';
-  }
-
-  const nombre    = getElement('input-nombre').value.trim();
-  const apellido  = getElement('input-apellido').value.trim();
-  const telefono  = getElement('input-telefono').value.trim();
-  const envio     = getElement('select-envio').value;
-  const direccion = envio !== 'retiro' ? getElement('input-direccion').value.trim() : '';
-  const notas     = getElement('input-notas').value.trim();
-
-  // Validaciones
-  if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
-    mostrarNotificacion('Complete todos los campos obligatorios', 'error');
-    if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
-    enviandoPedido = false;
-    return;
-  }
-
-  // Revalidar stock local
-  for (const item of carrito) {
-    const prod = productos.find(p => p.id === item.id);
-    if (!prod || prod.stock < 0) {
-      mostrarNotificacion(`Stock insuficiente para "${item?.nombre || 'un producto'}"`, 'error');
-      if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
-      enviandoPedido = false;
-      return;
-    }
-  }
-
-  try {
-    // ─────────────────────────────────────────────
-    // Llamar a la Serverless Function en Vercel
-    // ─────────────────────────────────────────────
-    const response = await fetch('/api/crear-preferencia', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        carrito,
-        datosCliente: { nombre, apellido, telefono, envio, direccion, notas },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Error del servidor: ${response.status}`);
-    }
-
-    const { url, url_sandbox } = await response.json();
-
-    // 📊 Analytics
-    registrarEventoAnalytics('purchase_redirect', {
-      items: carrito.map(item => ({
-        item_id:   item.id.toString(),
-        item_name: item.nombre,
-        quantity:  item.cantidad,
-        price:     item.precio,
-      })),
-      value:    carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0),
-      currency: 'UYU',
-    });
-
-    // Cerrar modal
-    const modal = getElement('modal-datos-envio');
-    modal?.classList.remove('visible');
-    setTimeout(() => { if (modal) modal.style.display = 'none'; }, 300);
-
-    // Limpiar carrito localmente (el stock ya fue descontado al agregar)
-    carrito = [];
-    guardarCarrito();
-    actualizarUI();
-    getElement('form-envio').reset();
-
-    mostrarNotificacion('Redirigiendo a Mercado Pago...', 'exito');
-
-    // ─────────────────────────────────────────────
-    // Redirigir a Mercado Pago
-    // Usá url_sandbox para pruebas, url para producción
-    // ─────────────────────────────────────────────
-    const esSandbox = false; // ← cambiá a true para pruebas
-    setTimeout(() => {
-      window.location.href = esSandbox ? url_sandbox : url;
-    }, 800);
-
-  } catch (error) {
-    console.error('Error al procesar pago:', error);
-    mostrarNotificacion(
-      error.message || 'Error al conectar con Mercado Pago. Intentá de nuevo.',
-      'error'
-    );
-    if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
-    enviandoPedido = false;
-  }
-});
-
-// ===============================
-// SLIDERS DE PRECIO
-// ===============================
-function updateRange() {
-  const minSlider = elementos.precioMinInput;
-  const maxSlider = elementos.precioMaxInput;
-  const minPrice = getElement('min-price');
-  const maxPrice = getElement('max-price');
-  const range = document.querySelector('.range');
-  const thumbMin = getElement('thumb-label-min');
-  const thumbMax = getElement('thumb-label-max');
-
-  if (!minSlider || !maxSlider || !minPrice || !maxPrice || !range || !thumbMin || !thumbMax) return;
-
-  let minVal = parseInt(minSlider.value);
-  let maxVal = parseInt(maxSlider.value);
-  if (minVal > maxVal) [minVal, maxVal] = [maxVal, minVal];
-
-  minSlider.value = minVal;
-  maxSlider.value = maxVal;
-
-  const sliderMax = parseInt(minSlider.max);
-  const sliderWidth = minSlider.offsetWidth;
-
-  // Actualizar posición del rango
-  range.style.left = (minVal / sliderMax * 100) + '%';
-  range.style.width = ((maxVal - minVal) / sliderMax * 100) + '%';
-
-  // Actualizar etiquetas de precio
-  minPrice.textContent = `$U${minVal}`;
-  maxPrice.textContent = `$U${maxVal}`;
-
-  // Actualizar globos (tooltips)
-  thumbMin.textContent = `$U${minVal}`;
-  thumbMax.textContent = `$U${maxVal}`;
-
-  // Calcular posiciones de los globos
-  const minPos = (minVal / sliderMax) * sliderWidth;
-  const maxPos = (maxVal / sliderMax) * sliderWidth;
-
-  thumbMin.style.left = `${minPos}px`;
-  thumbMax.style.left = `${maxPos}px`;
-
-  // Mostrar globos temporalmente al cambiar valores
-  thumbMin.style.opacity = '1';
-  thumbMax.style.opacity = '1';
-
-  // Ocultar después de un tiempo
-  setTimeout(() => {
-    thumbMin.style.opacity = '0';
-    thumbMax.style.opacity = '0';
-  },  2000);
-}
-
-// Agregar event listeners para mostrar globos al interactuar
-elementos.precioMinInput?.addEventListener('input', () => {
-  const thumbMin = getElement('thumb-label-min');
-  if (thumbMin) thumbMin.style.opacity = '1';
-  updateRange();
-});
-
-elementos.precioMaxInput?.addEventListener('input', () => {
-  const thumbMax = getElement('thumb-label-max');
-  if (thumbMax) thumbMax.style.opacity = '1';
-  updateRange();
-});
-
-// Mostrar globos al pasar el mouse sobre el slider
-document.querySelector('.range-slider')?.addEventListener('mouseenter', () => {
-  const thumbMin = getElement('thumb-label-min');
-  const thumbMax = getElement('thumb-label-max');
-  if (thumbMin) thumbMin.style.opacity = '1';
-  if (thumbMax) thumbMax.style.opacity = '1';
-});
-
-// Ocultar globos al salir del slider
-document.querySelector('.range-slider')?.addEventListener('mouseleave', () => {
-  const thumbMin = getElement('thumb-label-min');
-  const thumbMax = getElement('thumb-label-max');
-  if (thumbMin) thumbMin.style.opacity = '0';
-  if (thumbMax) thumbMax.style.opacity = '0';
-});
-
-// ===============================
-// OTRAS
-// ===============================
-function preguntarStock(nombre) {
-  const asunto = encodeURIComponent(`Consulta sobre disponibilidad de "${nombre}"`);
-  const cuerpo = encodeURIComponent(`Hola Patofelting,\n\nMe gustaría saber cuándo estará disponible el producto: ${nombre}\n\nSaludos,\n[Tu nombre]`);
-  window.location.href = `mailto:patofelting@gmail.com?subject=${asunto}&body=${cuerpo}`;
-}
-
-// ===============================
-// CONTADOR DE VISITAS EN REALTIME DATABASE (BACKUP)
-// ===============================
-async function contarVisitaRealtimeDB() {
-    try {
-        const db = window.firebaseDatabase || getDatabase(window.firebaseApp);
-        
-        // Contador total de visitas
-        const totalRef = ref(db, 'stats/visits');
-        await runTransaction(totalRef, (current) => (current || 0) + 1);
-        
-        // Contador por día
-        const today = new Date().toISOString().split('T')[0];
-        const dailyRef = ref(db, `stats/daily/${today}`);
-        await runTransaction(dailyRef, (current) => (current || 0) + 1);
-        
-        console.log('✅ Visita contada en Realtime Database');
-    } catch (error) {
-        console.warn('No se pudo contar visita:', error);
-    }
-}
-
-// ===============================
-// CONFIGURACIÓN DE EVENTOS DE BÚSQUEDA PARA ANALYTICS
-// ===============================
-function setupBusquedaAnalytics() {
-    if (!elementos.inputBusqueda) return;
-    
-    let searchTimeout;
-    elementos.inputBusqueda.addEventListener('input', function(e) {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            const term = e.target.value.trim();
-            if (term.length >= 2) {
-                registrarEventoAnalytics('search', {
-                    search_term: term
-                });
-            }
-        }, 1000);
-    });
-}
-
-// ===============================
-// DETECCIÓN DE RETORNO DE MERCADO PAGO
-// ===============================
-function detectarRetornoMercadoPago() {
-  const params = new URLSearchParams(window.location.search);
-  const status = params.get('status') || params.get('collection_status');
-
-  if (status === 'approved') {
-    mostrarNotificacion('¡Pago aprobado! Tu pedido está confirmado 🎉', 'exito');
-    window.history.replaceState({}, document.title, window.location.pathname);
-  } else if (status === 'failure') {
-    mostrarNotificacion('El pago fue rechazado. Podés intentarlo de nuevo.', 'error');
-    window.history.replaceState({}, document.title, window.location.pathname);
-  } else if (status === 'pending') {
-    mostrarNotificacion('Tu pago está pendiente. Te avisaremos cuando se confirme.', 'info');
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }
-}
-
-// ===============================
 // INIT PRINCIPAL
 // ===============================
 document.addEventListener('DOMContentLoaded', async () => {
@@ -1225,7 +1432,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     await signInAnonymously(auth);
     console.log('✅ Signed in anonymously to Firebase.');
     
-    // 📊 REGISTRAR EVENTOS INICIALES DE ANALYTICS
     if (analytics) {
       registrarEventoAnalytics('session_start');
       registrarEventoAnalytics('page_view', {
@@ -1235,10 +1441,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
     
-    // CONTAR VISITA EN REALTIME DATABASE (BACKUP)
     contarVisitaRealtimeDB();
-    
-    // DETECTAR RETORNO DE MERCADO PAGO
     detectarRetornoMercadoPago();
     
     cargarProductosDesdeFirebase();
@@ -1250,7 +1453,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     mostrarNotificacion(msg, 'error');
   }
 
-  // Inyectar estilos de la cinta si no existen
   if (!document.getElementById('pf-back-in-stock-ribbon-css')) {
     const style = document.createElement('style');
     style.id = 'pf-back-in-stock-ribbon-css';
