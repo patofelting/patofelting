@@ -768,6 +768,7 @@ window.confirmarPedidoTransferencia = async function() {
 
   if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
 
+  // ✅ CORREGIDO: enviandoTransferencia se pone true PRIMERO
   enviandoTransferencia = true;
   const btnConfirmar = getElement('btn-confirmar-transferencia');
   if (btnConfirmar) {
@@ -868,6 +869,13 @@ TOTAL: $U ${total.toLocaleString('es-UY')}`;
   actualizarUI();
   mostrarModalDatosBancarios(total, mensajeWA, { nombre, apellido });
   document.body.classList.add('no-scroll');
+  
+  // ✅ CORREGIDO: Resetear el botón y el flag AL FINAL
+  enviandoTransferencia = false;
+  if (btnConfirmar) {
+    btnConfirmar.disabled = false;
+    btnConfirmar.innerHTML = '✅ Confirmar pedido';
+  }
 };
 
 // ============================================================
