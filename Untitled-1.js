@@ -15,7 +15,8 @@ const TRANSFERENCIA_CONFIG = {
   banco: 'BROU (Banco República)',
   titular: 'Patofelting',
   ci: '5.123.456-7',          // ← CAMBIÁ por tu CI real
-  numeroCuenta: '001-123456-7', // ← CAMBIÁ por tu número de cuenta real
+  numeroCuenta: '001300996-00002.', 
+  numeroCuentaReal: '00130099600002', // ← CAMBIÁ por tu número de cuenta real
   whatsapp: '+59893566283',
   whatsappDisplay: '+598 93 566 283',
   email: 'patofelting@gmail.com'
@@ -768,12 +769,10 @@ window.confirmarPedidoTransferencia = async function() {
 
   if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
 
-  // ✅ CORREGIDO: enviandoTransferencia se pone true PRIMERO
-  enviandoTransferencia = true;
-  const btnConfirmar = getElement('btn-confirmar-transferencia');
+   enviandoTransferencia = false;
   if (btnConfirmar) {
-    btnConfirmar.disabled = true;
-    btnConfirmar.innerHTML = 'Procesando... <span class="spinner"></span>';
+    btnConfirmar.disabled = false;
+    btnConfirmar.innerHTML = '✅ Confirmar pedido';
   }
 
   const subtotal = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
@@ -869,13 +868,6 @@ TOTAL: $U ${total.toLocaleString('es-UY')}`;
   actualizarUI();
   mostrarModalDatosBancarios(total, mensajeWA, { nombre, apellido });
   document.body.classList.add('no-scroll');
-  
-  // ✅ CORREGIDO: Resetear el botón y el flag AL FINAL
-  enviandoTransferencia = false;
-  if (btnConfirmar) {
-    btnConfirmar.disabled = false;
-    btnConfirmar.innerHTML = '✅ Confirmar pedido';
-  }
 };
 
 // ============================================================
