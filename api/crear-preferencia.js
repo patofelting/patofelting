@@ -77,7 +77,7 @@ export default async function handler(req, res) {
 },
       auto_return:        'approved',
       external_reference: externalReference,
-      notification_url: 'https://www.patofelting.com/api/webhook-mp',
+    // notification_url: 'https://www.patofelting.com/api/webhook-mp', // comentado para pruebas
       // Métodos de pago disponibles en Uruguay
       payment_methods: {
         excluded_payment_types: [],
