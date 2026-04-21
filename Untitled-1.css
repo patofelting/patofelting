@@ -922,3 +922,179 @@ blockquote {
   }
 }
 
+/*
+.metodo-pago-titulo {
+  font-weight: 700;
+  font-size: 1rem;
+  margin: 1.2rem 0 0.8rem;
+  color: #333;
+}
+ 
+.metodo-pago-opciones {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+ 
+.metodo-pago-btn {
+  flex: 1;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 10px;
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #333;
+}
+.metodo-pago-btn small { font-weight: 400; color: #888; font-size: 0.78rem; }
+.metodo-pago-btn .metodo-icono { font-size: 1.6rem; }
+.metodo-pago-btn:hover { border-color: #7ed957; transform: translateY(-2px); }
+.metodo-pago-btn.selected {
+  border-color: #7ed957;
+  background: #f0fce8;
+  box-shadow: 0 0 0 3px rgba(126,217,87,0.25);
+}
+.mp-logo-selector { width: 90px; object-fit: contain; }
+ 
+.boton-pagar-mp {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #009ee3, #0070e0);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: opacity 0.2s, transform 0.15s;
+}
+.boton-pagar-mp:hover { opacity: 0.92; transform: translateY(-1px); }
+ 
+.aviso-transferencia {
+  background: #fffbe6;
+  border: 1px solid #ffe066;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 0.88rem;
+  color: #7a6200;
+  margin-bottom: 10px;
+}
+ 
+.boton-confirmar-transferencia {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #7ed957, #53b44b);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+}
+.boton-confirmar-transferencia:hover { opacity: 0.92; transform: translateY(-1px); }
+.boton-confirmar-transferencia:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+ 
+/* Modal datos bancarios */
+.modal-contenido-banco {
+  background: #fff;
+  border-radius: 18px;
+  padding: 2rem;
+  max-width: 420px;
+  width: 92%;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.22);
+  animation: slideUp 0.3s ease;
+}
+ 
+.banco-header { text-align: center; margin-bottom: 1.4rem; }
+.banco-icono { font-size: 2.5rem; display: block; margin-bottom: 8px; }
+.banco-header h2 { margin: 0 0 6px; font-size: 1.4rem; color: #222; }
+.banco-header p { margin: 0; color: #666; font-size: 0.9rem; }
+ 
+.banco-datos {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+.banco-dato-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+  gap: 10px;
+}
+.banco-dato-row:last-child { border-bottom: none; }
+.banco-label { font-size: 0.82rem; color: #888; flex-shrink: 0; }
+.banco-valor { font-weight: 600; color: #222; font-size: 0.92rem; text-align: right; }
+ 
+.banco-valor.copiable {
+  cursor: pointer;
+  color: #2e7d32;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.banco-valor.copiable.copiado { color: #7ed957; }
+.copy-hint { font-size: 0.72rem; font-weight: 400; color: #aaa; }
+ 
+.banco-total-row { background: #f0fce8; border-radius: 8px; padding: 10px 8px; margin-top: 4px; }
+.banco-total { color: #2e7d32; font-size: 1.15rem; font-weight: 800; }
+ 
+.banco-instruccion { font-size: 0.85rem; color: #555; text-align: center; margin-bottom: 1.2rem; line-height: 1.5; }
+ 
+.banco-acciones { display: flex; flex-direction: column; gap: 10px; }
+ 
+.btn-whatsapp-banco {
+  display: block;
+  text-align: center;
+  padding: 13px;
+  background: #25D366;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: opacity 0.2s;
+}
+.btn-whatsapp-banco:hover { opacity: 0.88; }
+ 
+.btn-email-banco {
+  display: block;
+  text-align: center;
+  padding: 11px;
+  background: #f0f0f0;
+  color: #333;
+  text-decoration: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+.btn-email-banco:hover { background: #e0e0e0; }
+ 
+.btn-cerrar-banco {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: center;
+  padding: 6px;
+}
+.btn-cerrar-banco:hover { color: #666; }
+ 
+@keyframes slideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
