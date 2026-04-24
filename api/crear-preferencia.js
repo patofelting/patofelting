@@ -1,5 +1,3 @@
-import { guardarPedido } from './pedidos';
-
 const SITE_URL = process.env.FRONTEND_URL;
 
 export default async function handler(req, res) {
@@ -13,26 +11,11 @@ export default async function handler(req, res) {
     const { carrito, datosCliente } = req.body;
     const ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
 
-    // ✅ Validaciones básicas
     if (!ACCESS_TOKEN) return res.status(500).json({ error: 'Access Token no configurado' });
     if (!SITE_URL) return res.status(500).json({ error: 'FRONTEND_URL no configurada' });
     if (!carrito || !datosCliente) return res.status(400).json({ error: 'Faltan datos' });
 
     const externalReference = `pedido_${Date.now()}`;
-
-    // ✅ Guardamos pedido con try/catch separado
-    try {
-      guardarPedido({
-        id: externalReference,
-        carrito,
-        cliente: datosCliente,
-        estado: 'pendiente',
-        fecha: new Date(),
-      });
-    } catch (e) {
-      console.error('Error guardando pedido:', e);
-      // Podés decidir si continuar o no
-    }
 
     const items = carrito.map(item => ({
       title: item.nombre,
@@ -51,7 +34,10 @@ export default async function handler(req, res) {
         pending: `${SITE_URL}/pago-pendiente.html`,
       },
       auto_return: 'approved',
-      metadata: { carrito, cliente: datosCliente },
+      metadata: {
+        carrito,
+        cliente: datosCliente,
+      },
     };
 
     const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
@@ -65,7 +51,6 @@ export default async function handler(req, res) {
 
     const data = await mpResponse.json();
 
-    // ✅ Verificar que MP respondió bien
     if (!mpResponse.ok) {
       console.error('Error de Mercado Pago:', data);
       return res.status(500).json({ error: 'Error de Mercado Pago', detalle: data });
@@ -73,6 +58,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       url: data.init_point,
+      url_sandbox: data.sandbox_init_point,
       reference: externalReference,
     });
 
