@@ -1090,8 +1090,16 @@ function actualizarResumenPedido() {
 // ===============================
 // FORMULARIO DE ENVÍO CON MERCADO PAGO
 // ===============================
+
+let enviandoPedido = false; // ✅ Declarado ANTES del listener
+
 getElement('form-envio')?.addEventListener('submit', async (e) => {
   e.preventDefault();
+
+  // ✅ Verificar que el método seleccionado sea Mercado Pago
+  const metodoPagoSeleccionado = document.querySelector('.metodo-pago-btn.selected')?.dataset?.metodo;
+  if (metodoPagoSeleccionado !== 'mercadopago') return;
+
   if (enviandoPedido) return;
   enviandoPedido = true;
 
@@ -1109,13 +1117,22 @@ getElement('form-envio')?.addEventListener('submit', async (e) => {
   const direccion = envio !== 'retiro' ? getElement('input-direccion').value.trim() : '';
   const notas     = getElement('input-notas').value.trim();
 
+  // Validaciones
   if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
-    mostrarNotificacion('Complete todos los campos obligatorios', 'error');
+    mostrarNotificacion('Completá todos los campos obligatorios', 'error');
     if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
     enviandoPedido = false;
     return;
   }
 
+  if (carrito.length === 0) {
+    mostrarNotificacion('El carrito está vacío', 'error');
+    if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
+    enviandoPedido = false;
+    return;
+  }
+
+  // Validar stock de cada producto
   for (const item of carrito) {
     const prod = productos.find(p => p.id === item.id);
     if (!prod || prod.stock < 0) {
@@ -1141,9 +1158,13 @@ getElement('form-envio')?.addEventListener('submit', async (e) => {
       throw new Error(errorData.error || `Error del servidor: ${response.status}`);
     }
 
-    const { url, url_sandbox } = await response.json();
+    const { url, url_sandbox, reference } = await response.json();
 
+    if (!url) throw new Error('No se recibió la URL de pago de Mercado Pago');
+
+    // ✅ Analytics ANTES de redirigir
     registrarEventoAnalytics('purchase_redirect', {
+      transaction_id: reference,
       items: carrito.map(item => ({
         item_id:   item.id.toString(),
         item_name: item.nombre,
@@ -1154,20 +1175,21 @@ getElement('form-envio')?.addEventListener('submit', async (e) => {
       currency: 'UYU',
     });
 
+    // ✅ Cerrar modal de envío
     const modal = getElement('modal-datos-envio');
-    modal?.classList.remove('visible');
-    setTimeout(() => { if (modal) modal.style.display = 'none'; }, 300);
+    if (modal) {
+      modal.classList.remove('visible');
+      setTimeout(() => { modal.style.display = 'none'; }, 300);
+    }
 
-    carrito = [];
-    guardarCarrito();
-    actualizarUI();
-    getElement('form-envio').reset();
+    // ✅ NO vaciamos el carrito aquí — se vacía en pago-exitoso.html
+    // El stock ya fue descontado en Firebase al agregar al carrito
 
     mostrarNotificacion('Redirigiendo a Mercado Pago...', 'exito');
 
-    const esSandbox = false;
+    const esSandbox = false; // cambiá a true para pruebas
     setTimeout(() => {
-      window.location.href = esSandbox ? url_sandbox : url;
+      window.location.href = esSandbox && url_sandbox ? url_sandbox : url;
     }, 800);
 
   } catch (error) {
@@ -1179,14 +1201,8 @@ getElement('form-envio')?.addEventListener('submit', async (e) => {
     if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
     enviandoPedido = false;
   }
-});
-
-let enviandoPedido = false;
-
-getElement('btn-cerrar-modal-envio')?.addEventListener('click', () => {
-  const modal = getElement('modal-datos-envio');
-  modal.classList.remove('visible');
-  setTimeout(() => modal.style.display = 'none', 300);
+  // ✅ NO ponemos enviandoPedido = false en el finally exitoso
+  // porque ya redirigimos — si se resetea, permite doble click antes de redirigir
 });
 
 // ===============================
