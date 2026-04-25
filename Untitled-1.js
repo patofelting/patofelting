@@ -13,10 +13,9 @@ const BACK_IN_STOCK_DUR_MS = 1000 * 60 * 60 * 24 * 5; // 5 días (ajustable)
 // ── Configuración de transferencia ──────────────────────────
 const TRANSFERENCIA_CONFIG = {
   banco: 'BROU (Banco República)',
-  titular: 'Patofelting',
-  ci: '5.123.456-7',          // ← CAMBIÁ por tu CI real
-  numeroCuenta: '001300996-00002.', 
-   // ← CAMBIÁ por tu número de cuenta real
+  titular: 'Patricia Lopez',
+   // ← CAMBIÁ por tu CI real
+  numeroCuenta: '001300996-00002',
   whatsapp: '+59893566283',
   whatsappDisplay: '+598 93 566 283',
   email: 'patofelting@gmail.com'
@@ -52,9 +51,7 @@ const RIBBON_CSS = `
 
 // Firebase v10+ (SDK modular)
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getDatabase, ref, runTransaction, onValue, get, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-// Añade analytics a tus imports existentes
+import { getDatabase, ref, runTransaction, get, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getAnalytics, logEvent, setAnalyticsCollectionEnabled } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 
 const db = window.firebaseDatabase || getDatabase(window.firebaseApp);
@@ -262,21 +259,6 @@ async function cargarProductosDesdeFirebase() {
       renderizarProductos();
       actualizarCategorias();
       actualizarUI();
-    }
-
-    if (!cargarProductosDesdeFirebase._listening) {
-      onValue(productosRef, (snap) => {
-        if (suprimirRealtime > 0) { suprimirRealtime--; return; }
-        if (!snap.exists()) productos = [];
-        else procesarDatosProductos(snap.val());
-        renderizarProductos();
-        actualizarCategorias();
-        actualizarUI();
-      }, (error) => {
-        console.error('Listener productos error:', error);
-        mostrarNotificacion('Error al recibir actualizaciones de productos', 'error');
-      });
-      cargarProductosDesdeFirebase._listening = true;
     }
   } catch (error) {
     console.error('Error al cargar productos:', error);
@@ -711,8 +693,162 @@ function resetearFiltros() {
 }
 
 // ===============================
-// MÉTODOS DE PAGO (NUEVO)
+// MÉTODOS DE PAGO
 // ===============================
+
+// Función para restaurar el contenido original del modal de envío
+function restaurarModalEnvioOriginal() {
+  const modalEnvioContenido = document.querySelector('.modal-envio-contenido');
+  if (!modalEnvioContenido) return;
+  
+  // Guardar el HTML original si no existe
+  if (!modalEnvioContenido.dataset.originalHtml) {
+    modalEnvioContenido.dataset.originalHtml = modalEnvioContenido.innerHTML;
+  }
+  
+  // Restaurar solo si fue modificado (por ejemplo, por la pantalla de éxito de transferencia)
+  if (modalEnvioContenido.querySelector('.confirmacion-transferencia')) {
+    modalEnvioContenido.innerHTML = modalEnvioContenido.dataset.originalHtml;
+    
+    // Reasignar eventos necesarios
+    const selectEnvio = getElement('select-envio');
+    if (selectEnvio) {
+      selectEnvio.addEventListener('change', actualizarResumenPedido);
+    }
+    
+    // Reasignar evento del formulario
+    const formEnvio = getElement('form-envio');
+    if (formEnvio && !formEnvio.hasAttribute('data-listener-added')) {
+      formEnvio.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const metodoPagoSeleccionado = document.querySelector('.metodo-pago-btn.selected')?.dataset?.metodo;
+        if (metodoPagoSeleccionado !== 'mercadopago') return;
+        
+        if (enviandoPedido) return;
+        enviandoPedido = true;
+        
+        const btnSubmit = e.target.querySelector('button[type="submit"]');
+        const textoOriginal = btnSubmit?.innerHTML;
+        if (btnSubmit) {
+          btnSubmit.disabled = true;
+          btnSubmit.innerHTML = 'Procesando... <span class="spinner"></span>';
+        }
+        
+        const nombre    = getElement('input-nombre').value.trim();
+        const apellido  = getElement('input-apellido').value.trim();
+        const telefono  = getElement('input-telefono').value.trim();
+        const envio     = getElement('select-envio').value;
+        const direccion = envio !== 'retiro' ? getElement('input-direccion').value.trim() : '';
+        const notas     = getElement('input-notas').value.trim();
+        
+        if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
+          mostrarNotificacion('Completá todos los campos obligatorios', 'error');
+          if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
+          enviandoPedido = false;
+          return;
+        }
+        
+        if (carrito.length === 0) {
+          mostrarNotificacion('El carrito está vacío', 'error');
+          if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
+          enviandoPedido = false;
+          return;
+        }
+        
+        for (const item of carrito) {
+          const prod = productos.find(p => p.id === item.id);
+          if (!prod || prod.stock < 0) {
+            mostrarNotificacion(`Stock insuficiente para "${item?.nombre || 'un producto'}"`, 'error');
+            if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
+            enviandoPedido = false;
+            return;
+          }
+        }
+        
+        try {
+          const response = await fetch('/api/crear-preferencia', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              carrito,
+              datosCliente: { nombre, apellido, telefono, envio, direccion, notas },
+            }),
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Error del servidor: ${response.status}`);
+          }
+          
+          const { url, url_sandbox, reference } = await response.json();
+          
+          if (!url) throw new Error('No se recibió la URL de pago de Mercado Pago');
+          
+          registrarEventoAnalytics('purchase_redirect', {
+            transaction_id: reference,
+            items: carrito.map(item => ({
+              item_id:   item.id.toString(),
+              item_name: item.nombre,
+              quantity:  item.cantidad,
+              price:     item.precio,
+            })),
+            value:    carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0),
+            currency: 'UYU',
+          });
+          
+          const modal = getElement('modal-datos-envio');
+          if (modal) {
+            modal.classList.remove('visible');
+            setTimeout(() => { modal.style.display = 'none'; }, 300);
+          }
+          
+          mostrarNotificacion('Redirigiendo a Mercado Pago...', 'exito');
+          
+          const esSandbox = false;
+          setTimeout(() => {
+            window.location.href = esSandbox && url_sandbox ? url_sandbox : url;
+          }, 800);
+          
+        } catch (error) {
+          console.error('Error al procesar pago:', error);
+          mostrarNotificacion(error.message || 'Error al conectar con Mercado Pago. Intentá de nuevo.', 'error');
+          if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
+          enviandoPedido = false;
+        }
+      });
+      formEnvio.setAttribute('data-listener-added', 'true');
+    }
+  }
+}
+
+// Función para cerrar modal de envío
+function cerrarModalEnvio() {
+  const modalEnvio = getElement('modal-datos-envio');
+  if (modalEnvio) {
+    modalEnvio.classList.remove('visible');
+    setTimeout(() => {
+      modalEnvio.style.display = 'none';
+      modalEnvio.setAttribute('hidden', '');
+    }, 300);
+  }
+  document.body.classList.remove('no-scroll');
+  
+  // Resetear selección de método
+  document.querySelectorAll('.metodo-pago-btn').forEach(b => b.classList.remove('selected'));
+  const seccionMP = getElement('seccion-mercadopago');
+  const seccionTrans = getElement('seccion-transferencia');
+  if (seccionMP) seccionMP.style.display = 'none';
+  if (seccionTrans) seccionTrans.style.display = 'none';
+  
+  // Resetear flags
+  enviandoTransferencia = false;
+  enviandoPedido = false;
+  
+  // Restaurar contenido original
+  restaurarModalEnvioOriginal();
+}
+
+window.cerrarModalEnvio = cerrarModalEnvio;
 
 // Abrir modal selector de método de pago
 function abrirSelectorPago() {
@@ -722,6 +858,11 @@ function abrirSelectorPago() {
     modalEnvio.classList.add('visible');
     modalEnvio.removeAttribute('hidden');
     actualizarResumenPedido();
+    
+    // Cerrar al hacer click en el overlay
+    modalEnvio.onclick = (e) => {
+      if (e.target === modalEnvio) cerrarModalEnvio();
+    };
   }
 
   const selectorPago = getElement('selector-metodo-pago');
@@ -752,19 +893,17 @@ window.seleccionarMetodoPago = function(metodo) {
 };
 
 // ===============================
-// CONFIRMAR PEDIDO POR TRANSFERENCIA (CORREGIDO)
+// CONFIRMAR PEDIDO POR TRANSFERENCIA
 // ===============================
 
 let enviandoTransferencia = false;
 
 window.confirmarPedidoTransferencia = async function() {
-  // Evitar doble envío
   if (enviandoTransferencia) {
     console.warn('⚠️ Ya hay un pedido en proceso');
     return;
   }
 
-  // Obtener datos del formulario
   const nombre = getElement('input-nombre')?.value.trim();
   const apellido = getElement('input-apellido')?.value.trim();
   const telefono = getElement('input-telefono')?.value.trim();
@@ -772,7 +911,6 @@ window.confirmarPedidoTransferencia = async function() {
   const direccion = envio !== 'retiro' ? getElement('input-direccion')?.value.trim() : '';
   const notas = getElement('input-notas')?.value.trim() || '';
 
-  // Validaciones
   if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
     return mostrarNotificacion('Completá todos los campos obligatorios', 'error');
   }
@@ -781,7 +919,6 @@ window.confirmarPedidoTransferencia = async function() {
     return mostrarNotificacion('El carrito está vacío', 'error');
   }
 
-  // ✅ ACTIVAR FLAG y BOTÓN DE CARGA
   enviandoTransferencia = true;
   const btnConfirmar = getElement('btn-confirmar-transferencia');
   if (btnConfirmar) {
@@ -790,7 +927,6 @@ window.confirmarPedidoTransferencia = async function() {
   }
 
   try {
-    // Calcular totales
     const subtotal = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
     const costoEnvio = envio === 'montevideo' ? 200 : envio === 'interior' ? 250 : 0;
     const total = subtotal + costoEnvio;
@@ -805,7 +941,6 @@ window.confirmarPedidoTransferencia = async function() {
 
     const fechaPedido = new Date().toLocaleString('es-UY', { timeZone: 'America/Montevideo' });
 
-    // Mensaje WhatsApp
     const mensajeWA = encodeURIComponent(
 `🛍️ *NUEVO PEDIDO - TRANSFERENCIA*
 
@@ -830,7 +965,6 @@ Cuenta: ${TRANSFERENCIA_CONFIG.numeroCuenta}
 _Por favor adjuntá el comprobante de pago a este mensaje_ 🙏`
     );
 
-    // Registrar Analytics
     registrarEventoAnalytics('purchase_transfer_initiated', {
       value: total,
       currency: 'UYU',
@@ -842,7 +976,6 @@ _Por favor adjuntá el comprobante de pago a este mensaje_ 🙏`
       }))
     });
 
-    // Enviar email de notificación (si EmailJS está disponible)
     if (window.emailjs) {
       try {
         const cuerpoEmail = `NUEVO PEDIDO - PAGO POR TRANSFERENCIA\n======================================\nFecha: ${fechaPedido}\n\nDATOS DEL CLIENTE\n-----------------\nNombre: ${nombre} ${apellido}\nTeléfono: ${telefono}\n\nPRODUCTOS\n---------\n${carrito.map(item => `${item.nombre} x${item.cantidad} — $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`).join('\n')}\n\nENVÍO\n-----\n${metodoEnvioTexto}\n${notas ? `Notas: ${notas}` : ''}\n\nRESUMEN\n-------\nSubtotal: $U ${subtotal.toLocaleString('es-UY')}\n${costoEnvio > 0 ? `Envío: $U ${costoEnvio.toLocaleString('es-UY')}` : ''}\nTOTAL: $U ${total.toLocaleString('es-UY')}`;
@@ -858,12 +991,10 @@ _Por favor adjuntá el comprobante de pago a este mensaje_ 🙏`
       }
     }
 
-    // ✅ LIMPIAR CARRITO Y ACTUALIZAR UI
     carrito = [];
     guardarCarrito();
     actualizarUI();
 
-    // ✅ MOSTRAR MODAL CON DATOS BANCARIOS
     mostrarModalDatosBancarios(total, mensajeWA, { nombre, apellido });
     document.body.classList.add('no-scroll');
 
@@ -871,7 +1002,6 @@ _Por favor adjuntá el comprobante de pago a este mensaje_ 🙏`
     console.error('❌ Error en confirmarPedidoTransferencia:', error);
     mostrarNotificacion('Ocurrió un error al procesar tu pedido', 'error');
   } finally {
-    // ✅ RESETEAR FLAG Y BOTÓN AL FINAL
     enviandoTransferencia = false;
     if (btnConfirmar) {
       btnConfirmar.disabled = false;
@@ -879,16 +1009,12 @@ _Por favor adjuntá el comprobante de pago a este mensaje_ 🙏`
     }
   }
 };
-// ============================================================
-// ① MOSTRAR MODAL DATOS BANCARIOS (VERSIÓN MEJORADA)
-// ============================================================
 
+// Mostrar modal datos bancarios
 function mostrarModalDatosBancarios(total, mensajeWA, datosCliente) {
-  // Toma el contenido del modal de envío y lo reemplaza con la pantalla de éxito
   const modalEnvioContenido = document.querySelector('.modal-envio-contenido');
   if (!modalEnvioContenido) return;
  
-  // Asegurar que el modal de envío siga visible
   const modalEnvio = getElement('modal-datos-envio');
   if (modalEnvio) {
     modalEnvio.removeAttribute('hidden');
@@ -898,8 +1024,8 @@ function mostrarModalDatosBancarios(total, mensajeWA, datosCliente) {
  
   modalEnvioContenido.innerHTML = `
     <div class="confirmacion-transferencia">
- 
-      <!-- Encabezado de éxito -->
+      <button onclick="cerrarConfirmacionTransferencia()" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--color-text-secondary);">&times;</button>
+      
       <div class="confirmacion-header">
         <div class="confirmacion-check">
           <svg viewBox="0 0 52 52" class="checkmark-svg">
@@ -911,7 +1037,6 @@ function mostrarModalDatosBancarios(total, mensajeWA, datosCliente) {
         <p class="confirmacion-subtitulo">Realizá la transferencia para confirmar tu compra</p>
       </div>
  
-      <!-- Pasos -->
       <div class="confirmacion-pasos">
         <div class="paso paso-activo">
           <span class="paso-num">1</span>
@@ -934,13 +1059,11 @@ function mostrarModalDatosBancarios(total, mensajeWA, datosCliente) {
         </div>
       </div>
  
-      <!-- Total destacado -->
       <div class="confirmacion-total-box">
         <span class="confirmacion-total-label">Total a transferir</span>
         <span class="confirmacion-total-monto">$U ${total.toLocaleString('es-UY')}</span>
       </div>
  
-      <!-- Datos bancarios -->
       <div class="confirmacion-banco">
         <h3 class="confirmacion-banco-titulo">🏦 Datos para la transferencia</h3>
  
@@ -965,13 +1088,11 @@ function mostrarModalDatosBancarios(total, mensajeWA, datosCliente) {
         </div>
       </div>
  
-      <!-- Instrucción -->
       <p class="confirmacion-instruccion">
         Una vez realizada la transferencia, envianos el comprobante por WhatsApp o email. 
         Confirmamos tu pedido en menos de 24 hs hábiles. 🕐
       </p>
  
-      <!-- Acciones principales -->
       <div class="confirmacion-acciones">
         <a href="https://wa.me/${TRANSFERENCIA_CONFIG.whatsapp}?text=${mensajeWA}"
            target="_blank" rel="noopener"
@@ -988,18 +1109,12 @@ function mostrarModalDatosBancarios(total, mensajeWA, datosCliente) {
         </a>
       </div>
  
-      <!-- Cerrar -->
       <button onclick="cerrarConfirmacionTransferencia()" class="confirmacion-btn-cerrar">
         Listo, ya transferí →
       </button>
- 
     </div>
   `;
 }
-
-// ============================================================
-// ② NUEVA FUNCIÓN para cerrar la pantalla de confirmación
-// ============================================================
 
 window.cerrarConfirmacionTransferencia = function() {
   const modalEnvio = getElement('modal-datos-envio');
@@ -1011,11 +1126,26 @@ window.cerrarConfirmacionTransferencia = function() {
     }, 300);
   }
   document.body.classList.remove('no-scroll');
-};
 
-// ============================================================
-// ③ NUEVA FUNCIÓN para copiar datos bancarios con feedback
-// ============================================================
+  const form = getElement('form-envio');
+  if (form) form.reset();
+
+  document.querySelectorAll('.metodo-pago-btn').forEach(b => b.classList.remove('selected'));
+  const seccionMP = getElement('seccion-mercadopago');
+  const seccionTrans = getElement('seccion-transferencia');
+  if (seccionMP) seccionMP.style.display = 'none';
+  if (seccionTrans) seccionTrans.style.display = 'none';
+
+  enviandoTransferencia = false;
+  enviandoPedido = false;
+
+  restaurarModalEnvioOriginal();
+  
+  renderizarProductos();
+  actualizarContadorCarrito();
+  
+  mostrarNotificacion('Gracias por tu compra! Te esperamos pronto', 'exito');
+};
 
 window.copiarDatoBanco = function(texto, btn) {
   navigator.clipboard.writeText(texto).then(() => {
@@ -1091,119 +1221,7 @@ function actualizarResumenPedido() {
 // FORMULARIO DE ENVÍO CON MERCADO PAGO
 // ===============================
 
-let enviandoPedido = false; // ✅ Declarado ANTES del listener
-
-getElement('form-envio')?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  // ✅ Verificar que el método seleccionado sea Mercado Pago
-  const metodoPagoSeleccionado = document.querySelector('.metodo-pago-btn.selected')?.dataset?.metodo;
-  if (metodoPagoSeleccionado !== 'mercadopago') return;
-
-  if (enviandoPedido) return;
-  enviandoPedido = true;
-
-  const btnSubmit = e.target.querySelector('button[type="submit"]');
-  const textoOriginal = btnSubmit?.innerHTML;
-  if (btnSubmit) {
-    btnSubmit.disabled = true;
-    btnSubmit.innerHTML = 'Procesando... <span class="spinner"></span>';
-  }
-
-  const nombre    = getElement('input-nombre').value.trim();
-  const apellido  = getElement('input-apellido').value.trim();
-  const telefono  = getElement('input-telefono').value.trim();
-  const envio     = getElement('select-envio').value;
-  const direccion = envio !== 'retiro' ? getElement('input-direccion').value.trim() : '';
-  const notas     = getElement('input-notas').value.trim();
-
-  // Validaciones
-  if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
-    mostrarNotificacion('Completá todos los campos obligatorios', 'error');
-    if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
-    enviandoPedido = false;
-    return;
-  }
-
-  if (carrito.length === 0) {
-    mostrarNotificacion('El carrito está vacío', 'error');
-    if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
-    enviandoPedido = false;
-    return;
-  }
-
-  // Validar stock de cada producto
-  for (const item of carrito) {
-    const prod = productos.find(p => p.id === item.id);
-    if (!prod || prod.stock < 0) {
-      mostrarNotificacion(`Stock insuficiente para "${item?.nombre || 'un producto'}"`, 'error');
-      if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
-      enviandoPedido = false;
-      return;
-    }
-  }
-
-  try {
-    const response = await fetch('/api/crear-preferencia', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        carrito,
-        datosCliente: { nombre, apellido, telefono, envio, direccion, notas },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Error del servidor: ${response.status}`);
-    }
-
-    const { url, url_sandbox, reference } = await response.json();
-
-    if (!url) throw new Error('No se recibió la URL de pago de Mercado Pago');
-
-    // ✅ Analytics ANTES de redirigir
-    registrarEventoAnalytics('purchase_redirect', {
-      transaction_id: reference,
-      items: carrito.map(item => ({
-        item_id:   item.id.toString(),
-        item_name: item.nombre,
-        quantity:  item.cantidad,
-        price:     item.precio,
-      })),
-      value:    carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0),
-      currency: 'UYU',
-    });
-
-    // ✅ Cerrar modal de envío
-    const modal = getElement('modal-datos-envio');
-    if (modal) {
-      modal.classList.remove('visible');
-      setTimeout(() => { modal.style.display = 'none'; }, 300);
-    }
-
-    // ✅ NO vaciamos el carrito aquí — se vacía en pago-exitoso.html
-    // El stock ya fue descontado en Firebase al agregar al carrito
-
-    mostrarNotificacion('Redirigiendo a Mercado Pago...', 'exito');
-
-    const esSandbox = false; // cambiá a true para pruebas
-    setTimeout(() => {
-      window.location.href = esSandbox && url_sandbox ? url_sandbox : url;
-    }, 800);
-
-  } catch (error) {
-    console.error('Error al procesar pago:', error);
-    mostrarNotificacion(
-      error.message || 'Error al conectar con Mercado Pago. Intentá de nuevo.',
-      'error'
-    );
-    if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
-    enviandoPedido = false;
-  }
-  // ✅ NO ponemos enviandoPedido = false en el finally exitoso
-  // porque ya redirigimos — si se resetea, permite doble click antes de redirigir
-});
+let enviandoPedido = false;
 
 // ===============================
 // SLIDERS DE PRECIO
@@ -1412,7 +1430,6 @@ function initEventos() {
   getElement('select-envio')?.addEventListener('change', actualizarResumenPedido);
   elementos.btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
 
-  // ✅ NUEVO: Listener con selector de método de pago
   elementos.btnFinalizarCompra?.addEventListener('click', () => {
     if (carrito.length === 0) return mostrarNotificacion('El carrito está vacío', 'error');
     
@@ -1431,7 +1448,6 @@ function initEventos() {
     elementos.avisoPreCompraModal.setAttribute('aria-hidden', 'false');
   });
 
-  // ✅ NUEVO: Abre selector de pago en lugar de ir directo a envío
   elementos.btnEntendidoAviso?.addEventListener('click', () => {
     elementos.avisoPreCompraModal.style.display = 'none';
     elementos.avisoPreCompraModal.setAttribute('hidden', '');
