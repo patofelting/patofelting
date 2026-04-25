@@ -14,7 +14,7 @@ const BACK_IN_STOCK_DUR_MS = 1000 * 60 * 60 * 24 * 5; // 5 días (ajustable)
 const TRANSFERENCIA_CONFIG = {
   banco: 'BROU (Banco República)',
   titular: 'Patricia Lopez',
-  ci: '12345678', // ← CAMBIÁ por tu CI real
+ 
   numeroCuenta: '001300996-00002',
   whatsapp: '+59893566283',
   whatsappDisplay: '+598 93 566 283',
