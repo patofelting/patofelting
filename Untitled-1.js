@@ -14,7 +14,7 @@ const BACK_IN_STOCK_DUR_MS = 1000 * 60 * 60 * 24 * 5; // 5 días (ajustable)
 const TRANSFERENCIA_CONFIG = {
   banco: 'BROU (Banco República)',
   titular: 'Patricia Lopez',
- 
+  ci: '12345678', // ← CAMBIÁ por tu CI real
   numeroCuenta: '001300996-00002',
   whatsapp: '+59893566283',
   whatsappDisplay: '+598 93 566 283',
@@ -51,7 +51,7 @@ const RIBBON_CSS = `
 
 // Firebase v10+ (SDK modular)
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getDatabase, ref, runTransaction, get, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, runTransaction, get, update, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getAnalytics, logEvent, setAnalyticsCollectionEnabled } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 
 const db = window.firebaseDatabase || getDatabase(window.firebaseApp);
@@ -259,6 +259,21 @@ async function cargarProductosDesdeFirebase() {
       renderizarProductos();
       actualizarCategorias();
       actualizarUI();
+    }
+
+    if (!cargarProductosDesdeFirebase._listening) {
+      onValue(productosRef, (snap) => {
+        if (suprimirRealtime > 0) { suprimirRealtime--; return; }
+        if (!snap.exists()) productos = [];
+        else procesarDatosProductos(snap.val());
+        renderizarProductos();
+        actualizarCategorias();
+        actualizarUI();
+      }, (error) => {
+        console.error('Listener productos error:', error);
+        mostrarNotificacion('Error al recibir actualizaciones de productos', 'error');
+      });
+      cargarProductosDesdeFirebase._listening = true;
     }
   } catch (error) {
     console.error('Error al cargar productos:', error);
@@ -583,7 +598,7 @@ function cerrarModal() {
 window.cerrarModal = cerrarModal;
 
 // ===============================
-// AGREGAR AL CARRITO (CORREGIDO)
+// AGREGAR AL CARRITO (CORREGIDO CON LECTURA PREVIA DE STOCK)
 // ===============================
 async function agregarAlCarrito(id, cantidad = 1, boton = null) {
   // Evitar múltiples clicks simultáneos
@@ -624,18 +639,6 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
     boton.innerHTML = 'Agregando <span class="spinner"></span>';
   }
 
-  // Verificar stock disponible ANTES de la transacción
-  const stockActual = producto.stock || 0;
-  if (stockActual < cantidadAgregar) {
-    if (boton) {
-      boton.disabled = false;
-      boton.innerHTML = boton._oldHTML;
-      busyButtons.delete(boton);
-    }
-    inFlightAdds.delete(id);
-    return mostrarNotificacion(`Stock insuficiente. Solo quedan ${stockActual} unidades.`, 'error');
-  }
-
   try {
     const key = getDbKeyFromId(id);
     if (!key) {
@@ -644,19 +647,50 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
     
     const productRef = ref(db, `productos/${key}/stock`);
     
-    console.log(`🛒 Intentando agregar ${cantidadAgregar} de ${producto.nombre} (stock actual: ${stockActual})`);
-
-    // Ejecutar transacción con reintentos automáticos
+    console.log(`🛒 Verificando stock para ${producto.nombre}...`);
+    
+    // 1. Leer stock real desde Firebase antes de la transacción
+    const stockSnap = await get(productRef);
+    const stockReal = stockSnap.exists() ? (stockSnap.val() || 0) : 0;
+    
+    console.log(`📊 Stock real en Firebase: ${stockReal}, Stock local: ${producto.stock}`);
+    
+    // Si el stock local está desincronizado, actualizarlo
+    if (producto.stock !== stockReal) {
+      console.log(`🔄 Actualizando stock local de ${producto.stock} -> ${stockReal}`);
+      producto.stock = stockReal;
+      renderizarProductos(); // Actualizar UI con stock real
+    }
+    
+    // Verificar stock suficiente ANTES de la transacción
+    if (stockReal < cantidadAgregar) {
+      if (boton) {
+        boton.disabled = false;
+        boton.innerHTML = boton._oldHTML;
+        busyButtons.delete(boton);
+      }
+      inFlightAdds.delete(id);
+      return mostrarNotificacion(`Stock insuficiente. Solo quedan ${stockReal} unidades.`, 'error');
+    }
+    
+    console.log(`✅ Stock suficiente: ${stockReal} >= ${cantidadAgregar}`);
+    
+    // 2. Ejecutar transacción con reintentos
     let intentos = 0;
     const maxIntentos = 3;
     let committed = false;
     let finalStock = null;
-
+    let transactionSnapshot = null;
+    
     while (intentos < maxIntentos && !committed) {
       try {
+        console.log(`🔄 Intento de transacción ${intentos + 1}/${maxIntentos}...`);
+        
         const result = await runTransaction(productRef, (currentStock) => {
-          // Si el nodo no existe, inicializar en 0
-          let stock = currentStock === null ? 0 : currentStock;
+          // Usar el valor actual de Firebase o el que leímos antes
+          let stock = currentStock !== null ? currentStock : stockReal;
+          
+          console.log(`📊 Dentro de transacción - stock actual: ${stock}`);
           
           // Verificar nuevamente dentro de la transacción
           if (stock < cantidadAgregar) {
@@ -664,21 +698,28 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
             return; // Abortar transacción
           }
           
-          console.log(`✅ Transacción aceptada: ${stock} - ${cantidadAgregar} = ${stock - cantidadAgregar}`);
-          return stock - cantidadAgregar;
+          const nuevoStock = stock - cantidadAgregar;
+          console.log(`✅ Transacción aceptada: ${stock} - ${cantidadAgregar} = ${nuevoStock}`);
+          return nuevoStock;
         });
         
         committed = result.committed;
-        finalStock = result.snapshot?.val();
+        transactionSnapshot = result.snapshot;
+        finalStock = transactionSnapshot?.val();
         
         if (committed) {
           console.log(`🎉 Transacción exitosa! Nuevo stock: ${finalStock}`);
           break;
         } else {
-          console.log(`⚠️ Intento ${intentos + 1} fallido, reintentando...`);
+          console.log(`⚠️ Intento ${intentos + 1} fallido (stock cambió durante la transacción), reintentando...`);
           intentos++;
           if (intentos < maxIntentos) {
+            // Esperar antes de reintentar, con backoff progresivo
             await new Promise(resolve => setTimeout(resolve, 500 * intentos));
+            // Volver a leer el stock actualizado antes del próximo intento
+            const freshStockSnap = await get(productRef);
+            const freshStock = freshStockSnap.exists() ? (freshStockSnap.val() || 0) : 0;
+            console.log(`📊 Stock actualizado para reintento: ${freshStock}`);
           }
         }
       } catch (txError) {
@@ -691,19 +732,25 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
         }
       }
     }
-
+    
     if (!committed) {
       throw new Error('No se pudo completar la transacción después de varios intentos');
     }
-
-    // Actualizar stock local
+    
+    // 3. Actualizar estado local con el stock confirmado desde Firebase
     suprimirRealtime++;
-    producto.stock = Math.max(0, (producto.stock || 0) - cantidadAgregar);
-
-    // Actualizar carrito
+    const nuevoStockLocal = (transactionSnapshot?.val() !== undefined && transactionSnapshot?.val() !== null)
+      ? transactionSnapshot.val()
+      : (stockReal - cantidadAgregar);
+    
+    producto.stock = Math.max(0, nuevoStockLocal);
+    console.log(`✅ Stock local actualizado a: ${producto.stock}`);
+    
+    // 4. Actualizar carrito
     const enCarrito = carrito.find(item => item.id === id);
     if (enCarrito) {
       enCarrito.cantidad += cantidadAgregar;
+      console.log(`📦 Producto ya en carrito, nueva cantidad: ${enCarrito.cantidad}`);
     } else {
       carrito.push({
         id: producto.id,
@@ -712,45 +759,55 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
         cantidad: cantidadAgregar,
         imagen: (producto.imagenes && producto.imagenes[0]) || PLACEHOLDER_IMAGE
       });
+      console.log(`📦 Producto agregado al carrito por primera vez`);
     }
-
+    
+    // 5. Guardar y actualizar UI
     guardarCarrito();
     renderizarCarrito();
     renderizarProductos();
     mostrarNotificacion(`${cantidadAgregar} x ${producto.nombre} agregado al carrito`, 'exito');
     
+    // 6. Registrar analytics
     registrarEventoAnalytics('add_to_cart', {
       item_id: id.toString(),
       item_name: producto.nombre,
       quantity: cantidadAgregar,
       price: producto.precio,
-      currency: 'UYU'
+      currency: 'UYU',
+      stock_remaining: producto.stock
     });
     
   } catch (error) {
     console.error('❌ Error al agregar al carrito:', error);
     
-    // Mensajes de error más amigables
+    // Mensajes de error más amigables según el tipo de error
     let mensajeError = 'Error al agregar al carrito';
-    if (error.message.includes('Stock insuficiente')) {
+    if (error.message && error.message.includes('Stock insuficiente')) {
       mensajeError = 'El producto se quedó sin stock. Por favor, intentá de nuevo.';
-    } else if (error.message.includes('No se pudo completar la transacción')) {
-      mensajeError = 'Problema de conexión. Intentá nuevamente.';
+    } else if (error.message && error.message.includes('No se pudo completar la transacción')) {
+      mensajeError = 'Problema de conexión. Por favor, verificá tu conexión a internet y volvé a intentar.';
+    } else if (error.message && error.message.includes('permission_denied')) {
+      mensajeError = 'Error de permisos. Por favor, recargá la página.';
     } else {
-      mensajeError = 'Error al agregar al carrito. Intentá de nuevo.';
+      mensajeError = 'Error al agregar al carrito. Por favor, intentá de nuevo.';
     }
     
     mostrarNotificacion(mensajeError, 'error');
     
-    // Intentar refrescar el stock desde Firebase
+    // Intentar refrescar el stock desde Firebase para mantener la UI sincronizada
     try {
       const key = getDbKeyFromId(id);
       if (key) {
         const stockRef = ref(db, `productos/${key}/stock`);
         const snapshot = await get(stockRef);
         if (snapshot.exists()) {
-          producto.stock = snapshot.val() || 0;
-          renderizarProductos();
+          const stockActualizado = snapshot.val() || 0;
+          if (producto.stock !== stockActualizado) {
+            console.log(`🔄 Sincronizando stock local después de error: ${producto.stock} -> ${stockActualizado}`);
+            producto.stock = stockActualizado;
+            renderizarProductos();
+          }
         }
       }
     } catch (refreshError) {
@@ -767,6 +824,53 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
     inFlightAdds.delete(id);
   }
 }
+
+// ===============================
+// SINCRONIZACIÓN DE STOCK (NUEVO)
+// ===============================
+async function sincronizarStockLocal() {
+  console.log('🔄 Sincronizando stock local con Firebase...');
+  
+  let cambios = 0;
+  
+  for (const producto of productos) {
+    try {
+      const key = getDbKeyFromId(producto.id);
+      if (key) {
+        const stockRef = ref(db, `productos/${key}/stock`);
+        const snapshot = await get(stockRef);
+        if (snapshot.exists()) {
+          const stockFirebase = snapshot.val() || 0;
+          if (producto.stock !== stockFirebase) {
+            console.log(`📊 Sincronizando ${producto.nombre}: ${producto.stock} -> ${stockFirebase}`);
+            producto.stock = stockFirebase;
+            cambios++;
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(`Error sincronizando producto ${producto.id}:`, error);
+    }
+  }
+  
+  if (cambios > 0) {
+    renderizarProductos();
+    console.log(`✅ Sincronización completada. ${cambios} productos actualizados.`);
+  } else {
+    console.log('✅ Sincronización completada. Sin cambios.');
+  }
+}
+
+// Sincronizar stock cada 30 segundos
+setInterval(sincronizarStockLocal, 30000);
+
+// Sincronizar cuando la pestaña vuelve a ser visible
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    console.log('👁️ Pestaña visible - sincronizando stock...');
+    sincronizarStockLocal();
+  }
+});
 
 // ===============================
 // UI / FILTROS
@@ -895,6 +999,7 @@ window.seleccionarMetodoPago = function(metodo) {
 // ===============================
 
 let enviandoTransferencia = false;
+let enviandoPedido = false;
 
 window.confirmarPedidoTransferencia = async function() {
   if (enviandoTransferencia) {
@@ -1214,12 +1319,6 @@ function actualizarResumenPedido() {
     inputDireccion.required = metodo !== 'retiro';
   }
 }
-
-// ===============================
-// FORMULARIO DE ENVÍO CON MERCADO PAGO
-// ===============================
-
-let enviandoPedido = false;
 
 // ===============================
 // SLIDERS DE PRECIO
