@@ -14,7 +14,7 @@ const BACK_IN_STOCK_DUR_MS = 1000 * 60 * 60 * 24 * 5; // 5 días (ajustable)
 const TRANSFERENCIA_CONFIG = {
   banco: 'BROU (Banco República)',
   titular: 'Patricia Lopez',
-   // ← CAMBIÁ por tu CI real
+  ci: '12345678', // ← CAMBIÁ por tu CI real
   numeroCuenta: '001300996-00002',
   whatsapp: '+59893566283',
   whatsappDisplay: '+598 93 566 283',
@@ -583,63 +583,141 @@ function cerrarModal() {
 window.cerrarModal = cerrarModal;
 
 // ===============================
-// AGREGAR AL CARRITO
+// AGREGAR AL CARRITO (CORREGIDO)
 // ===============================
 async function agregarAlCarrito(id, cantidad = 1, boton = null) {
-  if (inFlightAdds.has(id)) return;
+  // Evitar múltiples clicks simultáneos
+  if (inFlightAdds.has(id)) {
+    console.log(`⚠️ Ya hay una operación en curso para el producto ${id}`);
+    return;
+  }
+  
   inFlightAdds.add(id);
 
-  if (!Number.isFinite(id) || id <= 0) { inFlightAdds.delete(id); return mostrarNotificacion('ID de producto inválido', 'error'); }
+  // Validaciones básicas
+  if (!Number.isFinite(id) || id <= 0) {
+    inFlightAdds.delete(id);
+    return mostrarNotificacion('ID de producto inválido', 'error');
+  }
 
   const producto = productos.find(p => p.id === id);
-  if (!producto) { inFlightAdds.delete(id); return mostrarNotificacion('Producto no encontrado', 'error'); }
+  if (!producto) {
+    inFlightAdds.delete(id);
+    return mostrarNotificacion('Producto no encontrado', 'error');
+  }
 
-  const cantidadAgregar = Math.max(1, parseInt(cantidad));
-  if (!Number.isFinite(cantidadAgregar)) { inFlightAdds.delete(id); return mostrarNotificacion('Cantidad inválida', 'error'); }
+  const cantidadAgregar = Math.max(1, parseInt(cantidad) || 1);
+  if (!Number.isFinite(cantidadAgregar) || cantidadAgregar <= 0) {
+    inFlightAdds.delete(id);
+    return mostrarNotificacion('Cantidad inválida', 'error');
+  }
 
+  // Deshabilitar botón si existe
   if (boton) {
-    if (busyButtons.has(boton)) { inFlightAdds.delete(id); return; }
+    if (busyButtons.has(boton)) {
+      inFlightAdds.delete(id);
+      return;
+    }
     busyButtons.add(boton);
     boton.disabled = true;
     boton._oldHTML = boton.innerHTML;
     boton.innerHTML = 'Agregando <span class="spinner"></span>';
   }
 
-  if ((producto.stock || 0) < cantidadAgregar) {
-    if (boton) { boton.disabled = false; boton.innerHTML = boton._oldHTML; busyButtons.delete(boton); }
+  // Verificar stock disponible ANTES de la transacción
+  const stockActual = producto.stock || 0;
+  if (stockActual < cantidadAgregar) {
+    if (boton) {
+      boton.disabled = false;
+      boton.innerHTML = boton._oldHTML;
+      busyButtons.delete(boton);
+    }
     inFlightAdds.delete(id);
-    return mostrarNotificacion('Stock insuficiente', 'error');
+    return mostrarNotificacion(`Stock insuficiente. Solo quedan ${stockActual} unidades.`, 'error');
   }
 
   try {
     const key = getDbKeyFromId(id);
+    if (!key) {
+      throw new Error(`No se encontró la clave Firebase para el producto ${id}`);
+    }
+    
     const productRef = ref(db, `productos/${key}/stock`);
+    
+    console.log(`🛒 Intentando agregar ${cantidadAgregar} de ${producto.nombre} (stock actual: ${stockActual})`);
 
-    const { committed } = await runTransaction(productRef, (stock) => {
-      stock = stock || 0;
-      if (stock < cantidadAgregar) return;
-      return stock - cantidadAgregar;
-    });
+    // Ejecutar transacción con reintentos automáticos
+    let intentos = 0;
+    const maxIntentos = 3;
+    let committed = false;
+    let finalStock = null;
 
-    if (!committed) throw new Error('Stock insuficiente o cambiado por otro usuario');
+    while (intentos < maxIntentos && !committed) {
+      try {
+        const result = await runTransaction(productRef, (currentStock) => {
+          // Si el nodo no existe, inicializar en 0
+          let stock = currentStock === null ? 0 : currentStock;
+          
+          // Verificar nuevamente dentro de la transacción
+          if (stock < cantidadAgregar) {
+            console.log(`❌ Stock insuficiente en transacción: ${stock} < ${cantidadAgregar}`);
+            return; // Abortar transacción
+          }
+          
+          console.log(`✅ Transacción aceptada: ${stock} - ${cantidadAgregar} = ${stock - cantidadAgregar}`);
+          return stock - cantidadAgregar;
+        });
+        
+        committed = result.committed;
+        finalStock = result.snapshot?.val();
+        
+        if (committed) {
+          console.log(`🎉 Transacción exitosa! Nuevo stock: ${finalStock}`);
+          break;
+        } else {
+          console.log(`⚠️ Intento ${intentos + 1} fallido, reintentando...`);
+          intentos++;
+          if (intentos < maxIntentos) {
+            await new Promise(resolve => setTimeout(resolve, 500 * intentos));
+          }
+        }
+      } catch (txError) {
+        console.error(`❌ Error en transacción (intento ${intentos + 1}):`, txError);
+        intentos++;
+        if (intentos < maxIntentos) {
+          await new Promise(resolve => setTimeout(resolve, 500 * intentos));
+        } else {
+          throw txError;
+        }
+      }
+    }
 
+    if (!committed) {
+      throw new Error('No se pudo completar la transacción después de varios intentos');
+    }
+
+    // Actualizar stock local
     suprimirRealtime++;
     producto.stock = Math.max(0, (producto.stock || 0) - cantidadAgregar);
 
+    // Actualizar carrito
     const enCarrito = carrito.find(item => item.id === id);
-    if (enCarrito) enCarrito.cantidad += cantidadAgregar;
-    else carrito.push({
-      id: producto.id,
-      nombre: producto.nombre,
-      precio: producto.precio,
-      cantidad: cantidadAgregar,
-      imagen: (producto.imagenes && producto.imagenes[0]) || PLACEHOLDER_IMAGE
-    });
+    if (enCarrito) {
+      enCarrito.cantidad += cantidadAgregar;
+    } else {
+      carrito.push({
+        id: producto.id,
+        nombre: producto.nombre,
+        precio: producto.precio,
+        cantidad: cantidadAgregar,
+        imagen: (producto.imagenes && producto.imagenes[0]) || PLACEHOLDER_IMAGE
+      });
+    }
 
     guardarCarrito();
     renderizarCarrito();
     renderizarProductos();
-    mostrarNotificacion('Producto agregado al carrito', 'exito');
+    mostrarNotificacion(`${cantidadAgregar} x ${producto.nombre} agregado al carrito`, 'exito');
     
     registrarEventoAnalytics('add_to_cart', {
       item_id: id.toString(),
@@ -650,12 +728,40 @@ async function agregarAlCarrito(id, cantidad = 1, boton = null) {
     });
     
   } catch (error) {
-    console.error('Error al agregar al carrito:', error);
-    mostrarNotificacion('Error al agregar al carrito', 'error');
+    console.error('❌ Error al agregar al carrito:', error);
+    
+    // Mensajes de error más amigables
+    let mensajeError = 'Error al agregar al carrito';
+    if (error.message.includes('Stock insuficiente')) {
+      mensajeError = 'El producto se quedó sin stock. Por favor, intentá de nuevo.';
+    } else if (error.message.includes('No se pudo completar la transacción')) {
+      mensajeError = 'Problema de conexión. Intentá nuevamente.';
+    } else {
+      mensajeError = 'Error al agregar al carrito. Intentá de nuevo.';
+    }
+    
+    mostrarNotificacion(mensajeError, 'error');
+    
+    // Intentar refrescar el stock desde Firebase
+    try {
+      const key = getDbKeyFromId(id);
+      if (key) {
+        const stockRef = ref(db, `productos/${key}/stock`);
+        const snapshot = await get(stockRef);
+        if (snapshot.exists()) {
+          producto.stock = snapshot.val() || 0;
+          renderizarProductos();
+        }
+      }
+    } catch (refreshError) {
+      console.warn('No se pudo refrescar el stock:', refreshError);
+    }
+    
   } finally {
+    // Restaurar botón
     if (boton) {
       boton.disabled = false;
-      boton.innerHTML = boton._oldHTML;
+      boton.innerHTML = boton._oldHTML || 'Agregar';
       busyButtons.delete(boton);
     }
     inFlightAdds.delete(id);
@@ -706,117 +812,13 @@ function restaurarModalEnvioOriginal() {
     modalEnvioContenido.dataset.originalHtml = modalEnvioContenido.innerHTML;
   }
   
-  // Restaurar solo si fue modificado (por ejemplo, por la pantalla de éxito de transferencia)
+  // Restaurar solo si fue modificado
   if (modalEnvioContenido.querySelector('.confirmacion-transferencia')) {
     modalEnvioContenido.innerHTML = modalEnvioContenido.dataset.originalHtml;
     
-    // Reasignar eventos necesarios
     const selectEnvio = getElement('select-envio');
     if (selectEnvio) {
       selectEnvio.addEventListener('change', actualizarResumenPedido);
-    }
-    
-    // Reasignar evento del formulario
-    const formEnvio = getElement('form-envio');
-    if (formEnvio && !formEnvio.hasAttribute('data-listener-added')) {
-      formEnvio.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const metodoPagoSeleccionado = document.querySelector('.metodo-pago-btn.selected')?.dataset?.metodo;
-        if (metodoPagoSeleccionado !== 'mercadopago') return;
-        
-        if (enviandoPedido) return;
-        enviandoPedido = true;
-        
-        const btnSubmit = e.target.querySelector('button[type="submit"]');
-        const textoOriginal = btnSubmit?.innerHTML;
-        if (btnSubmit) {
-          btnSubmit.disabled = true;
-          btnSubmit.innerHTML = 'Procesando... <span class="spinner"></span>';
-        }
-        
-        const nombre    = getElement('input-nombre').value.trim();
-        const apellido  = getElement('input-apellido').value.trim();
-        const telefono  = getElement('input-telefono').value.trim();
-        const envio     = getElement('select-envio').value;
-        const direccion = envio !== 'retiro' ? getElement('input-direccion').value.trim() : '';
-        const notas     = getElement('input-notas').value.trim();
-        
-        if (!nombre || !apellido || !telefono || (envio !== 'retiro' && !direccion)) {
-          mostrarNotificacion('Completá todos los campos obligatorios', 'error');
-          if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
-          enviandoPedido = false;
-          return;
-        }
-        
-        if (carrito.length === 0) {
-          mostrarNotificacion('El carrito está vacío', 'error');
-          if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
-          enviandoPedido = false;
-          return;
-        }
-        
-        for (const item of carrito) {
-          const prod = productos.find(p => p.id === item.id);
-          if (!prod || prod.stock < 0) {
-            mostrarNotificacion(`Stock insuficiente para "${item?.nombre || 'un producto'}"`, 'error');
-            if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
-            enviandoPedido = false;
-            return;
-          }
-        }
-        
-        try {
-          const response = await fetch('/api/crear-preferencia', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              carrito,
-              datosCliente: { nombre, apellido, telefono, envio, direccion, notas },
-            }),
-          });
-          
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `Error del servidor: ${response.status}`);
-          }
-          
-          const { url, url_sandbox, reference } = await response.json();
-          
-          if (!url) throw new Error('No se recibió la URL de pago de Mercado Pago');
-          
-          registrarEventoAnalytics('purchase_redirect', {
-            transaction_id: reference,
-            items: carrito.map(item => ({
-              item_id:   item.id.toString(),
-              item_name: item.nombre,
-              quantity:  item.cantidad,
-              price:     item.precio,
-            })),
-            value:    carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0),
-            currency: 'UYU',
-          });
-          
-          const modal = getElement('modal-datos-envio');
-          if (modal) {
-            modal.classList.remove('visible');
-            setTimeout(() => { modal.style.display = 'none'; }, 300);
-          }
-          
-          mostrarNotificacion('Redirigiendo a Mercado Pago...', 'exito');
-          
-          const esSandbox = false;
-          setTimeout(() => {
-            window.location.href = esSandbox && url_sandbox ? url_sandbox : url;
-          }, 800);
-          
-        } catch (error) {
-          console.error('Error al procesar pago:', error);
-          mostrarNotificacion(error.message || 'Error al conectar con Mercado Pago. Intentá de nuevo.', 'error');
-          if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
-          enviandoPedido = false;
-        }
-      });
-      formEnvio.setAttribute('data-listener-added', 'true');
     }
   }
 }
@@ -833,18 +835,15 @@ function cerrarModalEnvio() {
   }
   document.body.classList.remove('no-scroll');
   
-  // Resetear selección de método
   document.querySelectorAll('.metodo-pago-btn').forEach(b => b.classList.remove('selected'));
   const seccionMP = getElement('seccion-mercadopago');
   const seccionTrans = getElement('seccion-transferencia');
   if (seccionMP) seccionMP.style.display = 'none';
   if (seccionTrans) seccionTrans.style.display = 'none';
   
-  // Resetear flags
   enviandoTransferencia = false;
   enviandoPedido = false;
   
-  // Restaurar contenido original
   restaurarModalEnvioOriginal();
 }
 
@@ -859,7 +858,6 @@ function abrirSelectorPago() {
     modalEnvio.removeAttribute('hidden');
     actualizarResumenPedido();
     
-    // Cerrar al hacer click en el overlay
     modalEnvio.onclick = (e) => {
       if (e.target === modalEnvio) cerrarModalEnvio();
     };
