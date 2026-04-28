@@ -51,7 +51,7 @@ const RIBBON_CSS = `
 
 // Firebase v10+ (SDK modular)
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getDatabase, ref, runTransaction, get, update, onValue, push, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, runTransaction, get, update, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getAnalytics, logEvent, setAnalyticsCollectionEnabled } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 
 const db = window.firebaseDatabase || getDatabase(window.firebaseApp);
@@ -237,29 +237,6 @@ function toggleCarrito(forceState) {
   document.body.classList.toggle('no-scroll', isOpen);
 
   if (isOpen) renderizarCarrito();
-}
-
-// ===============================
-// FUNCIÓN PARA GUARDAR PEDIDO EN FIREBASE
-// ===============================
-async function guardarPedidoEnFirebase(datosPedido) {
-  try {
-    const pedidosRef = ref(db, 'pedidos');
-    const nuevoPedidoRef = push(pedidosRef);
-    
-    await set(nuevoPedidoRef, {
-      ...datosPedido,
-      id: nuevoPedidoRef.key,
-      timestamp: Date.now(),
-      fechaRegistro: new Date().toISOString()
-    });
-    
-    console.log('✅ Pedido guardado en Firebase con ID:', nuevoPedidoRef.key);
-    return nuevoPedidoRef.key;
-  } catch (error) {
-    console.error('❌ Error al guardar pedido en Firebase:', error);
-    throw error;
-  }
 }
 
 // ===============================
@@ -1067,41 +1044,12 @@ window.confirmarPedidoTransferencia = async function() {
 
     const fechaPedido = new Date().toLocaleString('es-UY', { timeZone: 'America/Montevideo' });
 
-    // === NUEVO: GUARDAR PEDIDO EN FIREBASE ===
-    const pedidoId = await guardarPedidoEnFirebase({
-      estado: 'pendiente_pago',
-      metodoPago: 'transferencia',
-      datosCliente: {
-        nombre,
-        apellido,
-        telefono,
-        envio,
-        direccion: direccion || '',
-        notas: notas || ''
-      },
-      carrito: carrito.map(item => ({
-        id: item.id,
-        nombre: item.nombre,
-        precio: item.precio,
-        cantidad: item.cantidad,
-        imagen: item.imagen
-      })),
-      subtotal: subtotal,
-      costoEnvio: costoEnvio,
-      montoTotal: total,
-      fechaPedido: fechaPedido,
-      timestamp: Date.now()
-    });
-
-    console.log('📦 Pedido guardado en Firebase con ID:', pedidoId);
-
     const mensajeWA = encodeURIComponent(
 `🛍️ *NUEVO PEDIDO - TRANSFERENCIA*
 
 👤 *Cliente:* ${nombre} ${apellido}
 📞 *Teléfono:* ${telefono}
 📅 *Fecha:* ${fechaPedido}
-🆔 *Pedido ID:* ${pedidoId}
 
 📦 *Productos:*
 ${resumenProductos}
@@ -1121,7 +1069,6 @@ _Por favor adjuntá el comprobante de pago a este mensaje_ 🙏`
     );
 
     registrarEventoAnalytics('purchase_transfer_initiated', {
-      pedido_id: pedidoId,
       value: total,
       currency: 'UYU',
       items: carrito.map(item => ({
@@ -1134,53 +1081,29 @@ _Por favor adjuntá el comprobante de pago a este mensaje_ 🙏`
 
     if (window.emailjs) {
       try {
-        const cuerpoEmail = `NUEVO PEDIDO - PAGO POR TRANSFERENCIA
-======================================
-Pedido ID: ${pedidoId}
-Fecha: ${fechaPedido}
-
-DATOS DEL CLIENTE
------------------
-Nombre: ${nombre} ${apellido}
-Teléfono: ${telefono}
-
-PRODUCTOS
----------
-${carrito.map(item => `${item.nombre} x${item.cantidad} — $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`).join('\n')}
-
-ENVÍO
------
-${metodoEnvioTexto}
-${notas ? `Notas: ${notas}` : ''}
-
-RESUMEN
--------
-Subtotal: $U ${subtotal.toLocaleString('es-UY')}
-${costoEnvio > 0 ? `Envío: $U ${costoEnvio.toLocaleString('es-UY')}` : ''}
-TOTAL: $U ${total.toLocaleString('es-UY')}`;
+        const cuerpoEmail = `NUEVO PEDIDO - PAGO POR TRANSFERENCIA\n======================================\nFecha: ${fechaPedido}\n\nDATOS DEL CLIENTE\n-----------------\nNombre: ${nombre} ${apellido}\nTeléfono: ${telefono}\n\nPRODUCTOS\n---------\n${carrito.map(item => `${item.nombre} x${item.cantidad} — $U ${(item.precio * item.cantidad).toLocaleString('es-UY')}`).join('\n')}\n\nENVÍO\n-----\n${metodoEnvioTexto}\n${notas ? `Notas: ${notas}` : ''}\n\nRESUMEN\n-------\nSubtotal: $U ${subtotal.toLocaleString('es-UY')}\n${costoEnvio > 0 ? `Envío: $U ${costoEnvio.toLocaleString('es-UY')}` : ''}\nTOTAL: $U ${total.toLocaleString('es-UY')}`;
 
         await emailjs.send('service_89by24g', 'template_8mn7hdp', {
           from_name: `${nombre} ${apellido}`,
           from_email: TRANSFERENCIA_CONFIG.email,
           message: cuerpoEmail,
-          subject: `🛍️ Nuevo pedido transferencia #${pedidoId} - ${nombre} ${apellido}`
+          subject: `🛍️ Nuevo pedido transferencia - ${nombre} ${apellido}`
         });
       } catch (err) {
         console.warn('EmailJS error (no crítico):', err);
       }
     }
 
-    // Vaciar carrito SOLO DESPUÉS de guardar el pedido
     carrito = [];
     guardarCarrito();
     actualizarUI();
 
-    mostrarModalDatosBancarios(total, mensajeWA, { nombre, apellido, pedidoId });
+    mostrarModalDatosBancarios(total, mensajeWA, { nombre, apellido });
     document.body.classList.add('no-scroll');
 
   } catch (error) {
     console.error('❌ Error en confirmarPedidoTransferencia:', error);
-    mostrarNotificacion('Ocurrió un error al procesar tu pedido. Por favor, intentá de nuevo.', 'error');
+    mostrarNotificacion('Ocurrió un error al procesar tu pedido', 'error');
   } finally {
     enviandoTransferencia = false;
     if (btnConfirmar) {
@@ -1215,7 +1138,6 @@ function mostrarModalDatosBancarios(total, mensajeWA, datosCliente) {
         </div>
         <h2 class="confirmacion-titulo">¡Pedido registrado!</h2>
         <p class="confirmacion-subtitulo">Realizá la transferencia para confirmar tu compra</p>
-        ${datosCliente.pedidoId ? `<p class="confirmacion-pedido-id">Pedido #${datosCliente.pedidoId}</p>` : ''}
       </div>
  
       <div class="confirmacion-pasos">
@@ -1284,7 +1206,7 @@ function mostrarModalDatosBancarios(total, mensajeWA, datosCliente) {
           Enviar comprobante por WhatsApp
         </a>
  
-        <a href="mailto:${TRANSFERENCIA_CONFIG.email}?subject=${encodeURIComponent('Comprobante de transferencia - Pedido #' + (datosCliente?.pedidoId || ''))}&body=${encodeURIComponent('Hola! Te envío el comprobante de mi transferencia.\n\nPedido #' + (datosCliente?.pedidoId || '') + '\nNombre: ' + (datosCliente?.nombre || '') + ' ' + (datosCliente?.apellido || ''))}"
+        <a href="mailto:${TRANSFERENCIA_CONFIG.email}?subject=${encodeURIComponent('Comprobante de transferencia - Patofelting')}&body=${encodeURIComponent('Hola! Te envío el comprobante de mi transferencia.\n\nNombre: ' + (datosCliente?.nombre || '') + ' ' + (datosCliente?.apellido || ''))}"
            class="confirmacion-btn-email">
           ✉️ Enviar por Email
         </a>
@@ -1741,6 +1663,35 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateRange();
 });
 
-// Exponer funciones globales
 window.agregarAlCarrito = agregarAlCarrito;
-window.preguntarStock = preguntarStock;
+window.preguntarStock = preguntarStock;  Solución en dos partes:
+Parte 1 — En la web (patofelting JS): Guardar el pedido en Firebase cuando el cliente finaliza la compra.
+En la función confirmarPedidoTransferencia, antes del carrito = [], agregá esto:
+js// Guardar pedido en Firebase para sincronizar con ZenDay
+try {
+  const { ref: dbRef, push } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js");
+  const pedidosRef = dbRef(db, 'pedidos');
+  await push(pedidosRef, {
+    fechaRegistro: new Date().toISOString(),
+    estado: 'aprobado',
+    datosCliente: {
+      nombre,
+      apellido,
+      telefono,
+      envio,
+      direccion: direccion || '',
+      notas: notas || ''
+    },
+    carrito: carrito.map(item => ({
+      id: item.id,
+      nombre: item.nombre,
+      precio: item.precio,
+      cantidad: item.cantidad
+    })),
+    monto: total,
+    metodoPago: 'transferencia'
+  });
+  console.log('✅ Pedido guardado en Firebase');
+} catch (err) {
+  console.warn('No se pudo guardar pedido en Firebase:', err);
+}
