@@ -1664,34 +1664,4 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 window.agregarAlCarrito = agregarAlCarrito;
-window.preguntarStock = preguntarStock;  Solución en dos partes:
-Parte 1 — En la web (patofelting JS): Guardar el pedido en Firebase cuando el cliente finaliza la compra.
-En la función confirmarPedidoTransferencia, antes del carrito = [], agregá esto:
-js// Guardar pedido en Firebase para sincronizar con ZenDay
-try {
-  const { ref: dbRef, push } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js");
-  const pedidosRef = dbRef(db, 'pedidos');
-  await push(pedidosRef, {
-    fechaRegistro: new Date().toISOString(),
-    estado: 'aprobado',
-    datosCliente: {
-      nombre,
-      apellido,
-      telefono,
-      envio,
-      direccion: direccion || '',
-      notas: notas || ''
-    },
-    carrito: carrito.map(item => ({
-      id: item.id,
-      nombre: item.nombre,
-      precio: item.precio,
-      cantidad: item.cantidad
-    })),
-    monto: total,
-    metodoPago: 'transferencia'
-  });
-  console.log('✅ Pedido guardado en Firebase');
-} catch (err) {
-  console.warn('No se pudo guardar pedido en Firebase:', err);
-}
+window.preguntarStock = preguntarStock;
